@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Export to AE - 服务测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #ccc;
+        }
+        .test-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .test-error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .test-pending {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-panel">
+        <h2>Export to AE - 服务连接测试</h2>
+        <p>此页面用于测试后台服务是否正常运行</p>
+        
+        <div class="test-actions">
+            <button onclick="testPing()">测试Ping</button>
+            <button onclick="testServiceStatus()">测试服务状态</button>
+            <button onclick="testAEStatus()">测试AE状态</button>
+            <button onclick="runAllTests()">运行所有测试</button>
+        </div>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        const serviceUrl = 'http://localhost:8080';
+        
+        function addTestResult(name, success, message, data = null) {
+            const resultsDiv = document.getElementById('test-results');
+            const testItem = document.createElement('div');
+            testItem.className = `test-item ${success ? 'test-success' : 'test-error'}`;
+            
+            let content = `<strong>${name}</strong>: ${message}`;
+            if (data) {
+                content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            testItem.innerHTML = content;
+            resultsDiv.appendChild(testItem);
+        }
+        
+        function addPendingResult(name, message) {
+            const resultsDiv = document.getElementById('test-results');
+            const testItem = document.createElement('div');
+            testItem.className = 'test-item test-pending';
+            testItem.innerHTML = `<strong>${name}</strong>: ${message}`;
+            resultsDiv.appendChild(testItem);
+            return testItem;
+        }
+        
+        async function testPing() {
+            const pendingItem = addPendingResult('Ping测试', '正在测试服务连接...');
+            
+            try {
+                const response = await fetch(`${serviceUrl}/ping`);
+                if (response.ok) {
+                    const data = await response.json();
+                    pendingItem.remove();
+                    addTestResult('Ping测试', true, '服务连接成功', data);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                pendingItem.remove();
+                addTestResult('Ping测试', false, `连接失败: ${error.message}`);
+            }
+        }
+        
+        async function testServiceStatus() {
+            const pendingItem = addPendingResult('服务状态测试', '正在获取服务状态...');
+            
+            try {
+                const response = await fetch(`${serviceUrl}/service-status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    pendingItem.remove();
+                    addTestResult('服务状态测试', true, '服务状态获取成功', data);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                pendingItem.remove();
+                addTestResult('服务状态测试', false, `获取失败: ${error.message}`);
+            }
+        }
+        
+        async function testAEStatus() {
+            const pendingItem = addPendingResult('AE状态测试', '正在获取AE状态...');
+            
+            try {
+                const response = await fetch(`${serviceUrl}/ae-status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    pendingItem.remove();
+                    addTestResult('AE状态测试', true, 'AE状态获取成功', data);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                pendingItem.remove();
+                addTestResult('AE状态测试', false, `获取失败: ${error.message}`);
+            }
+        }
+        
+        async function runAllTests() {
+            document.getElementById('test-results').innerHTML = '';
+            
+            await testPing();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testServiceStatus();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testAEStatus();
+        }
+        
+        // 页面加载时自动运行测试
+        window.onload = function() {
+            setTimeout(runAllTests, 1000);
+        };
+    </script>
+</body>
+</html>

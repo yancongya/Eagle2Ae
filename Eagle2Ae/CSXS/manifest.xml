@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.eagle.exporttoae" ExtensionBundleVersion="1.0.0"
+                  ExtensionBundleName="Eagle2Ae@烟囱鸭" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ExtensionList>
+    <Extension Id="com.eagle.exporttoae.panel" Version="1.0.0"/>
+  </ExtensionList>
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="AEFT" Version="[13.0,99.9]"/>
+    </HostList>
+    <LocaleList>
+      <Locale Code="All"/>
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="7.0"/>
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+  <DispatchInfoList>
+    <Extension Id="com.eagle.exporttoae.panel">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./index.html</MainPath>
+          <ScriptPath>./jsx/hostscript.jsx</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>Eagle2Ae@烟囱鸭</Menu>
+          <Geometry>
+            <Size>
+              <Height>400</Height>
+              <Width>300</Width>
+            </Size>
+            <MinSize>
+              <Height>300</Height>
+              <Width>250</Width>
+            </MinSize>
+            <MaxSize>
+              <Height>800</Height>
+              <Width>500</Width>
+            </MaxSize>
+          </Geometry>
+          <Icons>
+            <Icon Type="Normal">./icons/icon_normal.png</Icon>
+            <Icon Type="RollOver">./icons/icon_rollover.png</Icon>
+            <Icon Type="DarkNormal">./icons/icon_dark_normal.png</Icon>
+            <Icon Type="DarkRollOver">./icons/icon_dark_rollover.png</Icon>
+          </Icons>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>

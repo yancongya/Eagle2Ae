@@ -1,0 +1,25 @@
+{
+    "id": "c824a8fb-700d-4a79-b627-20e7c3961f93",
+    "version": "1.0.1",
+    "platform": "all",
+    "arch": "all",
+    "name": "Export to AE",
+    "description": "自动将Eagle中选中的文件导出到After Effects项目中的后台服务插件",
+    "logo": "/logo.png",
+    "keywords": ["after effects", "export", "automation", "background", "service"],
+    "devTools": true,
+    "main": {
+        "serviceMode": true,
+        "url": "service.html",
+        "width": 1,
+        "height": 1,
+        "resizable": false,
+        "showOnRun": false,
+        "visible": false,
+        "minimizable": false,
+        "maximizable": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": true,
+        "frame": false
+    }
+}

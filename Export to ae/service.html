@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Export to AE - 后台服务</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            background: transparent;
+        }
+        #hidden-container {
+            display: none;
+            visibility: hidden;
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 1px;
+            height: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div id="hidden-container">
+        <!-- 隐藏的容器，用于服务运行 -->
+        <div id="service-status">后台服务运行中</div>
+    </div>
+
+    <script src="js/plugin.js"></script>
+    
+    <script>
+        // 确保窗口完全隐藏
+        if (typeof eagle !== 'undefined') {
+            // 尝试隐藏窗口
+            try {
+                if (eagle.window && eagle.window.hide) {
+                    eagle.window.hide();
+                }
+                
+                // 最小化窗口
+                if (eagle.window && eagle.window.minimize) {
+                    eagle.window.minimize();
+                }
+                
+                // 设置窗口不可见
+                if (eagle.window && eagle.window.setVisible) {
+                    eagle.window.setVisible(false);
+                }
+            } catch (error) {
+                console.log('窗口控制失败:', error);
+            }
+        }
+        
+        // 阻止任何UI显示
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.display = 'none';
+            document.body.style.visibility = 'hidden';
+            
+            // 如果有窗口对象，尝试隐藏
+            if (window.parent && window.parent !== window) {
+                try {
+                    window.parent.document.body.style.display = 'none';
+                } catch (e) {
+                    // 跨域限制，忽略错误
+                }
+            }
+        });
+        
+        // 阻止右键菜单等交互
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // 记录服务启动
+        console.log('Export to AE 后台服务页面已加载');
+    </script>
+</body>
+</html>
