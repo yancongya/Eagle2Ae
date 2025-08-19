@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>复制功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #005a87;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Eagle2Ae 复制功能测试</h1>
+        
+        <div class="test-section">
+            <h3>1. 连接测试</h3>
+            <p>测试与Eagle插件的连接状态</p>
+            <button class="test-button" onclick="testConnection()">测试连接</button>
+            <div id="connection-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. API端点测试</h3>
+            <p>测试复制API端点是否响应</p>
+            <button class="test-button" onclick="testCopyAPI()">测试复制API</button>
+            <div id="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 文件路径测试</h3>
+            <p>测试文件路径解析逻辑</p>
+            <input type="text" id="test-path" placeholder="输入测试文件路径" style="width: 400px; padding: 5px;">
+            <button class="test-button" onclick="testFilePath()">测试路径</button>
+            <div id="path-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 模拟导出数据测试</h3>
+            <p>测试导出数据结构解析</p>
+            <button class="test-button" onclick="testExportData()">测试导出数据</button>
+            <div id="export-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // 测试连接
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            resultDiv.innerHTML = '<div class="info">正在测试连接...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:8080/ping');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<div class="success">连接成功！<br>服务: ${data.service}<br>版本: ${data.version}<br>时间戳: ${new Date(data.timestamp).toLocaleString()}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">连接失败: HTTP ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">连接错误: ${error.message}</div>`;
+            }
+        }
+
+        // 测试复制API
+        async function testCopyAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<div class="info">正在测试复制API...</div>';
+            
+            const testData = {
+                type: 'copy_files',
+                filePaths: ['C:/test/nonexistent.png'],
+                timestamp: Date.now()
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8080/copy-to-clipboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">API响应成功！<br>结果: ${JSON.stringify(result, null, 2)}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">API错误: ${result.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 测试文件路径
+        function testFilePath() {
+            const resultDiv = document.getElementById('path-result');
+            const testPath = document.getElementById('test-path').value;
+            
+            if (!testPath) {
+                resultDiv.innerHTML = '<div class="error">请输入测试路径</div>';
+                return;
+            }
+            
+            // 模拟路径处理逻辑
+            const normalizedPath = testPath.replace(/\\/g, '/');
+            const pathInfo = {
+                original: testPath,
+                normalized: normalizedPath,
+                isAbsolute: testPath.match(/^[A-Za-z]:/) || testPath.startsWith('/'),
+                extension: testPath.split('.').pop()
+            };
+            
+            resultDiv.innerHTML = `<div class="info">路径分析结果:<br><pre>${JSON.stringify(pathInfo, null, 2)}</pre></div>`;
+        }
+
+        // 测试导出数据
+        function testExportData() {
+            const resultDiv = document.getElementById('export-result');
+            
+            // 模拟JSX返回的导出数据结构
+            const mockExportData = {
+                exportPath: 'E:/工作/202508/test_Export_20250819_122557',
+                exportedLayers: [
+                    {
+                        success: true,
+                        fileName: 'Layer1.png',
+                        layerName: 'Layer1',
+                        filePath: 'E:/工作/202508/test_Export_20250819_122557/Layer1.png'
+                    },
+                    {
+                        success: true,
+                        fileName: 'Layer2.png',
+                        layerName: 'Layer2',
+                        filePath: 'E:/工作/202508/test_Export_20250819_122557/Layer2.png'
+                    }
+                ]
+            };
+            
+            // 模拟文件路径构建逻辑
+            const filePaths = mockExportData.exportedLayers.map(layer => {
+                const fileName = layer.fileName || `${layer.layerName || 'unknown'}.png`;
+                const fullPath = `${mockExportData.exportPath}/${fileName}`.replace(/\\/g, '/');
+                return fullPath;
+            });
+            
+            const result = {
+                mockData: mockExportData,
+                generatedPaths: filePaths
+            };
+            
+            resultDiv.innerHTML = `<div class="success">导出数据测试结果:<br><pre>${JSON.stringify(result, null, 2)}</pre></div>`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+article div div[role="button"] div:empty {
+	pointer-events: none !important;
+}
+
+article div div span[role="button"]:empty {
+	pointer-events: none !important;
+}
+
+article .videoSpritePlayButton {
+	pointer-events: none !important;
+}
+
+article div:not([class]) video ~ div[data-instancekey],
+section main div[role="button"] div:not([class]) video ~ div[data-instancekey] {
+	pointer-events: none !important;
+}

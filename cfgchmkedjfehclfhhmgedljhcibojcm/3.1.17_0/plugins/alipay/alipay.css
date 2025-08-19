@@ -1,0 +1,7 @@
+html {
+	display: none !important;
+}
+
+html.show {
+	display: initial !important;
+}

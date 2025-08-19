@@ -1,0 +1,33 @@
+# 排除参考目录
+/参考/
+
+# 排除临时文件
+*.tmp
+*.temp
+*.log
+
+# 排除系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 排除编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 排除Node.js相关
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 排除构建输出
+dist/
+build/
+out/
+
+# 排除用户配置文件
+*.user
+*.local

@@ -1,0 +1,1 @@
+class WeiboPlugin extends SitePlugin{getMeta(e){if(!location.href.includes("weibo.com"))return i;let i={};var e=e.closest("article");return e&&(e=e.querySelectorAll("a"))[2]&&e[2].getAttribute("class").includes("time")&&(i.link=e[2].href),i}}(()=>{var e=new WeiboPlugin;eagle.plugin.register("weibo.com",e)})();

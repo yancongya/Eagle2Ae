@@ -13,18 +13,27 @@ Eagle2Ae 是一个双组件系统，旨在简化从Eagle图片管理软件到Aft
 
 ```
 Eagle2Ae/
-├── Export to ae/          # Eagle插件目录
-│   ├── manifest.json      # Eagle插件配置
-│   ├── service.html       # 后台服务页面
+├── Eagle2Ae-Eagle/       # Eagle插件目录
+│   ├── manifest.json     # Eagle插件配置
+│   ├── service.html      # 后台服务页面
+│   ├── index.html        # 插件UI页面
 │   ├── js/               # 插件JavaScript代码
-│   └── ...               # 其他插件文件
-├── Eagle2Ae/             # After Effects CEP扩展
+│   │   └── plugin.js     # 主插件逻辑
+│   └── logo.png          # 插件图标
+├── Eagle2Ae-Ae/          # After Effects CEP扩展
 │   ├── CSXS/             # CEP配置目录
+│   │   └── manifest.xml  # CEP扩展配置
 │   ├── index.html        # 扩展主页面
 │   ├── js/               # 扩展JavaScript代码
-│   └── jsx/              # ExtendScript代码
+│   │   ├── main.js       # 主扩展逻辑
+│   │   ├── constants/    # 常量定义
+│   │   └── services/     # 服务模块
+│   ├── jsx/              # ExtendScript代码
+│   │   └── hostscript.jsx # AE主机脚本
+│   └── README.md         # AE扩展说明
 ├── doc/                  # 项目文档
 │   ├── BACKGROUND_SERVICE.md  # 后台服务说明
+│   ├── QUICK_SETTINGS_GUIDE.md # 快速设置指南
 │   └── ...               # 其他文档
 └── README.md             # 项目说明（本文件）
 ```
@@ -33,18 +42,21 @@ Eagle2Ae/
 
 ### 安装Eagle插件
 
-1. 将 `Export to ae/` 文件夹复制到Eagle插件目录
+1. 将 `Eagle2Ae-Eagle/` 文件夹复制到Eagle插件目录
 2. 在Eagle中打开插件管理器
-3. 启用"Export to AE"插件
+3. 启用"Eagle2Ae"插件
 4. 重启Eagle - 插件将自动作为后台服务运行
 
 ### 安装AE扩展
 
-1. 将 `Eagle2Ae/` 文件夹复制到AE扩展目录：
-   - Windows: `C:\Program Files\Common Files\Adobe\CEP\extensions\`
-   - macOS: `/Library/Application Support/Adobe/CEP/extensions/`
-2. 启动After Effects
-3. 在菜单中找到 `窗口` → `扩展` → `Eagle2Ae`
+1. 将 `Eagle2Ae-Ae/` 文件夹复制到AE扩展目录并重命名为 `com.eagle.eagle2ae`：
+   - Windows: `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\com.eagle.eagle2ae\`
+   - macOS: `/Library/Application Support/Adobe/CEP/extensions/com.eagle.eagle2ae/`
+2. 启用CEP调试模式（首次安装需要）
+3. 启动After Effects
+4. 在菜单中找到 `窗口` → `扩展` → `Eagle2Ae@烟囱鸭`
+
+详细安装说明请参考 `Eagle2Ae-Ae/README.md`
 
 ## ✨ 核心特性
 
@@ -62,24 +74,31 @@ Eagle2Ae/
 
 ## 🔧 工作原理
 
-1. **Eagle插件**在后台监听文件选择事件
-2. 当用户在Eagle中选择文件时，插件自动处理文件信息
-3. **AE扩展**通过HTTP通信接收文件信息
-4. 根据用户设置，文件被自动导入到AE项目中
+1. **Eagle插件启动**：Eagle启动时自动加载插件，作为后台服务运行
+2. **文件选择监听**：插件监听Eagle中的文件选择事件
+3. **用户触发导出**：用户在Eagle中选择文件后点击插件图标
+4. **HTTP通信**：Eagle插件通过HTTP API将文件信息发送给AE扩展
+5. **智能导入**：AE扩展根据用户设置自动导入文件到当前项目
+6. **状态反馈**：整个过程提供实时状态反馈和日志记录
 
 ## 📋 系统要求
 
-- **Eagle**: 4.0+
-- **After Effects**: 2020+
-- **操作系统**: Windows 10+ / macOS 10.14+
-- **Node.js**: Eagle内置版本
+- **Eagle**: 4.0+ (支持插件系统)
+- **After Effects**: CC 2015+ (支持CEP扩展)
+- **操作系统**:
+  - Windows 10+
+  - macOS 10.14+ (Mojave)
+- **其他**:
+  - Node.js (Eagle内置)
+  - CEP调试模式已启用
 
 ## 📚 文档
 
-详细文档请查看 `doc/` 目录：
+详细文档请查看相关目录：
 
+- [AE扩展说明](Eagle2Ae-Ae/README.md) - After Effects扩展的详细安装和使用指南
 - [后台服务说明](doc/BACKGROUND_SERVICE.md) - Eagle插件后台服务的详细说明
-- 更多文档正在整理中...
+- [快速设置指南](doc/QUICK_SETTINGS_GUIDE.md) - AE扩展快速设置功能说明
 
 ## 🛠️ 开发
 
@@ -102,18 +121,34 @@ Eagle2Ae/
 ### 常见问题
 
 1. **Eagle插件没有自动启动**
-   - 检查插件是否正确安装并启用
-   - 重启Eagle应用
+   - 检查插件是否正确安装到Eagle插件目录
+   - 在Eagle插件管理器中确认插件已启用
+   - 重启Eagle应用程序
+   - 检查Eagle版本是否支持插件系统（4.0+）
 
-2. **AE扩展无法连接**
-   - 确认Eagle插件正在运行
-   - 检查防火墙设置
+2. **AE扩展无法连接Eagle插件**
+   - 确认Eagle中的Eagle2Ae插件正在运行（后台服务）
+   - 检查8080端口是否被其他程序占用
+   - 确认防火墙允许本地HTTP通信
+   - 尝试在AE扩展中点击"测试连接"按钮
 
-3. **文件导入失败**
-   - 确认AE项目已打开
-   - 检查文件格式支持
+3. **AE扩展无法显示**
+   - 确认CEP调试模式已正确启用
+   - 检查扩展是否安装到正确目录并重命名为`com.eagle.eagle2ae`
+   - 确认AE版本支持CEP扩展（CC 2015+）
+   - 重启After Effects
 
-更多故障排除信息请参考文档目录中的相关文档。
+4. **文件导入失败**
+   - 确认AE中有打开的项目
+   - 检查文件路径是否存在且可访问
+   - 确认文件格式被AE支持
+   - 查看AE扩展面板中的详细错误日志
+
+### 获取更多帮助
+
+- 详细安装说明：[AE扩展README](Eagle2Ae-Ae/README.md)
+- 后台服务说明：[后台服务文档](doc/BACKGROUND_SERVICE.md)
+- 快速设置指南：[设置指南](doc/QUICK_SETTINGS_GUIDE.md)
 
 ## 📄 许可证
 

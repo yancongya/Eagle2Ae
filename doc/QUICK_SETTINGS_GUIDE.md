@@ -25,7 +25,7 @@ Eagle2Ae 扩展插件现已支持双重操作入口和实时设置同步功能�
 
 ```
 ┌─────────────────────────────┐
-│ Export to AE                │
+│ Eagle2Ae                    │
 ├─────────────────────────────┤
 │ 项目信息                    │
 │ • 项目: [项目名称]          │
@@ -158,7 +158,7 @@ triggerAutoSave() {
 2. **检查localStorage数据**
    ```
    F12 → Application → Storage → Local Storage
-   查看 exportToAE_importSettings 键值
+   查看 eagle2ae_importSettings 键值
    ```
 
 3. **验证事件监听器**
