@@ -665,6 +665,32 @@
             gap: 8px;
         }
 
+        .checkbox-group-horizontal {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-group-horizontal .checkbox-option {
+            flex: 1;
+            min-width: 120px;
+            justify-content: flex-start;
+        }
+
+        /* 响应式设计：在较小屏幕上垂直排列 */
+        @media (max-width: 480px) {
+            .checkbox-group-horizontal {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                flex: none;
+                min-width: 0;
+            }
+        }
+
         .radio-option, .checkbox-option {
             display: flex;
             align-items: flex-start;
@@ -2294,64 +2320,6 @@
                     </div>
                 </div>
 
-                <!-- 导出路径设置 -->
-                <div class="settings-section">
-                    <div class="settings-section-title">导出路径设置</div>
-                    <div class="import-mode-options-horizontal">
-                        <label class="import-mode-option" title="在AE项目文件旁边创建导出文件夹">
-                            <input type="radio" name="export-mode" value="project_adjacent" checked>
-                            <span>项目旁导出</span>
-                        </label>
-                        <label class="import-mode-option" title="指定任意文件夹作为导出目录">
-                            <input type="radio" name="export-mode" value="custom_folder">
-                            <span>自定义文件夹</span>
-                        </label>
-                        <label class="import-mode-option" title="直接导出到桌面">
-                            <input type="radio" name="export-mode" value="desktop">
-                            <span>桌面导出</span>
-                        </label>
-                    </div>
-
-                    <!-- 项目旁导出设置 -->
-                    <div id="export-project-adjacent-options" class="export-mode-options">
-                        <div class="input-group">
-                            <label class="input-option">
-                                <span class="input-label">文件夹名称</span>
-                                <div class="input-wrapper">
-                                    <input type="text" id="export-project-folder-name" value="Export" placeholder="导出文件夹名称">
-                                    <small class="input-hint">在项目文件旁边创建的文件夹名称</small>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 自定义文件夹设置 -->
-                    <div id="export-custom-folder-options" class="export-mode-options" style="display: none;">
-                        <div class="input-group">
-                            <label class="input-option">
-                                <span class="input-label">导出路径</span>
-                                <div class="input-wrapper">
-                                    <input type="text" id="export-custom-folder-path" placeholder="选择导出文件夹路径" readonly>
-                                    <button type="button" id="browse-export-folder" class="browse-button">浏览...</button>
-                                    <small class="input-hint">点击浏览选择导出文件夹</small>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 导出选项 -->
-                    <div class="checkbox-group">
-                        <label class="checkbox-option">
-                            <input type="checkbox" id="export-add-timestamp" checked>
-                            <span class="checkbox-label">在文件夹名中添加时间戳</span>
-                        </label>
-                        <label class="checkbox-option">
-                            <input type="checkbox" id="export-create-subfolders">
-                            <span class="checkbox-label">按合成名称创建子文件夹</span>
-                        </label>
-                    </div>
-                </div>
-
                 <!-- 导入行为设置 -->
                 <div class="settings-section">
                     <div class="settings-section-title">导入行为</div>
@@ -2383,6 +2351,36 @@
                     </div>
                 </div>
 
+                <!-- 导出路径设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">导出路径设置</div>
+                    <div class="import-mode-options-horizontal">
+                        <label class="import-mode-option" title="在AE项目文件旁边创建导出文件夹">
+                            <input type="radio" name="export-mode" value="project_adjacent" checked>
+                            <span>项目旁导出</span>
+                        </label>
+                        <label class="import-mode-option" title="指定任意文件夹作为导出目录">
+                            <input type="radio" name="export-mode" value="custom_folder">
+                            <span>自定义文件夹</span>
+                        </label>
+                        <label class="import-mode-option" title="直接导出到桌面">
+                            <input type="radio" name="export-mode" value="desktop">
+                            <span>桌面导出</span>
+                        </label>
+                    </div>
+
+                    <!-- 导出选项 -->
+                    <div class="checkbox-group-horizontal">
+                        <label class="checkbox-option" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
+                            <input type="checkbox" id="export-add-timestamp" checked>
+                            <span class="checkbox-label">添加时间戳前缀</span>
+                        </label>
+                        <label class="checkbox-option" title="在导出文件夹名称前添加当前合成名称，如：MyComp_Export">
+                            <input type="checkbox" id="export-create-subfolders">
+                            <span class="checkbox-label">添加合成名前缀</span>
+                        </label>
+                    </div>
+                </div>
 
                 <!-- 通信设置 -->
                 <div class="settings-section">
@@ -2504,6 +2502,71 @@
             <div class="modal-footer">
                 <button class="modal-btn cancel" onclick="closeCustomFolderModal()">取消</button>
                 <button class="modal-btn confirm" onclick="confirmCustomFolderSettings()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出项目旁模式设置弹窗 -->
+    <div id="export-project-adjacent-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>项目旁导出设置</h3>
+                <button class="modal-close" onclick="closeExportProjectAdjacentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-setting">
+                    <div class="folder-preset-section">
+                        <select id="export-project-folder-preset-select">
+                            <option value="Export">Export</option>
+                            <option value="AE_Export">AE_Export</option>
+                            <option value="Output">Output</option>
+                            <option value="Render">Render</option>
+                            <option value="Frames">Frames</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                    </div>
+                    <div class="custom-folder-section">
+                        <input type="text" id="export-project-custom-folder-input" placeholder="或输入自定义文件夹名">
+                    </div>
+                </div>
+                <div class="modal-description">
+                    <p>选择在AE项目文件旁边创建的导出文件夹名称</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeExportProjectAdjacentModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmExportProjectAdjacentSettings()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出自定义文件夹设置弹窗 -->
+    <div id="export-custom-folder-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>自定义导出文件夹设置</h3>
+                <button class="modal-close" onclick="closeExportCustomFolderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-path-setting">
+                    <div class="folder-path-section">
+                        <input type="text" id="export-custom-folder-path-input" placeholder="选择导出文件夹路径" readonly>
+                        <button class="browse-button" onclick="browseExportFolderPath()">浏览...</button>
+                    </div>
+                    <div class="recent-folders-section" id="export-recent-folders-section" style="display: none;">
+                        <div class="recent-folders-title">最近使用的导出文件夹</div>
+                        <div class="recent-folders-list" id="export-recent-folders-list">
+                            <!-- 最近使用的导出文件夹将动态添加到这里 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-description">
+                    <p>选择用于导出图层的目标文件夹</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeExportCustomFolderModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmExportCustomFolderSettings()">确认</button>
             </div>
         </div>
     </div>
@@ -2848,12 +2911,152 @@
         }
 
         function browseFolderPath() {
-            // 这里应该调用CEP接口来打开文件夹选择对话框
-            // 暂时使用prompt作为演示
-            const selectedPath = prompt('请输入文件夹路径:', customFolderSettings.folderPath);
-            if (selectedPath !== null) {
-                const pathInput = document.getElementById('custom-folder-path-input');
-                pathInput.value = selectedPath;
+            try {
+                console.log('正在使用Web API文件夹选择...');
+
+                // 首先尝试使用现代的 File System Access API
+                if ('showDirectoryPicker' in window) {
+                    console.log('使用 File System Access API');
+                    showDirectoryPicker()
+                        .then(directoryHandle => {
+                            const pathInput = document.getElementById('custom-folder-path-input');
+                            // 注意：File System Access API 不能直接获取完整路径，但可以获取文件夹名称
+                            pathInput.value = `[已选择] ${directoryHandle.name}`;
+                            console.log('已选择文件夹:', directoryHandle.name);
+
+                            // 保存文件夹句柄以供后续使用
+                            customFolderSettings.directoryHandle = directoryHandle;
+                            customFolderSettings.folderPath = directoryHandle.name;
+                        })
+                        .catch(error => {
+                            if (error.name === 'AbortError') {
+                                console.log('用户取消了文件夹选择');
+                            } else {
+                                console.error('File System Access API 失败:', error);
+                                // 回退到 webkitdirectory 方法
+                                useWebkitDirectoryPicker('custom-folder-path-input');
+                            }
+                        });
+                    return;
+                }
+
+                // 回退方案1：使用 webkitdirectory
+                if (supportsWebkitDirectory()) {
+                    console.log('使用 webkitdirectory API');
+                    useWebkitDirectoryPicker('custom-folder-path-input');
+                    return;
+                }
+
+                // 回退方案2：使用 ExtendScript
+                if (window.csInterface) {
+                    console.log('回退到 ExtendScript 方法');
+                    useExtendScriptFolderPicker('custom-folder-path-input', customFolderSettings.folderPath || '', '选择目标文件夹');
+                } else {
+                    console.warn('所有文件夹选择方法都不可用');
+                    alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器');
+                }
+            } catch (error) {
+                console.error('文件夹选择出错:', error);
+                alert('文件夹选择功能出现错误: ' + error.message);
+            }
+        }
+
+        // 检查是否支持 webkitdirectory
+        function supportsWebkitDirectory() {
+            const input = document.createElement('input');
+            return 'webkitdirectory' in input;
+        }
+
+        // 使用 webkitdirectory API 选择文件夹
+        function useWebkitDirectoryPicker(inputId) {
+            console.log('使用 webkitdirectory 选择文件夹...');
+
+            // 创建隐藏的文件输入元素
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;
+            input.multiple = true;
+            input.style.display = 'none';
+
+            input.addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files.length > 0) {
+                    // 从第一个文件的路径中提取文件夹路径
+                    const firstFile = files[0];
+                    const fullPath = firstFile.webkitRelativePath;
+                    const folderName = fullPath.split('/')[0]; // 获取顶级文件夹名称
+
+                    const pathInput = document.getElementById(inputId);
+                    pathInput.value = `[已选择] ${folderName}`;
+                    console.log('已选择文件夹:', folderName);
+
+                    // 保存文件夹信息
+                    if (inputId === 'custom-folder-path-input') {
+                        customFolderSettings.folderPath = folderName;
+                        customFolderSettings.files = Array.from(files);
+                    } else if (inputId === 'export-custom-folder-path-input') {
+                        exportCustomFolderSettings.folderPath = folderName;
+                        exportCustomFolderSettings.files = Array.from(files);
+                    }
+                } else {
+                    console.log('用户取消了文件夹选择');
+                }
+
+                // 清理临时元素
+                document.body.removeChild(input);
+            });
+
+            // 添加到DOM并触发点击
+            document.body.appendChild(input);
+            input.click();
+        }
+
+        // ExtendScript文件夹选择的通用函数
+        function useExtendScriptFolderPicker(inputId, currentPath, title) {
+            console.log('正在使用ExtendScript文件夹选择对话框...');
+
+            window.csInterface.evalScript(`selectFolder("${currentPath}", "${title}")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+
+                    if (parsedResult.success && parsedResult.path) {
+                        const pathInput = document.getElementById(inputId);
+                        pathInput.value = parsedResult.path;
+                        console.log('已选择文件夹:', parsedResult.path);
+
+                        // 保存路径到相应的设置对象
+                        if (inputId === 'custom-folder-path-input') {
+                            customFolderSettings.folderPath = parsedResult.path;
+                        } else if (inputId === 'export-custom-folder-path-input') {
+                            exportCustomFolderSettings.folderPath = parsedResult.path;
+                        }
+                    } else if (parsedResult.cancelled) {
+                        console.log('用户取消了文件夹选择');
+                        // 用户取消时不显示错误提示
+                    } else {
+                        console.error('文件夹选择失败:', parsedResult.error || '未知错误');
+                        // 只有在真正出错时才显示错误提示
+                        alert('文件夹选择失败: ' + (parsedResult.error || '未知错误'));
+                    }
+                } catch (error) {
+                    console.error('解析文件夹选择结果失败:', error);
+                    alert('文件夹选择功能出现错误，请重试');
+                }
+            });
+        }
+
+        // 回退到输入对话框
+        function fallbackToInputDialog(type) {
+            const currentPath = type === '导入' ? customFolderSettings.folderPath : exportCustomFolderSettings.folderPath;
+            const selectedPath = prompt(`请输入${type}文件夹路径:`, currentPath);
+            if (selectedPath !== null && selectedPath.trim() !== '') {
+                if (type === '导入') {
+                    const pathInput = document.getElementById('custom-folder-path-input');
+                    pathInput.value = selectedPath.trim();
+                } else {
+                    const pathInput = document.getElementById('export-custom-folder-path-input');
+                    pathInput.value = selectedPath.trim();
+                }
             }
         }
 
@@ -2915,12 +3118,186 @@
             console.log('指定文件夹设置已保存:', customFolderSettings);
         }
 
+        // 导出路径设置
+        let exportProjectAdjacentSettings = {
+            folderName: 'Export'
+        };
+
+        let exportCustomFolderSettings = {
+            folderPath: '',
+            recentFolders: []
+        };
+
+        // 导出项目旁模式弹窗功能
+        function showExportProjectAdjacentModal() {
+            const modal = document.getElementById('export-project-adjacent-modal');
+            const presetSelect = document.getElementById('export-project-folder-preset-select');
+            const customInput = document.getElementById('export-project-custom-folder-input');
+
+            // 设置当前值
+            presetSelect.value = exportProjectAdjacentSettings.folderName;
+            customInput.value = '';
+
+            // 根据选择显示/隐藏自定义输入框
+            customInput.style.display = presetSelect.value === 'custom' ? 'block' : 'none';
+
+            modal.style.display = 'flex';
+        }
+
+        function closeExportProjectAdjacentModal() {
+            const modal = document.getElementById('export-project-adjacent-modal');
+            modal.style.display = 'none';
+        }
+
+        function confirmExportProjectAdjacentSettings() {
+            const presetSelect = document.getElementById('export-project-folder-preset-select');
+            const customInput = document.getElementById('export-project-custom-folder-input');
+
+            let folderName;
+            if (presetSelect.value === 'custom') {
+                folderName = customInput.value.trim();
+                if (!folderName) {
+                    alert('请输入自定义文件夹名');
+                    return;
+                }
+            } else {
+                folderName = presetSelect.value;
+            }
+
+            // 保存设置
+            exportProjectAdjacentSettings.folderName = folderName;
+
+            // 关闭弹窗
+            closeExportProjectAdjacentModal();
+
+            console.log('导出项目旁设置已保存:', exportProjectAdjacentSettings);
+        }
+
+        // 导出自定义文件夹模式弹窗功能
+        function showExportCustomFolderModal() {
+            const modal = document.getElementById('export-custom-folder-modal');
+            const pathInput = document.getElementById('export-custom-folder-path-input');
+
+            // 设置当前值
+            pathInput.value = exportCustomFolderSettings.folderPath;
+
+            // 显示最近使用的导出文件夹
+            updateExportRecentFoldersList();
+
+            modal.style.display = 'flex';
+        }
+
+        function closeExportCustomFolderModal() {
+            const modal = document.getElementById('export-custom-folder-modal');
+            modal.style.display = 'none';
+        }
+
+        function updateExportRecentFoldersList() {
+            const recentList = document.getElementById('export-recent-folders-list');
+            const recentSection = document.getElementById('export-recent-folders-section');
+
+            if (exportCustomFolderSettings.recentFolders.length > 0) {
+                recentList.innerHTML = '';
+                exportCustomFolderSettings.recentFolders.forEach(folder => {
+                    const folderItem = document.createElement('div');
+                    folderItem.className = 'recent-folder-item';
+                    folderItem.textContent = folder;
+                    folderItem.onclick = () => {
+                        document.getElementById('export-custom-folder-path-input').value = folder;
+                    };
+                    recentList.appendChild(folderItem);
+                });
+                recentSection.style.display = 'block';
+            } else {
+                recentSection.style.display = 'none';
+            }
+        }
+
+        function confirmExportCustomFolderSettings() {
+            const pathInput = document.getElementById('export-custom-folder-path-input');
+            const folderPath = pathInput.value.trim();
+
+            if (!folderPath) {
+                alert('请选择导出文件夹路径');
+                return;
+            }
+
+            // 保存设置
+            exportCustomFolderSettings.folderPath = folderPath;
+
+            // 添加到最近使用列表
+            if (!exportCustomFolderSettings.recentFolders.includes(folderPath)) {
+                exportCustomFolderSettings.recentFolders.unshift(folderPath);
+                // 限制最近使用列表长度
+                if (exportCustomFolderSettings.recentFolders.length > 5) {
+                    exportCustomFolderSettings.recentFolders = exportCustomFolderSettings.recentFolders.slice(0, 5);
+                }
+            }
+
+            // 关闭弹窗
+            closeExportCustomFolderModal();
+
+            console.log('导出自定义文件夹设置已保存:', exportCustomFolderSettings);
+        }
+
+        function browseExportFolderPath() {
+            try {
+                console.log('正在使用Web API导出文件夹选择...');
+
+                // 首先尝试使用现代的 File System Access API
+                if ('showDirectoryPicker' in window) {
+                    console.log('使用 File System Access API');
+                    showDirectoryPicker()
+                        .then(directoryHandle => {
+                            const pathInput = document.getElementById('export-custom-folder-path-input');
+                            pathInput.value = `[已选择] ${directoryHandle.name}`;
+                            console.log('已选择导出文件夹:', directoryHandle.name);
+
+                            // 保存文件夹句柄以供后续使用
+                            exportCustomFolderSettings.directoryHandle = directoryHandle;
+                            exportCustomFolderSettings.folderPath = directoryHandle.name;
+                        })
+                        .catch(error => {
+                            if (error.name === 'AbortError') {
+                                console.log('用户取消了导出文件夹选择');
+                            } else {
+                                console.error('File System Access API 失败:', error);
+                                // 回退到 webkitdirectory 方法
+                                useWebkitDirectoryPicker('export-custom-folder-path-input');
+                            }
+                        });
+                    return;
+                }
+
+                // 回退方案1：使用 webkitdirectory
+                if (supportsWebkitDirectory()) {
+                    console.log('使用 webkitdirectory API');
+                    useWebkitDirectoryPicker('export-custom-folder-path-input');
+                    return;
+                }
+
+                // 回退方案2：使用 ExtendScript
+                if (window.csInterface) {
+                    console.log('回退到 ExtendScript 方法');
+                    useExtendScriptFolderPicker('export-custom-folder-path-input', exportCustomFolderSettings.folderPath || '', '选择导出文件夹');
+                } else {
+                    console.warn('所有文件夹选择方法都不可用');
+                    alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器');
+                }
+            } catch (error) {
+                console.error('导出文件夹选择出错:', error);
+                alert('导出文件夹选择功能出现错误: ' + error.message);
+            }
+        }
+
         // ESC键关闭弹窗
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 const sequenceModal = document.getElementById('sequence-modal');
                 const projectModal = document.getElementById('project-adjacent-modal');
                 const customModal = document.getElementById('custom-folder-modal');
+                const exportProjectModal = document.getElementById('export-project-adjacent-modal');
+                const exportCustomModal = document.getElementById('export-custom-folder-modal');
 
                 if (sequenceModal.style.display === 'flex') {
                     closeSequenceModal();
@@ -2928,6 +3305,10 @@
                     closeProjectAdjacentModal();
                 } else if (customModal.style.display === 'flex') {
                     closeCustomFolderModal();
+                } else if (exportProjectModal.style.display === 'flex') {
+                    closeExportProjectAdjacentModal();
+                } else if (exportCustomModal.style.display === 'flex') {
+                    closeExportCustomFolderModal();
                 }
             }
         });
@@ -2947,5 +3328,12 @@
     <script src="js/utils/SoundPlayer.js"></script>
     <script src="js/utils/LogManager.js"></script>
     <script src="js/main.js"></script>
+
+    <script>
+        // 初始化 CSInterface 用于弹窗中的文件夹选择
+        if (typeof CSInterface !== 'undefined') {
+            window.csInterface = new CSInterface();
+        }
+    </script>
 </body>
 </html>

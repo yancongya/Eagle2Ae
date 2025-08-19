@@ -2786,6 +2786,14 @@ class AEExtension {
             radio.addEventListener('change', () => {
                 if (radio.checked) {
                     this.log(`导出模式已更改为: ${radio.value}`, 'info');
+
+                    // 显示相应的模态框
+                    if (radio.value === 'project_adjacent') {
+                        this.showExportProjectAdjacentModal();
+                    } else if (radio.value === 'custom_folder') {
+                        this.showExportCustomFolderModal();
+                    }
+
                     this.updateExportSettingsUI();
 
                     // 实时保存导出设置
@@ -2795,22 +2803,7 @@ class AEExtension {
             });
         });
 
-        // 导出文件夹名称输入
-        const exportProjectFolderName = document.getElementById('export-project-folder-name');
-        if (exportProjectFolderName) {
-            exportProjectFolderName.addEventListener('change', () => {
-                const exportSettings = this.getExportSettingsFromUI();
-                this.settingsManager.saveExportSettings(exportSettings);
-            });
-        }
 
-        // 导出自定义路径浏览按钮
-        const browseExportFolderBtn = document.getElementById('browse-export-folder');
-        if (browseExportFolderBtn) {
-            browseExportFolderBtn.addEventListener('click', () => {
-                this.browseExportFolder();
-            });
-        }
 
         // 导出选项复选框
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
@@ -3260,8 +3253,55 @@ class AEExtension {
     browseCustomFolder() {
         this.log('打开文件夹选择对话框...', 'info');
 
-        // 显示自定义的文件夹选择模态框
-        this.showFolderPickerModal();
+        // 首先尝试使用现代Web API
+        if (this.tryModernWebFolderPicker()) {
+            return;
+        }
+
+        // 回退到 ExtendScript 方法
+        if (!this.tryExtendScriptFolderPicker()) {
+            this.log('无法打开文件夹选择对话框，请确保在AE环境中运行此扩展', 'error');
+        }
+    }
+
+    // 使用 ExtendScript 文件夹选择对话框
+    tryExtendScriptFolderPicker() {
+        try {
+            const currentPath = document.getElementById('custom-folder-path').value || '';
+            this.log('正在打开文件夹选择对话框...', 'info');
+
+            // 调用 ExtendScript 的文件夹选择函数
+            this.csInterface.evalScript(`selectFolder("${currentPath}", "选择目标文件夹")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+
+                    if (parsedResult.success && parsedResult.path) {
+                        this.handleSelectedFolder(parsedResult.path);
+                        this.log(`已选择文件夹: ${parsedResult.path}`, 'success');
+                    } else if (parsedResult.cancelled) {
+                        this.log('用户取消了文件夹选择', 'info');
+                        // 用户取消时不做任何操作，不回退到模态框
+                    } else {
+                        // 检查是否是用户取消操作
+                        if (parsedResult.cancelled) {
+                            this.log('用户取消了文件夹选择', 'info');
+                            // 用户取消时不显示错误提示
+                        } else {
+                            this.log(`文件夹选择失败: ${parsedResult.error || '未知错误'}`, 'error');
+                            // 只有在真正出错时才显示错误提示
+                        }
+                    }
+                } catch (error) {
+                    this.log(`解析文件夹选择结果失败: ${error.message}`, 'error');
+                    // 解析错误时不再回退到其他方式，直接提示用户
+                }
+            });
+
+            return true;
+        } catch (error) {
+            this.log(`ExtendScript文件夹选择出错: ${error.message}`, 'error');
+            return false;
+        }
     }
 
     // 尝试使用现代的文件夹选择器
@@ -3360,7 +3400,7 @@ class AEExtension {
         const currentPath = document.getElementById('custom-folder-path').value;
 
         // 调用ExtendScript来打开文件夹选择对话框
-        this.csInterface.evalScript(`selectFolder("${currentPath}")`, (result) => {
+        this.csInterface.evalScript(`selectFolder("${currentPath}", "选择目标文件夹")`, (result) => {
             try {
                 const parsedResult = JSON.parse(result);
                 if (parsedResult.success && parsedResult.path) {
@@ -3368,13 +3408,14 @@ class AEExtension {
                     this.log(`已选择文件夹: ${parsedResult.path}`, 'success');
                 } else if (parsedResult.cancelled) {
                     this.log('用户取消了文件夹选择', 'info');
+                    // 用户取消时不做任何操作，不回退到输入框
                 } else {
                     this.log(`文件夹选择失败: ${parsedResult.error || '未知错误'}`, 'error');
+                    // 不再回退到输入框，直接提示用户
                 }
             } catch (error) {
                 this.log(`解析文件夹选择结果失败: ${error.message}`, 'error');
-                // 最终降级到输入框方式
-                this.fallbackToInputPrompt(currentPath);
+                // 解析错误时不再回退到输入框方式，直接提示用户
             }
         });
     }
@@ -3546,19 +3587,69 @@ class AEExtension {
         }
     }
 
-    // 使用现代文件夹选择器
-    useModernFolderPicker() {
-        this.log('启动现代文件夹选择器...', 'info');
+    // 尝试使用现代Web API选择文件夹
+    tryModernWebFolderPicker() {
+        try {
+            // 首先尝试使用 File System Access API
+            if ('showDirectoryPicker' in window) {
+                this.log('使用 File System Access API 选择文件夹...', 'info');
 
-        // 优先尝试现代的文件夹选择方式
-        if (this.tryModernFolderPicker()) {
-            // 成功使用现代选择器后关闭模态框
+                window.showDirectoryPicker()
+                    .then(directoryHandle => {
+                        const folderName = directoryHandle.name;
+                        this.handleSelectedFolder(`[已选择] ${folderName}`);
+                        this.log(`已选择文件夹: ${folderName}`, 'success');
+
+                        // 保存文件夹句柄以供后续使用
+                        this.selectedDirectoryHandle = directoryHandle;
+                    })
+                    .catch(error => {
+                        if (error.name === 'AbortError') {
+                            this.log('用户取消了文件夹选择', 'info');
+                        } else {
+                            this.log(`File System Access API 失败: ${error.message}`, 'error');
+                            // 回退到 webkitdirectory 方法
+                            this.useWebkitDirectoryPicker();
+                        }
+                    });
+                return true;
+            }
+
+            // 回退到 webkitdirectory
+            if (this.supportsWebkitDirectory()) {
+                this.log('使用 webkitdirectory API 选择文件夹...', 'info');
+                this.useWebkitDirectoryPicker();
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            this.log(`现代Web API文件夹选择出错: ${error.message}`, 'error');
+            return false;
+        }
+    }
+
+    // 使用系统文件夹选择器
+    useModernFolderPicker() {
+        this.log('启动文件夹选择器...', 'info');
+
+        // 首先尝试现代Web API
+        if (this.tryModernWebFolderPicker()) {
+            // 成功使用现代API后关闭模态框
             this.hideFolderPickerModal();
             return;
         }
 
-        // 降级到CEP ExtendScript方式
-        this.useCEPFolderPicker();
+        // 回退到 ExtendScript 方式
+        if (this.tryExtendScriptFolderPicker()) {
+            // 成功使用 ExtendScript 选择器后关闭模态框
+            this.hideFolderPickerModal();
+            return;
+        }
+
+        // 如果都失败，显示错误提示
+        this.log('无法打开文件夹选择对话框', 'error');
+        this.hideFolderPickerModal();
     }
 
     // 确认文件夹选择
@@ -4469,16 +4560,13 @@ class AEExtension {
             exportModeRadio.checked = true;
         }
 
-        // 项目旁文件夹名称
-        const exportProjectFolderName = document.getElementById('export-project-folder-name');
-        if (exportProjectFolderName) {
-            exportProjectFolderName.value = exportSettings.projectAdjacentFolder;
+        // 同步到弹窗设置变量
+        if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
+            window.exportProjectAdjacentSettings.folderName = exportSettings.projectAdjacentFolder;
         }
 
-        // 自定义导出路径
-        const exportCustomFolderPath = document.getElementById('export-custom-folder-path');
-        if (exportCustomFolderPath) {
-            exportCustomFolderPath.value = exportSettings.customExportPath;
+        if (typeof window.exportCustomFolderSettings !== 'undefined') {
+            window.exportCustomFolderSettings.folderPath = exportSettings.customExportPath;
         }
 
         // 导出选项
@@ -4499,15 +4587,25 @@ class AEExtension {
     // 从UI获取导出设置
     getExportSettingsFromUI() {
         const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'project_adjacent';
-        const exportProjectFolderName = document.getElementById('export-project-folder-name');
-        const exportCustomFolderPath = document.getElementById('export-custom-folder-path');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
+        // 从弹窗设置中获取数据
+        let projectAdjacentFolder = 'Export';
+        let customExportPath = '';
+
+        if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
+            projectAdjacentFolder = window.exportProjectAdjacentSettings.folderName;
+        }
+
+        if (typeof window.exportCustomFolderSettings !== 'undefined') {
+            customExportPath = window.exportCustomFolderSettings.folderPath;
+        }
+
         return {
             mode: exportMode,
-            projectAdjacentFolder: exportProjectFolderName ? exportProjectFolderName.value : 'Export',
-            customExportPath: exportCustomFolderPath ? exportCustomFolderPath.value : '',
+            projectAdjacentFolder: projectAdjacentFolder,
+            customExportPath: customExportPath,
             addTimestamp: exportAddTimestamp ? exportAddTimestamp.checked : true,
             createSubfolders: exportCreateSubfolders ? exportCreateSubfolders.checked : false
         };
@@ -4515,50 +4613,30 @@ class AEExtension {
 
     // 更新导出设置UI状态
     updateExportSettingsUI() {
-        const exportSettings = this.getExportSettingsFromUI();
-
-        // 显示/隐藏相应的配置选项
-        const projectAdjacentOptions = document.getElementById('export-project-adjacent-options');
-        const customFolderOptions = document.getElementById('export-custom-folder-options');
-
-        if (projectAdjacentOptions) {
-            projectAdjacentOptions.style.display = exportSettings.mode === 'project_adjacent' ? 'block' : 'none';
-        }
-        if (customFolderOptions) {
-            customFolderOptions.style.display = exportSettings.mode === 'custom_folder' ? 'block' : 'none';
-        }
+        // 导出设置现在通过弹窗管理，这里只需要确保UI状态正确
+        // 具体的显示/隐藏逻辑由弹窗处理
     }
 
-    // 浏览导出文件夹
-    browseExportFolder() {
-        try {
-            if (window.cep && window.cep.fs) {
-                const result = window.cep.fs.showOpenDialog(false, true, '选择导出文件夹', '', []);
-                if (result.err === 0 && result.data && result.data.length > 0) {
-                    const selectedPath = result.data[0];
-                    const exportCustomFolderPath = document.getElementById('export-custom-folder-path');
-                    if (exportCustomFolderPath) {
-                        exportCustomFolderPath.value = selectedPath;
 
-                        // 保存设置
-                        const exportSettings = this.getExportSettingsFromUI();
-                        this.settingsManager.saveExportSettings(exportSettings);
-
-                        this.log(`导出文件夹已设置为: ${selectedPath}`, 'info');
-                    }
-                }
-            } else {
-                this.log('文件夹选择功能不可用', 'warning');
-            }
-        } catch (error) {
-            this.log(`选择导出文件夹失败: ${error.message}`, 'error');
-        }
-    }
 
     // 显示项目旁复制模态框
     showProjectAdjacentModal() {
         if (typeof window.showProjectAdjacentModal === 'function') {
             window.showProjectAdjacentModal();
+        }
+    }
+
+    // 显示导出项目旁模态框
+    showExportProjectAdjacentModal() {
+        if (typeof window.showExportProjectAdjacentModal === 'function') {
+            window.showExportProjectAdjacentModal();
+        }
+    }
+
+    // 显示导出自定义文件夹模态框
+    showExportCustomFolderModal() {
+        if (typeof window.showExportCustomFolderModal === 'function') {
+            window.showExportCustomFolderModal();
         }
     }
 

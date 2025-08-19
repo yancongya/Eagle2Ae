@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExtendScript 文件夹选择功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #2b2b2b;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #1e1e1e;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #2d5a2d;
+            border: 1px solid #4a8f4a;
+            border-radius: 3px;
+            word-break: break-all;
+        }
+        .error {
+            background: #5a2d2d;
+            border: 1px solid #8f4a4a;
+        }
+        .warning {
+            background: #5a5a2d;
+            border: 1px solid #8f8f4a;
+        }
+        .path-display {
+            margin: 10px 0;
+            padding: 8px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 3px;
+            font-family: monospace;
+            min-height: 20px;
+        }
+        .api-info {
+            margin: 10px 0;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 3px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ExtendScript 文件夹选择功能测试</h1>
+    
+    <div class="test-section">
+        <h2>CSInterface 可用性检查</h2>
+        <button onclick="checkCSInterfaceAvailability()">检查 CSInterface</button>
+        <div id="cs-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>基础文件夹选择测试</h2>
+        <input type="text" id="initial-path" placeholder="初始路径（可选）" value="">
+        <button onclick="testBasicFolderPicker()">选择文件夹</button>
+        <div class="path-display" id="selected-path">未选择文件夹</div>
+        <div id="basic-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>导入文件夹选择测试</h2>
+        <button onclick="testImportFolderPicker()">选择导入文件夹</button>
+        <div class="path-display" id="import-path">未选择文件夹</div>
+        <div id="import-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>导出文件夹选择测试</h2>
+        <button onclick="testExportFolderPicker()">选择导出文件夹</button>
+        <div class="path-display" id="export-path">未选择文件夹</div>
+        <div id="export-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>取消操作测试</h2>
+        <button onclick="testCancelOperation()">测试取消操作</button>
+        <div id="cancel-result"></div>
+        <div class="api-info">
+            <strong>测试说明：</strong>点击按钮后会弹出文件夹选择对话框，请点击"Cancel"按钮测试取消操作的处理。
+            <br>预期结果：显示取消消息，不会弹出输入框。
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>错误处理测试</h2>
+        <button onclick="testErrorHandling()">测试错误处理</button>
+        <div id="error-result"></div>
+    </div>
+
+    <script src="js/CSInterface.js"></script>
+    <script>
+        // 初始化 CSInterface
+        let csInterface;
+        
+        function initCSInterface() {
+            if (typeof CSInterface !== 'undefined') {
+                csInterface = new CSInterface();
+                return true;
+            }
+            return false;
+        }
+        
+        function showResult(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            const className = type === 'success' ? 'result' : type === 'error' ? 'result error' : 'result warning';
+            element.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+        
+        function checkCSInterfaceAvailability() {
+            let status = '';
+            let type = 'success';
+            
+            try {
+                if (typeof CSInterface === 'undefined') {
+                    status = '❌ CSInterface 类不存在';
+                    type = 'error';
+                } else if (!initCSInterface()) {
+                    status = '❌ CSInterface 初始化失败';
+                    type = 'error';
+                } else {
+                    status = '✅ CSInterface 可用';
+                    
+                    // 显示详细信息
+                    status += '<div class="api-info">';
+                    status += `CSInterface 版本: ${csInterface.getSystemPath ? '可用' : '不可用'}<br>`;
+                    status += `evalScript 方法: ${typeof csInterface.evalScript}<br>`;
+                    status += '</div>';
+                }
+            } catch (error) {
+                status = `❌ 检查 CSInterface 时出错: ${error.message}`;
+                type = 'error';
+            }
+            
+            showResult('cs-status', status, type);
+        }
+        
+        function testBasicFolderPicker() {
+            if (!csInterface) {
+                showResult('basic-result', '❌ CSInterface 未初始化', 'error');
+                return;
+            }
+
+            const initialPath = document.getElementById('initial-path').value || '';
+            showResult('basic-result', '正在打开文件夹选择对话框...', 'warning');
+
+            csInterface.evalScript(`selectFolder("${initialPath}", "选择文件夹")`, (result) => {
+                try {
+                    console.log('ExtendScript result:', result);
+                    const parsedResult = JSON.parse(result);
+
+                    if (parsedResult.success && parsedResult.path) {
+                        document.getElementById('selected-path').textContent = parsedResult.path;
+                        showResult('basic-result', `✅ 成功选择文件夹: ${parsedResult.path}`);
+                    } else if (parsedResult.cancelled) {
+                        showResult('basic-result', '✅ 用户取消了文件夹选择（正常操作，不会回退到输入框）', 'warning');
+                    } else {
+                        showResult('basic-result', `❌ 文件夹选择失败: ${parsedResult.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showResult('basic-result', `❌ 解析结果失败: ${error.message}`, 'error');
+                    console.error('Parse error:', error, 'Raw result:', result);
+                }
+            });
+        }
+        
+        function testImportFolderPicker() {
+            if (!csInterface) {
+                showResult('import-result', '❌ CSInterface 未初始化', 'error');
+                return;
+            }
+            
+            showResult('import-result', '正在打开导入文件夹选择对话框...', 'warning');
+            
+            csInterface.evalScript(`selectFolder("", "选择导入文件夹")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+                    
+                    if (parsedResult.success && parsedResult.path) {
+                        document.getElementById('import-path').textContent = parsedResult.path;
+                        showResult('import-result', `✅ 成功选择导入文件夹: ${parsedResult.path}`);
+                    } else if (parsedResult.cancelled) {
+                        showResult('import-result', '用户取消了导入文件夹选择', 'warning');
+                    } else {
+                        showResult('import-result', `❌ 导入文件夹选择失败: ${parsedResult.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showResult('import-result', `❌ 解析导入文件夹选择结果失败: ${error.message}`, 'error');
+                    console.error('Import parse error:', error, 'Raw result:', result);
+                }
+            });
+        }
+        
+        function testExportFolderPicker() {
+            if (!csInterface) {
+                showResult('export-result', '❌ CSInterface 未初始化', 'error');
+                return;
+            }
+            
+            // 使用导入路径作为初始路径
+            const initialPath = document.getElementById('import-path').textContent !== '未选择文件夹' 
+                ? document.getElementById('import-path').textContent 
+                : '';
+            
+            showResult('export-result', '正在打开导出文件夹选择对话框...', 'warning');
+            
+            csInterface.evalScript(`selectFolder("${initialPath}", "选择导出文件夹")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+                    
+                    if (parsedResult.success && parsedResult.path) {
+                        document.getElementById('export-path').textContent = parsedResult.path;
+                        showResult('export-result', `✅ 成功选择导出文件夹: ${parsedResult.path}`);
+                    } else if (parsedResult.cancelled) {
+                        showResult('export-result', '用户取消了导出文件夹选择', 'warning');
+                    } else {
+                        showResult('export-result', `❌ 导出文件夹选择失败: ${parsedResult.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showResult('export-result', `❌ 解析导出文件夹选择结果失败: ${error.message}`, 'error');
+                    console.error('Export parse error:', error, 'Raw result:', result);
+                }
+            });
+        }
+        
+        function testCancelOperation() {
+            if (!csInterface) {
+                showResult('cancel-result', '❌ CSInterface 未初始化', 'error');
+                return;
+            }
+
+            showResult('cancel-result', '正在打开文件夹选择对话框，请点击"Cancel"按钮...', 'warning');
+
+            csInterface.evalScript(`selectFolder("", "取消操作测试 - 请点击Cancel")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+
+                    if (parsedResult.success && parsedResult.path) {
+                        showResult('cancel-result', `意外结果：用户选择了文件夹 ${parsedResult.path}`, 'warning');
+                    } else if (parsedResult.cancelled) {
+                        showResult('cancel-result', '✅ 取消操作测试成功：用户取消了选择，没有弹出输入框', 'success');
+                    } else {
+                        showResult('cancel-result', `❌ 取消操作测试失败: ${parsedResult.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showResult('cancel-result', `❌ 取消操作测试异常: ${error.message}`, 'error');
+                    console.error('Cancel test error:', error, 'Raw result:', result);
+                }
+            });
+        }
+
+        function testErrorHandling() {
+            if (!csInterface) {
+                showResult('error-result', '❌ CSInterface 未初始化', 'error');
+                return;
+            }
+
+            let errorTests = [];
+
+            // 测试1: 无效的初始路径
+            csInterface.evalScript(`selectFolder("/invalid/path/that/does/not/exist", "测试无效路径")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+                    errorTests.push(`无效路径测试: ${parsedResult.success ? '成功' : '失败'} - ${parsedResult.error || '无错误'}`);
+                } catch (error) {
+                    errorTests.push(`无效路径测试异常: ${error.message}`);
+                }
+
+                // 测试2: 空标题
+                csInterface.evalScript(`selectFolder("", "")`, (result2) => {
+                    try {
+                        const parsedResult2 = JSON.parse(result2);
+                        errorTests.push(`空标题测试: ${parsedResult2.success ? '成功' : '失败'} - ${parsedResult2.error || '无错误'}`);
+                    } catch (error) {
+                        errorTests.push(`空标题测试异常: ${error.message}`);
+                    }
+
+                    const resultText = errorTests.join('<br>');
+                    showResult('error-result', resultText, 'warning');
+                });
+            });
+        }
+        
+        // 页面加载时自动检查可用性
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                checkCSInterfaceAvailability();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

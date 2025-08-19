@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web文件夹选择器测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: #333;
+        }
+        
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: #2980b9;
+        }
+        
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .error {
+            border-left-color: #e74c3c;
+        }
+        
+        .success {
+            border-left-color: #27ae60;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #1e1e1e;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web文件夹选择器测试</h1>
+    
+    <div class="test-section">
+        <h2>1. File System Access API (Chrome 86+)</h2>
+        <button class="test-button" onclick="testFileSystemAccessAPI()">测试 File System Access API</button>
+        <input type="text" id="fsapi-result" placeholder="选择的文件夹将显示在这里" readonly>
+        <div id="fsapi-log" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. webkitdirectory API</h2>
+        <button class="test-button" onclick="testWebkitDirectory()">测试 webkitdirectory API</button>
+        <input type="text" id="webkit-result" placeholder="选择的文件夹将显示在这里" readonly>
+        <div id="webkit-log" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 浏览器支持检测</h2>
+        <div id="support-info"></div>
+    </div>
+
+    <script>
+        // 检测浏览器支持
+        function checkSupport() {
+            const supportInfo = document.getElementById('support-info');
+            let html = '<h3>浏览器支持情况：</h3>';
+            
+            // File System Access API
+            if ('showDirectoryPicker' in window) {
+                html += '<div class="result success">✅ File System Access API 支持</div>';
+            } else {
+                html += '<div class="result error">❌ File System Access API 不支持</div>';
+            }
+            
+            // webkitdirectory
+            const input = document.createElement('input');
+            if ('webkitdirectory' in input) {
+                html += '<div class="result success">✅ webkitdirectory 支持</div>';
+            } else {
+                html += '<div class="result error">❌ webkitdirectory 不支持</div>';
+            }
+            
+            // CEP环境检测
+            if (window.cep) {
+                html += '<div class="result success">✅ CEP 环境</div>';
+            } else {
+                html += '<div class="result error">❌ 非CEP环境</div>';
+            }
+            
+            supportInfo.innerHTML = html;
+        }
+        
+        // 测试 File System Access API
+        async function testFileSystemAccessAPI() {
+            const resultInput = document.getElementById('fsapi-result');
+            const logDiv = document.getElementById('fsapi-log');
+            
+            try {
+                if (!('showDirectoryPicker' in window)) {
+                    throw new Error('File System Access API 不支持');
+                }
+                
+                logDiv.innerHTML = '<div class="result">正在打开文件夹选择对话框...</div>';
+                
+                const directoryHandle = await window.showDirectoryPicker();
+                
+                resultInput.value = `[已选择] ${directoryHandle.name}`;
+                logDiv.innerHTML = `<div class="result success">成功选择文件夹: ${directoryHandle.name}</div>`;
+                
+                console.log('Directory handle:', directoryHandle);
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    logDiv.innerHTML = '<div class="result">用户取消了选择</div>';
+                    resultInput.value = '';
+                } else {
+                    logDiv.innerHTML = `<div class="result error">错误: ${error.message}</div>`;
+                    resultInput.value = '';
+                }
+            }
+        }
+        
+        // 测试 webkitdirectory
+        function testWebkitDirectory() {
+            const resultInput = document.getElementById('webkit-result');
+            const logDiv = document.getElementById('webkit-log');
+            
+            try {
+                const input = document.createElement('input');
+                if (!('webkitdirectory' in input)) {
+                    throw new Error('webkitdirectory 不支持');
+                }
+                
+                logDiv.innerHTML = '<div class="result">正在打开文件夹选择对话框...</div>';
+                
+                input.type = 'file';
+                input.webkitdirectory = true;
+                input.multiple = true;
+                input.style.display = 'none';
+                
+                input.addEventListener('change', (event) => {
+                    const files = event.target.files;
+                    if (files.length > 0) {
+                        const firstFile = files[0];
+                        const fullPath = firstFile.webkitRelativePath;
+                        const folderName = fullPath.split('/')[0];
+                        
+                        resultInput.value = `[已选择] ${folderName}`;
+                        logDiv.innerHTML = `<div class="result success">成功选择文件夹: ${folderName} (包含 ${files.length} 个文件)</div>`;
+                        
+                        console.log('Selected files:', files);
+                    } else {
+                        logDiv.innerHTML = '<div class="result">用户取消了选择</div>';
+                        resultInput.value = '';
+                    }
+                    
+                    document.body.removeChild(input);
+                });
+                
+                document.body.appendChild(input);
+                input.click();
+                
+            } catch (error) {
+                logDiv.innerHTML = `<div class="result error">错误: ${error.message}</div>`;
+                resultInput.value = '';
+            }
+        }
+        
+        // 页面加载时检测支持
+        window.addEventListener('load', checkSupport);
+    </script>
+</body>
+</html>

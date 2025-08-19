@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出路径设置布局测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        
+        .settings-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: #333;
+        }
+        
+        .settings-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 12px;
+        }
+        
+        .import-mode-options-horizontal {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .import-mode-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #2a2a2a;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .import-mode-option:hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .import-mode-option input[type="radio"] {
+            margin: 0;
+        }
+        
+        .checkbox-group-horizontal {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+            flex: 1;
+            min-width: 120px;
+            justify-content: flex-start;
+        }
+
+        .checkbox-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            margin: 0;
+            margin-top: 2px;
+        }
+        
+        .checkbox-label {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        /* 响应式设计：在较小屏幕上垂直排列 */
+        @media (max-width: 480px) {
+            .checkbox-group-horizontal {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .checkbox-group-horizontal .checkbox-option {
+                flex: none;
+                min-width: 0;
+            }
+            
+            .import-mode-options-horizontal {
+                flex-direction: column;
+            }
+            
+            .import-mode-option {
+                flex: none;
+                min-width: 0;
+            }
+        }
+        
+        .demo-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .demo-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+        
+        .demo-result {
+            font-family: monospace;
+            background: #0a0a0a;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>导出路径设置布局测试</h1>
+    
+    <div class="settings-section">
+        <div class="settings-section-title">导出路径设置</div>
+        <div class="import-mode-options-horizontal">
+            <label class="import-mode-option" title="在AE项目文件旁边创建导出文件夹">
+                <input type="radio" name="export-mode" value="project_adjacent" checked>
+                <span>项目旁导出</span>
+            </label>
+            <label class="import-mode-option" title="指定任意文件夹作为导出目录">
+                <input type="radio" name="export-mode" value="custom_folder">
+                <span>自定义文件夹</span>
+            </label>
+            <label class="import-mode-option" title="直接导出到桌面">
+                <input type="radio" name="export-mode" value="desktop">
+                <span>桌面导出</span>
+            </label>
+        </div>
+
+        <!-- 导出选项 -->
+        <div class="checkbox-group-horizontal">
+            <label class="checkbox-option" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
+                <input type="checkbox" id="export-add-timestamp" checked>
+                <span class="checkbox-label">添加时间戳前缀</span>
+            </label>
+            <label class="checkbox-option" title="在导出文件夹名称前添加当前合成名称，如：MyComp_Export">
+                <input type="checkbox" id="export-create-subfolders">
+                <span class="checkbox-label">添加合成名前缀</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">文件夹命名示例</div>
+        <div id="folder-examples"></div>
+    </div>
+
+    <script>
+        function updateFolderExamples() {
+            const addTimestamp = document.getElementById('export-add-timestamp').checked;
+            const addCompPrefix = document.getElementById('export-create-subfolders').checked;
+            const exportMode = document.querySelector('input[name="export-mode"]:checked').value;
+            
+            const examplesDiv = document.getElementById('folder-examples');
+            
+            // 模拟数据
+            const timestamp = '20240119_143022';
+            const compName = 'MyComposition';
+            
+            let prefix = '';
+            if (addTimestamp) {
+                prefix += timestamp + '_';
+            }
+            if (addCompPrefix) {
+                prefix += compName + '_';
+            }
+            
+            let baseName = '';
+            switch (exportMode) {
+                case 'project_adjacent':
+                    baseName = 'Export';
+                    break;
+                case 'custom_folder':
+                    baseName = 'Export';
+                    break;
+                case 'desktop':
+                    baseName = 'AE_Export';
+                    break;
+            }
+            
+            const finalName = prefix + baseName;
+            
+            examplesDiv.innerHTML = `
+                <div class="demo-result">文件夹名称: ${finalName}</div>
+                <div style="margin-top: 10px; font-size: 11px; color: #999;">
+                    <div>时间戳前缀: ${addTimestamp ? '✅ 启用' : '❌ 禁用'}</div>
+                    <div>合成名前缀: ${addCompPrefix ? '✅ 启用' : '❌ 禁用'}</div>
+                    <div>导出模式: ${exportMode}</div>
+                </div>
+            `;
+        }
+        
+        // 监听变化
+        document.getElementById('export-add-timestamp').addEventListener('change', updateFolderExamples);
+        document.getElementById('export-create-subfolders').addEventListener('change', updateFolderExamples);
+        document.querySelectorAll('input[name="export-mode"]').forEach(radio => {
+            radio.addEventListener('change', updateFolderExamples);
+        });
+        
+        // 初始化
+        updateFolderExamples();
+        
+        // 测试响应式
+        function testResponsive() {
+            const width = window.innerWidth;
+            console.log(`当前窗口宽度: ${width}px`);
+            if (width <= 480) {
+                console.log('使用移动端布局');
+            } else {
+                console.log('使用桌面端布局');
+            }
+        }
+        
+        window.addEventListener('resize', testResponsive);
+        testResponsive();
+    </script>
+</body>
+</html>

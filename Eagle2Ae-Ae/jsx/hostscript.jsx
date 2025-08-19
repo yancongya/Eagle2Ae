@@ -1104,6 +1104,48 @@ function padZero(num) {
     return (num < 10) ? "0" + num : String(num);
 }
 
+// 文件夹选择函数
+function selectFolder(initialPath, title) {
+    try {
+        var dialogTitle = title || "选择文件夹";
+        var selectedFolder = null;
+
+        // 直接使用ExtendScript的Folder.selectDialog，但改进错误处理
+        if (initialPath && initialPath !== '') {
+            var initialFolder = new Folder(initialPath);
+            if (initialFolder.exists) {
+                selectedFolder = initialFolder.selectDlg(dialogTitle);
+            } else {
+                selectedFolder = Folder.selectDialog(dialogTitle);
+            }
+        } else {
+            selectedFolder = Folder.selectDialog(dialogTitle);
+        }
+
+        if (selectedFolder && selectedFolder.exists) {
+            return JSON.stringify({
+                success: true,
+                path: selectedFolder.fsName,
+                cancelled: false
+            });
+        } else {
+            // 用户取消选择或选择了无效路径
+            return JSON.stringify({
+                success: false,
+                path: null,
+                cancelled: true
+            });
+        }
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            path: null,
+            cancelled: true,
+            error: error.toString()
+        });
+    }
+}
+
 // 创建导出文件夹
 function createExportFolder(exportSettings) {
     try {
@@ -1120,22 +1162,34 @@ function createExportFolder(exportSettings) {
         var settings = exportSettings && exportSettings.exportSettings ? exportSettings.exportSettings : null;
         var mode = settings ? settings.mode : 'project_adjacent';
         var addTimestamp = settings ? settings.addTimestamp : true;
-        var createSubfolders = settings ? settings.createSubfolders : false;
+        var addCompPrefix = settings ? settings.createSubfolders : false; // 重命名为更准确的变量名
+
+        // 构建文件夹名称前缀
+        var folderPrefix = '';
+
+        // 添加时间戳前缀
+        if (addTimestamp) {
+            folderPrefix += timeStr + '_';
+        }
+
+        // 添加合成名前缀
+        if (addCompPrefix && app.project.activeItem) {
+            var compName = app.project.activeItem.name.replace(/[<>:"/\\|?*]/g, '_');
+            folderPrefix += compName + '_';
+        }
 
         switch (mode) {
             case 'project_adjacent':
                 // 导出到项目文件相邻的文件夹
                 if (app.project.file) {
                     var projectFolder = app.project.file.parent;
-                    var folderName = settings && settings.projectAdjacentFolder ?
+                    var baseFolderName = settings && settings.projectAdjacentFolder ?
                         settings.projectAdjacentFolder : 'Export';
-                    if (addTimestamp) {
-                        folderName += '_' + timeStr;
-                    }
+                    var folderName = folderPrefix + baseFolderName;
                     exportFolder = new Folder(projectFolder.fsName + "/" + folderName);
                 } else {
                     // 如果项目未保存，回退到桌面
-                    var folderName = addTimestamp ? 'AE_Export_' + timeStr : 'AE_Export';
+                    var folderName = folderPrefix + 'AE_Export';
                     exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
                 }
                 break;
@@ -1144,30 +1198,24 @@ function createExportFolder(exportSettings) {
                 // 自定义文件夹
                 var customPath = settings && settings.customExportPath ?
                     settings.customExportPath : Folder.desktop.fsName;
-                var folderName = addTimestamp ? 'Export_' + timeStr : 'Export';
+                var folderName = folderPrefix + 'Export';
                 exportFolder = new Folder(customPath + "/" + folderName);
                 break;
 
             case 'desktop':
                 // 桌面导出
-                var folderName = addTimestamp ? 'AE_Export_' + timeStr : 'AE_Export';
+                var folderName = folderPrefix + 'AE_Export';
                 exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
                 break;
 
             default:
                 // 默认使用项目相邻模式
-                var folderName = addTimestamp ? 'temp_layer_export_' + timeStr : 'temp_layer_export';
+                var folderName = folderPrefix + 'temp_layer_export';
                 if (app.project.file) {
                     exportFolder = new Folder(app.project.file.parent.fsName + "/" + folderName);
                 } else {
                     exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
                 }
-        }
-
-        // 如果启用了按合成创建子文件夹
-        if (createSubfolders && app.project.activeItem) {
-            var compName = app.project.activeItem.name.replace(/[<>:"/\\|?*]/g, '_');
-            exportFolder = new Folder(exportFolder.fsName + "/" + compName);
         }
 
         // 创建文件夹
@@ -1459,49 +1507,7 @@ function getSelectedLayers() {
     }
 }
 
-// 选择文件夹对话框
-function selectFolder(currentPath) {
-    try {
-        var folder = null;
 
-        // 如果有当前路径，尝试设置为默认位置
-        if (currentPath && currentPath !== "") {
-            try {
-                var currentFolder = new Folder(currentPath);
-                if (currentFolder.exists) {
-                    folder = currentFolder.selectDlg("选择目标文件夹");
-                } else {
-                    folder = Folder.selectDialog("选择目标文件夹");
-                }
-            } catch (e) {
-                folder = Folder.selectDialog("选择目标文件夹");
-            }
-        } else {
-            folder = Folder.selectDialog("选择目标文件夹");
-        }
-
-        if (folder) {
-            return JSON.stringify({
-                success: true,
-                path: folder.fsName,
-                cancelled: false
-            });
-        } else {
-            return JSON.stringify({
-                success: false,
-                path: null,
-                cancelled: true
-            });
-        }
-
-    } catch (error) {
-        return JSON.stringify({
-            success: false,
-            error: error.toString(),
-            cancelled: false
-        });
-    }
-}
 
 // 验证文件夹路径是否存在
 function validateFolderPath(folderPath) {
