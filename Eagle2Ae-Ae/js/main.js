@@ -141,6 +141,9 @@ class AEExtension {
         this.startPortBroadcast();
 
         this.init();
+
+        // 获取AE版本信息
+        this.getAEVersion();
     }
 
     // 初始化端口设置
@@ -296,8 +299,7 @@ class AEExtension {
             logSwitch: document.getElementById('log-switch-btn'),
             logPanelToggle: document.getElementById('log-panel-toggle'),
             detectLayers: document.getElementById('detect-layers-btn'),
-            exportLayers: document.getElementById('export-layers-btn'),
-            copyToClipboard: document.getElementById('copy-to-clipboard-btn')
+            exportLayers: document.getElementById('export-layers-btn')
         };
 
         // 安全绑定事件监听器
@@ -347,11 +349,7 @@ class AEExtension {
             });
         }
 
-        if (buttons.copyToClipboard) {
-            buttons.copyToClipboard.addEventListener('click', () => {
-                this.copyExportedFilesToClipboard();
-            });
-        }
+
 
 
 
@@ -510,6 +508,9 @@ class AEExtension {
             // 发送AE状态
             this.sendAEStatus();
 
+            // 立即获取一次Eagle状态
+            this.updateEagleStatusFromServer();
+
         } catch (error) {
             this.connectionMonitor.recordFailure();
             this.setConnectionState(ConnectionState.ERROR);
@@ -576,7 +577,10 @@ class AEExtension {
     // 处理Eagle状态更新（WebSocket）
     handleEagleStatus(status) {
         this.log('收到Eagle状态更新', 'debug');
-        // 可以在这里处理Eagle端的状态信息
+        // 更新Eagle信息UI
+        if (status && status.eagleStatus) {
+            this.updateEagleUI(status.eagleStatus);
+        }
     }
 
     // 处理配置变更（WebSocket）
@@ -710,6 +714,13 @@ class AEExtension {
             // 处理Eagle日志
             if (data.eagleLogs && data.eagleLogs.length > 0) {
                 this.updateEagleLogs(data.eagleLogs);
+            }
+
+            // 每5秒获取一次Eagle状态信息
+            const now = Date.now();
+            if (!this.lastEagleStatusUpdate || now - this.lastEagleStatusUpdate > 5000) {
+                this.updateEagleStatusFromServer();
+                this.lastEagleStatusUpdate = now;
             }
 
             this.lastPollTime = Date.now();
@@ -1077,11 +1088,7 @@ class AEExtension {
                 exportedLayers: exportedLayers
             };
 
-            // 启用复制按钮
-            const copyBtn = document.getElementById('copy-to-clipboard-btn');
-            if (copyBtn) {
-                copyBtn.disabled = false;
-            }
+
 
         } catch (error) {
             this.log(`❌ 显示导出结果失败: ${error.message}`, 'error');
@@ -1096,12 +1103,6 @@ class AEExtension {
         }
 
         try {
-            // 禁用按钮，显示加载状态
-            const copyBtn = document.getElementById('copy-to-clipboard-btn');
-            if (copyBtn) {
-                copyBtn.disabled = true;
-                copyBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">复制中...</span>';
-            }
 
             this.log('📋 开始复制导出文件到剪贴板...', 'info');
 
@@ -1201,13 +1202,6 @@ class AEExtension {
                 }
             } catch (soundError) {
                 // 忽略音效播放错误
-            }
-        } finally {
-            // 恢复按钮状态
-            const copyBtn = document.getElementById('copy-to-clipboard-btn');
-            if (copyBtn) {
-                copyBtn.disabled = false;
-                copyBtn.innerHTML = '<span class="btn-icon">📋</span><span class="btn-text">复制导出</span>';
             }
         }
     }
@@ -1907,6 +1901,36 @@ class AEExtension {
         }
     }
 
+    // 复制文本到剪切板（通用函数）
+    async copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } else {
+                // 回退方案：使用传统的复制方法
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                const result = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (!result) {
+                    throw new Error('复制命令执行失败');
+                }
+                return true;
+            }
+        } catch (error) {
+            throw new Error(`复制失败: ${error.message}`);
+        }
+    }
+
     // 复制路径到剪切板
     copyPathToClipboard(exportPath) {
         try {
@@ -2360,6 +2384,17 @@ class AEExtension {
                     // 忽略音效播放错误
                 }
 
+                // 检查是否启用自动复制
+                const exportSettings = this.getExportSettingsFromUI();
+                if (exportSettings.autoCopy && result.exportPath) {
+                    try {
+                        await this.copyToClipboard(result.exportPath);
+                        this.log('📋 导出路径已自动复制到剪切板', 'success');
+                    } catch (copyError) {
+                        this.log(`📋 自动复制失败: ${copyError.message}`, 'warning');
+                    }
+                }
+
                 // 导出完成后显示简单的完成信息
                 if (result.exportedLayers && result.exportedLayers.length > 0) {
                     this.showFinalExportResult(result.exportPath, result.exportedLayers);
@@ -2567,7 +2602,95 @@ class AEExtension {
     updateProjectUI(projectInfo) {
         document.getElementById('project-name').textContent = projectInfo.projectName || '未打开项目';
         document.getElementById('comp-name').textContent = projectInfo.activeComp?.name || '无';
+
+        // 更新项目路径
+        const projectPathElement = document.getElementById('project-path');
+        if (projectPathElement) {
+            const projectPath = projectInfo.projectPath || '未知';
+            projectPathElement.textContent = projectPath;
+            projectPathElement.title = projectPath; // 设置悬浮显示完整路径
+        }
+
         document.getElementById('ae-status').textContent = projectInfo.isReady ? '准备就绪' : '未就绪';
+    }
+
+    // 获取AE版本信息
+    getAEVersion() {
+        try {
+            // 确保DOM元素存在
+            const versionElement = document.getElementById('ae-version');
+            if (!versionElement) {
+                console.warn('ae-version元素不存在，延迟执行');
+                // 延迟执行，等待DOM加载完成
+                setTimeout(() => this.getAEVersion(), 100);
+                return;
+            }
+
+            // 使用CEP环境API获取AE版本
+            if (typeof CSInterface !== 'undefined') {
+                const csInterface = new CSInterface();
+                const hostEnvironment = csInterface.getHostEnvironment();
+
+                if (hostEnvironment && hostEnvironment.appVersion) {
+                    const version = hostEnvironment.appVersion;
+                    versionElement.textContent = version;
+                    console.log(`AE版本获取成功: ${version}`);
+                } else {
+                    versionElement.textContent = '未知';
+                    console.warn('无法获取AE版本信息');
+                }
+            } else {
+                versionElement.textContent = '未知';
+                console.warn('CSInterface不可用');
+            }
+        } catch (error) {
+            console.error('获取AE版本失败:', error);
+            const versionElement = document.getElementById('ae-version');
+            if (versionElement) {
+                versionElement.textContent = '获取失败';
+            }
+        }
+    }
+
+    // 更新Eagle信息UI
+    updateEagleUI(eagleStatus) {
+        if (eagleStatus) {
+            document.getElementById('eagle-version').textContent = eagleStatus.version || '未知';
+
+            // 更新Eagle路径并设置悬浮显示
+            const eaglePathElement = document.getElementById('eagle-path');
+            const eaglePath = eagleStatus.execPath || '未知';
+            eaglePathElement.textContent = eaglePath;
+            eaglePathElement.title = eaglePath; // 设置悬浮显示完整路径
+
+            document.getElementById('eagle-library').textContent = eagleStatus.libraryName || '未知';
+            document.getElementById('eagle-folder').textContent = eagleStatus.folderPath || '未选择';
+        } else {
+            document.getElementById('eagle-version').textContent = '未连接';
+
+            const eaglePathElement = document.getElementById('eagle-path');
+            eaglePathElement.textContent = '未连接';
+            eaglePathElement.title = '未连接';
+
+            document.getElementById('eagle-library').textContent = '未连接';
+            document.getElementById('eagle-folder').textContent = '未连接';
+        }
+    }
+
+    // 从服务器获取Eagle状态信息
+    async updateEagleStatusFromServer() {
+        try {
+            const response = await fetch(`${this.eagleUrl}/ae-status`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.eagleStatus) {
+                    this.updateEagleUI(data.eagleStatus);
+                }
+            }
+        } catch (error) {
+            // 静默处理错误，避免日志过多
+            console.log('获取Eagle状态失败:', error.message);
+        }
     }
 
     // 更新导入状态显示
@@ -2806,8 +2929,17 @@ class AEExtension {
 
 
         // 导出选项复选框
+        const exportAutoCopy = document.getElementById('export-auto-copy');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
+
+        if (exportAutoCopy) {
+            exportAutoCopy.addEventListener('change', () => {
+                const exportSettings = this.getExportSettingsFromUI();
+                this.settingsManager.saveExportSettings(exportSettings);
+                this.log(`自动复制已${exportAutoCopy.checked ? '启用' : '禁用'}`, 'info');
+            });
+        }
 
         if (exportAddTimestamp) {
             exportAddTimestamp.addEventListener('change', () => {
@@ -4570,9 +4702,13 @@ class AEExtension {
         }
 
         // 导出选项
+        const exportAutoCopy = document.getElementById('export-auto-copy');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
+        if (exportAutoCopy) {
+            exportAutoCopy.checked = exportSettings.autoCopy !== undefined ? exportSettings.autoCopy : true;
+        }
         if (exportAddTimestamp) {
             exportAddTimestamp.checked = exportSettings.addTimestamp;
         }
@@ -4587,6 +4723,7 @@ class AEExtension {
     // 从UI获取导出设置
     getExportSettingsFromUI() {
         const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'project_adjacent';
+        const exportAutoCopy = document.getElementById('export-auto-copy');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
@@ -4606,6 +4743,7 @@ class AEExtension {
             mode: exportMode,
             projectAdjacentFolder: projectAdjacentFolder,
             customExportPath: customExportPath,
+            autoCopy: exportAutoCopy ? exportAutoCopy.checked : true,
             addTimestamp: exportAddTimestamp ? exportAddTimestamp.checked : true,
             createSubfolders: exportCreateSubfolders ? exportCreateSubfolders.checked : false
         };

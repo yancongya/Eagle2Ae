@@ -98,6 +98,88 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
+            height: 24px;
+            min-height: 24px;
+        }
+
+        /* 项目信息面板布局 */
+        .project-info-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 0; /* 允许flex子项收缩 */
+        }
+
+        .project-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            min-width: 0; /* 允许收缩 */
+            max-width: 50%; /* 确保不超过一半 */
+        }
+
+        .project-info .ae-title {
+            color: #9966cc;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-info .ae-title::before {
+            content: "●";
+            color: #9966cc;
+            font-size: 8px;
+        }
+
+        .eagle-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            border-left: 1px solid rgba(74, 144, 226, 0.3);
+            padding-left: 15px;
+            position: relative;
+            min-width: 0; /* 允许收缩 */
+            max-width: 50%; /* 确保不超过一半 */
+        }
+
+        .eagle-info::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #4a90e2, rgba(74, 144, 226, 0.3));
+            border-radius: 1px;
+        }
+
+        .eagle-info .eagle-title {
+            color: #4a90e2;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .eagle-info .eagle-title::before {
+            content: "●";
+            color: #4a90e2;
+            font-size: 8px;
         }
 
         .project-action-btn {
@@ -138,15 +220,19 @@
             color: #ecf0f1;
             border: 1px solid #34495e;
             border-radius: 3px;
-            padding: 6px 10px;
-            font-size: 10px;
+            padding: 4px 8px;
+            font-size: 9px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 6px;
-            min-width: 90px;
-            height: auto;
+            justify-content: center;
+            gap: 4px;
+            min-width: 80px;
+            height: 24px;
+            line-height: 1;
+            box-sizing: border-box;
+            margin: 0;
         }
 
         .connection-status-btn:hover {
@@ -159,8 +245,8 @@
         }
 
         .connection-status-btn .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #e74c3c;
             transition: all 0.3s ease;
@@ -185,22 +271,22 @@
         .connection-text {
             display: flex;
             align-items: center;
-            gap: 8px;
-            line-height: 1.2;
+            gap: 6px;
+            line-height: 1;
         }
 
         .connection-text .status-main {
-            font-size: 9px;
+            font-size: 8px;
             color: #ecf0f1;
             font-weight: 500;
         }
 
         .connection-text .ping-time {
-            font-size: 8px;
+            font-size: 7px;
             color: #bdc3c7;
             font-family: 'Courier New', monospace;
             background: rgba(255, 255, 255, 0.1);
-            padding: 1px 4px;
+            padding: 1px 3px;
             border-radius: 2px;
         }
 
@@ -237,18 +323,108 @@
             font-size: 12px;
             font-weight: 600;
             color: #ffffff;
-            margin-bottom: 8px;
+            margin: 0;
+            line-height: 24px;
+            display: flex;
+            align-items: center;
         }
 
-        .project-info {
-            font-size: 11px;
-            color: #bbb;
-            line-height: 1.6;
-        }
+
 
         .project-info .label {
             color: #ccc;
             font-weight: 500;
+        }
+
+        .eagle-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        /* 信息项的值样式 */
+        .project-info span:not(.label):not(.ae-title) {
+            color: #e0e0e0;
+        }
+
+        .eagle-info span:not(.label):not(.eagle-title) {
+            color: #e0e0e0;
+        }
+
+        /* 路径不换行样式 */
+        .eagle-info #eagle-path,
+        .project-info #project-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px;
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* Eagle路径特殊处理 - 更小的最大宽度 */
+        .eagle-info #eagle-path {
+            max-width: 80px;
+        }
+
+        /* 路径悬浮效果 */
+        .eagle-info #eagle-path:hover,
+        .project-info #project-path:hover {
+            color: #fff;
+            transition: color 0.2s ease;
+        }
+
+        /* 确保包含路径的div不会超出容器 */
+        .eagle-info > div,
+        .project-info > div {
+            max-width: 100%;
+            overflow: hidden;
+            word-break: break-all;
+        }
+
+        /* 标签和值的布局优化 */
+        .eagle-info .label,
+        .project-info .label {
+            min-width: 42px;
+            width: 42px;
+            flex-shrink: 0;
+        }
+
+        /* 信息行布局 */
+        .eagle-info > div,
+        .project-info > div {
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        /* 值部分允许收缩 */
+        .eagle-info span:not(.label):not(.eagle-title),
+        .project-info span:not(.label):not(.ae-title) {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Eagle路径不换行 */
+        .eagle-info #eagle-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        /* 项目信息和Eagle信息的每一行 */
+        .project-info > div, .eagle-info > div {
+            margin: 3px 0;
+            word-break: keep-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .actions-grid {
@@ -668,35 +844,84 @@
         .checkbox-group-horizontal {
             display: flex;
             flex-direction: row;
-            gap: 16px;
+            gap: 8px;
             flex-wrap: wrap;
+            align-items: flex-start;
         }
 
         .checkbox-group-horizontal .checkbox-option {
             flex: 1;
-            min-width: 120px;
+            min-width: 0;
             justify-content: flex-start;
+            white-space: nowrap;
         }
 
-        /* 响应式设计：在较小屏幕上垂直排列 */
-        @media (max-width: 480px) {
+        .checkbox-group-horizontal .checkbox-option .checkbox-label {
+            font-size: 11px;
+            line-height: 1.3;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 响应式设计：中等屏幕优化 */
+        @media (max-width: 768px) {
+            .checkbox-group-horizontal {
+                gap: 4px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                flex: 1;
+                min-width: 0;
+                padding: 4px 6px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 10px;
+            }
+        }
+
+        /* 小屏幕：进一步压缩 */
+        @media (max-width: 600px) {
+            .checkbox-group-horizontal {
+                gap: 2px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                padding: 4px;
+                gap: 4px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 9px;
+            }
+        }
+
+        /* 超小屏幕：垂直排列 */
+        @media (max-width: 400px) {
             .checkbox-group-horizontal {
                 flex-direction: column;
-                gap: 8px;
+                gap: 6px;
             }
 
             .checkbox-group-horizontal .checkbox-option {
                 flex: none;
                 min-width: 0;
+                white-space: normal;
+                padding: 6px 8px;
+                gap: 6px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 11px;
             }
         }
 
         .radio-option, .checkbox-option {
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
             cursor: pointer;
-            padding: 8px;
+            padding: 6px 8px;
             border-radius: 4px;
             transition: background 0.2s ease;
         }
@@ -713,7 +938,8 @@
         .radio-option input[type="radio"],
         .checkbox-option input[type="checkbox"] {
             margin: 0;
-            margin-top: 2px;
+            flex-shrink: 0;
+            vertical-align: middle;
         }
 
         /* 项目旁复制模式的内联布局 */
@@ -2172,10 +2398,21 @@
                         </div>
                     </button>
                 </div>
-                <div class="project-info">
-                    <div><span class="label">项目:</span> <span id="project-name">未打开项目</span></div>
-                    <div><span class="label">合成:</span> <span id="comp-name">无</span></div>
-                    <div><span class="label">状态:</span> <span id="ae-status">准备就绪</span></div>
+                <div class="project-info-container">
+                    <div class="project-info">
+                        <div class="ae-title">After Effects</div>
+                        <div><span class="label">版本:</span> <span id="ae-version">获取中...</span></div>
+                        <div><span class="label">路径:</span> <span id="project-path" title="">未知</span></div>
+                        <div><span class="label">项目:</span> <span id="project-name">未打开项目</span></div>
+                        <div><span class="label">合成:</span> <span id="comp-name">无</span></div>
+                    </div>
+                    <div class="eagle-info">
+                        <div class="eagle-title">Eagle</div>
+                        <div><span class="label">版本:</span> <span id="eagle-version">获取中...</span></div>
+                        <div><span class="label">路径:</span> <span id="eagle-path" title="">获取中...</span></div>
+                        <div><span class="label">资源库:</span> <span id="eagle-library">获取中...</span></div>
+                        <div><span class="label">当前组:</span> <span id="eagle-folder">获取中...</span></div>
+                    </div>
                 </div>
             </div>
 
@@ -2233,11 +2470,6 @@
                     <button id="export-layers-btn" class="btn btn-success">
                         <span class="btn-icon">📤</span>
                         <span class="btn-text">导出图层</span>
-                    </button>
-
-                    <button id="copy-to-clipboard-btn" class="btn btn-warning" disabled>
-                        <span class="btn-icon">📋</span>
-                        <span class="btn-text">复制导出</span>
                     </button>
                 </div>
 
@@ -2371,13 +2603,17 @@
 
                     <!-- 导出选项 -->
                     <div class="checkbox-group-horizontal">
+                        <label class="checkbox-option" title="导出完成后自动复制导出路径到剪切板，替代手动复制操作">
+                            <input type="checkbox" id="export-auto-copy" checked>
+                            <span class="checkbox-label">自动复制</span>
+                        </label>
                         <label class="checkbox-option" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
                             <input type="checkbox" id="export-add-timestamp" checked>
-                            <span class="checkbox-label">添加时间戳前缀</span>
+                            <span class="checkbox-label">时间戳前缀</span>
                         </label>
                         <label class="checkbox-option" title="在导出文件夹名称前添加当前合成名称，如：MyComp_Export">
                             <input type="checkbox" id="export-create-subfolders">
-                            <span class="checkbox-label">添加合成名前缀</span>
+                            <span class="checkbox-label">合成名前缀</span>
                         </label>
                     </div>
                 </div>
@@ -3320,6 +3556,9 @@
         <div class="drag-text">拖拽文件到此处</div>
     </div>
 
+    <!-- 演示模式数据覆盖策略 (必须在所有其他脚本之前) -->
+    <script src="js/demo/demo-override.js"></script>
+
     <script src="js/CSInterface.js"></script>
     <script src="js/websocket-client.js"></script>
     <script src="js/constants/ImportSettings.js"></script>
@@ -3327,6 +3566,15 @@
     <script src="js/services/FileHandler.js"></script>
     <script src="js/utils/SoundPlayer.js"></script>
     <script src="js/utils/LogManager.js"></script>
+
+    <!-- 演示模式脚本 -->
+    <script src="js/demo/demo-apis.js"></script>
+    <script src="js/demo/demo-network-interceptor.js"></script>
+    <script src="js/demo/demo-ui.js"></script>
+    <script src="js/demo/easter-egg.js"></script>
+    <script src="js/demo/demo-mode.js"></script>
+    <script src="js/demo/demo-validation.js"></script>
+
     <script src="js/main.js"></script>
 
     <script>

@@ -61,6 +61,7 @@ const DEFAULT_IMPORT_SETTINGS = {
         mode: ExportModes.PROJECT_ADJACENT,
         projectAdjacentFolder: 'Export',
         customExportPath: '',
+        autoCopy: true,
         addTimestamp: true,
         createSubfolders: false
     }

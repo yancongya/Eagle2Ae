@@ -20,6 +20,17 @@ class Eagle2Ae {
             activeComp: null,
             isReady: false
         };
+
+        // Eagle状态信息
+        this.eagleStatus = {
+            version: null,
+            execPath: null,
+            libraryName: null,
+            libraryPath: null,
+            currentFolder: null,
+            currentFolderName: null,
+            folderPath: null
+        };
         this.selectedFiles = [];
         this.messageQueue = [];
         this.eagleLogs = []; // 存储Eagle发送的日志
@@ -108,20 +119,20 @@ class Eagle2Ae {
                 if (eagle.window.setPosition) eagle.window.setPosition(-99999, -99999);
             }
 
-            console.log('立即窗口隐藏已执行');
+            eagle.log.debug('立即窗口隐藏已执行');
         } catch (error) {
-            console.log('立即窗口隐藏失败:', error);
+            eagle.log.warn('立即窗口隐藏失败:', error);
         }
     }
 
     // 初始化后台服务
     async init() {
         try {
-            // 启动信息简化，只在控制台输出详细信息
+            // 启动信息简化，使用Eagle日志系统
             this.log('🚀 Eagle2Ae 后台服务启动中...', 'info');
-            console.log(`运行环境: Node.js ${process.version || 'unknown'}`);
-            console.log(`当前目录: ${process.cwd ? process.cwd() : 'unknown'}`);
-            console.log(`服务模式: ${this.isServiceMode ? '后台服务' : 'UI模式'}`);
+            eagle.log.debug(`运行环境: Node.js ${process.version || 'unknown'}`);
+            eagle.log.debug(`当前目录: ${process.cwd ? process.cwd() : 'unknown'}`);
+            eagle.log.info(`服务模式: ${this.isServiceMode ? '后台服务' : 'UI模式'}`);
 
             // 立即隐藏窗口（仅在服务模式下）
             if (this.isServiceMode) {
@@ -428,7 +439,8 @@ class Eagle2Ae {
                         connected: true,
                         selectedFiles: this.selectedFiles,
                         config: this.config,
-                        serviceMode: true
+                        serviceMode: true,
+                        eagleStatus: this.eagleStatus  // 添加Eagle状态信息
                     }));
                 } else if (req.method === 'GET' && parsedUrl.pathname === '/messages') {
                     // AE扩展获取消息队列（支持WebSocket兼容模式）
@@ -581,7 +593,7 @@ class Eagle2Ae {
             });
 
             this.httpServer.listen(this.config.wsPort, 'localhost', () => {
-                console.log(`HTTP服务器启动成功，端口: ${this.config.wsPort}`);
+                eagle.log.info(`HTTP服务器启动成功，端口: ${this.config.wsPort}`);
                 this.aeStatus.connected = true;
             });
 
@@ -600,6 +612,167 @@ class Eagle2Ae {
         }
     }
 
+    // 获取Eagle信息
+    async updateEagleStatus() {
+        try {
+            eagle.log.debug('开始获取Eagle状态信息...');
+
+            // 获取Eagle版本信息
+            try {
+                this.eagleStatus.version = eagle.app.version;
+                eagle.log.debug(`Eagle版本: ${this.eagleStatus.version}`);
+            } catch (versionError) {
+                eagle.log.warn(`获取Eagle版本失败: ${versionError.message}`);
+                this.eagleStatus.version = '获取失败';
+            }
+
+            // 获取Eagle安装路径
+            try {
+                this.eagleStatus.execPath = eagle.app.execPath;
+                eagle.log.debug(`Eagle路径: ${this.eagleStatus.execPath}`);
+            } catch (pathError) {
+                eagle.log.warn(`获取Eagle路径失败: ${pathError.message}`);
+                this.eagleStatus.execPath = '获取失败';
+            }
+
+            // 获取当前资源库信息
+            try {
+                eagle.log.debug('开始获取资源库信息...');
+                eagle.log.debug(`eagle对象类型: ${typeof eagle}`);
+                eagle.log.debug(`eagle.library类型: ${typeof eagle.library}`);
+
+                // 尝试多种方法获取资源库信息
+                let libraryName = '未知';
+                let libraryPath = '未知';
+
+                // 方法1: 直接访问属性
+                if (typeof eagle.library !== 'undefined' && eagle.library) {
+                    eagle.log.debug(`library对象存在，尝试获取属性...`);
+                    let rawName = eagle.library.name || '未知';
+                    libraryPath = eagle.library.path || '未知';
+
+                    // 确保显示完整的.library扩展名
+                    if (rawName !== '未知' && !rawName.endsWith('.library')) {
+                        libraryName = rawName + '.library';
+                    } else {
+                        libraryName = rawName;
+                    }
+
+                    eagle.log.debug(`直接访问 - 原始name: ${rawName}, 处理后name: ${libraryName}, path: ${libraryPath}`);
+                }
+
+                // 方法2: 如果直接访问失败，尝试使用info()方法
+                if (libraryName === '未知' && typeof eagle.library.info === 'function') {
+                    eagle.log.debug('尝试使用library.info()方法...');
+                    try {
+                        const libraryInfo = await eagle.library.info();
+                        if (libraryInfo) {
+                            let rawName = libraryInfo.name || '未知';
+                            libraryPath = libraryInfo.path || '未知';
+
+                            // 确保显示完整的.library扩展名
+                            if (rawName !== '未知' && !rawName.endsWith('.library')) {
+                                libraryName = rawName + '.library';
+                            } else {
+                                libraryName = rawName;
+                            }
+
+                            eagle.log.debug(`info()方法 - 原始name: ${rawName}, 处理后name: ${libraryName}, path: ${libraryPath}`);
+                        }
+                    } catch (infoError) {
+                        eagle.log.warn(`library.info()调用失败: ${infoError.message}`);
+                    }
+                }
+
+                this.eagleStatus.libraryName = libraryName;
+                this.eagleStatus.libraryPath = libraryPath;
+                eagle.log.info(`资源库信息获取完成 - 名称: ${libraryName}, 路径: ${libraryPath}`);
+
+            } catch (libraryError) {
+                eagle.log.error(`获取资源库信息失败: ${libraryError.message}`);
+                eagle.log.error(`错误堆栈: ${libraryError.stack}`);
+                this.eagleStatus.libraryName = '获取失败';
+                this.eagleStatus.libraryPath = '获取失败';
+            }
+
+            // 获取当前激活的文件夹
+            try {
+                const selectedFolders = await eagle.folder.getSelected();
+                eagle.log.debug(`获取到选中文件夹: ${selectedFolders ? selectedFolders.length : 0} 个`);
+
+                if (selectedFolders && selectedFolders.length > 0) {
+                    const folder = selectedFolders[0];
+                    this.eagleStatus.currentFolder = folder.id;
+                    this.eagleStatus.currentFolderName = folder.name;
+
+                    // 构建文件夹层级路径
+                    this.eagleStatus.folderPath = await this.buildFolderPath(folder);
+                    eagle.log.debug(`当前选中组: ${this.eagleStatus.folderPath}`);
+                } else {
+                    // 如果没有选中文件夹，尝试获取最近使用的文件夹
+                    try {
+                        const recentFolders = await eagle.folder.getRecents();
+                        eagle.log.debug(`获取到最近文件夹: ${recentFolders ? recentFolders.length : 0} 个`);
+
+                        if (recentFolders && recentFolders.length > 0) {
+                            const folder = recentFolders[0];
+                            this.eagleStatus.currentFolder = folder.id;
+                            this.eagleStatus.currentFolderName = folder.name;
+
+                            // 构建文件夹层级路径
+                            this.eagleStatus.folderPath = await this.buildFolderPath(folder);
+                            eagle.log.debug(`使用最近组: ${this.eagleStatus.folderPath}`);
+                        } else {
+                            this.eagleStatus.currentFolder = null;
+                            this.eagleStatus.currentFolderName = '未选择';
+                            this.eagleStatus.folderPath = '未选择';
+                            eagle.log.debug('没有找到任何文件夹组');
+                        }
+                    } catch (recentError) {
+                        eagle.log.warn(`获取最近文件夹失败: ${recentError.message}`);
+                        this.eagleStatus.currentFolder = null;
+                        this.eagleStatus.currentFolderName = '获取失败';
+                        this.eagleStatus.folderPath = '获取失败';
+                    }
+                }
+            } catch (folderError) {
+                eagle.log.warn(`获取文件夹信息失败: ${folderError.message}`);
+                this.eagleStatus.currentFolder = null;
+                this.eagleStatus.currentFolderName = '获取失败';
+                this.eagleStatus.folderPath = '获取失败';
+            }
+
+            eagle.log.info(`Eagle状态更新完成 - 版本: ${this.eagleStatus.version}, 资源库: ${this.eagleStatus.libraryName}, 当前组: ${this.eagleStatus.folderPath}`);
+
+        } catch (error) {
+            eagle.log.error(`获取Eagle状态失败: ${error.message}`);
+            eagle.log.error(error.stack || error);
+            // 设置默认值
+            this.eagleStatus.version = '未知';
+            this.eagleStatus.execPath = '未知';
+            this.eagleStatus.libraryName = '未知';
+            this.eagleStatus.libraryPath = '未知';
+            this.eagleStatus.currentFolder = null;
+            this.eagleStatus.currentFolderName = '未知';
+            this.eagleStatus.folderPath = '未知';
+        }
+    }
+
+    // 构建文件夹层级路径
+    async buildFolderPath(folder) {
+        try {
+            // 只返回当前文件夹名称，不包含资源库名称和父文件夹路径
+            const folderName = folder.name || '未知';
+
+            eagle.log.debug(`构建文件夹路径完成: ${folderName}`);
+            return folderName;
+
+        } catch (error) {
+            eagle.log.warn(`构建文件夹路径失败: ${error.message}`);
+            return folder.name || '未知';
+        }
+    }
+
     // 设置Eagle事件监听
     setupEventListeners() {
         // 监听文件选择变化（仅用于状态更新，不自动导出）
@@ -608,17 +781,23 @@ class Eagle2Ae {
                 const selectedItems = await eagle.item.getSelected();
                 if (JSON.stringify(selectedItems) !== JSON.stringify(this.selectedFiles)) {
                     this.selectedFiles = selectedItems;
-                    // 文件选择变化不记录到日志，避免日志被占满
-                    // 只在控制台输出用于调试
-                    console.log(`文件选择已更新: ${selectedItems.length} 个文件`);
+                    // 文件选择变化使用debug级别，避免日志被占满
+                    eagle.log.debug(`文件选择已更新: ${selectedItems.length} 个文件`);
 
                     // 只更新状态，不自动导出
                     // 用户需要主动点击插件才会导出
                 }
+
+                // 同时更新Eagle状态信息
+                await this.updateEagleStatus();
             } catch (error) {
                 // 静默处理，避免频繁错误日志
             }
         }, 1000);
+
+        // 初始化时立即获取一次Eagle状态
+        eagle.log.info('Eagle2AE插件初始化，开始获取Eagle状态信息');
+        this.updateEagleStatus();
     }
 
     // 处理来自AE的消息
@@ -641,9 +820,8 @@ class Eagle2Ae {
     // 更新AE状态
     updateAEStatus(status) {
         this.aeStatus = { ...this.aeStatus, ...status, connected: true };
-        // 不再将AE状态更新记录到Eagle日志中，避免日志被状态信息占满
-        // 只在控制台输出，不添加到日志队列
-        console.log(`AE状态更新: 项目=${status.projectName || '未知'}, 合成=${status.activeComp?.name || '无'}`);
+        // AE状态更新使用debug级别，避免日志被状态信息占满
+        eagle.log.debug(`AE状态更新: 项目=${status.projectName || '未知'}, 合成=${status.activeComp?.name || '无'}`);
     }
 
     // 处理导入结果
@@ -883,7 +1061,7 @@ class Eagle2Ae {
             }
         } catch (error) {
             // 发送失败，保留日志队列，下次再试
-            console.log('发送日志到AE失败:', error.message);
+            eagle.log.debug('发送日志到AE失败:', error.message);
         }
     }
 
@@ -1683,14 +1861,14 @@ let eagle2ae = null;
 
 // Eagle插件事件处理
 eagle.onPluginCreate((plugin) => {
-    console.log('Eagle2Ae 插件初始化（服务模式）');
-    console.log('插件信息:', plugin);
+    eagle.log.info('Eagle2Ae 插件初始化（服务模式）');
+    eagle.log.debug('插件信息:', plugin);
 
     // 创建主实例（自动检测UI/服务模式）
     eagle2ae = new Eagle2Ae();
 
     // 启动信息简化
-    console.log(eagle2ae.uiMode ? 'Eagle2Ae UI 面板已启动' : 'Eagle2Ae 后台服务已启动');
+    eagle.log.info(eagle2ae.uiMode ? 'Eagle2Ae UI 面板已启动' : 'Eagle2Ae 后台服务已启动');
 });
 
 eagle.onPluginRun(async () => {
@@ -1775,7 +1953,7 @@ eagle.onPluginRun(async () => {
 });
 
 eagle.onPluginShow(() => {
-    console.log('Eagle2Ae 插件显示');
+    eagle.log.debug('Eagle2Ae 插件显示');
 
     // 在服务模式下，立即强制隐藏窗口
     if (eagle2ae && !eagle2ae.uiMode) {
@@ -1798,14 +1976,14 @@ eagle.onPluginShow(() => {
 });
 
 eagle.onPluginHide(() => {
-    console.log('Eagle2Ae 插件隐藏');
+    eagle.log.debug('Eagle2Ae 插件隐藏');
     if (eagle2ae && eagle2ae.uiMode) {
         eagle2ae.log('UI面板已隐藏');
     }
 });
 
 eagle.onPluginBeforeExit((event) => {
-    console.log('Eagle2Ae 插件退出');
+    eagle.log.info('Eagle2Ae 插件退出');
     if (eagle2ae) {
         eagle2ae.log('插件正在退出...');
 
