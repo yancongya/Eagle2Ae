@@ -127,7 +127,15 @@ class DemoMode {
 
         // 初始化彩蛋功能（仅在CEP环境中）
         if (this.state.isCEPEnvironment && this.config.easterEgg.enabled) {
-            this.easterEgg = new EasterEgg(this);
+            // 延迟初始化彩蛋功能，确保DOM完全加载
+            if (document.readyState === 'complete') {
+                this.easterEgg = new EasterEgg(this);
+            } else {
+                window.addEventListener('load', () => {
+                    this.easterEgg = new EasterEgg(this);
+                    console.log('🥚 彩蛋功能延迟初始化完成');
+                });
+            }
         }
 
         console.log('🧩 演示模式组件已初始化');
@@ -170,6 +178,11 @@ class DemoMode {
     enableDemoMode(modeType = this.modes.DEMO) {
         console.log(`🎭 启用演示模式: ${modeType}`);
 
+        // 激活数据覆盖策略
+        if (window.__DEMO_OVERRIDE__) {
+            window.__DEMO_OVERRIDE__.activate();
+        }
+
         // 保存原始API引用
         this.backupOriginalAPIs();
 
@@ -204,6 +217,11 @@ class DemoMode {
     disableDemoMode() {
         console.log('🔧 禁用演示模式，恢复正常模式');
 
+        // 停用数据覆盖策略
+        if (window.__DEMO_OVERRIDE__) {
+            window.__DEMO_OVERRIDE__.deactivate();
+        }
+
         // 禁用网络拦截器
         if (this.networkInterceptor) {
             this.networkInterceptor.deactivate();
@@ -212,8 +230,9 @@ class DemoMode {
         // 恢复原始API
         this.restoreOriginalAPIs();
 
-        // 清理演示UI
+        // 清理演示UI并恢复原始事件监听器
         if (this.demoUI) {
+            this.demoUI.restoreOriginalEventListeners();
             this.demoUI.cleanup();
         }
 
@@ -978,12 +997,104 @@ window.getDemoMode = function() {
             currentMode: window.demoMode.getCurrentMode(),
             isDemoMode: window.demoMode.isDemoMode(),
             isCEPEnvironment: window.demoMode.isCEPEnvironment(),
-            networkStats: window.demoMode.getNetworkInterceptionStats()
+            networkStats: window.demoMode.getNetworkInterceptionStats(),
+            easterEggEnabled: !!window.demoMode.easterEgg
         };
     } else {
         console.log('❌ 演示模式未初始化');
         return null;
     }
+};
+
+// 测试彩蛋功能
+window.testEasterEgg = function() {
+    console.log('🧪 测试彩蛋功能...');
+
+    if (!window.demoMode) {
+        console.log('❌ 演示模式未初始化');
+        return;
+    }
+
+    console.log('🔍 CEP环境:', window.demoMode.isCEPEnvironment());
+    console.log('🔍 彩蛋对象:', !!window.demoMode.easterEgg);
+
+    if (window.demoMode.easterEgg) {
+        console.log('🔍 彩蛋配置:', window.demoMode.easterEgg.config);
+        console.log('🔍 彩蛋状态:', window.demoMode.easterEgg.state);
+
+        // 查找Eagle2AE标题
+        const titleElement = document.querySelector('.header .title');
+        console.log('🔍 找到的Eagle2AE标题元素:', !!titleElement);
+        if (titleElement) {
+            console.log(`  文本内容: "${titleElement.textContent.trim()}"`);
+        }
+
+        // 模拟点击测试
+        if (window.demoMode.easterEgg.state.titleElement) {
+            console.log('🖱️ 模拟点击测试...');
+            window.demoMode.easterEgg.handleTitleClick({ preventDefault: () => {} });
+        } else {
+            console.log('❌ 标题元素未绑定');
+        }
+    } else {
+        console.log('❌ 彩蛋功能未初始化');
+    }
+};
+
+// 诊断连接按钮问题
+window.debugConnection = function() {
+    console.log('🔧 诊断连接按钮问题...');
+
+    // 检查演示模式状态
+    if (window.demoMode) {
+        console.log('✅ 演示模式已初始化');
+        console.log('🔍 当前模式:', window.demoMode.state.currentMode);
+        console.log('🔍 CEP环境:', window.demoMode.state.isCEPEnvironment);
+
+        if (window.demoMode.demoUI) {
+            console.log('✅ DemoUI已初始化');
+            console.log('🔍 DemoUI状态:', window.demoMode.demoUI.state);
+            console.log('🔍 DemoUI是否已设置:', window.demoMode.demoUI.state.isInitialized);
+        } else {
+            console.log('❌ DemoUI未初始化');
+        }
+    } else {
+        console.log('❌ 演示模式未初始化');
+    }
+
+    // 检查连接按钮元素
+    const button = document.getElementById('test-connection-btn');
+    if (button) {
+        console.log('✅ 连接按钮元素存在');
+        console.log('🔍 按钮disabled:', button.disabled);
+        console.log('🔍 按钮title:', button.title);
+
+        // 检查事件监听器（如果可能）
+        if (typeof getEventListeners !== 'undefined') {
+            const listeners = getEventListeners(button);
+            console.log('🔍 事件监听器:', Object.keys(listeners));
+        }
+    } else {
+        console.log('❌ 连接按钮元素不存在');
+    }
+
+    // 检查主应用状态
+    if (window.eagle2ae) {
+        console.log('✅ 主应用已初始化');
+        console.log('🔍 连接状态:', window.eagle2ae.connectionState);
+    } else {
+        console.log('❌ 主应用未初始化');
+    }
+
+    return {
+        demoMode: !!window.demoMode,
+        currentMode: window.demoMode?.state?.currentMode,
+        demoUIInitialized: window.demoMode?.demoUI?.state?.isInitialized,
+        buttonExists: !!button,
+        mainAppExists: !!window.eagle2ae,
+        dataOverrideActive: window.__DEMO_OVERRIDE__?.isActive() || false,
+        globalDemoFlag: window.__DEMO_MODE_ACTIVE__ || false
+    };
 };
 
 // 测试网络拦截的函数

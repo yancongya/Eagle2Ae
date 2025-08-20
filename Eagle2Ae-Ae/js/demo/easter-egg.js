@@ -21,12 +21,18 @@ class EasterEgg {
     }
     
     init() {
+        console.log('🥚 彩蛋功能初始化开始...');
+        console.log('🔍 CEP环境检测:', this.isCEPEnvironment());
+        console.log('🔍 window.__adobe_cep__:', !!window.__adobe_cep__);
+        console.log('🔍 window.cep:', !!window.cep);
+        console.log('🔍 CSInterface:', typeof CSInterface !== 'undefined');
+
         // 只在CEP环境中启用彩蛋功能
         if (!this.isCEPEnvironment()) {
             console.log('🎭 彩蛋功能仅在CEP环境中可用');
             return;
         }
-        
+
         this.config.enabled = true;
         this.injectStyles(); // 注入CSS样式
         this.setupTitleClickListener();
@@ -34,7 +40,11 @@ class EasterEgg {
     }
     
     isCEPEnvironment() {
-        return !!(window.__adobe_cep__ || (window.cep && window.cep.process));
+        return !!(
+            window.__adobe_cep__ ||
+            (window.cep && window.cep.process) ||
+            (typeof CSInterface !== 'undefined')
+        );
     }
     
     setupTitleClickListener() {
@@ -47,10 +57,10 @@ class EasterEgg {
     }
     
     bindTitleClick() {
-        // 查找"项目信息"标题元素
-        const titleElement = document.querySelector('.section-title');
+        // 查找顶部标题栏的"Eagle2AE"标题元素
+        const titleElement = document.querySelector('.header .title');
 
-        if (titleElement && titleElement.textContent.includes('项目信息')) {
+        if (titleElement && titleElement.textContent.trim() === 'Eagle2AE') {
             this.state.titleElement = titleElement;
             this.state.titleElement.addEventListener('click', (e) => this.handleTitleClick(e));
             this.state.titleElement.style.cursor = 'pointer';
@@ -59,9 +69,12 @@ class EasterEgg {
             // 添加视觉提示（微妙的样式变化）
             this.state.titleElement.style.transition = 'all 0.2s ease';
 
-            console.log('🎯 标题点击监听器已绑定到"项目信息"');
+            console.log('🎯 标题点击监听器已绑定到顶部"Eagle2AE"标题');
+            console.log('🥚 彩蛋提示: 连续快速点击顶部"Eagle2AE"标题5次可切换演示模式');
         } else {
-            console.warn('⚠️ 未找到"项目信息"标题元素，彩蛋功能无法启用');
+            console.warn('⚠️ 未找到顶部"Eagle2AE"标题元素，彩蛋功能无法启用');
+            console.log('🔍 查找的元素:', titleElement);
+            console.log('🔍 元素文本内容:', titleElement?.textContent);
 
             // 延迟重试，可能DOM还没完全加载
             setTimeout(() => {

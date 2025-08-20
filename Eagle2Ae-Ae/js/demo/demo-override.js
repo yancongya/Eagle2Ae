@@ -4,10 +4,10 @@
 (function() {
     'use strict';
     
-    console.log('🎭 演示模式数据覆盖策略启动...');
-    
-    // 创建全局标记
-    window.__DEMO_MODE_ACTIVE__ = true;
+    console.log('🎭 演示模式数据覆盖策略已加载，等待激活...');
+
+    // 不立即激活，等待演示模式真正启用时才激活
+    window.__DEMO_MODE_ACTIVE__ = false;
     
     // 设置演示数据
     window.__DEMO_DATA__ = {
@@ -515,10 +515,28 @@
         }, 5000);
     }
 
-    // 启动所有功能
-    overrideKeyMethods();
-    initializeDemoData();
-    protectDemoElements();
+    // 提供激活和停用接口
+    window.__DEMO_OVERRIDE__ = {
+        activate: function() {
+            console.log('🎭 激活演示模式数据覆盖策略...');
+            window.__DEMO_MODE_ACTIVE__ = true;
+            overrideKeyMethods();
+            initializeDemoData();
+            protectDemoElements();
+            console.log('✅ 演示模式数据覆盖策略已激活');
+        },
 
-    console.log('✅ 演示模式数据覆盖策略启动完成');
+        deactivate: function() {
+            console.log('🔧 停用演示模式数据覆盖策略...');
+            window.__DEMO_MODE_ACTIVE__ = false;
+            // 这里可以添加恢复原始方法的逻辑
+            console.log('✅ 演示模式数据覆盖策略已停用');
+        },
+
+        isActive: function() {
+            return window.__DEMO_MODE_ACTIVE__;
+        }
+    };
+
+    console.log('✅ 演示模式数据覆盖策略已准备就绪，等待激活');
 })();

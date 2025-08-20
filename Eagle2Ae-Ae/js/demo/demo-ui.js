@@ -21,58 +21,48 @@ class DemoUI {
     
     init() {
         console.log('🎨 演示UI管理器初始化...');
-        
-        // 等待DOM加载完成
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setupUI());
-        } else {
-            this.setupUI();
-        }
-    }
-    
-    setupUI() {
+
+        // 缓存DOM元素，但不设置事件监听器
         this.cacheElements();
-        this.updateProjectInfo();
-        this.updateConnectionStatus();
-        this.setupEventListeners();
-        this.showDemoModeIndicator();
-        
-        this.state.isInitialized = true;
-        console.log('✅ 演示UI已初始化');
+
+        // 不在初始化时就设置UI，只有在演示模式激活时才设置
+        console.log('🎨 演示UI管理器已准备就绪，等待激活');
     }
-    
+
+    // 缓存DOM元素引用
     cacheElements() {
-        // 缓存常用的DOM元素
         this.elements = {
-            // 项目信息
+            testConnectionBtn: document.getElementById('test-connection-btn'),
+            statusIndicator: document.getElementById('status-indicator'),
+            statusMain: document.getElementById('status-main'),
+            pingTime: document.getElementById('ping-time'),
             aeVersion: document.getElementById('ae-version'),
             projectPath: document.getElementById('project-path'),
             projectName: document.getElementById('project-name'),
             compName: document.getElementById('comp-name'),
-
-            // Eagle信息
             eagleVersion: document.getElementById('eagle-version'),
             eaglePath: document.getElementById('eagle-path'),
             eagleLibrary: document.getElementById('eagle-library'),
-            eagleFolder: document.getElementById('eagle-folder'),
-
-            // 连接状态
-            statusIndicator: document.getElementById('status-indicator'),
-            statusMain: document.getElementById('status-main'),
-            pingTime: document.getElementById('ping-time'),
-            testConnectionBtn: document.getElementById('test-connection-btn'),
-
-            // 其他可能的元素
-            logContainer: document.querySelector('.log-container'),
-            settingsPanel: document.querySelector('.settings-panel')
+            eagleFolder: document.getElementById('eagle-folder')
         };
 
-        // 移除不存在的元素
-        Object.keys(this.elements).forEach(key => {
-            if (!this.elements[key]) {
-                delete this.elements[key];
-            }
-        });
+        console.log('📋 DOM元素已缓存');
+    }
+
+    setupUI() {
+        console.log('🎨 设置演示模式UI...');
+
+        // 重新缓存元素（确保获取最新的DOM状态）
+        this.cacheElements();
+
+        // 设置演示模式的UI状态
+        this.updateProjectInfo();
+        this.updateConnectionStatus();
+        this.setupEventListeners();
+        this.showDemoModeIndicator();
+
+        this.state.isInitialized = true;
+        console.log('✅ 演示UI已激活');
     }
     
     updateProjectInfo() {
@@ -163,8 +153,14 @@ class DemoUI {
     }
     
     setupEventListeners() {
+        // 只在演示模式激活时才设置事件监听器
+        // 这个方法现在只在 setupUI() 中被调用，而 setupUI() 只在演示模式激活时调用
+
         // 测试连接按钮 - 完全接管点击事件
         if (this.elements.testConnectionBtn) {
+            // 备份原始的事件监听器（如果存在）
+            this.backupOriginalEventListeners();
+
             // 移除原有的事件监听器
             this.elements.testConnectionBtn.replaceWith(this.elements.testConnectionBtn.cloneNode(true));
             // 重新获取元素引用
@@ -191,6 +187,29 @@ class DemoUI {
         });
 
         console.log('👂 演示模式事件监听器已设置');
+    }
+
+    // 备份原始事件监听器
+    backupOriginalEventListeners() {
+        // 这里可以备份原始的事件监听器，以便在退出演示模式时恢复
+        // 目前暂时不实现，因为主要通过页面刷新来退出演示模式
+    }
+
+    // 恢复原始事件监听器
+    restoreOriginalEventListeners() {
+        // 恢复原始的连接按钮事件监听器
+        if (this.elements.testConnectionBtn && window.eagle2ae) {
+            // 重新绑定原始的事件监听器
+            this.elements.testConnectionBtn.replaceWith(this.elements.testConnectionBtn.cloneNode(true));
+            this.elements.testConnectionBtn = document.getElementById('test-connection-btn');
+
+            // 让主应用重新绑定事件
+            if (window.eagle2ae.setupUI) {
+                window.eagle2ae.setupUI();
+            }
+        }
+
+        console.log('🔄 原始事件监听器已恢复');
     }
     
     async handleTestConnection(event) {
