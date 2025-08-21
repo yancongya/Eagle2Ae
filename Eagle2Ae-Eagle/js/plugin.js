@@ -36,7 +36,7 @@ class Eagle2Ae {
         this.messageQueue = [];
         this.eagleLogs = []; // 存储Eagle发送的日志
         this.config = {
-            wsPort: 8080,
+            wsPort: 8080, // 固定使用8080端口，不允许更改
             autoExport: false, // 默认关闭自动导出，需要用户主动点击
             targetDirectory: null,
             useWebSocket: false, // 暂时禁用WebSocket（Eagle环境限制）
@@ -187,10 +187,25 @@ class Eagle2Ae {
 
         } catch (error) {
             this.log(`服务启动失败: ${error.message}`, 'error');
-            console.error('详细错误信息:', error);
+            console.error('=== Eagle2Ae 初始化失败 ===');
+            console.error('错误信息:', error.message);
+            console.error('错误堆栈:', error.stack);
+            console.error('配置信息:', this.config);
+
+            // 尝试显示错误通知
+            if (typeof eagle !== 'undefined' && eagle.notification) {
+                eagle.notification.show({
+                    title: 'Eagle2Ae 启动失败',
+                    body: `错误: ${error.message}`,
+                    mute: false,
+                    duration: 10000
+                });
+            }
+
             // 即使初始化失败，也要解除初始化状态
             setTimeout(() => {
                 this.isInitializing = false;
+                console.log('初始化状态已解除（失败后）');
             }, this.minInitTime);
         }
     }
@@ -387,9 +402,13 @@ class Eagle2Ae {
     // 启动HTTP服务器（兼容模式）
     async startHttpServer() {
         try {
+            console.log('=== 开始启动HTTP服务器 ===');
+            console.log(`目标端口: ${this.config.wsPort}`);
+
             const http = require('http');
             const url = require('url');
 
+            console.log('创建HTTP服务器实例...');
             this.httpServer = http.createServer((req, res) => {
                 // 设置CORS头
                 res.setHeader('Access-Control-Allow-Origin', '*');
@@ -604,18 +623,58 @@ class Eagle2Ae {
                 }
             });
 
+            console.log(`开始监听端口 ${this.config.wsPort}...`);
             this.httpServer.listen(this.config.wsPort, 'localhost', () => {
+                console.log(`✅ HTTP服务器启动成功，端口: ${this.config.wsPort}`);
                 eagle.log.info(`HTTP服务器启动成功，端口: ${this.config.wsPort}`);
                 this.aeStatus.connected = true;
+
+                // 显示启动成功通知
+                if (typeof eagle !== 'undefined' && eagle.notification) {
+                    eagle.notification.show({
+                        title: 'Eagle2Ae HTTP服务器',
+                        body: `已在端口 ${this.config.wsPort} 启动`,
+                        mute: false,
+                        duration: 3000
+                    });
+                }
             });
 
             this.httpServer.on('error', (error) => {
+                console.error(`❌ HTTP服务器错误:`, error);
                 if (error.code === 'EADDRINUSE') {
-                    this.log(`端口 ${this.config.wsPort} 被占用，尝试使用其他端口...`, 'warning');
-                    this.config.wsPort += 1;
-                    setTimeout(() => this.startHttpServer(), 1000);
+                    console.error(`❌ 端口 ${this.config.wsPort} 被占用！`);
+                    this.log(`❌ 端口 ${this.config.wsPort} 被占用，无法启动服务器`, 'error');
+
+                    // 显示端口占用错误通知
+                    if (typeof eagle !== 'undefined' && eagle.notification) {
+                        eagle.notification.show({
+                            title: 'Eagle2Ae 端口被占用',
+                            body: `端口 ${this.config.wsPort} 被其他程序占用，请关闭占用程序或更改端口`,
+                            mute: false,
+                            duration: 15000
+                        });
+                    }
+
+                    // 不再自动递增端口，而是给出明确的错误信息
+                    console.error('请执行以下操作之一：');
+                    console.error('1. 关闭占用端口的程序');
+                    console.error('2. 在AE扩展中更改通信端口');
+                    console.error('3. 重启Eagle应用程序');
+
                 } else {
+                    console.error(`HTTP服务器严重错误: ${error.message}`);
                     this.log(`HTTP服务器错误: ${error.message}`, 'error');
+
+                    // 显示错误通知
+                    if (typeof eagle !== 'undefined' && eagle.notification) {
+                        eagle.notification.show({
+                            title: 'Eagle2Ae 服务器错误',
+                            body: `HTTP服务器启动失败: ${error.message}`,
+                            mute: false,
+                            duration: 10000
+                        });
+                    }
                 }
             });
 
@@ -1835,24 +1894,25 @@ class Eagle2Ae {
     loadPortConfig() {
         try {
             console.log('正在加载端口配置...');
-            const stored = localStorage.getItem('eagle2ae_portConfig');
 
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed.communicationPort && parsed.communicationPort >= 1024 && parsed.communicationPort <= 65535) {
-                    const oldPort = this.config.wsPort;
-                    this.config.wsPort = parsed.communicationPort;
-                    // 只有端口变化时才记录到日志
-                    if (oldPort !== this.config.wsPort) {
-                        this.log(`✅ 端口配置已更新: ${this.config.wsPort}`, 'success');
-                    }
-                    console.log(`Eagle扩展将在端口 ${this.config.wsPort} 上启动`);
-                } else {
-                    this.log(`⚠️ 端口配置无效 (${parsed.communicationPort})，使用默认端口 ${this.config.wsPort}`, 'warning');
-                }
-            } else {
-                this.log(`📋 未找到保存的端口配置，使用默认端口 ${this.config.wsPort}`, 'info');
+            // 强制使用8080端口，忽略之前保存的配置
+            const defaultPort = 8080;
+            if (this.config.wsPort !== defaultPort) {
+                console.log(`强制重置端口: ${this.config.wsPort} -> ${defaultPort}`);
+                this.config.wsPort = defaultPort;
+                this.log(`🔧 端口已重置为默认值: ${defaultPort}`, 'info');
             }
+
+            // 清除可能导致端口变化的旧配置
+            try {
+                localStorage.removeItem('eagle2ae_portConfig');
+                console.log('已清除旧的端口配置');
+            } catch (e) {
+                console.log('清除旧配置失败:', e.message);
+            }
+
+            console.log(`Eagle扩展将在端口 ${this.config.wsPort} 上启动`);
+            this.log(`📋 使用固定端口: ${this.config.wsPort}`, 'info');
         } catch (error) {
             this.log(`❌ 加载端口配置失败: ${error.message}，使用默认端口 ${this.config.wsPort}`, 'warning');
         }
@@ -1861,12 +1921,20 @@ class Eagle2Ae {
     // 保存端口配置
     savePortConfig() {
         try {
+            // 强制保存8080端口
+            const defaultPort = 8080;
             const portConfig = {
-                communicationPort: this.config.wsPort,
+                communicationPort: defaultPort,
                 timestamp: Date.now()
             };
             localStorage.setItem('eagle2ae_portConfig', JSON.stringify(portConfig));
-            this.log(`端口配置已保存: ${this.config.wsPort}`, 'info');
+            this.log(`端口配置已保存: ${defaultPort}`, 'info');
+
+            // 确保当前配置也是8080
+            if (this.config.wsPort !== defaultPort) {
+                this.config.wsPort = defaultPort;
+                console.log(`端口配置已同步为: ${defaultPort}`);
+            }
         } catch (error) {
             this.log(`保存端口配置失败: ${error.message}`, 'warning');
         }
