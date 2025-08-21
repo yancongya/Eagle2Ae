@@ -198,7 +198,10 @@ class AEExtension {
                 });
 
                 if (response.ok) {
-                    this.log(`📡 已向Eagle扩展(端口${port})广播AE端口信息: ${currentAEPort}`, 'info');
+                    // 在演示模式下静默处理
+                    if (!window.__DEMO_MODE_ACTIVE__) {
+                        this.log(`📡 已向Eagle扩展(端口${port})广播AE端口信息: ${currentAEPort}`, 'info');
+                    }
                     // 找到一个Eagle扩展就够了，停止广播
                     break;
                 }
@@ -982,6 +985,22 @@ class AEExtension {
 
             if (result.success) {
                 if (isDragImport) {
+                    // 在演示模式下显示Eagle的虚拟反馈
+                    if (window.__DEMO_MODE_ACTIVE__) {
+                        this.logEagle(`📥 接收到导入请求: ${result.importedCount} 个文件`, 'info');
+                        setTimeout(() => {
+                            this.logEagle(`🖼️ 正在生成缩略图...`, 'info');
+                            this.log(`🚀 开始导入 ${result.importedCount} 个文件...`, 'info');
+                        }, 500);
+                        setTimeout(() => {
+                            this.logEagle(`🏷️ 智能标签分析完成`, 'info');
+                            this.logEagle(`💾 文件已保存到 "AE导入" 文件夹`, 'success');
+                            this.log(`📍 导入目标: 佛跳墙`, 'info');
+                        }, 1000);
+                        setTimeout(() => {
+                            this.log(`🎉 导入完成！共 ${result.importedCount} 个文件已添加到合成`, 'success');
+                        }, 1500);
+                    }
                     this.log(`✅ 拖拽导入完成: ${result.importedCount} 个文件`, 'success');
                 } else {
                     this.log(`成功导入 ${result.importedCount} 个文件`, 'success');
@@ -2008,7 +2027,10 @@ class AEExtension {
     async checkAndCleanupTempFolderOnStartup() {
         try {
             if (this.connectionState !== ConnectionState.CONNECTED) {
-                this.log('未连接到Eagle，跳过临时文件夹检查', 'debug');
+                // 在演示模式下静默处理
+                if (!window.__DEMO_MODE_ACTIVE__) {
+                    this.log('未连接到Eagle，跳过临时文件夹检查', 'debug');
+                }
                 return;
             }
 
@@ -3170,6 +3192,36 @@ class AEExtension {
 
         // 滚动到底部
         logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // Eagle专用日志方法
+    logEagle(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logData = {
+            message,
+            type,
+            time: timestamp,
+            timestamp: new Date().toISOString(),
+            source: 'eagle'
+        };
+
+        // 添加到Eagle日志数组
+        this.eagleLogs.push(logData);
+
+        // 如果当前显示Eagle日志，实时更新显示
+        if (this.currentLogView === 'eagle') {
+            const logOutput = document.getElementById('log-output');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type} eagle`;
+            logEntry.innerHTML = `<span class="log-time">${timestamp}</span>${message}`;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // 更新最新日志显示（只有在Eagle日志视图时）
+        if (this.currentLogView === 'eagle') {
+            this.updateLatestLogMessage(message, type);
+        }
     }
 
     // 更新日志显示
@@ -4604,7 +4656,128 @@ class AEExtension {
     updateEagleUrl(port) {
         this.currentPort = port;
         this.eagleUrl = `http://localhost:${port}`;
-        this.log(`🚀 AE扩展启动 - 端口: ${port}`, 'info');
+        // 在演示模式下显示虚拟信息
+        if (window.__DEMO_MODE_ACTIVE__) {
+            this.startDemoLogs(port);
+        } else {
+            this.log(`🚀 AE扩展启动 - 端口: ${port}`, 'info');
+        }
+    }
+
+    // 启动演示模式虚拟日志
+    startDemoLogs(port) {
+        this.log(`🎭 演示模式已启用 - 虚拟端口: ${port}`, 'info');
+
+        // 延迟显示虚拟日志，模拟真实的启动过程
+        setTimeout(() => {
+            this.log(`🔗 正在测试连接到Eagle...`, 'info');
+        }, 1000);
+
+        setTimeout(() => {
+            this.log(`HTTP连接成功！延迟: 23ms`, 'success');
+            this.log(`✅ WebSocket连接成功！`, 'success');
+        }, 2000);
+
+        setTimeout(() => {
+            this.log(`🔄 导入前刷新项目状态...`, 'info');
+            this.log(`📍 导入目标: 佛跳墙`, 'info');
+        }, 3000);
+
+        setTimeout(() => {
+            this.log(`✅ ExtendScript连接成功: AE脚本环境已就绪`, 'success');
+            this.log(`AE版本: 2024 (24.0.0)`, 'info');
+        }, 4000);
+
+        setTimeout(() => {
+            this.log(`🚀 Eagle2Ae 演示环境准备完成`, 'success');
+            this.log(`💡 提示: 拖拽图片到此处开始体验导入功能`, 'info');
+        }, 5000);
+
+        // 启动Eagle虚拟日志
+        setTimeout(() => {
+            this.startEagleDemoLogs();
+        }, 6000);
+
+        // 定期显示一些虚拟活动日志
+        this.startDemoActivityLogs();
+    }
+
+    // 启动演示活动日志
+    startDemoActivityLogs() {
+        if (!window.__DEMO_MODE_ACTIVE__) return;
+
+        const activities = [
+            '🗑️ 临时文件夹清理完成',
+            '🔄 导入前刷新项目状态...',
+            '✅ JSX脚本重新加载完成',
+            '📁 检测到新的项目文件',
+            '🎯 合成状态检查完成',
+            '💾 设置自动保存完成',
+            '🔍 扫描可导入文件...',
+            '⚡ 性能优化完成'
+        ];
+
+        let activityIndex = 0;
+        const showActivity = () => {
+            if (!window.__DEMO_MODE_ACTIVE__) return;
+
+            const activity = activities[activityIndex % activities.length];
+            this.log(activity, 'debug');
+            activityIndex++;
+
+            // 随机间隔 20-60 秒
+            const nextInterval = 20000 + Math.random() * 40000;
+            setTimeout(showActivity, nextInterval);
+        };
+
+        // 首次活动日志在 15 秒后开始
+        setTimeout(showActivity, 15000);
+    }
+
+    // 启动Eagle虚拟日志
+    startEagleDemoLogs() {
+        if (!window.__DEMO_MODE_ACTIVE__) return;
+
+        const eagleActivities = [
+            '📁 扫描文件夹变化...',
+            '🔍 发现 2 个新文件',
+            '🖼️ 生成缩略图完成',
+            '🏷️ 自动标签分析中...',
+            '📋 已添加到 "最近导入" 文件夹',
+            '💾 数据库同步完成',
+            '🗑️ 清理临时缓存',
+            '🔄 更新文件索引',
+            '📊 统计信息已更新',
+            '🎯 智能分类完成',
+            '🔒 文件完整性检查',
+            '⚡ 性能优化完成'
+        ];
+
+        let eagleIndex = 0;
+        const showEagleActivity = () => {
+            if (!window.__DEMO_MODE_ACTIVE__) return;
+
+            const activity = eagleActivities[eagleIndex % eagleActivities.length];
+            this.logEagle(activity, 'info');
+            eagleIndex++;
+
+            // 随机间隔 25-70 秒
+            const nextInterval = 25000 + Math.random() * 45000;
+            setTimeout(showEagleActivity, nextInterval);
+        };
+
+        // Eagle初始化日志
+        this.logEagle('🚀 Eagle插件启动完成 - 版本 4.0.0', 'success');
+        this.logEagle('📁 资源库 "仓鼠.library" 已加载', 'info');
+        this.logEagle('📊 共 1,247 个文件，占用 2.3 GB', 'info');
+
+        setTimeout(() => {
+            this.logEagle('🎯 智能分类系统已启用', 'info');
+            this.logEagle('👁️ 开始监听文件夹变化...', 'debug');
+        }, 2000);
+
+        // 首次Eagle活动日志在 12 秒后开始
+        setTimeout(showEagleActivity, 12000);
     }
 
     // 处理端口更改（异步方法）

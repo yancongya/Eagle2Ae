@@ -412,7 +412,35 @@ class DemoUI {
                     setTimeout(() => {
                         this.updateProjectInfo();
                     }, 200);
-                    console.log('✅ 演示连接完成');
+                    // 在演示模式下显示虚拟连接日志
+        if (window.aeExtension && typeof window.aeExtension.log === 'function') {
+            window.aeExtension.log('🔗 正在测试连接到Eagle...', 'info');
+
+            // Eagle端的连接日志
+            if (typeof window.aeExtension.logEagle === 'function') {
+                setTimeout(() => {
+                    window.aeExtension.logEagle('📡 接收到连接请求', 'info');
+                    window.aeExtension.logEagle('🔐 验证API权限...', 'debug');
+                }, 300);
+
+                setTimeout(() => {
+                    window.aeExtension.logEagle('✅ API权限验证通过', 'success');
+                    window.aeExtension.logEagle('📁 当前选中文件夹: "仓鼠党"', 'info');
+                    window.aeExtension.logEagle('📊 资源库状态: 1,247 个文件可用', 'info');
+                }, 800);
+
+                setTimeout(() => {
+                    window.aeExtension.logEagle('🚀 Eagle插件就绪，等待导入请求', 'success');
+                }, 1200);
+            }
+
+            setTimeout(() => {
+                window.aeExtension.log('HTTP连接成功！延迟: 18ms', 'success');
+                window.aeExtension.log('✅ WebSocket连接成功！', 'success');
+                window.aeExtension.log('🎯 系统就绪 - 可以开始拖拽导入', 'success');
+            }, 1400);
+        }
+        console.log('✅ 演示连接完成');
                 } else {
                     throw new Error(result.message || '连接失败');
                 }
@@ -659,3 +687,62 @@ class DemoUI {
 
 // 导出类
 window.DemoUI = DemoUI;
+
+// 全局调试函数
+window.fixTitles = function() {
+    console.log('🔧 开始修复悬浮提示...');
+
+    const globalAEData = window.__DEMO_DATA__?.ae?.connected;
+    const globalEagleData = window.__DEMO_DATA__?.eagle?.connected;
+
+    // 修复AE项目路径
+    const projectPathElement = document.querySelector('#project-path');
+    if (projectPathElement && globalAEData?.execPath) {
+        projectPathElement.removeAttribute('title');
+        projectPathElement.setAttribute('title', globalAEData.execPath);
+        projectPathElement.title = globalAEData.execPath;
+        console.log('✅ AE项目路径悬浮提示已修复');
+    }
+
+    // 修复Eagle路径
+    const eaglePathElement = document.querySelector('#eagle-path');
+    if (eaglePathElement && globalEagleData?.execPath) {
+        eaglePathElement.removeAttribute('title');
+        eaglePathElement.setAttribute('title', globalEagleData.execPath);
+        eaglePathElement.title = globalEagleData.execPath;
+        console.log('✅ Eagle路径悬浮提示已修复');
+    }
+
+    // 强制重排
+    document.body.style.transform = 'translateZ(0)';
+    document.body.offsetHeight;
+    document.body.style.transform = '';
+
+    console.log('🎉 悬浮提示修复完成！');
+};
+
+window.showDemoStats = function() {
+    console.log('📊 演示模式统计信息:');
+    console.log('- 当前模式:', window.__DEMO_MODE_ACTIVE__ ? '演示模式' : '正常模式');
+    console.log('- 网络拦截:', window.demoMode?.networkInterceptor ? '已启用' : '未启用');
+    console.log('- 数据覆盖:', window.demoMode?.dataOverride ? '已启用' : '未启用');
+    console.log('- UI管理器:', window.demoMode?.ui ? '已启用' : '未启用');
+
+    if (window.demoMode?.networkInterceptor) {
+        const stats = window.demoMode.networkInterceptor.getInterceptionStats();
+        console.log('- 拦截统计:', stats);
+    }
+};
+
+window.getDemoMode = function() {
+    return {
+        active: window.__DEMO_MODE_ACTIVE__,
+        mode: window.demoMode?.currentMode,
+        components: {
+            networkInterceptor: !!window.demoMode?.networkInterceptor,
+            dataOverride: !!window.demoMode?.dataOverride,
+            ui: !!window.demoMode?.ui,
+            apis: !!window.demoMode?.apis
+        }
+    };
+};

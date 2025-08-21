@@ -3907,7 +3907,9 @@
                     message.includes('连接按钮') || message.includes('状态指示器') ||
                     message.includes('事件监听器') || message.includes('API已被拦截') ||
                     message.includes('备份原始') || message.includes('已替换为') ||
-                    message.includes('Web环境') || message.includes('CSInterface存在但调用失败')) {
+                    message.includes('Web环境') || message.includes('CSInterface存在但调用失败') ||
+                    message.includes('📡 已向Eagle扩展') || message.includes('广播AE端口信息') ||
+                    message.includes('未连接到Eagle，跳过临时文件夹检查')) {
                     return; // 不输出演示模式相关日志
                 }
                 originalLog.apply(console, args);
