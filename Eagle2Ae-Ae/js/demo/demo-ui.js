@@ -31,6 +31,8 @@ class DemoUI {
 
     // 缓存DOM元素引用
     cacheElements() {
+        console.log('📋 开始缓存DOM元素...');
+
         this.elements = {
             testConnectionBtn: document.getElementById('test-connection-btn'),
             statusIndicator: document.getElementById('status-indicator'),
@@ -43,10 +45,18 @@ class DemoUI {
             eagleVersion: document.getElementById('eagle-version'),
             eaglePath: document.getElementById('eagle-path'),
             eagleLibrary: document.getElementById('eagle-library'),
-            eagleFolder: document.getElementById('eagle-folder')
+            eagleFolder: document.getElementById('eagle-folder'),
+            // 添加缺少的元素引用
+            libraryPath: document.getElementById('eagle-library'),
+            selectedFolder: document.getElementById('eagle-folder')
         };
 
-        console.log('📋 DOM元素已缓存');
+        // 检查关键元素是否存在
+        console.log('🔍 连接按钮元素:', this.elements.testConnectionBtn ? '✅ 找到' : '❌ 未找到');
+        console.log('🔍 状态指示器:', this.elements.statusIndicator ? '✅ 找到' : '❌ 未找到');
+        console.log('🔍 状态文本:', this.elements.statusMain ? '✅ 找到' : '❌ 未找到');
+
+        console.log('📋 DOM元素缓存完成');
     }
 
     setupUI() {
@@ -56,66 +66,160 @@ class DemoUI {
         this.cacheElements();
 
         // 设置演示模式的UI状态
-        this.updateProjectInfo();
-        this.updateConnectionStatus();
         this.setupEventListeners();
         this.showDemoModeIndicator();
+
+        // 注意：不在这里调用 updateProjectInfo 和 updateConnectionStatus
+        // 因为这些会在演示模式初始化时单独调用
 
         this.state.isInitialized = true;
         console.log('✅ 演示UI已激活');
     }
     
     updateProjectInfo() {
-        // 静态更新AE信息
-        this.updateAEInfo();
+        // 根据连接状态更新项目信息
+        const connectionState = this.demoAPIs.getConnectionState();
 
-        // 静态更新Eagle信息
-        this.updateEagleInfo();
+        if (connectionState.isConnected) {
+            // 连接状态：显示演示数据
+            this.updateAEInfoConnected();
+            this.updateEagleInfoConnected();
+        } else {
+            // 未连接状态：显示获取中状态
+            this.updateAEInfoDisconnected();
+            this.updateEagleInfoDisconnected();
+        }
 
         console.log('📁 项目信息已更新为演示数据');
     }
 
-    updateAEInfo() {
+    updateAEInfoConnected() {
+        // 使用全局演示数据而不是配置中的数据
+        const globalAEData = window.__DEMO_DATA__?.ae?.connected;
+
         // 更新AE版本信息
         if (this.elements.aeVersion) {
-            this.elements.aeVersion.textContent = this.demoData.ae.version;
+            this.elements.aeVersion.textContent = globalAEData?.version || this.demoData.ae.version;
         }
 
         // 更新项目路径
         if (this.elements.projectPath) {
-            this.elements.projectPath.textContent = this.demoData.ae.projectPath;
-            this.elements.projectPath.title = this.demoData.ae.projectPath;
+            const projectPath = globalAEData?.projectPath || this.demoData.ae.projectPath;
+            this.elements.projectPath.textContent = projectPath;
+
+            // 正确设置title
+            if (projectPath && projectPath !== '未知' && projectPath !== 'undefined') {
+                this.elements.projectPath.removeAttribute('title');
+                this.elements.projectPath.setAttribute('title', projectPath);
+                this.elements.projectPath.title = projectPath;
+            }
+
+            // 添加点击样式和事件
+            this.elements.projectPath.classList.add('clickable');
+            this.elements.projectPath.onclick = () => {
+                console.log('🎭 演示模式：模拟打开项目文件夹');
+                alert('演示模式：这里会打开项目文件夹\n' + projectPath);
+            };
         }
 
         // 更新项目名称
         if (this.elements.projectName) {
-            this.elements.projectName.textContent = this.demoData.ae.projectName;
+            this.elements.projectName.textContent = globalAEData?.projectName || this.demoData.ae.projectName;
         }
 
         // 更新合成名称
         if (this.elements.compName) {
-            this.elements.compName.textContent = this.demoData.ae.activeComp;
+            this.elements.compName.textContent = globalAEData?.activeComp || this.demoData.ae.activeComp;
         }
 
-        console.log('🎬 AE信息已静态更新');
+        // console.log('🎬 AE信息已更新为连接状态');
     }
 
-    updateEagleInfo() {
+    updateAEInfoDisconnected() {
+        // 使用演示数据覆盖中的未连接状态数据
+        const disconnectedData = window.__DEMO_DATA__ ? window.__DEMO_DATA__.ae.disconnected : {
+            version: "获取中...",
+            projectPath: "未知",
+            projectName: "未打开项目",
+            activeComp: "无"
+        };
+
+        // 更新AE版本信息
+        if (this.elements.aeVersion) {
+            this.elements.aeVersion.textContent = disconnectedData.version;
+        }
+
+        // 更新项目路径
+        if (this.elements.projectPath) {
+            this.elements.projectPath.textContent = disconnectedData.projectPath;
+            // 只有在有有效路径时才设置title
+            if (disconnectedData.projectPath && disconnectedData.projectPath !== '未知' && disconnectedData.projectPath !== 'undefined') {
+                this.elements.projectPath.removeAttribute('title');
+                this.elements.projectPath.setAttribute('title', disconnectedData.projectPath);
+                this.elements.projectPath.title = disconnectedData.projectPath;
+            }
+            this.elements.projectPath.classList.remove('clickable');
+            this.elements.projectPath.onclick = null;
+        }
+
+        // 更新项目名称
+        if (this.elements.projectName) {
+            this.elements.projectName.textContent = disconnectedData.projectName;
+        }
+
+        // 更新合成名称
+        if (this.elements.compName) {
+            this.elements.compName.textContent = disconnectedData.activeComp;
+        }
+
+        // console.log('🎬 AE信息已更新为未连接状态');
+    }
+
+    updateEagleInfoConnected() {
+        // 使用全局演示数据而不是配置中的数据
+        const globalEagleData = window.__DEMO_DATA__?.eagle?.connected;
+
         // 更新Eagle版本信息
         if (this.elements.eagleVersion) {
-            this.elements.eagleVersion.textContent = this.demoData.eagle.version;
+            this.elements.eagleVersion.textContent = globalEagleData?.version || this.demoData.eagle.version;
         }
 
-        // 更新Eagle路径
+        // 更新Eagle路径 - 显示安装路径
         if (this.elements.eaglePath) {
-            this.elements.eaglePath.textContent = this.demoData.eagle.path || '演示路径';
-            this.elements.eaglePath.title = this.demoData.eagle.path || '演示路径';
+            const execPath = globalEagleData?.execPath || '演示路径';
+            this.elements.eaglePath.textContent = execPath;
+            // 正确设置title
+            if (execPath && execPath !== '演示路径' && execPath !== 'undefined') {
+                this.elements.eaglePath.removeAttribute('title');
+                this.elements.eaglePath.setAttribute('title', execPath);
+                this.elements.eaglePath.title = execPath;
+            }
+            // Eagle路径不设置点击事件
+            this.elements.eaglePath.classList.remove('clickable');
+            this.elements.eaglePath.onclick = null;
         }
 
-        // 更新资源库
+        // 更新资源库 - 可以点击打开
         if (this.elements.eagleLibrary) {
-            this.elements.eagleLibrary.textContent = this.demoData.eagle.libraryPath;
-            this.elements.eagleLibrary.title = this.demoData.eagle.libraryPath;
+            const libraryName = globalEagleData?.libraryName || '演示资源库';
+            const libraryPath = globalEagleData?.libraryPath || '演示路径';
+
+            this.elements.eagleLibrary.textContent = libraryName;
+            // 正确设置title
+            if (libraryPath && libraryPath !== '演示路径' && libraryPath !== 'undefined') {
+                this.elements.eagleLibrary.removeAttribute('title');
+                this.elements.eagleLibrary.setAttribute('title', libraryPath);
+                this.elements.eagleLibrary.title = libraryPath;
+            }
+
+            // 添加点击样式和事件
+            this.elements.eagleLibrary.classList.add('clickable');
+            this.elements.eagleLibrary.onclick = () => {
+                console.log('🎭 演示模式：模拟打开Eagle资源库文件夹');
+                alert('演示模式：这里会打开Eagle资源库文件夹\n' + libraryPath);
+            };
+        } else {
+            console.warn('❌ eagleLibrary 元素不存在');
         }
 
         // 更新当前组
@@ -123,62 +227,103 @@ class DemoUI {
             this.elements.eagleFolder.textContent = this.demoData.eagle.selectedFolder;
         }
 
-        console.log('🦅 Eagle信息已静态更新');
+        // console.log('🦅 Eagle信息已更新为连接状态');
+    }
+
+    updateEagleInfoDisconnected() {
+        // 使用演示数据覆盖中的未连接状态数据
+        // 使用全局演示数据
+        const globalEagleData = window.__DEMO_DATA__?.eagle?.disconnected;
+        const disconnectedData = window.__DEMO_DATA__ ? window.__DEMO_DATA__.eagle.disconnected : {
+            version: globalEagleData?.version || "获取中...",
+            execPath: globalEagleData?.execPath || "获取中...",
+            libraryPath: globalEagleData?.libraryPath || "获取中...",
+            selectedFolder: globalEagleData?.selectedFolder || "获取中..."
+        };
+
+        // 更新Eagle版本信息
+        if (this.elements.eagleVersion) {
+            this.elements.eagleVersion.textContent = disconnectedData.version;
+        }
+
+        // 更新Eagle路径
+        if (this.elements.eaglePath) {
+            this.elements.eaglePath.textContent = disconnectedData.execPath;
+            // 只有在有有效路径时才设置title
+            if (disconnectedData.execPath && disconnectedData.execPath !== '获取中...' && disconnectedData.execPath !== 'undefined') {
+                this.elements.eaglePath.removeAttribute('title');
+                this.elements.eaglePath.setAttribute('title', disconnectedData.execPath);
+                this.elements.eaglePath.title = disconnectedData.execPath;
+            }
+            this.elements.eaglePath.classList.remove('clickable');
+            this.elements.eaglePath.onclick = null;
+        }
+
+        // 更新资源库
+        if (this.elements.eagleLibrary) {
+            this.elements.eagleLibrary.textContent = '获取中...';
+            // 只有在有有效路径时才设置title
+            if (disconnectedData.libraryPath && disconnectedData.libraryPath !== '获取中...' && disconnectedData.libraryPath !== 'undefined') {
+                this.elements.eagleLibrary.removeAttribute('title');
+                this.elements.eagleLibrary.setAttribute('title', disconnectedData.libraryPath);
+                this.elements.eagleLibrary.title = disconnectedData.libraryPath;
+            }
+            this.elements.eagleLibrary.classList.remove('clickable');
+            this.elements.eagleLibrary.onclick = null;
+        }
+
+        // 更新当前组
+        if (this.elements.eagleFolder) {
+            this.elements.eagleFolder.textContent = disconnectedData.selectedFolder;
+        }
+
+        // console.log('🦅 Eagle信息已更新为未连接状态');
     }
     
-    updateConnectionStatus() {
-        const connectionData = this.demoData.connection;
-        
-        // 更新连接状态指示器
-        if (this.elements.statusIndicator) {
-            this.elements.statusIndicator.className = 'status-indicator connected';
-        }
-        
-        // 更新状态文本
-        if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '已连接 (演示)';
-        }
-        
-        // 更新ping时间
-        if (this.elements.pingTime) {
-            this.elements.pingTime.textContent = `${connectionData.pingTime}ms`;
-        }
-        
-        // 更新连接按钮状态
-        if (this.elements.testConnectionBtn) {
-            this.elements.testConnectionBtn.classList.add('connected');
-        }
-        
-        console.log('🔗 连接状态已更新为演示模式');
-    }
+
     
     setupEventListeners() {
         // 只在演示模式激活时才设置事件监听器
         // 这个方法现在只在 setupUI() 中被调用，而 setupUI() 只在演示模式激活时调用
 
-        // 测试连接按钮 - 完全接管点击事件
+        // 测试连接按钮 - 使用更简单的方法
         if (this.elements.testConnectionBtn) {
+            console.log('🔗 设置演示模式连接按钮事件监听器...');
+            console.log('🔍 按钮元素:', this.elements.testConnectionBtn);
+            console.log('🔍 按钮ID:', this.elements.testConnectionBtn.id);
+
             // 备份原始的事件监听器（如果存在）
             this.backupOriginalEventListeners();
 
-            // 移除原有的事件监听器
-            this.elements.testConnectionBtn.replaceWith(this.elements.testConnectionBtn.cloneNode(true));
-            // 重新获取元素引用
-            this.elements.testConnectionBtn = document.getElementById('test-connection-btn');
-
-            // 添加演示模式的事件监听器
-            this.elements.testConnectionBtn.addEventListener('click', (e) => {
+            // 直接添加演示模式的事件监听器，不替换元素
+            // 使用 capture 模式确保我们的监听器先执行
+            const demoClickHandler = (e) => {
+                console.log('🖱️ 演示模式连接按钮被点击');
                 e.preventDefault();
                 e.stopPropagation();
                 this.handleTestConnection(e);
-            });
+            };
 
-            // 阻止右键菜单
-            this.elements.testConnectionBtn.addEventListener('contextmenu', (e) => {
+            const demoContextHandler = (e) => {
+                console.log('🖱️ 演示模式连接按钮右键点击');
                 e.preventDefault();
                 e.stopPropagation();
                 this.handleTestConnection(e);
-            });
+            };
+
+            // 添加事件监听器，使用 capture 模式
+            this.elements.testConnectionBtn.addEventListener('click', demoClickHandler, true);
+            this.elements.testConnectionBtn.addEventListener('contextmenu', demoContextHandler, true);
+
+            // 保存处理器引用以便后续清理
+            this.demoEventHandlers = {
+                click: demoClickHandler,
+                contextmenu: demoContextHandler
+            };
+
+            console.log('✅ 演示模式连接按钮事件监听器已设置（capture模式）');
+        } else {
+            console.warn('⚠️ 连接按钮元素未找到，无法设置事件监听器');
         }
 
         // 监听演示导入进度
@@ -213,35 +358,69 @@ class DemoUI {
     }
     
     async handleTestConnection(event) {
+        console.log('🔗 handleTestConnection 被调用');
         event.preventDefault();
 
-        console.log('🔗 演示连接测试开始...');
+        // 获取当前连接状态
+        const currentState = this.demoAPIs.getConnectionState();
+        console.log('📊 当前连接状态:', currentState);
 
-        // 显示连接中状态
-        this.showConnectingState();
+        if (currentState.isConnected) {
+            // 当前已连接，执行断开操作
+            console.log('🔗 演示断开连接开始...');
 
-        // 添加一些延迟来模拟真实的连接过程
-        await new Promise(resolve => setTimeout(resolve, 800));
+            // 显示断开中状态
+            this.showDisconnectingState();
 
-        try {
-            // 调用演示API
-            const result = await this.demoAPIs.testConnection();
+            try {
+                const result = await this.demoAPIs.disconnect();
+                console.log('🔗 断开连接结果:', result);
 
-            if (result.success) {
-                this.showConnectedState(result);
-                // 不显示连接成功通知，静默连接
-                // this.showNotification(result.message, 'success');
-
-                // 连接成功后，确保项目信息是演示数据
-                setTimeout(() => {
-                    this.updateProjectInfo();
-                }, 200);
-            } else {
-                throw new Error(result.message || '连接失败');
+                if (result.success) {
+                    this.showDisconnectedState();
+                    // 断开连接后，更新项目信息为未连接状态
+                    setTimeout(() => {
+                        this.updateProjectInfo();
+                    }, 200);
+                    console.log('✅ 演示断开连接完成');
+                }
+            } catch (error) {
+                console.error('❌ 断开连接失败:', error);
+                this.showNotification(`断开连接失败: ${error.message}`, 'error');
             }
-        } catch (error) {
-            this.showDisconnectedState();
-            this.showNotification(`连接失败: ${error.message}`, 'error');
+        } else {
+            // 当前未连接，执行连接操作
+            console.log('🔗 演示连接测试开始...');
+
+            // 显示连接中状态
+            this.showConnectingState();
+
+            // 添加一些延迟来模拟真实的连接过程
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            try {
+                // 调用演示API
+                const result = await this.demoAPIs.testConnection();
+                console.log('🔗 连接测试结果:', result);
+
+                if (result.success) {
+                    this.showConnectedState(result);
+                    // 不显示连接成功通知，静默连接
+                    // this.showNotification(result.message, 'success');
+
+                    // 连接成功后，确保项目信息是演示数据
+                    setTimeout(() => {
+                        this.updateProjectInfo();
+                    }, 200);
+                    console.log('✅ 演示连接完成');
+                } else {
+                    throw new Error(result.message || '连接失败');
+                }
+            } catch (error) {
+                console.error('❌ 连接失败:', error);
+                this.showDisconnectedState();
+                this.showNotification(`连接失败: ${error.message}`, 'error');
+            }
         }
     }
     
@@ -260,36 +439,63 @@ class DemoUI {
     }
     
     showConnectedState(result) {
+        // 暂停DOM保护机制，避免冲突
+        if (window.__pauseDemoOverride__) {
+            window.__pauseDemoOverride__(3000); // 暂停3秒
+            console.log('🛡️ 已暂停DOM保护机制，避免UI更新冲突');
+        }
+
         if (this.elements.statusIndicator) {
             this.elements.statusIndicator.className = 'status-indicator connected';
         }
-        
+
         if (this.elements.statusMain) {
             this.elements.statusMain.textContent = '已连接 (演示)';
         }
-        
+
         if (this.elements.pingTime) {
             this.elements.pingTime.textContent = `${result.pingTime}ms`;
         }
-        
+
         if (this.elements.testConnectionBtn) {
             this.elements.testConnectionBtn.classList.add('connected');
         }
+
+        // 延迟更新AE和Eagle信息，确保状态指示器先更新
+        setTimeout(() => {
+            this.updateAEInfoConnected();
+            this.updateEagleInfoConnected();
+            console.log('✅ 连接状态UI已更新，包括AE和Eagle信息');
+        }, 100);
     }
     
+    showDisconnectingState() {
+        if (this.elements.statusIndicator) {
+            this.elements.statusIndicator.className = 'status-indicator connecting';
+        }
+
+        if (this.elements.statusMain) {
+            this.elements.statusMain.textContent = '断开连接中...';
+        }
+
+        if (this.elements.pingTime) {
+            this.elements.pingTime.textContent = '--ms';
+        }
+    }
+
     showDisconnectedState() {
         if (this.elements.statusIndicator) {
             this.elements.statusIndicator.className = 'status-indicator disconnected';
         }
-        
+
         if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '未连接';
+            this.elements.statusMain.textContent = '未连接 (演示)';
         }
-        
+
         if (this.elements.pingTime) {
             this.elements.pingTime.textContent = '--ms';
         }
-        
+
         if (this.elements.testConnectionBtn) {
             this.elements.testConnectionBtn.classList.remove('connected');
         }

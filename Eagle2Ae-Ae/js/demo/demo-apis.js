@@ -20,27 +20,27 @@ class DemoAPIs {
     
     init() {
         console.log('🎭 演示API模拟器已初始化');
-        
-        // 模拟连接状态
-        this.state.isConnected = true;
+
+        // 模拟连接状态 - 默认为未连接，让用户可以体验连接过程
+        this.state.isConnected = false;
         this.state.lastPingTime = this.demoData.connection.pingTime;
     }
     
     // 模拟连接测试
     async testConnection() {
         console.log('🔗 模拟连接测试...');
-        
+
         // 模拟连接延迟
         await this.delay(this.operations.connectionDelay);
-        
+
         // 模拟成功率
         if (Math.random() > this.operations.successRate && this.operations.simulateErrors) {
             throw new Error('演示连接失败（模拟错误）');
         }
-        
+
         this.state.isConnected = true;
         this.state.lastPingTime = this.generateRandomPing();
-        
+
         return {
             success: true,
             status: 'connected',
@@ -48,6 +48,32 @@ class DemoAPIs {
             message: '', // 不返回消息，避免显示通知
             service: 'Eagle2Ae-Demo',
             version: this.demoData.eagle.version
+        };
+    }
+
+    // 模拟断开连接
+    async disconnect() {
+        console.log('🔗 模拟断开连接...');
+
+        // 模拟断开延迟
+        await this.delay(300);
+
+        this.state.isConnected = false;
+        this.state.lastPingTime = 0;
+
+        return {
+            success: true,
+            status: 'disconnected',
+            message: '已断开连接 (演示)'
+        };
+    }
+
+    // 获取当前连接状态
+    getConnectionState() {
+        return {
+            isConnected: this.state.isConnected,
+            status: this.state.isConnected ? 'connected' : 'disconnected',
+            pingTime: this.state.lastPingTime
         };
     }
     
@@ -269,7 +295,7 @@ class DemoAPIs {
 
     // 模拟Eagle API端点响应
     async handleEagleAPICall(url, options = {}) {
-        console.log(`🎭 拦截Eagle API调用: ${url}`);
+        // console.log(`🎭 拦截Eagle API调用: ${url}`);
 
         const method = options.method || 'GET';
 

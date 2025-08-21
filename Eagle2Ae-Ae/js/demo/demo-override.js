@@ -14,9 +14,9 @@
         ae: {
             connected: {
                 version: "2024 (24.0.0)",
-                projectPath: "/Users/Demo/Projects/演示项目.aep",
-                projectName: "Eagle2Ae 演示项目",
-                activeComp: "主合成 - 演示场景"
+                projectPath: "D:\\工作\\今天你吃饭了嘛\\反正我吃了.aep",
+                projectName: "正在做饭",
+                activeComp: "佛跳墙"
             },
             disconnected: {
                 version: "获取中...",
@@ -27,14 +27,15 @@
         },
         eagle: {
             connected: {
-                version: "4.0+",
-                path: "/Applications/Eagle.app",
-                libraryPath: "/Users/Demo/Eagle Library",
-                selectedFolder: "AE素材"
+                version: "4.0.0 build 1 pid 41536",
+                execPath: "C:\\Program Files\\Eagle\\Eagle.exe",
+                libraryPath: "D:\\仓鼠.library",
+                libraryName: "仓鼠.library",
+                selectedFolder: "仓鼠党"
             },
             disconnected: {
                 version: "获取中...",
-                path: "获取中...",
+                execPath: "获取中...",
                 libraryPath: "获取中...",
                 selectedFolder: "获取中..."
             }
@@ -76,7 +77,7 @@
             { id: 'project-name', value: aeData.projectName },
             { id: 'comp-name', value: aeData.activeComp },
             { id: 'eagle-version', value: eagleData.version },
-            { id: 'eagle-path', value: eagleData.path, title: eagleData.path },
+            { id: 'eagle-path', value: eagleData.execPath, title: eagleData.execPath },
             { id: 'eagle-library', value: eagleData.libraryPath, title: eagleData.libraryPath },
             { id: 'eagle-folder', value: eagleData.selectedFolder }
         ];
@@ -85,7 +86,16 @@
             const element = document.getElementById(id);
             if (element && (force || element.textContent !== value)) {
                 element.textContent = value;
-                if (title && title !== '获取中...' && title !== '未知') element.title = title;
+
+                // 正确设置title属性
+                if (title && title !== '获取中...' && title !== '未知' && title !== 'undefined') {
+                    // 先清除可能存在的错误title
+                    element.removeAttribute('title');
+                    // 重新设置正确的title
+                    element.setAttribute('title', title);
+                    element.title = title;
+                }
+
                 changedCount++;
 
                 // 标记元素为演示模式
@@ -119,7 +129,7 @@
         }
 
         if (changedCount > 0) {
-            console.log(`🎭 演示数据设置完成，更新了 ${changedCount} 个元素 (连接状态: ${connectionState})`);
+            // console.log(`🎭 演示数据设置完成，更新了 ${changedCount} 个元素 (连接状态: ${connectionState})`);
         }
 
         return changedCount;
@@ -167,15 +177,31 @@
                         // 检查是否不是演示数据
                         const expectedValue = getExpectedValue(target.id);
                         if (target.textContent !== expectedValue) {
-                            console.log(`🎭 检测到 ${target.id} 被修改为: "${target.textContent}", 立即恢复演示数据`);
+                            console.log(`🎭 检测到 ${target.id} 被修改为: "${target.textContent}", 期望值: "${expectedValue}"`);
+                            console.log(`🔍 数据源检查 - aeData:`, aeData);
+                            console.log(`🔍 数据源检查 - eagleData:`, eagleData);
+                            console.log(`🔍 连接状态:`, connectionState);
 
                             // 立即恢复演示数据，不等待延迟
                             target.textContent = expectedValue;
                             target.setAttribute('data-demo-mode', 'true');
 
-                            // 如果是路径相关的元素，也设置title
-                            if (['project-path', 'eagle-path', 'eagle-library'].includes(target.id)) {
-                                target.title = expectedValue;
+                            // 如果是路径相关的元素，设置正确的title
+                            if (target.id === 'project-path' && aeData.projectPath) {
+                                target.removeAttribute('title');
+                                target.setAttribute('title', aeData.projectPath);
+                                target.title = aeData.projectPath;
+                                console.log(`🔧 设置 project-path title: ${aeData.projectPath}`);
+                            } else if (target.id === 'eagle-path' && eagleData.execPath) {
+                                target.removeAttribute('title');
+                                target.setAttribute('title', eagleData.execPath);
+                                target.title = eagleData.execPath;
+                                console.log(`🔧 设置 eagle-path title: ${eagleData.execPath}`);
+                            } else if (target.id === 'eagle-library' && eagleData.libraryPath) {
+                                target.removeAttribute('title');
+                                target.setAttribute('title', eagleData.libraryPath);
+                                target.title = eagleData.libraryPath;
+                                console.log(`🔧 设置 eagle-library title: ${eagleData.libraryPath}`);
                             }
 
                             needsUpdate = true;
@@ -229,8 +255,8 @@
             'project-name': aeData.projectName,
             'comp-name': aeData.activeComp,
             'eagle-version': eagleData.version,
-            'eagle-path': eagleData.path,
-            'eagle-library': eagleData.libraryPath,
+            'eagle-path': eagleData.execPath,
+            'eagle-library': eagleData.libraryName || eagleData.libraryPath,
             'eagle-folder': eagleData.selectedFolder,
             'status-main': '已连接 (演示)',
             'ping-time': `${data.connection.pingTime}ms`
@@ -488,7 +514,7 @@
                             if (window.__DEMO_MODE_ACTIVE__) {
                                 const expectedValue = getExpectedValue(this.id);
                                 if (value !== expectedValue) {
-                                    console.log(`🛡️ 阻止 ${this.id} 被修改为: "${value}", 保持演示数据: "${expectedValue}"`);
+                                    // console.log(`🛡️ 阻止 ${this.id} 被修改为: "${value}", 保持演示数据: "${expectedValue}"`);
                                     originalTextContentDescriptor.set.call(this, expectedValue);
                                     this.setAttribute('data-demo-mode', 'true');
                                     return;
@@ -499,7 +525,7 @@
                         configurable: true
                     });
 
-                    console.log(`🛡️ ${elementId} 元素已受保护`);
+                    // console.log(`🛡️ ${elementId} 元素已受保护`);
                 }
             });
         };

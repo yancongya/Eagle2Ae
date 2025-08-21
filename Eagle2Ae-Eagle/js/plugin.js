@@ -29,7 +29,8 @@ class Eagle2Ae {
             libraryPath: null,
             currentFolder: null,
             currentFolderName: null,
-            folderPath: null
+            folderPath: null,
+            tempPath: null
         };
         this.selectedFiles = [];
         this.messageQueue = [];
@@ -586,6 +587,17 @@ class Eagle2Ae {
                 } else if (req.method === 'POST' && parsedUrl.pathname === '/copy-to-clipboard') {
                     // 处理复制到剪贴板的请求
                     this.handleCopyToClipboard(req, res);
+                } else if (req.method === 'POST' && parsedUrl.pathname === '/temp-folder-action') {
+                    // 处理临时文件夹操作请求
+                    this.handleTempFolderAction(req, res);
+                } else if (req.method === 'GET' && parsedUrl.pathname === '/debug-eagle-status') {
+                    // 调试：获取详细的Eagle状态信息
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({
+                        eagleStatus: this.eagleStatus,
+                        tempFolderPath: this.getTempFolderPath(),
+                        timestamp: new Date().toISOString()
+                    }, null, 2));
                 } else {
                     res.writeHead(404);
                     res.end('Not Found');
@@ -617,21 +629,24 @@ class Eagle2Ae {
         try {
             eagle.log.debug('开始获取Eagle状态信息...');
 
-            // 获取Eagle版本信息
+            // 获取Eagle版本信息 - 组合版本、构建号和进程ID
             try {
-                this.eagleStatus.version = eagle.app.version;
-                eagle.log.debug(`Eagle版本: ${this.eagleStatus.version}`);
+                const version = eagle.app.version || '未知';
+                const build = eagle.app.build || '未知';
+                const pid = eagle.app.pid || '未知';
+                this.eagleStatus.version = `${version} build ${build} pid ${pid}`;
+                eagle.log.debug(`Eagle版本信息: ${this.eagleStatus.version}`);
             } catch (versionError) {
                 eagle.log.warn(`获取Eagle版本失败: ${versionError.message}`);
                 this.eagleStatus.version = '获取失败';
             }
 
-            // 获取Eagle安装路径
+            // 获取Eagle安装路径（保留用于其他用途）
             try {
                 this.eagleStatus.execPath = eagle.app.execPath;
-                eagle.log.debug(`Eagle路径: ${this.eagleStatus.execPath}`);
+                eagle.log.debug(`Eagle安装路径: ${this.eagleStatus.execPath}`);
             } catch (pathError) {
-                eagle.log.warn(`获取Eagle路径失败: ${pathError.message}`);
+                eagle.log.warn(`获取Eagle安装路径失败: ${pathError.message}`);
                 this.eagleStatus.execPath = '获取失败';
             }
 
@@ -742,6 +757,60 @@ class Eagle2Ae {
                 this.eagleStatus.folderPath = '获取失败';
             }
 
+            // 获取临时文件夹路径
+            try {
+                eagle.log.debug('开始获取临时文件夹路径...');
+
+                // 首先尝试使用Node.js的os模块（更可靠）
+                const os = require('os');
+                this.eagleStatus.tempPath = os.tmpdir();
+                eagle.log.info(`使用Node.js API获取临时文件夹路径: ${this.eagleStatus.tempPath}`);
+
+                // 验证路径是否有效
+                if (!this.eagleStatus.tempPath || this.eagleStatus.tempPath === '') {
+                    throw new Error('获取到的临时文件夹路径为空');
+                }
+
+                // 验证路径是否存在
+                const fs = require('fs');
+                if (!fs.existsSync(this.eagleStatus.tempPath)) {
+                    throw new Error(`临时文件夹路径不存在: ${this.eagleStatus.tempPath}`);
+                }
+
+                eagle.log.info(`临时文件夹路径验证成功: ${this.eagleStatus.tempPath}`);
+
+            } catch (tempError) {
+                eagle.log.error(`获取临时文件夹路径失败: ${tempError.message}`);
+
+                // 尝试使用硬编码的备用路径
+                try {
+                    const path = require('path');
+                    const fallbackPaths = [
+                        process.env.TEMP,
+                        process.env.TMP,
+                        '/tmp',
+                        'C:\\Windows\\Temp'
+                    ].filter(p => p); // 过滤掉undefined的值
+
+                    for (const fallbackPath of fallbackPaths) {
+                        const fs = require('fs');
+                        if (fs.existsSync(fallbackPath)) {
+                            this.eagleStatus.tempPath = fallbackPath;
+                            eagle.log.info(`使用备用临时文件夹路径: ${this.eagleStatus.tempPath}`);
+                            break;
+                        }
+                    }
+
+                    if (!this.eagleStatus.tempPath || this.eagleStatus.tempPath === '未知') {
+                        throw new Error('所有备用路径都不可用');
+                    }
+
+                } catch (backupError) {
+                    eagle.log.error(`所有临时文件夹路径获取方案都失败: ${backupError.message}`);
+                    this.eagleStatus.tempPath = '未知';
+                }
+            }
+
             eagle.log.info(`Eagle状态更新完成 - 版本: ${this.eagleStatus.version}, 资源库: ${this.eagleStatus.libraryName}, 当前组: ${this.eagleStatus.folderPath}`);
 
         } catch (error) {
@@ -755,6 +824,7 @@ class Eagle2Ae {
             this.eagleStatus.currentFolder = null;
             this.eagleStatus.currentFolderName = '未知';
             this.eagleStatus.folderPath = '未知';
+            this.eagleStatus.tempPath = '未知';
         }
     }
 
@@ -771,6 +841,224 @@ class Eagle2Ae {
             eagle.log.warn(`构建文件夹路径失败: ${error.message}`);
             return folder.name || '未知';
         }
+    }
+
+    // 获取Eagle2AE临时文件夹路径
+    getTempFolderPath() {
+        try {
+            eagle.log.debug(`检查临时文件夹路径状态: ${this.eagleStatus.tempPath}`);
+
+            if (this.eagleStatus.tempPath && this.eagleStatus.tempPath !== '未知' && this.eagleStatus.tempPath !== '') {
+                const path = require('path');
+                const tempFolderPath = path.join(this.eagleStatus.tempPath, 'Eagle2AE-tmp');
+                eagle.log.debug(`生成的临时文件夹路径: ${tempFolderPath}`);
+                return tempFolderPath;
+            }
+
+            eagle.log.warn(`临时文件夹路径无效: ${this.eagleStatus.tempPath}`);
+            return null;
+        } catch (error) {
+            eagle.log.error(`获取临时文件夹路径失败: ${error.message}`);
+            return null;
+        }
+    }
+
+    // 创建临时文件夹
+    async createTempFolder() {
+        try {
+            const tempFolderPath = this.getTempFolderPath();
+            if (!tempFolderPath) {
+                throw new Error('无法获取临时文件夹路径');
+            }
+
+            const fs = require('fs');
+            if (!fs.existsSync(tempFolderPath)) {
+                fs.mkdirSync(tempFolderPath, { recursive: true });
+                eagle.log.info(`创建临时文件夹: ${tempFolderPath}`);
+            }
+
+            return tempFolderPath;
+        } catch (error) {
+            eagle.log.error(`创建临时文件夹失败: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // 检查临时文件夹大小和文件数量
+    async checkTempFolderSize() {
+        try {
+            const tempFolderPath = this.getTempFolderPath();
+            if (!tempFolderPath) {
+                return { size: 0, count: 0, needsCleanup: false };
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+
+            if (!fs.existsSync(tempFolderPath)) {
+                return { size: 0, count: 0, needsCleanup: false };
+            }
+
+            let totalSize = 0;
+            let fileCount = 0;
+
+            const files = fs.readdirSync(tempFolderPath);
+            for (const file of files) {
+                const filePath = path.join(tempFolderPath, file);
+                const stats = fs.statSync(filePath);
+                if (stats.isFile()) {
+                    totalSize += stats.size;
+                    fileCount++;
+                }
+            }
+
+            const sizeInMB = totalSize / (1024 * 1024);
+            const needsCleanup = sizeInMB > 100 || fileCount > 100;
+
+            eagle.log.debug(`临时文件夹状态 - 大小: ${sizeInMB.toFixed(2)}MB, 文件数: ${fileCount}, 需要清理: ${needsCleanup}`);
+
+            return { size: sizeInMB, count: fileCount, needsCleanup };
+        } catch (error) {
+            eagle.log.error(`检查临时文件夹大小失败: ${error.message}`);
+            return { size: 0, count: 0, needsCleanup: false };
+        }
+    }
+
+    // 清空临时文件夹
+    async cleanupTempFolder() {
+        try {
+            const tempFolderPath = this.getTempFolderPath();
+            if (!tempFolderPath) {
+                eagle.log.warn('无法获取临时文件夹路径，跳过清理');
+                return;
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+
+            if (!fs.existsSync(tempFolderPath)) {
+                eagle.log.info('临时文件夹不存在，无需清理');
+                return;
+            }
+
+            const files = fs.readdirSync(tempFolderPath);
+            let deletedCount = 0;
+
+            for (const file of files) {
+                const filePath = path.join(tempFolderPath, file);
+                try {
+                    fs.unlinkSync(filePath);
+                    deletedCount++;
+                } catch (deleteError) {
+                    eagle.log.warn(`删除临时文件失败: ${filePath} - ${deleteError.message}`);
+                }
+            }
+
+            eagle.log.info(`临时文件夹清理完成，删除了 ${deletedCount} 个文件`);
+        } catch (error) {
+            eagle.log.error(`清空临时文件夹失败: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // 打开临时文件夹
+    async openTempFolder() {
+        try {
+            eagle.log.info('开始打开临时文件夹操作');
+            eagle.log.debug(`当前Eagle状态 - tempPath: ${this.eagleStatus.tempPath}`);
+
+            const tempFolderPath = this.getTempFolderPath();
+            eagle.log.debug(`获取到的临时文件夹路径: ${tempFolderPath}`);
+
+            if (!tempFolderPath) {
+                const errorMsg = `无法获取临时文件夹路径 - eagleStatus.tempPath: ${this.eagleStatus.tempPath}`;
+                eagle.log.error(errorMsg);
+                throw new Error(errorMsg);
+            }
+
+            // 确保文件夹存在
+            eagle.log.debug('创建临时文件夹...');
+            await this.createTempFolder();
+
+            // 检查Eagle shell API是否可用
+            if (!eagle.shell || typeof eagle.shell.openPath !== 'function') {
+                throw new Error('Eagle shell API不可用');
+            }
+
+            // 打开文件夹
+            eagle.log.debug(`使用Eagle shell打开文件夹: ${tempFolderPath}`);
+            eagle.shell.openPath(tempFolderPath);
+            eagle.log.info(`临时文件夹已打开: ${tempFolderPath}`);
+        } catch (error) {
+            eagle.log.error(`打开临时文件夹失败: ${error.message}`);
+            eagle.log.error(`错误堆栈: ${error.stack}`);
+            throw error;
+        }
+    }
+
+    // 处理临时文件夹操作请求
+    async handleTempFolderAction(req, res) {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                eagle.log.debug(`收到临时文件夹操作请求: ${body}`);
+
+                const data = JSON.parse(body);
+                const action = data.action;
+
+                eagle.log.info(`执行临时文件夹操作: ${action}`);
+
+                let result = { success: false };
+
+                switch (action) {
+                    case 'cleanupTempFolder':
+                        await this.cleanupTempFolder();
+                        result = { success: true, message: '临时文件夹已清空' };
+                        break;
+
+                    case 'openTempFolder':
+                        await this.openTempFolder();
+                        result = { success: true, message: '临时文件夹已打开' };
+                        break;
+
+                    case 'checkTempFolderSize':
+                        const status = await this.checkTempFolderSize();
+                        result = { success: true, data: status };
+                        break;
+
+                    case 'createTempFolder':
+                        const tempPath = await this.createTempFolder();
+                        result = { success: true, data: { path: tempPath } };
+                        break;
+
+                    default:
+                        eagle.log.error(`未知的临时文件夹操作: ${action}`);
+                        result = { success: false, error: `未知操作: ${action}` };
+                }
+
+                eagle.log.debug(`临时文件夹操作结果: ${JSON.stringify(result)}`);
+
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify(result));
+
+            } catch (error) {
+                eagle.log.error(`临时文件夹操作处理失败: ${error.message}`);
+                eagle.log.error(`错误堆栈: ${error.stack}`);
+
+                const errorResponse = {
+                    success: false,
+                    error: error.message,
+                    details: error.stack
+                };
+
+                res.writeHead(400, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify(errorResponse));
+            }
+        });
     }
 
     // 设置Eagle事件监听

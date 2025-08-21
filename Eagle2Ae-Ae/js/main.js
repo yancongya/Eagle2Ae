@@ -142,8 +142,13 @@ class AEExtension {
 
         this.init();
 
-        // 获取AE版本信息
-        this.getAEVersion();
+        // 获取AE版本信息（仅在CEP环境下）
+        if (!window.__DEMO_MODE_ACTIVE__) {
+            this.getAEVersion();
+        }
+
+        // 启动定期更新阅后即焚tooltip
+        this.startTooltipUpdateTimer();
     }
 
     // 初始化端口设置
@@ -266,6 +271,11 @@ class AEExtension {
                 // 添加拖拽支持
                 this.setupDragAndDrop();
                 // 拖拽支持已启用
+
+                // 延迟检查临时文件夹状态（等待连接建立）
+                setTimeout(() => {
+                    this.checkAndCleanupTempFolderOnStartup();
+                }, 5000);
             } catch (otherError) {
                 this.log(`其他初始化失败: ${otherError.message}`, 'error');
             }
@@ -648,6 +658,11 @@ class AEExtension {
                     testConnectionBtn.disabled = false;
                     testConnectionBtn.title = '左键：断开连接\n右键：刷新状态';
                 }
+
+                // 连接成功后更新阅后即焚tooltip
+                setTimeout(() => {
+                    this.updateBurnAfterReadingTooltip();
+                }, 1000); // 延迟1秒，确保连接稳定
                 break;
 
             case ConnectionState.ERROR:
@@ -661,6 +676,9 @@ class AEExtension {
                 }
                 break;
         }
+
+        // 连接状态变化时更新阅后即焚tooltip
+        this.updateBurnAfterReadingTooltip();
     }
 
     // 轮询获取消息
@@ -1892,22 +1910,27 @@ class AEExtension {
         }
     }
 
-    // 简单的打开文件夹方法
-    openFolderSimple(exportPath) {
+    // 通用的打开文件夹方法
+    openFolder(folderPath) {
         try {
             this.log('📁 正在打开文件夹...', 'info');
-            this.log(`📁 路径: ${exportPath}`, 'info');
+            this.log(`📁 路径: ${folderPath}`, 'info');
+
+            if (!folderPath || folderPath === '未知' || folderPath === '获取失败') {
+                this.log('❌ 无效的文件夹路径', 'error');
+                return;
+            }
 
             if (window.cep && window.cep.process) {
                 // 方法1: 直接使用explorer
                 window.cep.process.createProcess(
                     'explorer.exe',
-                    [exportPath],
+                    [folderPath],
                     (err, stdout, stderr) => {
                         if (err) {
                             this.log(`❌ Explorer失败: ${err}`, 'error');
                             // 尝试方法2
-                            this.tryOpenWithCmd(exportPath);
+                            this.tryOpenWithCmd(folderPath);
                         } else {
                             this.log('📁 文件夹已通过Explorer打开', 'success');
                         }
@@ -1915,12 +1938,143 @@ class AEExtension {
                 );
             } else {
                 this.log('❌ CEP process API不可用', 'error');
-                this.copyPathToClipboard(exportPath);
+                this.copyPathToClipboard(folderPath);
             }
         } catch (error) {
             this.log(`❌ 打开文件夹出错: ${error.message}`, 'error');
-            this.copyPathToClipboard(exportPath);
+            this.copyPathToClipboard(folderPath);
         }
+    }
+
+    // 清空临时文件夹
+    async cleanupTempFolder() {
+        try {
+            const response = await this.sendToEagle({
+                action: 'cleanupTempFolder'
+            });
+
+            if (response.success) {
+                this.log('🗑️ 临时文件夹清理完成', 'success');
+                // 清理完成后更新tooltip
+                setTimeout(() => {
+                    this.updateBurnAfterReadingTooltip();
+                }, 500);
+            } else {
+                throw new Error(response.error || '清理失败');
+            }
+        } catch (error) {
+            this.log(`❌ 清空临时文件夹失败: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // 打开临时文件夹
+    async openTempFolder() {
+        try {
+            const response = await this.sendToEagle({
+                action: 'openTempFolder'
+            });
+
+            if (response.success) {
+                this.log('📁 临时文件夹已打开', 'success');
+            } else {
+                throw new Error(response.error || '打开失败');
+            }
+        } catch (error) {
+            this.log(`❌ 打开临时文件夹失败: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // 检查临时文件夹状态
+    async checkTempFolderStatus() {
+        try {
+            const response = await this.sendToEagle({
+                action: 'checkTempFolderSize'
+            });
+
+            if (response.success) {
+                return response.data;
+            } else {
+                throw new Error(response.error || '检查失败');
+            }
+        } catch (error) {
+            this.log(`❌ 检查临时文件夹状态失败: ${error.message}`, 'error');
+            return { size: 0, count: 0, needsCleanup: false };
+        }
+    }
+
+    // 启动时检查并清理临时文件夹
+    async checkAndCleanupTempFolderOnStartup() {
+        try {
+            if (this.connectionState !== ConnectionState.CONNECTED) {
+                this.log('未连接到Eagle，跳过临时文件夹检查', 'debug');
+                return;
+            }
+
+            const status = await this.checkTempFolderStatus();
+
+            if (status.needsCleanup) {
+                this.log(`🗑️ 检测到临时文件夹需要清理 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'info');
+                await this.cleanupTempFolder();
+                this.log('🗑️ 启动时临时文件夹清理完成', 'success');
+            } else if (status.count > 0) {
+                this.log(`📁 临时文件夹状态 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'debug');
+            }
+
+            // 更新tooltip显示
+            this.updateBurnAfterReadingTooltip();
+        } catch (error) {
+            this.log(`启动时临时文件夹检查失败: ${error.message}`, 'warning');
+        }
+    }
+
+    // 更新阅后即焚的tooltip显示
+    async updateBurnAfterReadingTooltip() {
+        try {
+            const label = document.getElementById('burn-after-reading-label');
+            if (!label) return;
+
+            let tooltipText = '启用后图片导出到临时文件夹，导出后复制到剪切板。\n文件累计超过100MB或100个文件后自动清空。\n';
+
+            if (this.connectionState === ConnectionState.CONNECTED) {
+                try {
+                    const status = await this.checkTempFolderStatus();
+                    const sizeText = status.size > 0 ? `${status.size.toFixed(1)}MB` : '0MB';
+                    const countText = `${status.count}个`;
+                    tooltipText += `Alt+点击清空，Ctrl+点击打开临时文件夹（${sizeText}|${countText}）。`;
+                } catch (error) {
+                    tooltipText += 'Alt+点击清空，Ctrl+点击打开临时文件夹。';
+                }
+            } else {
+                tooltipText += 'Alt+点击清空，Ctrl+点击打开临时文件夹。';
+            }
+
+            // 使用浏览器默认的title tooltip，尝试不同的换行方法
+            label.setAttribute('title', tooltipText);
+        } catch (error) {
+            this.log(`更新阅后即焚tooltip失败: ${error.message}`, 'warning');
+        }
+    }
+
+    // 启动定期更新tooltip的定时器
+    startTooltipUpdateTimer() {
+        // 每30秒更新一次tooltip，确保显示最新的文件状态
+        setInterval(() => {
+            if (this.connectionState === ConnectionState.CONNECTED) {
+                this.updateBurnAfterReadingTooltip();
+            }
+        }, 30000); // 30秒间隔
+
+        // 初始更新
+        setTimeout(() => {
+            this.updateBurnAfterReadingTooltip();
+        }, 2000); // 延迟2秒，确保UI加载完成
+    }
+
+    // 简单的打开文件夹方法（保持向后兼容）
+    openFolderSimple(exportPath) {
+        this.openFolder(exportPath);
     }
 
     // 尝试使用cmd打开文件夹
@@ -2401,13 +2555,43 @@ class AEExtension {
             const currentSettings = this.settingsManager.getSettings();
 
             // 准备导出设置 - 使用新的导出设置
-            const exportSettings = {
+            let exportSettings = {
                 exportSettings: currentSettings.exportSettings,
                 fileManagement: currentSettings.fileManagement,
                 timelineOptions: currentSettings.timelineOptions
             };
 
-            this.log(`📋 使用导出设置: 模式=${currentSettings.exportSettings.mode}`, 'info');
+            // 检查是否启用阅后即焚模式
+            if (currentSettings.exportSettings.burnAfterReading) {
+                this.log('🔥 阅后即焚模式已启用，使用临时文件夹导出', 'info');
+
+                try {
+                    // 创建临时文件夹
+                    const tempResponse = await this.sendToEagle({
+                        action: 'createTempFolder'
+                    });
+
+                    if (tempResponse.success) {
+                        // 修改导出设置使用临时文件夹
+                        exportSettings.exportSettings = {
+                            ...exportSettings.exportSettings,
+                            mode: 'custom_folder',
+                            customExportPath: tempResponse.data.path,
+                            burnAfterReading: true // 标记为阅后即焚模式
+                        };
+
+                        this.log(`📁 临时文件夹已创建: ${tempResponse.data.path}`, 'info');
+                    } else {
+                        throw new Error(tempResponse.error || '创建临时文件夹失败');
+                    }
+                } catch (tempError) {
+                    this.log(`❌ 临时文件夹创建失败: ${tempError.message}`, 'error');
+                    this.log('回退到正常导出模式', 'warning');
+                    // 继续使用正常导出模式
+                }
+            }
+
+            this.log(`📋 使用导出设置: 模式=${exportSettings.exportSettings.mode}`, 'info');
 
             const result = await this.executeExtendScript('exportSelectedLayers', exportSettings);
 
@@ -2440,9 +2624,39 @@ class AEExtension {
                     this.showFinalExportResult(result.exportPath, result.exportedLayers);
                 }
 
-                // 检查是否启用自动复制
+                // 检查是否启用自动复制或阅后即焚
                 const exportSettings = this.getExportSettingsFromUI();
-                if (exportSettings.autoCopy && result.exportPath) {
+
+                if (exportSettings.burnAfterReading) {
+                    // 阅后即焚模式：直接复制文件到剪切板
+                    this.log('🔥 阅后即焚模式：正在复制文件到剪切板...', 'info');
+                    try {
+                        if (result.exportedLayers && result.exportedLayers.length > 0) {
+                            await this.copyExportedFilesToClipboard();
+                            this.log('📋 文件已复制到剪切板，临时文件将在后台管理', 'success');
+
+                            // 检查临时文件夹是否需要清理
+                            setTimeout(async () => {
+                                try {
+                                    const status = await this.checkTempFolderStatus();
+                                    if (status.needsCleanup) {
+                                        this.log(`🗑️ 临时文件夹已达到清理条件 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'info');
+                                        await this.cleanupTempFolder();
+                                        this.log('🗑️ 临时文件夹已自动清理', 'success');
+                                    }
+                                    // 更新tooltip显示最新状态
+                                    this.updateBurnAfterReadingTooltip();
+                                } catch (cleanupError) {
+                                    this.log(`临时文件夹清理检查失败: ${cleanupError.message}`, 'warning');
+                                }
+                            }, 1000); // 延迟1秒检查，确保文件复制完成
+                        }
+                    } catch (copyError) {
+                        this.log(`🔥 阅后即焚文件复制失败: ${copyError.message}`, 'error');
+                        this.log('💡 可以手动打开临时文件夹复制文件', 'info');
+                    }
+                } else if (exportSettings.autoCopy && result.exportPath) {
+                    // 正常的自动复制模式
                     try {
                         // 首先复制路径
                         await this.copyToClipboard(result.exportPath);
@@ -2482,6 +2696,40 @@ class AEExtension {
         if (this.connectionState !== ConnectionState.CONNECTED) {
             this.log('无法发送消息：未连接到Eagle', 'warning');
             return;
+        }
+
+        // 检查是否是临时文件夹操作
+        const tempFolderActions = ['cleanupTempFolder', 'openTempFolder', 'checkTempFolderSize', 'createTempFolder'];
+        if (message.action && tempFolderActions.includes(message.action)) {
+            // 使用专门的临时文件夹操作端点
+            try {
+                this.log(`发送临时文件夹操作请求: ${message.action}`, 'debug');
+                this.log(`请求URL: ${this.eagleUrl}/temp-folder-action`, 'debug');
+                this.log(`请求体: ${JSON.stringify(message)}`, 'debug');
+
+                const response = await fetch(`${this.eagleUrl}/temp-folder-action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(message)
+                });
+
+                this.log(`响应状态: ${response.status}`, 'debug');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    this.log(`响应错误内容: ${errorText}`, 'error');
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                this.log(`临时文件夹操作响应: ${JSON.stringify(result)}`, 'debug');
+                return result;
+            } catch (error) {
+                this.log(`临时文件夹操作失败: ${error.message}`, 'error');
+                throw error;
+            }
         }
 
         // 优先使用WebSocket发送
@@ -2564,6 +2812,17 @@ class AEExtension {
 
     // 获取项目信息
     async getProjectInfo() {
+        // 如果是演示模式，返回演示数据
+        if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
+            const aeData = window.__DEMO_DATA__.ae.connected;
+            return {
+                projectPath: aeData.projectPath,
+                projectName: aeData.projectName,
+                activeComp: { name: aeData.activeComp },
+                isReady: true
+            };
+        }
+
         return new Promise((resolve, reject) => {
             this.csInterface.evalScript('getProjectInfo()', (result) => {
                 try {
@@ -2671,7 +2930,23 @@ class AEExtension {
         if (projectPathElement) {
             const projectPath = projectInfo.projectPath || '未知';
             projectPathElement.textContent = projectPath;
-            projectPathElement.title = projectPath; // 设置悬浮显示完整路径
+            // 只有在projectPath不是undefined且不是字符串"undefined"时才设置title
+            if (projectPath && projectPath !== '未知' && projectPath !== 'undefined') {
+                projectPathElement.title = projectPath; // 设置悬浮显示完整路径
+            }
+
+            // 如果有有效路径，添加双击事件监听器
+            if (projectPath && projectPath !== '未知' && projectPath !== '未打开项目') {
+                projectPathElement.classList.add('clickable');
+                projectPathElement.onclick = () => {
+                    // 获取项目文件所在的目录
+                    const projectDir = projectPath.substring(0, projectPath.lastIndexOf('\\'));
+                    this.openFolder(projectDir);
+                };
+            } else {
+                projectPathElement.classList.remove('clickable');
+                projectPathElement.onclick = null;
+            }
         }
 
         document.getElementById('ae-status').textContent = projectInfo.isReady ? '准备就绪' : '未就绪';
@@ -2696,8 +2971,14 @@ class AEExtension {
 
                 if (hostEnvironment && hostEnvironment.appVersion) {
                     const version = hostEnvironment.appVersion;
-                    versionElement.textContent = version;
-                    console.log(`AE版本获取成功: ${version}`);
+                    // 获取更多详细信息
+                    const appName = hostEnvironment.appName || 'After Effects';
+                    const appId = hostEnvironment.appId || '';
+
+                    // 组合显示版本信息
+                    const fullVersion = `${version}`;
+                    versionElement.textContent = fullVersion;
+                    console.log(`AE版本获取成功: ${fullVersion}`);
                 } else {
                     versionElement.textContent = '未知';
                     console.warn('无法获取AE版本信息');
@@ -2720,13 +3001,37 @@ class AEExtension {
         if (eagleStatus) {
             document.getElementById('eagle-version').textContent = eagleStatus.version || '未知';
 
-            // 更新Eagle路径并设置悬浮显示
+            // 更新Eagle路径并设置悬浮显示 - 显示安装路径
             const eaglePathElement = document.getElementById('eagle-path');
             const eaglePath = eagleStatus.execPath || '未知';
             eaglePathElement.textContent = eaglePath;
-            eaglePathElement.title = eaglePath; // 设置悬浮显示完整路径
+            // 只有在eaglePath不是undefined且不是字符串"undefined"时才设置title
+            if (eaglePath && eaglePath !== '未知' && eaglePath !== 'undefined') {
+                eaglePathElement.title = eaglePath; // 设置悬浮显示完整路径
+            }
 
-            document.getElementById('eagle-library').textContent = eagleStatus.libraryName || '未知';
+            // Eagle路径不设置点击事件
+            eaglePathElement.classList.remove('clickable');
+            eaglePathElement.onclick = null;
+
+            // 更新资源库信息并设置点击事件
+            const eagleLibraryElement = document.getElementById('eagle-library');
+            const libraryPath = eagleStatus.libraryPath || '未知';
+            eagleLibraryElement.textContent = eagleStatus.libraryName || '未知';
+            // 只有在libraryPath不是undefined且不是字符串"undefined"时才设置title
+            if (libraryPath && libraryPath !== '未知' && libraryPath !== 'undefined') {
+                eagleLibraryElement.title = libraryPath; // 悬浮显示完整路径
+            }
+
+            // 资源库可以双击打开
+            if (libraryPath && libraryPath !== '未知' && libraryPath !== '获取失败') {
+                eagleLibraryElement.classList.add('clickable');
+                eagleLibraryElement.onclick = () => this.openFolder(libraryPath);
+            } else {
+                eagleLibraryElement.classList.remove('clickable');
+                eagleLibraryElement.onclick = null;
+            }
+
             document.getElementById('eagle-folder').textContent = eagleStatus.folderPath || '未选择';
         } else {
             document.getElementById('eagle-version').textContent = '未连接';
@@ -2734,6 +3039,14 @@ class AEExtension {
             const eaglePathElement = document.getElementById('eagle-path');
             eaglePathElement.textContent = '未连接';
             eaglePathElement.title = '未连接';
+            eaglePathElement.classList.remove('clickable');
+            eaglePathElement.onclick = null;
+
+            const eagleLibraryElement = document.getElementById('eagle-library');
+            eagleLibraryElement.textContent = '未连接';
+            eagleLibraryElement.title = '未连接';
+            eagleLibraryElement.classList.remove('clickable');
+            eagleLibraryElement.onclick = null;
 
             document.getElementById('eagle-library').textContent = '未连接';
             document.getElementById('eagle-folder').textContent = '未连接';
@@ -2742,6 +3055,18 @@ class AEExtension {
 
     // 从服务器获取Eagle状态信息
     async updateEagleStatusFromServer() {
+        // 如果是演示模式，使用演示数据
+        if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
+            const eagleData = window.__DEMO_DATA__.eagle.connected;
+            this.updateEagleUI({
+                version: eagleData.version,
+                execPath: eagleData.execPath,
+                libraryPath: eagleData.libraryPath,
+                libraryName: eagleData.libraryName
+            });
+            return;
+        }
+
         try {
             const response = await fetch(`${this.eagleUrl}/ae-status`);
             if (response.ok) {
@@ -2993,6 +3318,7 @@ class AEExtension {
 
         // 导出选项复选框
         const exportAutoCopy = document.getElementById('export-auto-copy');
+        const exportBurnAfterReading = document.getElementById('export-burn-after-reading');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
@@ -3001,6 +3327,45 @@ class AEExtension {
                 const exportSettings = this.getExportSettingsFromUI();
                 this.settingsManager.saveExportSettings(exportSettings);
                 this.log(`自动复制已${exportAutoCopy.checked ? '启用' : '禁用'}`, 'info');
+            });
+        }
+
+        if (exportBurnAfterReading) {
+            exportBurnAfterReading.addEventListener('change', () => {
+                const exportSettings = this.getExportSettingsFromUI();
+                this.settingsManager.saveExportSettings(exportSettings);
+                this.log(`阅后即焚已${exportBurnAfterReading.checked ? '启用' : '禁用'}`, 'info');
+            });
+
+            // 添加特殊点击事件处理
+            exportBurnAfterReading.addEventListener('click', async (event) => {
+                if (event.altKey) {
+                    // Alt+点击：清空临时文件夹
+                    event.preventDefault();
+                    try {
+                        await this.cleanupTempFolder();
+                        this.log('🗑️ 临时文件夹已清空', 'success');
+                        // 清空后更新tooltip
+                        setTimeout(() => {
+                            this.updateBurnAfterReadingTooltip();
+                        }, 500);
+                    } catch (error) {
+                        this.log(`❌ 清空临时文件夹失败: ${error.message}`, 'error');
+                    }
+                } else if (event.ctrlKey) {
+                    // Ctrl+点击：打开临时文件夹
+                    event.preventDefault();
+                    try {
+                        await this.openTempFolder();
+                        this.log('📁 临时文件夹已打开', 'info');
+                        // 打开后更新tooltip（可能有新文件）
+                        setTimeout(() => {
+                            this.updateBurnAfterReadingTooltip();
+                        }, 1000);
+                    } catch (error) {
+                        this.log(`❌ 打开临时文件夹失败: ${error.message}`, 'error');
+                    }
+                }
             });
         }
 
@@ -3020,23 +3385,27 @@ class AEExtension {
 
         // 项目文件夹选择
         const projectFolderSelect = document.getElementById('project-folder-select');
-        projectFolderSelect.addEventListener('change', () => {
-            this.handleProjectFolderChange();
-            // 实时同步到快速设置
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('projectAdjacentFolder', projectFolderSelect.value, false);
-            }
-        });
+        if (projectFolderSelect) {
+            projectFolderSelect.addEventListener('change', () => {
+                this.handleProjectFolderChange();
+                // 实时同步到快速设置
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('projectAdjacentFolder', projectFolderSelect.value, false);
+                }
+            });
+        }
 
         // 合成导入选项
         const addToCompositionCheckbox = document.getElementById('add-to-composition');
-        addToCompositionCheckbox.addEventListener('change', () => {
-            this.updateSettingsUI();
-            // 实时同步到快速设置
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('addToComposition', addToCompositionCheckbox.checked, false);
-            }
-        });
+        if (addToCompositionCheckbox) {
+            addToCompositionCheckbox.addEventListener('change', () => {
+                this.updateSettingsUI();
+                // 实时同步到快速设置
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('addToComposition', addToCompositionCheckbox.checked, false);
+                }
+            });
+        }
 
         // 时间轴放置选项
         const timelinePlacementRadios = document.querySelectorAll('input[name="timeline-placement"]');
@@ -3077,34 +3446,42 @@ class AEExtension {
 
         // 文件管理选项
         const keepOriginalNameCheckbox = document.getElementById('keep-original-name');
-        keepOriginalNameCheckbox.addEventListener('change', () => {
-            // 实时同步到快速设置
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('fileManagement.keepOriginalName', keepOriginalNameCheckbox.checked, false);
-            }
-        });
+        if (keepOriginalNameCheckbox) {
+            keepOriginalNameCheckbox.addEventListener('change', () => {
+                // 实时同步到快速设置
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('fileManagement.keepOriginalName', keepOriginalNameCheckbox.checked, false);
+                }
+            });
+        }
 
         // 其他文件管理选项也添加实时同步
         const addTimestampCheckbox = document.getElementById('add-timestamp');
-        addTimestampCheckbox.addEventListener('change', () => {
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('fileManagement.addTimestamp', addTimestampCheckbox.checked, false);
-            }
-        });
+        if (addTimestampCheckbox) {
+            addTimestampCheckbox.addEventListener('change', () => {
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('fileManagement.addTimestamp', addTimestampCheckbox.checked, false);
+                }
+            });
+        }
 
         const createTagFoldersCheckbox = document.getElementById('create-tag-folders');
-        createTagFoldersCheckbox.addEventListener('change', () => {
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('fileManagement.createTagFolders', createTagFoldersCheckbox.checked, false);
-            }
-        });
+        if (createTagFoldersCheckbox) {
+            createTagFoldersCheckbox.addEventListener('change', () => {
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('fileManagement.createTagFolders', createTagFoldersCheckbox.checked, false);
+                }
+            });
+        }
 
         const deleteFromEagleCheckbox = document.getElementById('delete-from-eagle');
-        deleteFromEagleCheckbox.addEventListener('change', () => {
-            if (this.quickSettingsInitialized) {
-                this.settingsManager.updateField('fileManagement.deleteFromEagle', deleteFromEagleCheckbox.checked, false);
-            }
-        });
+        if (deleteFromEagleCheckbox) {
+            deleteFromEagleCheckbox.addEventListener('change', () => {
+                if (this.quickSettingsInitialized) {
+                    this.settingsManager.updateField('fileManagement.deleteFromEagle', deleteFromEagleCheckbox.checked, false);
+                }
+            });
+        }
 
         // 通信端口设置
         const communicationPortInput = document.getElementById('communication-port');
@@ -3128,37 +3505,43 @@ class AEExtension {
 
         // 文件夹浏览按钮
         const browseFolderBtn = document.getElementById('browse-folder-btn');
-        browseFolderBtn.addEventListener('click', () => {
-            this.browseCustomFolder();
-        });
+        if (browseFolderBtn) {
+            browseFolderBtn.addEventListener('click', () => {
+                this.browseCustomFolder();
+            });
+        }
 
         // 最近文件夹选择
         const recentFoldersSelect = document.getElementById('recent-folders-select');
-        recentFoldersSelect.addEventListener('change', () => {
-            const selectedPath = recentFoldersSelect.value;
-            if (selectedPath) {
-                document.getElementById('custom-folder-path').value = selectedPath;
-                // 实时同步到快速设置
-                if (this.quickSettingsInitialized) {
-                    this.settingsManager.updateField('customFolderPath', selectedPath, false);
+        if (recentFoldersSelect) {
+            recentFoldersSelect.addEventListener('change', () => {
+                const selectedPath = recentFoldersSelect.value;
+                if (selectedPath) {
+                    document.getElementById('custom-folder-path').value = selectedPath;
+                    // 实时同步到快速设置
+                    if (this.quickSettingsInitialized) {
+                        this.settingsManager.updateField('customFolderPath', selectedPath, false);
+                    }
+                    this.log(`已选择最近使用的文件夹: ${selectedPath}`, 'success');
                 }
-                this.log(`已选择最近使用的文件夹: ${selectedPath}`, 'success');
-            }
-        });
+            });
+        }
 
         // 自定义文件夹路径输入框变化
         const customFolderPath = document.getElementById('custom-folder-path');
-        customFolderPath.addEventListener('change', () => {
-            const path = customFolderPath.value.trim();
-            if (path) {
-                this.settingsManager.addRecentFolder(path);
-                this.updateRecentFoldersDropdown();
-                // 实时同步到快速设置
-                if (this.quickSettingsInitialized) {
-                    this.settingsManager.updateField('customFolderPath', path, false);
+        if (customFolderPath) {
+            customFolderPath.addEventListener('change', () => {
+                const path = customFolderPath.value.trim();
+                if (path) {
+                    this.settingsManager.addRecentFolder(path);
+                    this.updateRecentFoldersDropdown();
+                    // 实时同步到快速设置
+                    if (this.quickSettingsInitialized) {
+                        this.settingsManager.updateField('customFolderPath', path, false);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // 音效设置已移除，默认启用音效
     }
@@ -3257,8 +3640,10 @@ class AEExtension {
         // 通信端口
         const preferences = this.settingsManager.getPreferences();
         const communicationPort = document.getElementById('communication-port');
-        communicationPort.value = preferences.communicationPort;
-        this.updateEagleUrl(preferences.communicationPort);
+        if (communicationPort) {
+            communicationPort.value = preferences.communicationPort;
+            this.updateEagleUrl(preferences.communicationPort);
+        }
 
         // 音效设置（默认启用，设置音效播放器音量）
         this.soundPlayer.setVolume(settings.soundSettings.volume / 100);
@@ -3352,12 +3737,16 @@ class AEExtension {
 
         // 项目文件夹配置显示/隐藏
         const projectFolderConfig = document.getElementById('project-folder-config');
-        projectFolderConfig.style.display = uiState.projectFolderVisible(settings) ? 'block' : 'none';
+        if (projectFolderConfig) {
+            projectFolderConfig.style.display = uiState.projectFolderVisible(settings) ? 'block' : 'none';
+        }
 
         // 自定义文件夹配置显示/隐藏
         const customFolderConfig = document.getElementById('custom-folder-config');
-        const isCustomFolderVisible = uiState.customFolderVisible(settings);
-        customFolderConfig.style.display = isCustomFolderVisible ? 'block' : 'none';
+        if (customFolderConfig) {
+            const isCustomFolderVisible = uiState.customFolderVisible(settings);
+            customFolderConfig.style.display = isCustomFolderVisible ? 'block' : 'none';
+        }
 
         // 如果自定义文件夹配置可见，更新最近文件夹下拉列表
         if (isCustomFolderVisible) {
@@ -4766,11 +5155,15 @@ class AEExtension {
 
         // 导出选项
         const exportAutoCopy = document.getElementById('export-auto-copy');
+        const exportBurnAfterReading = document.getElementById('export-burn-after-reading');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
         if (exportAutoCopy) {
             exportAutoCopy.checked = exportSettings.autoCopy !== undefined ? exportSettings.autoCopy : true;
+        }
+        if (exportBurnAfterReading) {
+            exportBurnAfterReading.checked = exportSettings.burnAfterReading !== undefined ? exportSettings.burnAfterReading : false;
         }
         if (exportAddTimestamp) {
             exportAddTimestamp.checked = exportSettings.addTimestamp;
@@ -4787,6 +5180,7 @@ class AEExtension {
     getExportSettingsFromUI() {
         const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'project_adjacent';
         const exportAutoCopy = document.getElementById('export-auto-copy');
+        const exportBurnAfterReading = document.getElementById('export-burn-after-reading');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
@@ -4812,6 +5206,7 @@ class AEExtension {
             projectAdjacentFolder: projectAdjacentFolder,
             customExportPath: customExportPath,
             autoCopy: exportAutoCopy ? exportAutoCopy.checked : true,
+            burnAfterReading: exportBurnAfterReading ? exportBurnAfterReading.checked : false,
             addTimestamp: exportAddTimestamp ? exportAddTimestamp.checked : true,
             createSubfolders: exportCreateSubfolders ? exportCreateSubfolders.checked : false
         };

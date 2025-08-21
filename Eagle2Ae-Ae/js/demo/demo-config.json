@@ -16,21 +16,22 @@
   "demoData": {
     "ae": {
       "version": "2024 (24.0.0)",
-      "projectPath": "/Users/Demo/Projects/演示项目.aep",
-      "projectName": "Eagle2Ae 演示项目",
-      "activeComp": "主合成 - 演示场景",
+      "projectPath": "D:\\工作\\今天你吃饭了嘛\\反正我吃了.aep",
+      "projectName": "正在做饭",
+      "activeComp": "佛跳墙",
       "compDuration": "00:00:30:00",
       "frameRate": 30,
       "resolution": "1920x1080"
     },
     "eagle": {
-      "version": "4.0+",
-      "path": "/Applications/Eagle.app",
+      "version": "4.0.0 build 1 pid 41536",
+      "execPath": "C:\\Program Files\\Eagle\\Eagle.exe",
       "connectionStatus": "connected",
       "responseTime": "12ms",
-      "libraryPath": "/Users/Demo/Eagle Library",
+      "libraryPath": "D:\\仓鼠.library",
+      "libraryName": "仓鼠.library",
       "totalItems": 1247,
-      "selectedFolder": "AE素材"
+      "selectedFolder": "仓鼠党"
     },
     "connection": {
       "status": "connected",

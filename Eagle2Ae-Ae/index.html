@@ -374,6 +374,22 @@
             transition: color 0.2s ease;
         }
 
+        /* 可点击路径样式 */
+        .eagle-info #eagle-path.clickable,
+        .eagle-info #eagle-library.clickable,
+        .project-info #project-path.clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #4a90e2;
+        }
+
+        .eagle-info #eagle-path.clickable:hover,
+        .eagle-info #eagle-library.clickable:hover,
+        .project-info #project-path.clickable:hover {
+            color: #66a3ff;
+            text-decoration: underline;
+        }
+
         /* 确保包含路径的div不会超出容器 */
         .eagle-info > div,
         .project-info > div {
@@ -1979,6 +1995,10 @@
             margin-right: 16px;
         }
 
+
+
+
+
         .behavior-checkbox input[type="checkbox"] {
             display: none;
         }
@@ -2402,14 +2422,14 @@
                     <div class="project-info">
                         <div class="ae-title">After Effects</div>
                         <div><span class="label">版本:</span> <span id="ae-version">获取中...</span></div>
-                        <div><span class="label">路径:</span> <span id="project-path" title="">未知</span></div>
+                        <div><span class="label">路径:</span> <span id="project-path">未知</span></div>
                         <div><span class="label">项目:</span> <span id="project-name">未打开项目</span></div>
                         <div><span class="label">合成:</span> <span id="comp-name">无</span></div>
                     </div>
                     <div class="eagle-info">
                         <div class="eagle-title">Eagle</div>
                         <div><span class="label">版本:</span> <span id="eagle-version">获取中...</span></div>
-                        <div><span class="label">路径:</span> <span id="eagle-path" title="">获取中...</span></div>
+                        <div><span class="label">路径:</span> <span id="eagle-path">获取中...</span></div>
                         <div><span class="label">资源库:</span> <span id="eagle-library">获取中...</span></div>
                         <div><span class="label">当前组:</span> <span id="eagle-folder">获取中...</span></div>
                     </div>
@@ -2606,6 +2626,10 @@
                         <label class="checkbox-option" title="导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用">
                             <input type="checkbox" id="export-auto-copy" checked>
                             <span class="checkbox-label">自动复制</span>
+                        </label>
+                        <label class="checkbox-option" id="burn-after-reading-label" title="启用后图片导出到临时文件夹，导出后复制到剪切板。&#10;文件累计超过100MB或100个文件后自动清空。&#10;Alt+点击清空，Ctrl+点击打开临时文件夹。">
+                            <input type="checkbox" id="export-burn-after-reading">
+                            <span class="checkbox-label">阅后即焚</span>
                         </label>
                         <label class="checkbox-option" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
                             <input type="checkbox" id="export-add-timestamp" checked>
@@ -3768,7 +3792,7 @@
     <script src="js/demo/demo-ui.js"></script>
     <script src="js/demo/easter-egg.js"></script>
     <script src="js/demo/demo-mode.js"></script>
-    <script src="js/demo/demo-validation.js"></script>
+    <!-- <script src="js/demo/demo-validation.js"></script> -->
 
     <script src="js/main.js"></script>
 
@@ -3777,6 +3801,138 @@
         if (typeof CSInterface !== 'undefined') {
             window.csInterface = new CSInterface();
         }
+
+        // 手动修复title（备用）
+        window.fixTitles = function() {
+            if (!window.__DEMO_DATA__) return;
+
+            const aeData = window.__DEMO_DATA__.ae.connected;
+            const eagleData = window.__DEMO_DATA__.eagle.connected;
+
+            const projectPath = document.getElementById('project-path');
+            const eaglePath = document.getElementById('eagle-path');
+            const eagleLibrary = document.getElementById('eagle-library');
+
+            if (projectPath && aeData.projectPath) {
+                projectPath.removeAttribute('title');
+                projectPath.setAttribute('title', aeData.projectPath);
+                projectPath.title = aeData.projectPath;
+                console.log('✅ AE路径title已修复:', aeData.projectPath);
+            }
+
+            if (eaglePath && eagleData.execPath) {
+                eaglePath.removeAttribute('title');
+                eaglePath.setAttribute('title', eagleData.execPath);
+                eaglePath.title = eagleData.execPath;
+                console.log('✅ Eagle路径title已修复:', eagleData.execPath);
+            }
+
+            if (eagleLibrary && eagleData.libraryPath) {
+                eagleLibrary.removeAttribute('title');
+                eagleLibrary.setAttribute('title', eagleData.libraryPath);
+                eagleLibrary.title = eagleData.libraryPath;
+                console.log('✅ 资源库title已修复:', eagleData.libraryPath);
+            }
+        };
+
+        // 添加调试功能
+        window.debugTitle = function() {
+            console.log('=== Title调试信息 ===');
+
+            // 检查演示模式状态
+            console.log('演示模式状态:');
+            console.log('  __DEMO_MODE_ACTIVE__:', window.__DEMO_MODE_ACTIVE__);
+            console.log('  __DEMO_DATA__存在:', !!window.__DEMO_DATA__);
+            console.log('  demoMode.isActive:', window.demoMode?.isActive);
+
+            if (window.__DEMO_DATA__) {
+                const aeData = window.__DEMO_DATA__.ae.connected;
+                const eagleData = window.__DEMO_DATA__.eagle.connected;
+                console.log('AE演示数据:', aeData);
+                console.log('Eagle演示数据:', eagleData);
+            }
+
+            // 检查title属性
+            console.log('\nTitle属性检查:');
+            const elements = [
+                { id: 'project-path', name: 'AE路径' },
+                { id: 'eagle-path', name: 'Eagle路径' },
+                { id: 'eagle-library', name: '资源库' }
+            ];
+
+            elements.forEach(({ id, name }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const textContent = element.textContent || '';
+                    const title = element.title || '';
+                    console.log(`${name} (${id}):`);
+                    console.log(`  文本内容: "${textContent}"`);
+                    console.log(`  title属性: "${title}"`);
+                    console.log(`  title类型: ${typeof title}`);
+                    console.log(`  title长度: ${title.length}`);
+
+                    if (title === 'undefined') {
+                        console.error(`⚠️ ${name}的title为undefined！`);
+                    }
+                } else {
+                    console.error(`❌ 元素${id}不存在`);
+                }
+            });
+
+            console.log('=== 调试完成 ===');
+            console.log('在控制台中查看详细信息');
+        };
+
+        // 全局日志控制 - 设置为 false 来简化演示模式日志
+        window.DEMO_QUIET_MODE = true;
+
+        // 重写console方法来过滤演示模式日志
+        if (window.DEMO_QUIET_MODE) {
+            const originalLog = console.log;
+            const originalError = console.error;
+
+            console.log = function(...args) {
+                const message = args.join(' ');
+                // 过滤演示模式相关的日志
+                if (message.includes('🎭') || message.includes('🔍') || message.includes('📋') ||
+                    message.includes('🛡️') || message.includes('💾') || message.includes('🔄') ||
+                    message.includes('🎨') || message.includes('🧩') || message.includes('🎯') ||
+                    message.includes('📊') || message.includes('🔗') || message.includes('🖱️') ||
+                    message.includes('✅') || message.includes('⚠️') || message.includes('👂') ||
+                    message.includes('演示模式') || message.includes('演示数据') ||
+                    message.includes('网络拦截') || message.includes('DOM元素') ||
+                    message.includes('演示UI') || message.includes('演示API') ||
+                    message.includes('配置加载失败') || message.includes('默认配置') ||
+                    message.includes('数据覆盖') || message.includes('缓存DOM') ||
+                    message.includes('连接按钮') || message.includes('状态指示器') ||
+                    message.includes('事件监听器') || message.includes('API已被拦截') ||
+                    message.includes('备份原始') || message.includes('已替换为') ||
+                    message.includes('Web环境') || message.includes('CSInterface存在但调用失败')) {
+                    return; // 不输出演示模式相关日志
+                }
+                originalLog.apply(console, args);
+            };
+
+            console.error = function(...args) {
+                const message = args.join(' ');
+                // 过滤Web环境下的预期错误
+                if (message.includes('配置加载失败') ||
+                    message.includes('Failed to fetch') ||
+                    message.includes('获取AE版本失败') ||
+                    message.includes('getHostEnvironment') ||
+                    message.includes('createMockCSInterface') ||
+                    message.includes('Cannot read properties of undefined') ||
+                    message.includes('Cannot read properties of null')) {
+                    return; // 不输出Web环境下的预期错误
+                }
+                originalError.apply(console, args);
+            };
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 页面加载完成');
+        });
     </script>
 </body>
 </html>

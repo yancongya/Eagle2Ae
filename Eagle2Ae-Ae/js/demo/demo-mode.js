@@ -1,6 +1,16 @@
 // Eagle2Ae 演示模式主控制器
 // 环境检测、模式切换和彩蛋功能的核心控制器
 
+// 全局日志控制
+window.DEMO_DEBUG = false; // 设置为 false 来简化日志输出
+
+// 简化的日志函数
+function demoLog(message, force = false) {
+    if (window.DEMO_DEBUG || force) {
+        console.log(message);
+    }
+}
+
 class DemoMode {
     constructor() {
         this.config = null;
@@ -27,7 +37,7 @@ class DemoMode {
     }
     
     async init() {
-        console.log('🎭 演示模式控制器初始化...');
+        // console.log('🎭 演示模式控制器初始化...');
         
         try {
             // 检测环境
@@ -51,45 +61,90 @@ class DemoMode {
     }
     
     detectEnvironment() {
-        // 检测CEP环境
-        this.state.isCEPEnvironment = !!(
-            window.__adobe_cep__ || 
-            (window.cep && window.cep.process) ||
-            (typeof CSInterface !== 'undefined')
-        );
-        
-        console.log(`🔍 环境检测: ${this.state.isCEPEnvironment ? 'CEP环境' : 'Web环境'}`);
+        // 更严格的CEP环境检测
+        let isCEP = false;
+
+        // 检查Adobe CEP特有的全局对象
+        if (window.__adobe_cep__) {
+            isCEP = true;
+            console.log('🔍 检测到 window.__adobe_cep__');
+        } else if (window.cep && window.cep.process) {
+            isCEP = true;
+            console.log('🔍 检测到 window.cep.process');
+        } else if (typeof CSInterface !== 'undefined') {
+            // 进一步验证CSInterface是否真正可用
+            try {
+                const cs = new CSInterface();
+                // 尝试获取CEP特有的信息
+                const hostEnv = cs.getHostEnvironment();
+                if (hostEnv && hostEnv.appName) {
+                    isCEP = true;
+                    console.log('🔍 CSInterface可用，检测到宿主应用:', hostEnv.appName);
+                } else {
+                    console.log('🔍 CSInterface存在但getHostEnvironment()返回空，判定为Web环境');
+                }
+            } catch (e) {
+                // CSInterface存在但不可用，说明不在CEP环境中
+                console.log('🔍 CSInterface存在但调用失败，判定为Web环境:', e.message);
+                isCEP = false;
+            }
+        } else {
+            console.log('🔍 未检测到任何CEP环境标识');
+        }
+
+        this.state.isCEPEnvironment = isCEP;
+        console.log(`🔍 最终环境检测结果: ${this.state.isCEPEnvironment ? 'CEP环境' : 'Web环境'}`);
     }
     
     async loadConfig() {
+        // 在Web环境下直接使用默认配置，避免CORS错误
+        if (this.isWebEnvironment()) {
+            this.config = this.getDefaultConfig();
+            return;
+        }
+
         try {
             // 获取配置文件路径
             const configPath = this.getConfigPath();
-            
+            console.log('📋 尝试加载配置文件:', configPath);
+
             // 加载配置
             const response = await fetch(configPath);
             if (!response.ok) {
-                throw new Error(`配置文件加载失败: ${response.status}`);
+                throw new Error(`配置文件加载失败: ${response.status} ${response.statusText}`);
             }
-            
+
             this.config = await response.json();
             console.log('📋 演示配置已加载');
-            
+
         } catch (error) {
-            console.error('❌ 配置加载失败:', error);
             // 使用默认配置
             this.config = this.getDefaultConfig();
         }
     }
     
+    isWebEnvironment() {
+        // 检查是否为Web环境
+        return !this.state.isCEPEnvironment || window.location.protocol === 'file:';
+    }
+
     getConfigPath() {
         // 根据环境确定配置文件路径
         if (this.state.isCEPEnvironment && typeof CSInterface !== 'undefined') {
-            const csInterface = new CSInterface();
-            const extensionRoot = csInterface.getSystemPath('extension');
-            return `${extensionRoot}/js/demo/demo-config.json`;
+            try {
+                const csInterface = new CSInterface();
+                const extensionRoot = csInterface.getSystemPath('extension');
+                const configPath = `${extensionRoot}/js/demo/demo-config.json`;
+                console.log('📋 CEP环境配置路径:', configPath);
+                return configPath;
+            } catch (error) {
+                console.warn('⚠️ CEP环境配置路径获取失败，使用默认路径:', error.message);
+                return './js/demo/demo-config.json';
+            }
         } else {
-            return './js/demo/demo-config.json';
+            const configPath = './js/demo/demo-config.json';
+            console.log('📋 Web环境配置路径:', configPath);
+            return configPath;
         }
     }
     
@@ -142,8 +197,12 @@ class DemoMode {
     }
     
     determineInitialMode() {
+        console.log('🎯 开始确定初始模式...');
+        console.log('🎯 当前环境检测结果:', this.state.isCEPEnvironment ? 'CEP环境' : 'Web环境');
+
         if (!this.state.isCEPEnvironment) {
             // 非CEP环境自动启用演示模式
+            console.log('🎭 Web环境检测到，准备自动启用演示模式...');
             this.enableDemoMode(this.modes.AUTO_DEMO);
         } else {
             // CEP环境保持正常模式，等待彩蛋触发
@@ -176,30 +235,45 @@ class DemoMode {
     }
     
     enableDemoMode(modeType = this.modes.DEMO) {
-        console.log(`🎭 启用演示模式: ${modeType}`);
+        console.log(`🎭 开始启用演示模式: ${modeType}`);
 
         // 激活数据覆盖策略
         if (window.__DEMO_OVERRIDE__) {
+            console.log('📊 激活数据覆盖策略...');
             window.__DEMO_OVERRIDE__.activate();
+        } else {
+            console.warn('⚠️ 数据覆盖策略未找到');
         }
 
         // 保存原始API引用
+        console.log('💾 备份原始API引用...');
         this.backupOriginalAPIs();
 
         // 替换API调用（包括网络拦截）
+        console.log('🔄 替换API调用...');
         this.replaceAPIs();
 
         // 启用网络拦截器
         if (this.networkInterceptor) {
+            console.log('🛡️ 启用网络拦截器...');
             this.networkInterceptor.activate();
+        } else {
+            console.warn('⚠️ 网络拦截器未找到');
         }
-
-        // 立即静态设置项目信息
-        this.setStaticProjectInfo();
 
         // 更新UI状态
         if (this.demoUI) {
+            console.log('🎨 更新UI状态...');
             this.demoUI.setupUI();
+
+            // 延迟设置初始状态，确保UI完全初始化
+            setTimeout(() => {
+                console.log('📋 设置初始未连接状态...');
+                this.demoUI.showDisconnectedState();
+                this.demoUI.updateProjectInfo();
+            }, 100);
+        } else {
+            console.warn('⚠️ DemoUI未找到');
         }
 
         // 更新模式状态
@@ -211,7 +285,7 @@ class DemoMode {
         //     this.config.demoData.ui.messages.modeSwitch || '🎭 演示模式已启用 - 网络通信已完全拦截';
         // this.showModeNotification(message);
 
-        console.log(`✅ 演示模式已启用: ${modeType} - 所有网络通信已被拦截`);
+        console.log('✅ 演示模式已启用');
     }
     
     disableDemoMode() {
@@ -344,10 +418,19 @@ class DemoMode {
     
     replaceAPIs() {
         // 创建模拟的CSInterface
-        if (this.demoAPIs && !this.state.isCEPEnvironment) {
+        if (this.demoAPIs && typeof this.demoAPIs.createMockCSInterface === 'function' && !this.state.isCEPEnvironment) {
+            const demoAPIs = this.demoAPIs; // 保存引用
             window.CSInterface = function() {
-                return this.demoAPIs.createMockCSInterface();
-            }.bind(this);
+                try {
+                    return demoAPIs.createMockCSInterface();
+                } catch (error) {
+                    // 静默处理错误，返回一个基本的mock对象
+                    return {
+                        getHostEnvironment: () => null,
+                        evalScript: () => {}
+                    };
+                }
+            };
         }
 
         // 拦截AEExtension的方法调用
@@ -740,6 +823,12 @@ class DemoMode {
         if (projectPath) {
             projectPath.textContent = aeData.projectPath;
             projectPath.title = aeData.projectPath;
+            // 添加点击样式和事件
+            projectPath.classList.add('clickable');
+            projectPath.onclick = () => {
+                console.log('🎭 演示模式：模拟打开项目文件夹');
+                alert('演示模式：这里会打开项目文件夹\n' + aeData.projectPath);
+            };
             console.log('✅ 项目路径已设置:', aeData.projectPath);
         } else {
             console.warn('❌ 未找到project-path元素');
@@ -779,25 +868,36 @@ class DemoMode {
             console.warn('❌ 未找到eagle-version元素');
         }
 
-        // Eagle路径
+        // Eagle路径 - 显示安装路径
         const eaglePath = document.getElementById('eagle-path');
         if (eaglePath) {
-            eaglePath.textContent = eagleData.path || '演示路径';
-            eaglePath.title = eagleData.path || '演示路径';
-            console.log('✅ Eagle路径已设置:', eagleData.path);
+            eaglePath.textContent = eagleData.execPath || '演示路径';
+            eaglePath.title = eagleData.execPath || '演示路径';
+            // Eagle路径不设置点击事件
+            eaglePath.classList.remove('clickable');
+            eaglePath.onclick = null;
+            console.log('✅ Eagle路径已设置:', eagleData.execPath);
         } else {
             console.warn('❌ 未找到eagle-path元素');
         }
 
-        // 资源库
+        // 资源库 - 可以点击打开
         const eagleLibrary = document.getElementById('eagle-library');
         if (eagleLibrary) {
-            eagleLibrary.textContent = eagleData.libraryPath;
-            eagleLibrary.title = eagleData.libraryPath;
-            console.log('✅ Eagle资源库已设置:', eagleData.libraryPath);
+            eagleLibrary.textContent = eagleData.libraryName || '演示资源库';
+            eagleLibrary.title = eagleData.libraryPath || '演示路径';
+            // 添加点击样式和事件
+            eagleLibrary.classList.add('clickable');
+            eagleLibrary.onclick = () => {
+                console.log('🎭 演示模式：模拟打开Eagle资源库文件夹');
+                alert('演示模式：这里会打开Eagle资源库文件夹\n' + eagleData.libraryPath);
+            };
+            console.log('✅ Eagle资源库已设置:', eagleData.libraryName);
         } else {
             console.warn('❌ 未找到eagle-library元素');
         }
+
+
 
         // 当前组
         const eagleFolder = document.getElementById('eagle-folder');
@@ -907,19 +1007,62 @@ class DemoMode {
 }
 
 // 全局初始化
-function initializeDemoMode() {
-    console.log('🎭 初始化演示模式...');
-    window.demoMode = new DemoMode();
+async function initializeDemoMode() {
+    demoLog('🎭 开始初始化演示模式...');
+
+    // 避免重复初始化
+    if (window.demoMode) {
+        console.log('⚠️ 演示模式已经初始化，跳过重复初始化');
+        return;
+    }
+
+    try {
+        window.demoMode = new DemoMode();
+        // 等待初始化完成
+        await new Promise(resolve => {
+            const checkInit = () => {
+                if (window.demoMode.state.isInitialized) {
+                    console.log('✅ 演示模式初始化完成');
+                    resolve();
+                } else {
+                    setTimeout(checkInit, 50);
+                }
+            };
+            checkInit();
+        });
+    } catch (error) {
+        console.error('❌ 演示模式初始化失败:', error);
+    }
 }
 
 // 尽早初始化演示模式，在main.js之前
 (function() {
-    // 立即检查环境并初始化
-    const isCEP = !!(window.__adobe_cep__ || window.cep || typeof CSInterface !== 'undefined');
+    // 立即检查环境并初始化 - 使用简化但更准确的检测
+    let isCEP = false;
+
+    if (window.__adobe_cep__) {
+        isCEP = true;
+    } else if (window.cep && window.cep.process) {
+        isCEP = true;
+    } else if (typeof CSInterface !== 'undefined') {
+        // 尝试更严格的检测
+        try {
+            const cs = new CSInterface();
+            const hostEnv = cs.getHostEnvironment();
+            if (hostEnv && hostEnv.appName) {
+                isCEP = true;
+            }
+        } catch (e) {
+            // CSInterface存在但不可用，判定为Web环境
+            isCEP = false;
+        }
+    }
+
+    // console.log('🔍 早期环境检测结果:', isCEP ? 'CEP环境' : 'Web环境');
 
     if (!isCEP) {
         // 非CEP环境，立即初始化演示模式并启用网络拦截
-        console.log('🎭 检测到非CEP环境，立即初始化演示模式并启用网络拦截');
+        // console.log('🎭 检测到非CEP环境，立即初始化演示模式并启用网络拦截');
 
         // 立即进行基础的网络拦截，防止任何早期的网络请求
         const originalFetch = window.fetch;
@@ -959,13 +1102,23 @@ function initializeDemoMode() {
         };
 
         // 立即初始化完整的演示模式
-        initializeDemoMode();
+        initializeDemoMode().catch(error => {
+            console.error('❌ 演示模式异步初始化失败:', error);
+        });
     } else {
         // CEP环境，正常初始化流程
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeDemoMode);
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeDemoMode().catch(error => {
+                    console.error('❌ CEP环境演示模式初始化失败:', error);
+                });
+            });
         } else {
-            setTimeout(initializeDemoMode, 50); // 更早的初始化
+            setTimeout(() => {
+                initializeDemoMode().catch(error => {
+                    console.error('❌ CEP环境延迟演示模式初始化失败:', error);
+                });
+            }, 50); // 更早的初始化
         }
     }
 })();
@@ -974,7 +1127,9 @@ function initializeDemoMode() {
 window.addEventListener('load', () => {
     if (!window.demoMode) {
         console.log('🔄 备用初始化演示模式...');
-        initializeDemoMode();
+        initializeDemoMode().catch(error => {
+            console.error('❌ 备用演示模式初始化失败:', error);
+        });
     }
 });
 

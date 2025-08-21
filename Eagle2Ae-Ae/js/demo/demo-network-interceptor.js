@@ -96,7 +96,7 @@ class DemoNetworkInterceptor {
                 requestInfo.intercepted = true;
                 self.interceptedRequests.push(requestInfo);
                 
-                console.log(`🛡️ 拦截fetch请求: ${requestInfo.method} ${url}`);
+                // console.log(`🛡️ 拦截fetch请求: ${requestInfo.method} ${url}`);
                 
                 // 返回模拟响应
                 return await self.demoAPIs.handleEagleAPICall(url, options);
