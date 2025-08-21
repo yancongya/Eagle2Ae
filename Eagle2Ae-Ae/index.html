@@ -2591,7 +2591,7 @@
                             <input type="radio" name="export-mode" value="project_adjacent" checked>
                             <span>项目旁导出</span>
                         </label>
-                        <label class="import-mode-option" title="指定任意文件夹作为导出目录">
+                        <label class="import-mode-option" id="export-custom-folder-option" title="指定任意文件夹作为导出目录">
                             <input type="radio" name="export-mode" value="custom_folder">
                             <span>自定义文件夹</span>
                         </label>
@@ -2603,7 +2603,7 @@
 
                     <!-- 导出选项 -->
                     <div class="checkbox-group-horizontal">
-                        <label class="checkbox-option" title="导出完成后自动复制导出路径到剪切板，替代手动复制操作">
+                        <label class="checkbox-option" title="导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用">
                             <input type="checkbox" id="export-auto-copy" checked>
                             <span class="checkbox-label">自动复制</span>
                         </label>
@@ -2786,7 +2786,7 @@
             <div class="modal-body">
                 <div class="folder-path-setting">
                     <div class="folder-path-section">
-                        <input type="text" id="export-custom-folder-path-input" placeholder="选择导出文件夹路径" readonly>
+                        <input type="text" id="export-custom-folder-path-input" placeholder="点击浏览选择导出文件夹路径" readonly title="鼠标悬浮查看完整路径">
                         <button class="browse-button" onclick="browseExportFolderPath()">浏览...</button>
                     </div>
                     <div class="recent-folders-section" id="export-recent-folders-section" style="display: none;">
@@ -3247,6 +3247,76 @@
             input.click();
         }
 
+        // CEP文件夹选择的通用函数
+        function useCEPFolderPicker(inputId, currentPath, title) {
+            console.log('正在使用CEP文件夹选择对话框...');
+
+            try {
+                // 使用CSInterface的文件选择功能
+                if (window.csInterface) {
+                    // 使用ExtendScript调用系统文件夹选择对话框
+                    window.csInterface.evalScript(`
+                        try {
+                            var folder = Folder.selectDialog("${title || '选择导出文件夹'}", "${currentPath || ''}");
+                            if (folder) {
+                                JSON.stringify({success: true, path: folder.fsName});
+                            } else {
+                                JSON.stringify({success: false, cancelled: true});
+                            }
+                        } catch (error) {
+                            JSON.stringify({success: false, error: error.toString()});
+                        }
+                    `, (result) => {
+                        try {
+                            const parsed = JSON.parse(result);
+                            if (parsed.success && parsed.path) {
+                                const selectedPath = parsed.path;
+                                const pathInput = document.getElementById(inputId);
+                                pathInput.value = selectedPath;
+                                console.log('已选择文件夹:', selectedPath);
+
+                                // 保存路径到相应的设置对象并同步到SettingsManager
+                                if (inputId === 'custom-folder-path-input') {
+                                    customFolderSettings.folderPath = selectedPath;
+                                    // 同步到SettingsManager
+                                    if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                        const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                        currentSettings.customFolderPath = selectedPath;
+                                        window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                        console.log('导入路径已同步到SettingsManager:', selectedPath);
+                                    }
+                                } else if (inputId === 'export-custom-folder-path-input') {
+                                    exportCustomFolderSettings.folderPath = selectedPath;
+                                    // 同步到SettingsManager
+                                    if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                        const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                        currentSettings.exportSettings.customExportPath = selectedPath;
+                                        window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                                        console.log('导出路径已同步到SettingsManager:', selectedPath);
+                                    }
+                                }
+
+                                // 更新tooltip显示路径
+                                updatePathTooltip(inputId, selectedPath);
+                            } else if (parsed.cancelled) {
+                                console.log('用户取消了文件夹选择');
+                            } else {
+                                console.error('文件夹选择失败:', parsed.error || '未知错误');
+                            }
+                        } catch (parseError) {
+                            console.error('解析文件夹选择结果失败:', parseError);
+                        }
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error('CEP文件夹选择出错:', error);
+            }
+
+            // 如果CEP方法失败，回退到ExtendScript方法
+            useExtendScriptFolderPicker(inputId, currentPath, title);
+        }
+
         // ExtendScript文件夹选择的通用函数
         function useExtendScriptFolderPicker(inputId, currentPath, title) {
             console.log('正在使用ExtendScript文件夹选择对话框...');
@@ -3265,6 +3335,14 @@
                             customFolderSettings.folderPath = parsedResult.path;
                         } else if (inputId === 'export-custom-folder-path-input') {
                             exportCustomFolderSettings.folderPath = parsedResult.path;
+
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.exportSettings.customExportPath = parsedResult.path;
+                                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                                console.log('导出路径已同步到SettingsManager:', parsedResult.path);
+                            }
                         }
                     } else if (parsedResult.cancelled) {
                         console.log('用户取消了文件夹选择');
@@ -3279,6 +3357,33 @@
                     alert('文件夹选择功能出现错误，请重试');
                 }
             });
+        }
+
+        // 更新路径tooltip
+        function updatePathTooltip(inputId, path) {
+            const input = document.getElementById(inputId);
+            if (input && path) {
+                input.title = `当前设置的路径: ${path}`;
+                input.setAttribute('data-path', path);
+            }
+
+            // 如果是导出自定义文件夹，更新选项的tooltip
+            if (inputId === 'export-custom-folder-path-input') {
+                updateExportCustomFolderTooltip(path);
+            }
+        }
+
+        // 更新导出自定义文件夹选项的tooltip
+        function updateExportCustomFolderTooltip(path) {
+            const customFolderOption = document.getElementById('export-custom-folder-option');
+            if (customFolderOption) {
+                const baseTooltip = '指定任意文件夹作为导出目录';
+                if (path && path.trim() !== '') {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: ${path}`;
+                } else {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
         }
 
         // 回退到输入对话框
@@ -3400,8 +3505,15 @@
                 folderName = presetSelect.value;
             }
 
-            // 保存设置
+            // 保存设置到全局变量
             exportProjectAdjacentSettings.folderName = folderName;
+
+            // 同步到SettingsManager
+            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                currentSettings.exportSettings.projectAdjacentFolder = folderName;
+                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+            }
 
             // 关闭弹窗
             closeExportProjectAdjacentModal();
@@ -3414,8 +3526,22 @@
             const modal = document.getElementById('export-custom-folder-modal');
             const pathInput = document.getElementById('export-custom-folder-path-input');
 
-            // 设置当前值
-            pathInput.value = exportCustomFolderSettings.folderPath;
+            // 从SettingsManager获取保存的路径
+            let savedPath = '';
+            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                const settings = window.eagleToAeApp.settingsManager.getSettings();
+                savedPath = settings.exportSettings.customExportPath || '';
+            }
+
+            // 如果SettingsManager中有路径，使用它；否则使用全局变量
+            const currentPath = savedPath || exportCustomFolderSettings.folderPath || '';
+
+            // 设置当前值和tooltip
+            pathInput.value = currentPath;
+            if (currentPath) {
+                updatePathTooltip('export-custom-folder-path-input', currentPath);
+                exportCustomFolderSettings.folderPath = currentPath; // 同步到全局变量
+            }
 
             // 显示最近使用的导出文件夹
             updateExportRecentFoldersList();
@@ -3458,7 +3584,7 @@
                 return;
             }
 
-            // 保存设置
+            // 保存设置到全局变量
             exportCustomFolderSettings.folderPath = folderPath;
 
             // 添加到最近使用列表
@@ -3470,6 +3596,16 @@
                 }
             }
 
+            // 同步到SettingsManager
+            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                currentSettings.exportSettings.customExportPath = folderPath;
+                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+            }
+
+            // 更新tooltip显示
+            updateExportCustomFolderTooltip(folderPath);
+
             // 关闭弹窗
             closeExportCustomFolderModal();
 
@@ -3478,20 +3614,48 @@
 
         function browseExportFolderPath() {
             try {
-                console.log('正在使用Web API导出文件夹选择...');
+                console.log('正在选择导出文件夹...');
 
-                // 首先尝试使用现代的 File System Access API
+                // 优先使用CEP的文件夹选择器
+                if (window.cep && window.cep.fs) {
+                    console.log('使用 CEP 文件夹选择器');
+                    useCEPFolderPicker('export-custom-folder-path-input', exportCustomFolderSettings.folderPath || '', '选择导出文件夹');
+                    return;
+                }
+
+                // 回退方案1：使用现代的 File System Access API
                 if ('showDirectoryPicker' in window) {
                     console.log('使用 File System Access API');
                     showDirectoryPicker()
-                        .then(directoryHandle => {
+                        .then(async directoryHandle => {
                             const pathInput = document.getElementById('export-custom-folder-path-input');
-                            pathInput.value = `[已选择] ${directoryHandle.name}`;
-                            console.log('已选择导出文件夹:', directoryHandle.name);
 
-                            // 保存文件夹句柄以供后续使用
+                            // 尝试获取完整路径
+                            let fullPath = directoryHandle.name;
+                            try {
+                                // 使用 resolve 方法获取相对路径，然后构建完整路径
+                                const entries = [];
+                                for await (const entry of directoryHandle.values()) {
+                                    entries.push(entry);
+                                    break; // 只需要一个条目来测试路径
+                                }
+
+                                // 如果可以访问文件系统，尝试获取更完整的路径信息
+                                if (directoryHandle.resolve) {
+                                    // 这是一个实验性API，可能不可用
+                                    fullPath = await directoryHandle.resolve() || directoryHandle.name;
+                                }
+                            } catch (e) {
+                                // 如果无法获取完整路径，使用文件夹名称
+                                console.log('无法获取完整路径，使用文件夹名称:', directoryHandle.name);
+                            }
+
+                            pathInput.value = fullPath;
+                            console.log('已选择导出文件夹:', fullPath);
+
+                            // 保存文件夹句柄和路径以供后续使用
                             exportCustomFolderSettings.directoryHandle = directoryHandle;
-                            exportCustomFolderSettings.folderPath = directoryHandle.name;
+                            exportCustomFolderSettings.folderPath = fullPath;
                         })
                         .catch(error => {
                             if (error.name === 'AbortError') {
@@ -3547,6 +3711,37 @@
                     closeExportCustomFolderModal();
                 }
             }
+        });
+
+        // 初始化导出路径显示
+        function initializeExportPathDisplay() {
+            // 等待应用初始化完成
+            setTimeout(() => {
+                if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                    const settings = window.eagleToAeApp.settingsManager.getSettings();
+                    const savedPath = settings.exportSettings.customExportPath;
+
+                    // 更新全局变量和输入框
+                    exportCustomFolderSettings.folderPath = savedPath || '';
+                    const pathInput = document.getElementById('export-custom-folder-path-input');
+                    if (pathInput) {
+                        pathInput.value = savedPath || '';
+                        updatePathTooltip('export-custom-folder-path-input', savedPath || '');
+                    }
+
+                    // 更新自定义文件夹选项的tooltip
+                    updateExportCustomFolderTooltip(savedPath || '');
+
+                    if (savedPath) {
+                        console.log('已恢复保存的导出路径:', savedPath);
+                    }
+                }
+            }, 1000); // 等待1秒确保应用完全初始化
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeExportPathDisplay();
         });
     </script>
 

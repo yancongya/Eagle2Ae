@@ -946,7 +946,7 @@ function exportSelectedLayers(exportSettings) {
         result.logs.push("⚙️ 导出设置: " + JSON.stringify(settings));
 
         // 创建导出文件夹
-        var exportFolder = createExportFolder(settings);
+        var exportFolder = createExportFolder(exportSettings);
         if (!exportFolder) {
             result.error = "无法创建导出文件夹";
             result.logs.push("❌ 无法创建导出文件夹");
@@ -1115,39 +1115,132 @@ function exportSelectedLayers(exportSettings) {
     }
 }
 
+// 文件夹选择函数
+function selectFolder(initialPath, title) {
+    try {
+        var dialogTitle = title || "选择文件夹";
+        var selectedFolder = null;
+
+        // 直接使用ExtendScript的Folder.selectDialog，但改进错误处理
+        if (initialPath && initialPath !== '') {
+            var initialFolder = new Folder(initialPath);
+            if (initialFolder.exists) {
+                selectedFolder = initialFolder.selectDlg(dialogTitle);
+            } else {
+                selectedFolder = Folder.selectDialog(dialogTitle);
+            }
+        } else {
+            selectedFolder = Folder.selectDialog(dialogTitle);
+        }
+
+        if (selectedFolder && selectedFolder.exists) {
+            return JSON.stringify({
+                success: true,
+                path: selectedFolder.fsName,
+                cancelled: false
+            });
+        } else {
+            // 用户取消选择或选择了无效路径
+            return JSON.stringify({
+                success: false,
+                path: null,
+                cancelled: true
+            });
+        }
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            path: null,
+            cancelled: true,
+            error: error.toString()
+        });
+    }
+}
+
 // 创建导出文件夹
-function createExportFolder(settings) {
+function createExportFolder(exportSettings) {
     try {
         var exportFolder;
-        var mode = settings && settings.mode ? settings.mode : 'project_adjacent';
+        var timestamp = new Date();
+        var timeStr = timestamp.getFullYear() +
+                     padZero(timestamp.getMonth() + 1) +
+                     padZero(timestamp.getDate()) + "_" +
+                     padZero(timestamp.getHours()) +
+                     padZero(timestamp.getMinutes()) +
+                     padZero(timestamp.getSeconds());
+
+        // 获取导出设置，如果没有传入则使用默认设置
+        var settings = exportSettings && exportSettings.exportSettings ? exportSettings.exportSettings : null;
+        var mode = settings ? settings.mode : 'project_adjacent';
+        var addTimestamp = settings ? settings.addTimestamp : true;
+        var addCompPrefix = settings ? settings.createSubfolders : false; // 重命名为更准确的变量名
+
+        // 构建文件夹名称前缀
+        var folderPrefix = '';
+
+        // 添加时间戳前缀
+        if (addTimestamp) {
+            folderPrefix += timeStr + '_';
+        }
+
+        // 添加合成名前缀
+        if (addCompPrefix && app.project.activeItem) {
+            var compName = app.project.activeItem.name.replace(/[<>:"\/\\|?*]/g, '_');
+            folderPrefix += compName + '_';
+        }
 
         switch (mode) {
-            case 'direct':
-                // 直接导出到桌面
-                exportFolder = new Folder(Folder.desktop.fsName + "/AE_Export_" + getCurrentTimestamp());
-                break;
-
             case 'project_adjacent':
                 // 导出到项目文件相邻的文件夹
                 if (app.project.file) {
                     var projectFolder = app.project.file.parent;
-                    var projectName = app.project.file.name.replace(/\.[^\.]+$/, ''); // 移除扩展名
-                    exportFolder = new Folder(projectFolder.fsName + "/" + projectName + "_Export_" + getCurrentTimestamp());
+                    var baseFolderName = settings && settings.projectAdjacentFolder ?
+                        settings.projectAdjacentFolder : 'Export';
+                    var folderName = folderPrefix + baseFolderName;
+                    exportFolder = new Folder(projectFolder.fsName + "/" + folderName);
                 } else {
                     // 如果项目未保存，回退到桌面
-                    exportFolder = new Folder(Folder.desktop.fsName + "/AE_Export_" + getCurrentTimestamp());
+                    var folderName = folderPrefix + 'AE_Export';
+                    exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
                 }
                 break;
 
             case 'custom_folder':
-                // 自定义文件夹（暂时使用桌面，后续可以通过设置指定）
-                var customPath = settings && settings.customPath ? settings.customPath : Folder.desktop.fsName;
-                exportFolder = new Folder(customPath + "/AE_Export_" + getCurrentTimestamp());
+                // 自定义文件夹 - 直接使用用户指定的路径，不创建子文件夹
+                var customPath = settings && settings.customExportPath && settings.customExportPath.trim() !== '' ?
+                    settings.customExportPath : Folder.desktop.fsName;
+
+                // 对于自定义文件夹，如果有前缀，创建带前缀的子文件夹；否则直接使用指定路径
+                if (folderPrefix && folderPrefix.trim() !== '') {
+                    // 如果有时间戳或合成名前缀，创建子文件夹
+                    var folderName = folderPrefix.replace(/_$/, ''); // 移除末尾的下划线
+                    exportFolder = new Folder(customPath + "/" + folderName);
+                } else {
+                    // 没有前缀时，直接使用用户指定的路径
+                    exportFolder = new Folder(customPath);
+                }
+
+                // 如果使用了默认桌面路径，添加提示信息
+                if (!settings || !settings.customExportPath || settings.customExportPath.trim() === '') {
+                    // 不抛出错误，而是记录警告信息
+                    // 这样用户可以看到文件导出到了桌面，并知道需要设置自定义路径
+                }
+                break;
+
+            case 'desktop':
+                // 桌面导出
+                var folderName = folderPrefix + 'AE_Export';
+                exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
                 break;
 
             default:
                 // 默认使用项目相邻模式
-                exportFolder = new Folder(Folder.desktop.fsName + "/AE_Export_" + getCurrentTimestamp());
+                var folderName = folderPrefix + 'temp_layer_export';
+                if (app.project.file) {
+                    exportFolder = new Folder(app.project.file.parent.fsName + "/" + folderName);
+                } else {
+                    exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
+                }
         }
 
         // 创建文件夹
@@ -1158,7 +1251,6 @@ function createExportFolder(settings) {
         }
 
         return exportFolder;
-
     } catch (error) {
         return null;
     }

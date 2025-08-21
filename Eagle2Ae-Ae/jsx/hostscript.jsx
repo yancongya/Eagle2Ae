@@ -1174,7 +1174,7 @@ function createExportFolder(exportSettings) {
 
         // 添加合成名前缀
         if (addCompPrefix && app.project.activeItem) {
-            var compName = app.project.activeItem.name.replace(/[<>:"/\\|?*]/g, '_');
+            var compName = app.project.activeItem.name.replace(/[<>:"\/\\|?*]/g, '_');
             folderPrefix += compName + '_';
         }
 
@@ -1195,11 +1195,25 @@ function createExportFolder(exportSettings) {
                 break;
 
             case 'custom_folder':
-                // 自定义文件夹
-                var customPath = settings && settings.customExportPath ?
+                // 自定义文件夹 - 直接使用用户指定的路径，不创建子文件夹
+                var customPath = settings && settings.customExportPath && settings.customExportPath.trim() !== '' ?
                     settings.customExportPath : Folder.desktop.fsName;
-                var folderName = folderPrefix + 'Export';
-                exportFolder = new Folder(customPath + "/" + folderName);
+
+                // 对于自定义文件夹，如果有前缀，创建带前缀的子文件夹；否则直接使用指定路径
+                if (folderPrefix && folderPrefix.trim() !== '') {
+                    // 如果有时间戳或合成名前缀，创建子文件夹
+                    var folderName = folderPrefix.replace(/_$/, ''); // 移除末尾的下划线
+                    exportFolder = new Folder(customPath + "/" + folderName);
+                } else {
+                    // 没有前缀时，直接使用用户指定的路径
+                    exportFolder = new Folder(customPath);
+                }
+
+                // 如果使用了默认桌面路径，添加提示信息
+                if (!settings || !settings.customExportPath || settings.customExportPath.trim() === '') {
+                    // 不抛出错误，而是记录警告信息
+                    // 这样用户可以看到文件导出到了桌面，并知道需要设置自定义路径
+                }
                 break;
 
             case 'desktop':

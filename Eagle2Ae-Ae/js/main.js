@@ -1088,6 +1088,8 @@ class AEExtension {
                 exportedLayers: exportedLayers
             };
 
+            this.log(`🔍 已保存导出信息: 路径=${exportPath}, 文件数=${exportedLayers.length}`, 'debug');
+
 
 
         } catch (error) {
@@ -1099,6 +1101,7 @@ class AEExtension {
     async copyExportedFilesToClipboard() {
         if (!this.lastExportInfo || !this.lastExportInfo.exportedLayers) {
             this.log('❌ 没有可复制的导出文件', 'error');
+            this.log(`🔍 调试信息: lastExportInfo=${!!this.lastExportInfo}, exportedLayers=${this.lastExportInfo ? !!this.lastExportInfo.exportedLayers : 'N/A'}`, 'debug');
             return;
         }
 
@@ -1493,12 +1496,55 @@ class AEExtension {
         });
     }
 
-    // 复制功能暂时禁用（避免编码问题和AE错误）
+    // 使用JSX PowerShell方案复制文件
     async copyUsingJSXFallback(exportPath) {
         return new Promise((resolve) => {
-            this.log('📋 复制功能暂时禁用（避免编码问题）', 'warning');
-            this.log('💡 请手动打开文件夹复制文件', 'info');
-            resolve({ success: false, error: 'Copy function temporarily disabled to avoid encoding issues' });
+            try {
+                this.log('📋 尝试使用PowerShell复制文件...', 'info');
+
+                // 构建PowerShell命令来复制文件夹中的所有PNG文件
+                const psCommand = `
+                    $files = Get-ChildItem -Path "${exportPath}" -Filter "*.png" | Select-Object -ExpandProperty FullName;
+                    if ($files.Count -gt 0) {
+                        Add-Type -AssemblyName System.Windows.Forms;
+                        $fileCollection = New-Object System.Collections.Specialized.StringCollection;
+                        foreach ($file in $files) { $fileCollection.Add($file) };
+                        [System.Windows.Forms.Clipboard]::SetFileDropList($fileCollection);
+                        Write-Output "Success: Copied $($files.Count) files to clipboard";
+                    } else {
+                        Write-Output "Error: No PNG files found";
+                    }
+                `.replace(/\n\s+/g, ' ').trim();
+
+                // 使用ExtendScript执行PowerShell命令
+                this.csInterface.evalScript(`
+                    try {
+                        var psCmd = 'powershell.exe -Command "& {${psCommand}}"';
+                        var result = system.callSystem(psCmd);
+                        JSON.stringify({success: true, result: result});
+                    } catch (error) {
+                        JSON.stringify({success: false, error: error.toString()});
+                    }
+                `, (result) => {
+                    try {
+                        const parsed = JSON.parse(result);
+                        if (parsed.success) {
+                            this.log('✅ 文件已复制到剪切板', 'success');
+                            resolve({ success: true });
+                        } else {
+                            this.log(`❌ PowerShell复制失败: ${parsed.error}`, 'warning');
+                            resolve({ success: false, error: parsed.error });
+                        }
+                    } catch (parseError) {
+                        this.log(`❌ 解析复制结果失败: ${parseError.message}`, 'warning');
+                        resolve({ success: false, error: parseError.message });
+                    }
+                });
+
+            } catch (error) {
+                this.log(`❌ 复制过程异常: ${error.message}`, 'error');
+                resolve({ success: false, error: error.message });
+            }
         });
     }
 
@@ -1904,28 +1950,33 @@ class AEExtension {
     // 复制文本到剪切板（通用函数）
     async copyToClipboard(text) {
         try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(text);
-                return true;
-            } else {
-                // 回退方案：使用传统的复制方法
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
+            // 在CEP环境中，直接使用传统的复制方法更可靠
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
 
-                const result = document.execCommand('copy');
-                document.body.removeChild(textArea);
+            // 确保元素获得焦点
+            textArea.focus();
+            textArea.select();
+            textArea.setSelectionRange(0, text.length);
 
-                if (!result) {
+            const result = document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            if (!result) {
+                // 如果传统方法失败，尝试现代API（但在CEP中可能不可用）
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } else {
                     throw new Error('复制命令执行失败');
                 }
-                return true;
             }
+            return true;
         } catch (error) {
             throw new Error(`复制失败: ${error.message}`);
         }
@@ -2384,20 +2435,32 @@ class AEExtension {
                     // 忽略音效播放错误
                 }
 
+                // 先保存导出信息，供复制功能使用
+                if (result.exportedLayers && result.exportedLayers.length > 0) {
+                    this.showFinalExportResult(result.exportPath, result.exportedLayers);
+                }
+
                 // 检查是否启用自动复制
                 const exportSettings = this.getExportSettingsFromUI();
                 if (exportSettings.autoCopy && result.exportPath) {
                     try {
+                        // 首先复制路径
                         await this.copyToClipboard(result.exportPath);
                         this.log('📋 导出路径已自动复制到剪切板', 'success');
+
+                        // 然后尝试复制文件（如果有导出的文件）
+                        if (result.exportedLayers && result.exportedLayers.length > 0) {
+                            this.log('📋 正在尝试复制导出的文件到剪切板...', 'info');
+                            try {
+                                await this.copyExportedFilesToClipboard();
+                            } catch (filesCopyError) {
+                                this.log(`📋 文件复制失败: ${filesCopyError.message}`, 'warning');
+                                this.log('💡 路径已复制，可手动打开文件夹复制文件', 'info');
+                            }
+                        }
                     } catch (copyError) {
                         this.log(`📋 自动复制失败: ${copyError.message}`, 'warning');
                     }
-                }
-
-                // 导出完成后显示简单的完成信息
-                if (result.exportedLayers && result.exportedLayers.length > 0) {
-                    this.showFinalExportResult(result.exportPath, result.exportedLayers);
                 }
 
             } else {
@@ -4727,19 +4790,24 @@ class AEExtension {
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
-        // 从弹窗设置中获取数据
-        let projectAdjacentFolder = 'Export';
-        let customExportPath = '';
+        // 优先从SettingsManager获取保存的设置，然后回退到全局变量
+        const savedSettings = this.settingsManager.getSettings().exportSettings;
 
-        if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
-            projectAdjacentFolder = window.exportProjectAdjacentSettings.folderName;
+        let projectAdjacentFolder = savedSettings.projectAdjacentFolder || 'Export';
+        let customExportPath = savedSettings.customExportPath || '';
+
+        // 如果SettingsManager中没有设置，回退到全局变量
+        if (!customExportPath && typeof window.exportCustomFolderSettings !== 'undefined') {
+            customExportPath = window.exportCustomFolderSettings.folderPath || '';
         }
 
-        if (typeof window.exportCustomFolderSettings !== 'undefined') {
-            customExportPath = window.exportCustomFolderSettings.folderPath;
+        if (!projectAdjacentFolder || projectAdjacentFolder === 'Export') {
+            if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
+                projectAdjacentFolder = window.exportProjectAdjacentSettings.folderName || 'Export';
+            }
         }
 
-        return {
+        const result = {
             mode: exportMode,
             projectAdjacentFolder: projectAdjacentFolder,
             customExportPath: customExportPath,
@@ -4747,6 +4815,11 @@ class AEExtension {
             addTimestamp: exportAddTimestamp ? exportAddTimestamp.checked : true,
             createSubfolders: exportCreateSubfolders ? exportCreateSubfolders.checked : false
         };
+
+        // 调试日志
+        this.log(`🔍 导出设置调试: mode=${result.mode}, customExportPath="${result.customExportPath}"`, 'info');
+
+        return result;
     }
 
     // 更新导出设置UI状态
@@ -5476,4 +5549,6 @@ let aeExtension = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     aeExtension = new AEExtension();
+    // 将应用实例暴露到全局作用域，供模态框函数使用
+    window.eagleToAeApp = aeExtension;
 });
