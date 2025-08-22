@@ -7,6 +7,126 @@
 // const CompatibilityLayer = require('./compatibility-layer');
 // const { MESSAGE_TYPES, createMessage } = require('./websocket-protocol');
 
+// 动态端口分配器类定义（内联）
+class DynamicPortAllocator {
+    constructor() {
+        this.portRange = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089];
+        this.currentPort = null;
+        this.registryFile = null;
+        this.initRegistryPath();
+    }
+
+    initRegistryPath() {
+        try {
+            const os = require('os');
+            const path = require('path');
+            const tempDir = os.tmpdir();
+            this.registryFile = path.join(tempDir, 'eagle2ae_port.txt');
+            console.log(`端口注册文件路径: ${this.registryFile}`);
+        } catch (error) {
+            console.error('初始化注册文件路径失败:', error);
+            this.registryFile = 'eagle2ae_port.txt';
+        }
+    }
+
+    async isPortAvailable(port) {
+        return new Promise((resolve) => {
+            const net = require('net');
+            const server = net.createServer();
+            const timeout = setTimeout(() => {
+                server.close();
+                resolve(false);
+            }, 1000);
+
+            server.listen(port, '127.0.0.1', () => {
+                clearTimeout(timeout);
+                server.once('close', () => resolve(true));
+                server.close();
+            });
+
+            server.on('error', () => {
+                clearTimeout(timeout);
+                resolve(false);
+            });
+        });
+    }
+
+    async findAvailablePort() {
+        console.log('开始扫描可用端口...');
+        for (const port of this.portRange) {
+            console.log(`检查端口 ${port}...`);
+            if (await this.isPortAvailable(port)) {
+                console.log(`✅ 端口 ${port} 可用`);
+                return port;
+            } else {
+                console.log(`❌ 端口 ${port} 被占用`);
+            }
+        }
+
+        console.log('预定义端口都被占用，尝试随机端口...');
+        for (let i = 0; i < 20; i++) {
+            const randomPort = Math.floor(Math.random() * (65535 - 49152)) + 49152;
+            if (await this.isPortAvailable(randomPort)) {
+                console.log(`✅ 随机端口 ${randomPort} 可用`);
+                return randomPort;
+            }
+        }
+
+        throw new Error('无法找到可用端口');
+    }
+
+    registerService(port) {
+        try {
+            const fs = require('fs');
+            const serviceInfo = {
+                port: port,
+                pid: process.pid,
+                startTime: Date.now(),
+                timestamp: new Date().toISOString(),
+                service: 'Eagle2Ae',
+                version: '2.1.0'
+            };
+
+            fs.writeFileSync(this.registryFile, JSON.stringify(serviceInfo, null, 2));
+            console.log(`✅ 服务已注册: 端口 ${port}`);
+            console.log(`📝 注册文件: ${this.registryFile}`);
+            this.currentPort = port;
+            return true;
+        } catch (error) {
+            console.error('注册服务失败:', error);
+            return false;
+        }
+    }
+
+    async allocatePort() {
+        try {
+            console.log('🚀 开始动态端口分配...');
+            const port = await this.findAvailablePort();
+            const registered = this.registerService(port);
+            if (!registered) {
+                throw new Error('服务注册失败');
+            }
+            console.log(`🎯 动态端口分配成功: ${port}`);
+            return port;
+        } catch (error) {
+            console.error('❌ 动态端口分配失败:', error);
+            throw error;
+        }
+    }
+
+    cleanup() {
+        try {
+            const fs = require('fs');
+            if (fs.existsSync(this.registryFile)) {
+                fs.unlinkSync(this.registryFile);
+                console.log('✅ 注册文件已清理');
+            }
+        } catch (error) {
+            console.error('清理注册文件失败:', error);
+        }
+    }
+}
+
 class Eagle2Ae {
     constructor() {
         this.httpServer = null;
@@ -14,6 +134,10 @@ class Eagle2Ae {
         this.compatibilityLayer = null; // 兼容性处理层
         this.eagleWebSocket = null; // Eagle兼容WebSocket
         this.aeConnection = null;
+
+        // 动态端口分配器
+        this.portAllocator = null;
+
         this.aeStatus = {
             connected: false,
             projectPath: null,
@@ -21,26 +145,45 @@ class Eagle2Ae {
             isReady: false
         };
 
+        // AE消息时间跟踪
+        this.lastAEMessageTime = null;
+
         // Eagle状态信息
         this.eagleStatus = {
             version: null,
             execPath: null,
             libraryName: null,
             libraryPath: null,
+            librarySize: 0,
             currentFolder: null,
             currentFolderName: null,
             folderPath: null,
             tempPath: null
         };
+
+        // 大小计算状态管理
+        this.librarySizeCalculation = {
+            isCalculating: false,
+            isCompleted: false,
+            startTime: null,
+            result: 0,
+            error: null,
+            lastModificationTime: null, // 记录上次检查的修改时间
+            lastCalculationTime: null   // 记录上次计算的时间
+        };
+
+        // 资源库变化监控定时器
+        this.libraryMonitorTimer = null;
         this.selectedFiles = [];
         this.messageQueue = [];
         this.eagleLogs = []; // 存储Eagle发送的日志
         this.config = {
-            wsPort: 8080, // 固定使用8080端口，不允许更改
+            wsPort: 8080, // 默认端口，将被动态分配覆盖
             autoExport: false, // 默认关闭自动导出，需要用户主动点击
             targetDirectory: null,
             useWebSocket: false, // 暂时禁用WebSocket（Eagle环境限制）
-            fallbackToHttp: true // 允许HTTP兼容模式
+            fallbackToHttp: true, // 允许HTTP兼容模式
+            useDynamicPort: true // 启用动态端口分配
         };
 
         // 在构造函数中不执行异步操作，移到init方法中
@@ -166,6 +309,12 @@ class Eagle2Ae {
 
             // 启动AE端口检测和自动匹配
             this.startAEPortDetection();
+
+            // 启动时开始预计算资源库大小
+            this.startLibrarySizePreCalculation();
+
+            // 启动资源库变化监控
+            this.startLibraryChangeMonitoring();
 
             this.log(`✅ Eagle2Ae 服务已启动 (端口: ${this.config.wsPort})`, 'success');
 
@@ -403,13 +552,29 @@ class Eagle2Ae {
     async startHttpServer() {
         try {
             console.log('=== 开始启动HTTP服务器 ===');
-            console.log(`目标端口: ${this.config.wsPort}`);
+
+            // 初始化动态端口分配器
+            if (!this.portAllocator) {
+                // 在Eagle环境中直接实例化类
+                this.portAllocator = new DynamicPortAllocator();
+            }
+
+            // 使用动态端口分配
+            let actualPort;
+            if (this.config.useDynamicPort) {
+                console.log('使用动态端口分配...');
+                actualPort = await this.portAllocator.allocatePort();
+                this.config.wsPort = actualPort; // 更新配置中的端口
+            } else {
+                console.log(`使用固定端口: ${this.config.wsPort}`);
+                actualPort = this.config.wsPort;
+            }
 
             const http = require('http');
             const url = require('url');
 
             console.log('创建HTTP服务器实例...');
-            this.httpServer = http.createServer((req, res) => {
+            this.httpServer = http.createServer(async (req, res) => {
                 // 设置CORS头
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -433,11 +598,16 @@ class Eagle2Ae {
                             const message = JSON.parse(body);
                             const clientId = message.clientId || 'default_client';
 
+                            // 添加消息接收日志
+                            this.log(`📨 收到AE消息: ${message.type}`, 'info');
+
                             // 如果启用了Eagle WebSocket，通过它处理消息
                             if (this.eagleWebSocket && this.eagleWebSocket.isEnabled) {
+                                this.log(`🔄 通过Eagle WebSocket处理消息`, 'debug');
                                 this.eagleWebSocket.handleClientMessage(clientId, message);
                             } else {
                                 // 回退到传统处理方式
+                                this.log(`🔄 通过传统方式处理消息`, 'debug');
                                 this.handleAEMessage(message);
                             }
 
@@ -609,31 +779,134 @@ class Eagle2Ae {
                 } else if (req.method === 'POST' && parsedUrl.pathname === '/temp-folder-action') {
                     // 处理临时文件夹操作请求
                     this.handleTempFolderAction(req, res);
+                } else if (req.method === 'POST' && parsedUrl.pathname === '/check-library-changes') {
+                    // 处理检查资源库变化请求
+                    this.handleCheckLibraryChanges(req, res);
+                } else if (req.method === 'POST' && parsedUrl.pathname === '/reset-ae-connection') {
+                    // 处理重置AE连接状态请求
+                    this.handleResetAEConnection(req, res);
                 } else if (req.method === 'GET' && parsedUrl.pathname === '/debug-eagle-status') {
                     // 调试：获取详细的Eagle状态信息
-                    res.writeHead(200, {'Content-Type': 'application/json'});
-                    res.end(JSON.stringify({
+                    const debugInfo = {
                         eagleStatus: this.eagleStatus,
                         tempFolderPath: this.getTempFolderPath(),
-                        timestamp: new Date().toISOString()
-                    }, null, 2));
+                        timestamp: new Date().toISOString(),
+                        eagleObjectType: typeof eagle,
+                        eagleLibraryType: typeof eagle?.library,
+                        eagleLibraryMethods: eagle?.library ? Object.getOwnPropertyNames(eagle.library) : [],
+                        eagleLibraryProperties: {},
+                        nodeJsInfo: {
+                            platform: process.platform,
+                            arch: process.arch,
+                            version: process.version,
+                            cwd: process.cwd(),
+                            env: {
+                                TEMP: process.env.TEMP,
+                                TMP: process.env.TMP,
+                                USERPROFILE: process.env.USERPROFILE,
+                                HOME: process.env.HOME
+                            }
+                        }
+                    };
+
+                    // 尝试获取eagle.library的所有属性值
+                    if (eagle?.library) {
+                        try {
+                            debugInfo.eagleLibraryProperties = {
+                                name: eagle.library.name,
+                                path: eagle.library.path,
+                                id: eagle.library.id,
+                                toString: eagle.library.toString ? eagle.library.toString() : 'N/A'
+                            };
+
+                            // 检查是否有info方法
+                            if (typeof eagle.library.info === 'function') {
+                                debugInfo.eagleLibraryInfoMethodExists = true;
+                                // 注意：这里不能使用await，因为不在async函数中
+                                // 在实际使用时需要通过其他方式调用
+                            } else {
+                                debugInfo.eagleLibraryInfoMethodExists = false;
+                            }
+                        } catch (propError) {
+                            debugInfo.eagleLibraryPropertiesError = propError.message;
+                        }
+                    }
+
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify(debugInfo, null, 2));
+                } else if (req.method === 'GET' && parsedUrl.pathname === '/test-library-size') {
+                    // 专门测试资源库大小计算
+                    try {
+                        const testResult = {
+                            timestamp: new Date().toISOString(),
+                            libraryPath: this.eagleStatus.libraryPath,
+                            pathExists: false,
+                            pathIsDirectory: false,
+                            calculatedSize: 0,
+                            error: null,
+                            steps: []
+                        };
+
+                        const fs = require('fs');
+                        const path = require('path');
+
+                        testResult.steps.push(`开始测试路径: "${this.eagleStatus.libraryPath}"`);
+
+                        if (this.eagleStatus.libraryPath && this.eagleStatus.libraryPath !== '未知') {
+                            // 检查路径是否存在
+                            testResult.pathExists = fs.existsSync(this.eagleStatus.libraryPath);
+                            testResult.steps.push(`路径存在检查: ${testResult.pathExists}`);
+
+                            if (testResult.pathExists) {
+                                // 检查是否为目录
+                                const stats = fs.statSync(this.eagleStatus.libraryPath);
+                                testResult.pathIsDirectory = stats.isDirectory();
+                                testResult.steps.push(`是否为目录: ${testResult.pathIsDirectory}`);
+
+                                if (testResult.pathIsDirectory) {
+                                    // 尝试计算大小
+                                    testResult.steps.push('开始计算大小...');
+                                    try {
+                                        testResult.calculatedSize = await this.calculateLibrarySize(this.eagleStatus.libraryPath);
+                                        testResult.steps.push(`计算完成: ${testResult.calculatedSize} bytes`);
+                                    } catch (calcError) {
+                                        testResult.error = calcError.message;
+                                        testResult.steps.push(`计算失败: ${calcError.message}`);
+                                    }
+                                }
+                            }
+                        } else {
+                            testResult.error = '资源库路径无效';
+                            testResult.steps.push('资源库路径无效，跳过测试');
+                        }
+
+                        res.writeHead(200, {'Content-Type': 'application/json'});
+                        res.end(JSON.stringify(testResult, null, 2));
+                    } catch (testError) {
+                        res.writeHead(500, {'Content-Type': 'application/json'});
+                        res.end(JSON.stringify({
+                            error: testError.message,
+                            stack: testError.stack,
+                            timestamp: new Date().toISOString()
+                        }, null, 2));
+                    }
                 } else {
                     res.writeHead(404);
                     res.end('Not Found');
                 }
             });
 
-            console.log(`开始监听端口 ${this.config.wsPort}...`);
-            this.httpServer.listen(this.config.wsPort, 'localhost', () => {
-                console.log(`✅ HTTP服务器启动成功，端口: ${this.config.wsPort}`);
-                eagle.log.info(`HTTP服务器启动成功，端口: ${this.config.wsPort}`);
+            console.log(`开始监听端口 ${actualPort}...`);
+            this.httpServer.listen(actualPort, 'localhost', () => {
+                console.log(`✅ HTTP服务器启动成功，端口: ${actualPort}`);
+                eagle.log.info(`HTTP服务器启动成功，端口: ${actualPort}`);
                 this.aeStatus.connected = true;
 
                 // 显示启动成功通知
                 if (typeof eagle !== 'undefined' && eagle.notification) {
                     eagle.notification.show({
                         title: 'Eagle2Ae HTTP服务器',
-                        body: `已在端口 ${this.config.wsPort} 启动`,
+                        body: `已在端口 ${actualPort} 启动${this.config.useDynamicPort ? ' (动态分配)' : ''}`,
                         mute: false,
                         duration: 3000
                     });
@@ -715,6 +988,19 @@ class Eagle2Ae {
                 eagle.log.debug(`eagle对象类型: ${typeof eagle}`);
                 eagle.log.debug(`eagle.library类型: ${typeof eagle.library}`);
 
+                // 详细调试Eagle API可用性
+                if (typeof eagle.library !== 'undefined' && eagle.library) {
+                    eagle.log.debug('eagle.library对象存在，检查可用属性...');
+                    eagle.log.debug(`eagle.library.name: ${eagle.library.name}`);
+                    eagle.log.debug(`eagle.library.path: ${eagle.library.path}`);
+
+                    // 检查所有可用属性
+                    const libraryProps = Object.getOwnPropertyNames(eagle.library);
+                    eagle.log.debug(`eagle.library可用属性: ${libraryProps.join(', ')}`);
+                } else {
+                    eagle.log.warn('eagle.library对象不存在或未定义');
+                }
+
                 // 尝试多种方法获取资源库信息
                 let libraryName = '未知';
                 let libraryPath = '未知';
@@ -724,6 +1010,8 @@ class Eagle2Ae {
                     eagle.log.debug(`library对象存在，尝试获取属性...`);
                     let rawName = eagle.library.name || '未知';
                     libraryPath = eagle.library.path || '未知';
+
+                    eagle.log.debug(`获取到的原始数据 - name: "${rawName}", path: "${libraryPath}"`);
 
                     // 确保显示完整的.library扩展名
                     if (rawName !== '未知' && !rawName.endsWith('.library')) {
@@ -740,9 +1028,13 @@ class Eagle2Ae {
                     eagle.log.debug('尝试使用library.info()方法...');
                     try {
                         const libraryInfo = await eagle.library.info();
+                        eagle.log.debug(`library.info()返回结果: ${JSON.stringify(libraryInfo)}`);
+
                         if (libraryInfo) {
                             let rawName = libraryInfo.name || '未知';
                             libraryPath = libraryInfo.path || '未知';
+
+                            eagle.log.debug(`解析前 - rawName: "${rawName}", libraryPath: "${libraryPath}"`);
 
                             // 确保显示完整的.library扩展名
                             if (rawName !== '未知' && !rawName.endsWith('.library')) {
@@ -752,6 +1044,8 @@ class Eagle2Ae {
                             }
 
                             eagle.log.debug(`info()方法 - 原始name: ${rawName}, 处理后name: ${libraryName}, path: ${libraryPath}`);
+                        } else {
+                            eagle.log.warn('library.info()返回null或undefined');
                         }
                     } catch (infoError) {
                         eagle.log.warn(`library.info()调用失败: ${infoError.message}`);
@@ -760,6 +1054,25 @@ class Eagle2Ae {
 
                 this.eagleStatus.libraryName = libraryName;
                 this.eagleStatus.libraryPath = libraryPath;
+
+                // 检查是否有预计算的结果
+                if (this.librarySizeCalculation.isCompleted &&
+                    this.librarySizeCalculation.result > 0) {
+                    // 使用预计算的结果
+                    this.eagleStatus.librarySize = this.librarySizeCalculation.result;
+                    eagle.log.info(`✅ 使用预计算的资源库大小: ${this.formatSize(this.librarySizeCalculation.result)}`);
+                } else {
+                    // 无论是否在计算中，都先返回基本信息，大小设为计算中状态
+                    this.eagleStatus.librarySize = -1; // -1 表示正在计算中
+
+                    if (this.librarySizeCalculation.isCalculating) {
+                        eagle.log.info('📊 资源库大小正在预计算中，先返回基本信息...');
+                    } else {
+                        eagle.log.info('📊 开始异步计算资源库大小，先返回基本信息...');
+                        this.calculateLibrarySizeAsync(libraryPath);
+                    }
+                }
+
                 eagle.log.info(`资源库信息获取完成 - 名称: ${libraryName}, 路径: ${libraryPath}`);
 
             } catch (libraryError) {
@@ -767,6 +1080,7 @@ class Eagle2Ae {
                 eagle.log.error(`错误堆栈: ${libraryError.stack}`);
                 this.eagleStatus.libraryName = '获取失败';
                 this.eagleStatus.libraryPath = '获取失败';
+                this.eagleStatus.librarySize = 0;
             }
 
             // 获取当前激活的文件夹
@@ -880,6 +1194,7 @@ class Eagle2Ae {
             this.eagleStatus.execPath = '未知';
             this.eagleStatus.libraryName = '未知';
             this.eagleStatus.libraryPath = '未知';
+            this.eagleStatus.librarySize = 0;
             this.eagleStatus.currentFolder = null;
             this.eagleStatus.currentFolderName = '未知';
             this.eagleStatus.folderPath = '未知';
@@ -983,6 +1298,308 @@ class Eagle2Ae {
         }
     }
 
+    // 启动时预计算资源库大小
+    startLibrarySizePreCalculation() {
+        eagle.log.info('🚀 启动资源库大小预计算...');
+
+        // 延迟2秒开始计算，更早开始预计算
+        setTimeout(async () => {
+            try {
+                // 先获取基本的Eagle信息
+                await this.updateEagleStatus();
+
+                // 如果有有效的资源库路径，开始预计算
+                if (this.eagleStatus.libraryPath &&
+                    this.eagleStatus.libraryPath !== '未知' &&
+                    this.eagleStatus.libraryPath !== '获取失败') {
+
+                    this.librarySizeCalculation.isCalculating = true;
+                    this.librarySizeCalculation.startTime = Date.now();
+
+                    eagle.log.info(`📊 开始预计算资源库大小: "${this.eagleStatus.libraryPath}"`);
+
+                    try {
+                        const librarySize = await this.calculateLibrarySize(this.eagleStatus.libraryPath);
+
+                        // 保存计算结果
+                        this.librarySizeCalculation.result = librarySize;
+                        this.librarySizeCalculation.isCompleted = true;
+                        this.librarySizeCalculation.isCalculating = false;
+                        this.librarySizeCalculation.lastCalculationTime = Date.now();
+
+                        // 记录当前的修改时间
+                        try {
+                            this.librarySizeCalculation.lastModificationTime = eagle.library.modificationTime;
+                            eagle.log.info(`📝 记录资源库修改时间: ${this.librarySizeCalculation.lastModificationTime}`);
+                        } catch (modTimeError) {
+                            eagle.log.warn(`获取资源库修改时间失败: ${modTimeError.message}`);
+                        }
+
+                        // 更新Eagle状态
+                        this.eagleStatus.librarySize = librarySize;
+
+                        const duration = Date.now() - this.librarySizeCalculation.startTime;
+                        eagle.log.info(`✅ 资源库大小预计算完成: ${this.formatSize(librarySize)} (耗时: ${duration}ms)`);
+
+                        // 显示预计算完成通知
+                        this.showLibrarySizeCalculationNotification(librarySize, duration);
+
+                    } catch (calcError) {
+                        this.librarySizeCalculation.error = calcError.message;
+                        this.librarySizeCalculation.isCalculating = false;
+                        eagle.log.error(`❌ 资源库大小预计算失败: ${calcError.message}`);
+                    }
+                } else {
+                    eagle.log.warn('⚠️ 无有效资源库路径，跳过预计算');
+                }
+            } catch (error) {
+                eagle.log.error(`预计算启动失败: ${error.message}`);
+            }
+        }, 5000); // 延迟5秒
+    }
+
+    // 启动资源库变化监控
+    startLibraryChangeMonitoring() {
+        eagle.log.info('🔍 启动资源库变化监控...');
+
+        // 每30分钟检查一次资源库是否有变化
+        this.libraryMonitorTimer = setInterval(async () => {
+            try {
+                await this.checkLibraryChanges();
+            } catch (error) {
+                eagle.log.error(`资源库变化检查失败: ${error.message}`);
+            }
+        }, 30 * 60 * 1000); // 30分钟 = 30 * 60 * 1000毫秒
+
+        eagle.log.info('✅ 资源库变化监控已启动 (每30分钟检查一次)');
+    }
+
+    // 检查资源库是否有变化
+    async checkLibraryChanges() {
+        try {
+            // 获取当前的修改时间
+            const currentModificationTime = eagle.library.modificationTime;
+
+            if (!currentModificationTime) {
+                eagle.log.warn('⚠️ 无法获取资源库修改时间，跳过变化检查');
+                return;
+            }
+
+            eagle.log.debug(`🔍 检查资源库变化: 当前=${currentModificationTime}, 上次=${this.librarySizeCalculation.lastModificationTime}`);
+
+            // 如果没有记录的修改时间，或者修改时间发生了变化
+            if (!this.librarySizeCalculation.lastModificationTime ||
+                currentModificationTime !== this.librarySizeCalculation.lastModificationTime) {
+
+                eagle.log.info(`📝 检测到资源库变化! 修改时间: ${this.librarySizeCalculation.lastModificationTime} → ${currentModificationTime}`);
+
+                // 重新计算资源库大小
+                await this.recalculateLibrarySize();
+
+            } else {
+                eagle.log.debug('✅ 资源库无变化，跳过重新计算');
+            }
+
+        } catch (error) {
+            eagle.log.error(`检查资源库变化失败: ${error.message}`);
+        }
+    }
+
+    // 重新计算资源库大小
+    async recalculateLibrarySize() {
+        try {
+            eagle.log.info('🔄 开始重新计算资源库大小...');
+
+            // 标记为正在计算
+            this.librarySizeCalculation.isCalculating = true;
+            this.librarySizeCalculation.isCompleted = false;
+            this.librarySizeCalculation.startTime = Date.now();
+
+            // 获取资源库路径
+            const libraryPath = this.eagleStatus.libraryPath;
+
+            if (!libraryPath || libraryPath === '未知' || libraryPath === '获取失败') {
+                eagle.log.warn('⚠️ 无有效资源库路径，无法重新计算大小');
+                return;
+            }
+
+            // 计算新的大小
+            const newLibrarySize = await this.calculateLibrarySize(libraryPath);
+            const oldSize = this.librarySizeCalculation.result;
+
+            // 更新结果
+            this.librarySizeCalculation.result = newLibrarySize;
+            this.librarySizeCalculation.isCompleted = true;
+            this.librarySizeCalculation.isCalculating = false;
+            this.librarySizeCalculation.lastCalculationTime = Date.now();
+            this.librarySizeCalculation.lastModificationTime = eagle.library.modificationTime;
+
+            // 更新Eagle状态
+            this.eagleStatus.librarySize = newLibrarySize;
+
+            const duration = Date.now() - this.librarySizeCalculation.startTime;
+            const sizeDiff = newLibrarySize - oldSize;
+            const diffText = sizeDiff > 0 ? `+${this.formatSize(sizeDiff)}` : this.formatSize(Math.abs(sizeDiff));
+
+            eagle.log.info(`✅ 资源库大小重新计算完成:`);
+            eagle.log.info(`   旧大小: ${this.formatSize(oldSize)}`);
+            eagle.log.info(`   新大小: ${this.formatSize(newLibrarySize)}`);
+            eagle.log.info(`   变化: ${diffText}`);
+            eagle.log.info(`   耗时: ${duration}ms`);
+
+            // 显示资源库变化通知
+            this.showLibraryChangeNotification(oldSize, newLibrarySize, duration);
+
+        } catch (error) {
+            this.librarySizeCalculation.error = error.message;
+            this.librarySizeCalculation.isCalculating = false;
+            eagle.log.error(`❌ 重新计算资源库大小失败: ${error.message}`);
+        }
+    }
+
+    // 停止资源库变化监控
+    stopLibraryChangeMonitoring() {
+        if (this.libraryMonitorTimer) {
+            clearInterval(this.libraryMonitorTimer);
+            this.libraryMonitorTimer = null;
+            eagle.log.info('🛑 资源库变化监控已停止');
+        }
+    }
+
+    // 异步计算资源库大小（不阻塞其他信息显示）
+    async calculateLibrarySizeAsync(libraryPath) {
+        try {
+            eagle.log.info(`开始异步计算资源库大小，路径: "${libraryPath}"`);
+
+            if (libraryPath && libraryPath !== '未知' && libraryPath !== '获取失败') {
+                // 使用setTimeout让其他信息先显示
+                setTimeout(async () => {
+                    try {
+                        const librarySize = await this.calculateLibrarySize(libraryPath);
+                        this.eagleStatus.librarySize = librarySize;
+                        eagle.log.info(`资源库大小计算完成: ${librarySize} bytes (${this.formatSize(librarySize)})`);
+                    } catch (sizeError) {
+                        eagle.log.error(`异步计算资源库大小失败: ${sizeError.message}`);
+                        this.eagleStatus.librarySize = 0;
+                    }
+                }, 100); // 延迟100ms，让其他信息先显示
+            } else {
+                eagle.log.warn(`资源库路径无效，跳过大小计算: "${libraryPath}"`);
+                this.eagleStatus.librarySize = 0;
+            }
+        } catch (error) {
+            eagle.log.error(`异步计算资源库大小失败: ${error.message}`);
+            this.eagleStatus.librarySize = 0;
+        }
+    }
+
+    // 计算资源库大小
+    async calculateLibrarySize(libraryPath) {
+        try {
+            if (!libraryPath || libraryPath === '未知' || libraryPath === '获取失败') {
+                eagle.log.warn(`资源库路径无效，跳过大小计算: "${libraryPath}"`);
+                return 0;
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+
+            eagle.log.info(`准备计算资源库大小，路径: "${libraryPath}"`);
+
+            // 验证路径是否存在
+            if (!fs.existsSync(libraryPath)) {
+                eagle.log.error(`资源库路径不存在: "${libraryPath}"`);
+
+                // 尝试列出父目录内容以帮助调试
+                try {
+                    const parentDir = path.dirname(libraryPath);
+                    if (fs.existsSync(parentDir)) {
+                        const parentContents = fs.readdirSync(parentDir);
+                        eagle.log.debug(`父目录 "${parentDir}" 内容: ${parentContents.join(', ')}`);
+                    }
+                } catch (debugError) {
+                    eagle.log.debug(`无法读取父目录: ${debugError.message}`);
+                }
+
+                return 0;
+            }
+
+            // 检查是否为目录
+            const pathStats = fs.statSync(libraryPath);
+            if (!pathStats.isDirectory()) {
+                eagle.log.error(`路径不是目录: "${libraryPath}"`);
+                return 0;
+            }
+
+            eagle.log.info(`开始递归计算目录大小: "${libraryPath}"`);
+            const startTime = Date.now();
+
+            // 递归计算目录大小
+            const calculateDirectorySize = (dirPath, depth = 0) => {
+                let totalSize = 0;
+                let fileCount = 0;
+                let dirCount = 0;
+
+                try {
+                    const items = fs.readdirSync(dirPath);
+
+                    for (const item of items) {
+                        const itemPath = path.join(dirPath, item);
+                        try {
+                            const stats = fs.statSync(itemPath);
+
+                            if (stats.isFile()) {
+                                totalSize += stats.size;
+                                fileCount++;
+
+                                // 每1000个文件记录一次进度
+                                if (fileCount % 1000 === 0) {
+                                    eagle.log.debug(`已处理 ${fileCount} 个文件，当前大小: ${this.formatSize(totalSize)}`);
+                                }
+                            } else if (stats.isDirectory()) {
+                                dirCount++;
+                                totalSize += calculateDirectorySize(itemPath, depth + 1);
+                            }
+                        } catch (itemError) {
+                            // 跳过无法访问的文件/文件夹，但记录详细信息
+                            eagle.log.debug(`跳过无法访问的项目: "${itemPath}" - ${itemError.message}`);
+                        }
+                    }
+
+                    // 在根目录级别记录统计信息
+                    if (depth === 0) {
+                        eagle.log.info(`目录统计 - 文件数: ${fileCount}, 子目录数: ${dirCount}`);
+                    }
+
+                } catch (dirError) {
+                    eagle.log.warn(`无法读取目录: "${dirPath}" - ${dirError.message}`);
+                }
+                return totalSize;
+            };
+
+            const totalSize = calculateDirectorySize(libraryPath);
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+
+            eagle.log.info(`资源库大小计算完成: ${totalSize} bytes (${this.formatSize(totalSize)}), 耗时: ${duration}ms`);
+
+            return totalSize;
+        } catch (error) {
+            eagle.log.error(`计算资源库大小失败: ${error.message}`);
+            eagle.log.error(`错误堆栈: ${error.stack}`);
+            return 0;
+        }
+    }
+
+    // 格式化文件大小
+    formatSize(bytes) {
+        if (bytes === 0) return '0B';
+        if (bytes < 1024) return bytes + 'B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + 'GB';
+    }
+
     // 清空临时文件夹
     async cleanupTempFolder() {
         try {
@@ -1052,6 +1669,69 @@ class Eagle2Ae {
             eagle.log.error(`打开临时文件夹失败: ${error.message}`);
             eagle.log.error(`错误堆栈: ${error.stack}`);
             throw error;
+        }
+    }
+
+    // 处理重置AE连接状态请求
+    async handleResetAEConnection(req, res) {
+        try {
+            this.log('🔄 收到重置AE连接状态请求', 'info');
+
+            // 重置AE连接状态
+            this.aeStatus.connected = false;
+            this.lastAEMessageTime = null;
+
+            this.log('✅ AE连接状态已重置', 'info');
+
+            const response = {
+                success: true,
+                message: 'AE连接状态已重置，下次连接将显示通知'
+            };
+
+            res.writeHead(200, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify(response));
+
+        } catch (error) {
+            this.log(`处理重置AE连接状态请求失败: ${error.message}`, 'error');
+            res.writeHead(500, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({
+                success: false,
+                error: error.message
+            }));
+        }
+    }
+
+    // 处理检查资源库变化请求
+    async handleCheckLibraryChanges(req, res) {
+        try {
+            eagle.log.info('🔍 收到手动检查资源库变化请求');
+
+            // 执行检查
+            await this.checkLibraryChanges();
+
+            // 返回当前状态
+            const response = {
+                success: true,
+                data: {
+                    lastModificationTime: this.librarySizeCalculation.lastModificationTime,
+                    lastCalculationTime: this.librarySizeCalculation.lastCalculationTime,
+                    currentSize: this.librarySizeCalculation.result,
+                    formattedSize: this.formatSize(this.librarySizeCalculation.result),
+                    isCalculating: this.librarySizeCalculation.isCalculating,
+                    isCompleted: this.librarySizeCalculation.isCompleted
+                }
+            };
+
+            res.writeHead(200, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify(response));
+
+        } catch (error) {
+            eagle.log.error(`处理检查资源库变化请求失败: ${error.message}`);
+            res.writeHead(500, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({
+                success: false,
+                error: error.message
+            }));
         }
     }
 
@@ -1166,9 +1846,102 @@ class Eagle2Ae {
 
     // 更新AE状态
     updateAEStatus(status) {
+        const wasConnected = this.aeStatus.connected;
+
+        // 添加详细的状态更新日志
+        this.log(`🎯 更新AE状态 - 之前连接状态: ${wasConnected}`, 'info');
+        this.log(`📋 AE状态数据: 项目=${status.projectName || '未知'}, 合成=${status.activeComp?.name || '无'}, 版本=${status.version || '未知'}`, 'info');
+
+        // 检查是否是真正的新连接（基于项目变化或长时间未连接）
+        const isNewConnection = !wasConnected ||
+                               this.aeStatus.projectName !== status.projectName ||
+                               !this.lastAEMessageTime ||
+                               (Date.now() - this.lastAEMessageTime) > 60000; // 超过1分钟未收到消息
+
         this.aeStatus = { ...this.aeStatus, ...status, connected: true };
-        // AE状态更新使用debug级别，避免日志被状态信息占满
-        eagle.log.debug(`AE状态更新: 项目=${status.projectName || '未知'}, 合成=${status.activeComp?.name || '无'}`);
+        this.lastAEMessageTime = Date.now();
+
+        // 如果是新连接，显示通知
+        if (isNewConnection) {
+            this.log(`🎉 检测到新连接，准备显示通知 (原因: ${!wasConnected ? '首次连接' : this.aeStatus.projectName !== status.projectName ? '项目变化' : '长时间未连接'})`, 'info');
+            this.showAEConnectionNotification(status);
+        } else {
+            this.log(`🔄 AE状态更新 (已连接状态)`, 'debug');
+        }
+    }
+
+    // 显示AE连接成功通知
+    showAEConnectionNotification(status) {
+        try {
+            if (typeof eagle !== 'undefined' && eagle.notification) {
+                // 构建通知内容
+                const projectName = status.projectName || '未知项目';
+                const compName = status.activeComp?.name || '无合成';
+                const aeVersion = status.version || '未知版本';
+
+                eagle.notification.show({
+                    title: '🎉 After Effects 已连接',
+                    description: `项目: ${projectName}\n合成: ${compName}\n版本: ${aeVersion}`,
+                    type: 'success',
+                    duration: 8000 // 显示8秒
+                });
+
+                eagle.log.info(`✅ 显示AE连接成功通知: ${projectName} - ${compName}`);
+            } else {
+                eagle.log.warn('⚠️ Eagle通知API不可用，跳过连接通知');
+            }
+        } catch (error) {
+            eagle.log.error(`显示AE连接通知失败: ${error.message}`);
+        }
+    }
+
+    // 显示资源库大小计算完成通知
+    showLibrarySizeCalculationNotification(librarySize, duration) {
+        try {
+            if (typeof eagle !== 'undefined' && eagle.notification) {
+                const formattedSize = this.formatSize(librarySize);
+                const durationText = duration > 1000 ? `${(duration/1000).toFixed(1)}秒` : `${duration}毫秒`;
+
+                eagle.notification.show({
+                    title: '📊 资源库大小计算完成',
+                    description: `大小: ${formattedSize}\n耗时: ${durationText}\n已准备好与AE连接`,
+                    type: 'info',
+                    duration: 6000 // 显示6秒
+                });
+
+                eagle.log.info(`✅ 显示资源库大小计算完成通知: ${formattedSize}`);
+            } else {
+                eagle.log.warn('⚠️ Eagle通知API不可用，跳过计算完成通知');
+            }
+        } catch (error) {
+            eagle.log.error(`显示资源库大小计算通知失败: ${error.message}`);
+        }
+    }
+
+    // 显示资源库变化通知
+    showLibraryChangeNotification(oldSize, newSize, duration) {
+        try {
+            if (typeof eagle !== 'undefined' && eagle.notification) {
+                const oldFormattedSize = this.formatSize(oldSize);
+                const newFormattedSize = this.formatSize(newSize);
+                const sizeDiff = newSize - oldSize;
+                const diffText = sizeDiff > 0 ? `+${this.formatSize(sizeDiff)}` : this.formatSize(Math.abs(sizeDiff));
+                const durationText = duration > 1000 ? `${(duration/1000).toFixed(1)}秒` : `${duration}毫秒`;
+
+                eagle.notification.show({
+                    title: '🔄 资源库大小已更新',
+                    description: `${oldFormattedSize} → ${newFormattedSize}\n变化: ${diffText}\n耗时: ${durationText}`,
+                    type: 'info',
+                    duration: 7000 // 显示7秒
+                });
+
+                eagle.log.info(`✅ 显示资源库变化通知: ${diffText}`);
+            } else {
+                eagle.log.warn('⚠️ Eagle通知API不可用，跳过变化通知');
+            }
+        } catch (error) {
+            eagle.log.error(`显示资源库变化通知失败: ${error.message}`);
+        }
     }
 
     // 处理导入结果
@@ -2343,6 +3116,9 @@ eagle.onPluginBeforeExit((event) => {
     if (eagle2ae) {
         eagle2ae.log('插件正在退出...');
 
+        // 停止资源库变化监控
+        eagle2ae.stopLibraryChangeMonitoring();
+
         // 清理HTTP服务器
         if (eagle2ae.httpServer) {
             eagle2ae.httpServer.close();
@@ -2351,6 +3127,11 @@ eagle.onPluginBeforeExit((event) => {
         // 清理轮询定时器
         if (eagle2ae.pollInterval) {
             clearInterval(eagle2ae.pollInterval);
+        }
+
+        // 清理端口注册文件
+        if (eagle2ae.portAllocator) {
+            eagle2ae.portAllocator.cleanup();
         }
     }
 });

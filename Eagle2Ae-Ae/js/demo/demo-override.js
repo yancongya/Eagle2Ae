@@ -31,12 +31,14 @@
                 execPath: "C:\\Program Files\\Eagle\\Eagle.exe",
                 libraryPath: "D:\\仓鼠.library",
                 libraryName: "仓鼠.library",
+                librarySize: 3221225472,
                 selectedFolder: "仓鼠党"
             },
             disconnected: {
                 version: "获取中...",
                 execPath: "获取中...",
                 libraryPath: "获取中...",
+                librarySize: 0,
                 selectedFolder: "获取中..."
             }
         },

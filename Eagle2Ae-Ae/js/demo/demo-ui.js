@@ -203,8 +203,16 @@ class DemoUI {
         if (this.elements.eagleLibrary) {
             const libraryName = globalEagleData?.libraryName || '演示资源库';
             const libraryPath = globalEagleData?.libraryPath || '演示路径';
+            const librarySize = globalEagleData?.librarySize || 0;
 
-            this.elements.eagleLibrary.textContent = libraryName;
+            // 格式化显示：资源库名称 | 大小
+            let displayText = libraryName;
+            if (librarySize > 0) {
+                const formattedSize = this.formatFileSize(librarySize);
+                displayText = `${libraryName} | ${formattedSize}`;
+            }
+
+            this.elements.eagleLibrary.textContent = displayText;
             // 正确设置title
             if (libraryPath && libraryPath !== '演示路径' && libraryPath !== 'undefined') {
                 this.elements.eagleLibrary.removeAttribute('title');
@@ -671,16 +679,25 @@ class DemoUI {
         document.head.appendChild(style);
     }
     
+    // 格式化文件大小
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0B';
+        if (bytes < 1024) return bytes + 'B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + 'GB';
+    }
+
     // 清理演示UI
     cleanup() {
         this.hideDemoModeIndicator();
-        
+
         // 移除样式
         const styles = document.getElementById('demo-ui-styles');
         if (styles) {
             styles.remove();
         }
-        
+
         console.log('🧹 演示UI已清理');
     }
 }

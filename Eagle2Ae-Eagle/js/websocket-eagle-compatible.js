@@ -162,26 +162,30 @@ class EagleCompatibleWebSocket {
 
         this.updateClientActivity(clientId);
 
+        // 添加消息处理日志
+        this.eagle2ae.log(`🔍 Eagle WebSocket处理消息: ${message.type} (客户端: ${clientId})`, 'info');
+
         // 处理不同类型的消息
         switch (message.type) {
             case this.MESSAGE_TYPES.CONNECTION.HANDSHAKE_ACK:
                 this.handleHandshakeAck(clientId, message);
                 break;
-                
+
             case this.MESSAGE_TYPES.CONNECTION.PING:
                 this.handlePing(clientId, message);
                 break;
-                
+
             case this.MESSAGE_TYPES.STATUS.AE_STATUS:
+            case 'ae_status': // 兼容AE发送的原始消息类型
                 this.handleAEStatus(clientId, message);
                 break;
-                
+
             case this.MESSAGE_TYPES.FILE.IMPORT_COMPLETE:
             case this.MESSAGE_TYPES.FILE.IMPORT_ERROR:
             case this.MESSAGE_TYPES.FILE.IMPORT_PROGRESS:
                 this.handleFileMessage(clientId, message);
                 break;
-                
+
             default:
                 this.eagle2ae.log(`未知消息类型: ${message.type}`, 'warning');
         }
@@ -215,8 +219,13 @@ class EagleCompatibleWebSocket {
      * 处理AE状态更新
      */
     handleAEStatus(clientId, message) {
+        this.eagle2ae.log(`📊 处理AE状态更新 (客户端: ${clientId})`, 'info');
+
         if (this.eagle2ae && this.eagle2ae.updateAEStatus) {
+            this.eagle2ae.log(`🔄 调用主插件的updateAEStatus方法`, 'debug');
             this.eagle2ae.updateAEStatus(message.data);
+        } else {
+            this.eagle2ae.log(`❌ 主插件或updateAEStatus方法不可用`, 'error');
         }
     }
 

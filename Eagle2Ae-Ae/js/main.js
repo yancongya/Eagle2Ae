@@ -95,6 +95,10 @@ class AEExtension {
         this.webSocketClient = null;
         this.useWebSocket = false; // 暂时禁用原生WebSocket
         this.fallbackToHttp = true; // 使用HTTP兼容模式
+
+        // 端口发现服务（暂时禁用以提高启动性能）
+        this.portDiscovery = null;
+        this.enablePortDiscovery = false; // 禁用端口发现以避免启动延迟
         this.clientId = `ae_client_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`; // 客户端ID
 
         // 轮询管理（HTTP兼容模式）
@@ -102,6 +106,9 @@ class AEExtension {
 
         // 连接监控
         this.connectionMonitor = new ConnectionMonitor();
+
+        // 临时禁用连接时的文件夹检查，以解决性能问题
+        this.disableConnectionTimeChecks = true;
 
         this.currentProject = {
             path: null,
@@ -125,6 +132,13 @@ class AEExtension {
 
         // 设置管理
         this.settingsManager = new SettingsManager();
+
+        // 临时文件夹状态缓存
+        this.tempFolderStatusCache = {
+            data: null,
+            timestamp: 0,
+            cacheTime: 30000 // 30秒缓存
+        };
         this.settingsPanel = null;
         this.quickSettingsInitialized = false;
 
@@ -134,13 +148,20 @@ class AEExtension {
         // 音效播放器
         this.soundPlayer = new SoundPlayer();
 
-        // 初始化端口设置
-        this.initializePort();
+        // 异步初始化
+        this.asyncInit();
+    }
+
+    // 异步初始化方法
+    async asyncInit() {
+        // 先执行同步初始化
+        this.init();
+
+        // 然后执行异步的端口初始化
+        await this.initializePort();
 
         // 启动端口广播服务
         this.startPortBroadcast();
-
-        this.init();
 
         // 获取AE版本信息（仅在CEP环境下）
         if (!window.__DEMO_MODE_ACTIVE__) {
@@ -152,9 +173,16 @@ class AEExtension {
     }
 
     // 初始化端口设置
-    initializePort() {
-        const preferences = this.settingsManager.getPreferences();
-        this.updateEagleUrl(preferences.communicationPort);
+    async initializePort() {
+        // 检查是否启用端口发现
+        if (this.enablePortDiscovery && this.portDiscovery) {
+            await this.updateEagleUrlWithDiscovery();
+        } else {
+            // 直接使用配置端口，避免端口发现的延迟
+            const preferences = this.settingsManager.getPreferences();
+            this.updateEagleUrl(preferences.communicationPort);
+            this.log('使用配置端口，跳过端口发现以提高启动性能', 'info');
+        }
     }
 
     // 启动端口广播服务
@@ -225,6 +253,18 @@ class AEExtension {
                 // UI设置失败不影响快速设置初始化
             }
 
+            // 初始化端口发现服务（仅在启用时）
+            if (this.enablePortDiscovery) {
+                try {
+                    this.portDiscovery = new PortDiscovery(this.log.bind(this));
+                    this.log('端口发现服务已初始化', 'info');
+                } catch (portError) {
+                    this.log(`端口发现服务初始化失败: ${portError.message}`, 'error');
+                }
+            } else {
+                this.log('端口发现服务已禁用，使用配置端口以提高启动性能', 'info');
+            }
+
             // 强制初始化快速设置，不依赖setupUI的结果
             // 静默初始化快速设置
             this.quickSettingsInitialized = true; // 先设置为true
@@ -275,10 +315,10 @@ class AEExtension {
                 this.setupDragAndDrop();
                 // 拖拽支持已启用
 
-                // 延迟检查临时文件夹状态（等待连接建立）
+                // 延迟检查临时文件夹状态（等待连接稳定后再检查，避免影响启动性能）
                 setTimeout(() => {
                     this.checkAndCleanupTempFolderOnStartup();
-                }, 5000);
+                }, 15000); // 延长到15秒，确保连接完全稳定
             } catch (otherError) {
                 this.log(`其他初始化失败: ${otherError.message}`, 'error');
             }
@@ -662,10 +702,10 @@ class AEExtension {
                     testConnectionBtn.title = '左键：断开连接\n右键：刷新状态';
                 }
 
-                // 连接成功后更新阅后即焚tooltip
+                // 连接成功后更新阅后即焚tooltip（进一步延迟，避免影响连接性能）
                 setTimeout(() => {
                     this.updateBurnAfterReadingTooltip();
-                }, 1000); // 延迟1秒，确保连接稳定
+                }, 60000); // 延迟60秒，确保连接完全稳定且Eagle预计算完成后再检查
                 break;
 
             case ConnectionState.ERROR:
@@ -680,8 +720,10 @@ class AEExtension {
                 break;
         }
 
-        // 连接状态变化时更新阅后即焚tooltip
-        this.updateBurnAfterReadingTooltip();
+        // 连接状态变化时更新阅后即焚tooltip（仅在非连接状态时立即更新，连接状态时已有延迟更新）
+        if (this.connectionState !== ConnectionState.CONNECTED) {
+            this.updateBurnAfterReadingTooltip();
+        }
     }
 
     // 轮询获取消息
@@ -737,9 +779,9 @@ class AEExtension {
                 this.updateEagleLogs(data.eagleLogs);
             }
 
-            // 每5秒获取一次Eagle状态信息
+            // 每2秒获取一次Eagle状态信息（提高更新频率以便更快显示计算结果）
             const now = Date.now();
-            if (!this.lastEagleStatusUpdate || now - this.lastEagleStatusUpdate > 5000) {
+            if (!this.lastEagleStatusUpdate || now - this.lastEagleStatusUpdate > 2000) {
                 this.updateEagleStatusFromServer();
                 this.lastEagleStatusUpdate = now;
             }
@@ -1973,6 +2015,10 @@ class AEExtension {
             });
 
             if (response.success) {
+                // 清理缓存，因为文件夹状态已改变
+                this.tempFolderStatusCache.data = null;
+                this.tempFolderStatusCache.timestamp = 0;
+
                 this.log('🗑️ 临时文件夹清理完成', 'success');
                 // 清理完成后更新tooltip
                 setTimeout(() => {
@@ -2005,14 +2051,26 @@ class AEExtension {
         }
     }
 
-    // 检查临时文件夹状态
-    async checkTempFolderStatus() {
+    // 检查临时文件夹状态（带缓存）
+    async checkTempFolderStatus(forceRefresh = false) {
         try {
+            const now = Date.now();
+
+            // 如果有缓存且未过期，直接返回缓存数据
+            if (!forceRefresh &&
+                this.tempFolderStatusCache.data &&
+                (now - this.tempFolderStatusCache.timestamp) < this.tempFolderStatusCache.cacheTime) {
+                return this.tempFolderStatusCache.data;
+            }
+
             const response = await this.sendToEagle({
                 action: 'checkTempFolderSize'
             });
 
             if (response.success) {
+                // 更新缓存
+                this.tempFolderStatusCache.data = response.data;
+                this.tempFolderStatusCache.timestamp = now;
                 return response.data;
             } else {
                 throw new Error(response.error || '检查失败');
@@ -2034,7 +2092,7 @@ class AEExtension {
                 return;
             }
 
-            const status = await this.checkTempFolderStatus();
+            const status = await this.checkTempFolderStatus(true); // 强制刷新
 
             if (status.needsCleanup) {
                 this.log(`🗑️ 检测到临时文件夹需要清理 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'info');
@@ -2044,7 +2102,7 @@ class AEExtension {
                 this.log(`📁 临时文件夹状态 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'debug');
             }
 
-            // 更新tooltip显示
+            // 更新tooltip显示（不需要强制刷新，因为上面已经刷新过了）
             this.updateBurnAfterReadingTooltip();
         } catch (error) {
             this.log(`启动时临时文件夹检查失败: ${error.message}`, 'warning');
@@ -2054,6 +2112,12 @@ class AEExtension {
     // 更新阅后即焚的tooltip显示
     async updateBurnAfterReadingTooltip() {
         try {
+            // 临时禁用连接时的检查以解决性能问题
+            if (this.disableConnectionTimeChecks && this.connectionState === ConnectionState.CONNECTED) {
+                this.log('⚠️ 连接时的文件夹检查已禁用，跳过tooltip更新', 'debug');
+                return;
+            }
+
             const label = document.getElementById('burn-after-reading-label');
             if (!label) return;
 
@@ -2081,17 +2145,17 @@ class AEExtension {
 
     // 启动定期更新tooltip的定时器
     startTooltipUpdateTimer() {
-        // 每30秒更新一次tooltip，确保显示最新的文件状态
+        // 减少更新频率，每5分钟更新一次tooltip，减少不必要的网络请求
         setInterval(() => {
             if (this.connectionState === ConnectionState.CONNECTED) {
                 this.updateBurnAfterReadingTooltip();
             }
-        }, 30000); // 30秒间隔
+        }, 300000); // 5分钟间隔（300秒）
 
-        // 初始更新
+        // 初始更新（延迟更长时间，避免启动时的性能影响）
         setTimeout(() => {
             this.updateBurnAfterReadingTooltip();
-        }, 2000); // 延迟2秒，确保UI加载完成
+        }, 20000); // 延迟20秒，确保所有初始化完成后再检查
     }
 
     // 简单的打开文件夹方法（保持向后兼容）
@@ -2660,13 +2724,13 @@ class AEExtension {
                             // 检查临时文件夹是否需要清理
                             setTimeout(async () => {
                                 try {
-                                    const status = await this.checkTempFolderStatus();
+                                    const status = await this.checkTempFolderStatus(true); // 强制刷新
                                     if (status.needsCleanup) {
                                         this.log(`🗑️ 临时文件夹已达到清理条件 - 大小: ${status.size.toFixed(2)}MB, 文件数: ${status.count}`, 'info');
                                         await this.cleanupTempFolder();
                                         this.log('🗑️ 临时文件夹已自动清理', 'success');
                                     }
-                                    // 更新tooltip显示最新状态
+                                    // 更新tooltip显示最新状态（不需要强制刷新，因为上面已经刷新过了）
                                     this.updateBurnAfterReadingTooltip();
                                 } catch (cleanupError) {
                                     this.log(`临时文件夹清理检查失败: ${cleanupError.message}`, 'warning');
@@ -2904,6 +2968,15 @@ class AEExtension {
         }
     }
 
+    // 格式化文件大小
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0B';
+        if (bytes < 1024) return bytes + 'B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + 'GB';
+    }
+
     // 开始项目监控
     startProjectMonitoring() {
         // 每3秒检查一次项目状态变化
@@ -2971,7 +3044,10 @@ class AEExtension {
             }
         }
 
-        document.getElementById('ae-status').textContent = projectInfo.isReady ? '准备就绪' : '未就绪';
+        const aeStatusElement = document.getElementById('ae-status');
+        if (aeStatusElement) {
+            aeStatusElement.textContent = projectInfo.isReady ? '准备就绪' : '未就绪';
+        }
     }
 
     // 获取AE版本信息
@@ -3039,7 +3115,21 @@ class AEExtension {
             // 更新资源库信息并设置点击事件
             const eagleLibraryElement = document.getElementById('eagle-library');
             const libraryPath = eagleStatus.libraryPath || '未知';
-            eagleLibraryElement.textContent = eagleStatus.libraryName || '未知';
+            const libraryName = eagleStatus.libraryName || '未知';
+
+            // 格式化显示：资源库名称 | 大小
+            let displayText = libraryName;
+            if (eagleStatus.librarySize !== undefined && eagleStatus.librarySize !== null) {
+                if (eagleStatus.librarySize === -1) {
+                    // -1 表示正在计算中
+                    displayText = `${libraryName} | 计算中...`;
+                } else if (eagleStatus.librarySize > 0) {
+                    const formattedSize = this.formatFileSize(eagleStatus.librarySize);
+                    displayText = `${libraryName} | ${formattedSize}`;
+                }
+            }
+
+            eagleLibraryElement.textContent = displayText;
             // 只有在libraryPath不是undefined且不是字符串"undefined"时才设置title
             if (libraryPath && libraryPath !== '未知' && libraryPath !== 'undefined') {
                 eagleLibraryElement.title = libraryPath; // 悬浮显示完整路径
@@ -3084,7 +3174,8 @@ class AEExtension {
                 version: eagleData.version,
                 execPath: eagleData.execPath,
                 libraryPath: eagleData.libraryPath,
-                libraryName: eagleData.libraryName
+                libraryName: eagleData.libraryName,
+                librarySize: eagleData.librarySize || 0
             });
             return;
         }
@@ -4661,6 +4752,40 @@ class AEExtension {
             this.startDemoLogs(port);
         } else {
             this.log(`🚀 AE扩展启动 - 端口: ${port}`, 'info');
+        }
+    }
+
+    // 使用动态端口发现更新Eagle URL
+    async updateEagleUrlWithDiscovery() {
+        if (!this.portDiscovery) {
+            this.log('端口发现服务未初始化，使用配置端口', 'warning');
+            const preferences = this.settingsManager.getPreferences();
+            this.updateEagleUrl(preferences.communicationPort);
+            return;
+        }
+
+        try {
+            this.log('🔍 开始动态端口发现...', 'info');
+            const discoveredPort = await this.portDiscovery.getEaglePort();
+
+            if (discoveredPort !== this.currentPort) {
+                this.log(`🎯 发现新端口: ${this.currentPort} -> ${discoveredPort}`, 'info');
+                this.updateEagleUrl(discoveredPort);
+
+                // 更新设置中的端口（但不保存，避免覆盖用户配置）
+                const communicationPortInput = document.getElementById('communication-port');
+                if (communicationPortInput) {
+                    communicationPortInput.value = discoveredPort;
+                }
+            } else {
+                this.log(`端口未变化: ${discoveredPort}`, 'info');
+            }
+
+        } catch (error) {
+            this.log(`动态端口发现失败: ${error.message}`, 'error');
+            // 回退到配置端口
+            const preferences = this.settingsManager.getPreferences();
+            this.updateEagleUrl(preferences.communicationPort);
         }
     }
 
