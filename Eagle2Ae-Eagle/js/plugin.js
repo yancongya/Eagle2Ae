@@ -644,13 +644,29 @@ class Eagle2Ae {
                         });
                     }
 
-                    // 获取消息（WebSocket优先，HTTP兼容）
+                    // 获取消息（HTTP队列优先，确保消息不丢失）
                     let messages = [];
+
+                    // 首先检查HTTP消息队列
+                    const httpMessages = this.getMessageQueue();
+                    if (httpMessages.length > 0) {
+                        this.log(`📤 从HTTP队列获取到 ${httpMessages.length} 条消息`, 'debug');
+                    }
+
+                    // 然后检查WebSocket消息队列
+                    let wsMessages = [];
                     if (this.eagleWebSocket && this.eagleWebSocket.hasActiveClients()) {
-                        messages = this.eagleWebSocket.getClientMessages(clientId);
-                    } else {
-                        // 回退到传统消息队列
-                        messages = this.getMessageQueue();
+                        wsMessages = this.eagleWebSocket.getClientMessages(clientId);
+                        if (wsMessages.length > 0) {
+                            this.log(`📤 从WebSocket队列获取到 ${wsMessages.length} 条消息`, 'debug');
+                        }
+                    }
+
+                    // 合并消息（HTTP消息优先）
+                    messages = [...httpMessages, ...wsMessages];
+
+                    if (messages.length > 0) {
+                        this.log(`📤 总共返回 ${messages.length} 条消息给AE扩展`, 'info');
                     }
 
                     // 只返回最新的50条Eagle日志，避免历史日志堆积
@@ -2042,12 +2058,7 @@ class Eagle2Ae {
         return typeMap[httpMessageType] || httpMessageType;
     }
 
-    // 获取消息队列
-    getMessageQueue() {
-        const messages = this.messageQueue || [];
-        this.messageQueue = []; // 清空队列
-        return messages;
-    }
+
 
     // 获取文件类型
     getFileType(ext) {

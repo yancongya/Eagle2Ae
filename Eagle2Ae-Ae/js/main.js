@@ -1421,17 +1421,19 @@ class AEExtension {
         }
     }
 
-    // 可靠的打开文件夹方法
+    // 可靠的打开文件夹方法（跨平台）
     openFolderReliable(exportPath) {
-        this.log('📁 尝试打开文件夹...', 'info');
+        this.log('📁 尝试可靠地打开文件夹...', 'info');
         this.log(`📁 路径: ${exportPath}`, 'info');
 
         if (window.cep && window.cep.process) {
-            // 使用最简单的explorer命令
-            this.log('🔄 使用Explorer直接打开...', 'info');
+            // 使用跨平台的打开方法
+            this.log('🔄 使用跨平台方法打开...', 'info');
 
             try {
-                window.cep.process.createProcess('explorer.exe', [exportPath]);
+                // 检测平台并使用相应的方法
+                const platform = this.detectPlatform();
+                this.openFolderByPlatform(exportPath, platform);
 
                 // 由于CEP的createProcess可能不会触发回调，我们延迟显示成功消息
                 setTimeout(() => {
@@ -1448,24 +1450,7 @@ class AEExtension {
         }
     }
 
-    // 尝试使用Explorer
-    tryExplorer(exportPath) {
-        this.log('🔄 尝试使用Explorer...', 'info');
-
-        window.cep.process.createProcess(
-            'explorer.exe',
-            [exportPath],
-            (err, stdout, stderr) => {
-                if (err) {
-                    this.log(`❌ Explorer也失败: ${err}`, 'error');
-                    this.log('💡 请手动打开文件夹', 'warning');
-                    this.copyPathToClipboard(exportPath);
-                } else {
-                    this.log('✅ 文件夹已通过Explorer打开', 'success');
-                }
-            }
-        );
-    }
+    // 已移除旧的tryExplorer方法，现在使用跨平台的openFolderByPlatform方法
 
     // 使用C#程序复制文件到剪切板
     async copyFilesToClipboardDirect(exportPath, exportedLayers) {
@@ -1971,7 +1956,7 @@ class AEExtension {
         }
     }
 
-    // 通用的打开文件夹方法
+    // 跨平台的打开文件夹方法
     openFolder(folderPath) {
         try {
             this.log('📁 正在打开文件夹...', 'info');
@@ -1983,20 +1968,12 @@ class AEExtension {
             }
 
             if (window.cep && window.cep.process) {
-                // 方法1: 直接使用explorer
-                window.cep.process.createProcess(
-                    'explorer.exe',
-                    [folderPath],
-                    (err, stdout, stderr) => {
-                        if (err) {
-                            this.log(`❌ Explorer失败: ${err}`, 'error');
-                            // 尝试方法2
-                            this.tryOpenWithCmd(folderPath);
-                        } else {
-                            this.log('📁 文件夹已通过Explorer打开', 'success');
-                        }
-                    }
-                );
+                // 检测操作系统平台
+                const platform = this.detectPlatform();
+                this.log(`🖥️ 检测到平台: ${platform}`, 'info');
+
+                // 根据平台选择合适的打开方法
+                this.openFolderByPlatform(folderPath, platform);
             } else {
                 this.log('❌ CEP process API不可用', 'error');
                 this.copyPathToClipboard(folderPath);
@@ -2004,6 +1981,53 @@ class AEExtension {
         } catch (error) {
             this.log(`❌ 打开文件夹出错: ${error.message}`, 'error');
             this.copyPathToClipboard(folderPath);
+        }
+    }
+
+    // 检测操作系统平台
+    detectPlatform() {
+        // 方法1: 使用navigator.platform
+        if (navigator.platform) {
+            const platform = navigator.platform.toLowerCase();
+            if (platform.includes('win')) {
+                return 'windows';
+            } else if (platform.includes('mac')) {
+                return 'mac';
+            } else if (platform.includes('linux')) {
+                return 'linux';
+            }
+        }
+
+        // 方法2: 使用userAgent
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (userAgent.includes('windows')) {
+            return 'windows';
+        } else if (userAgent.includes('mac')) {
+            return 'mac';
+        } else if (userAgent.includes('linux')) {
+            return 'linux';
+        }
+
+        // 默认返回windows（最常见的情况）
+        return 'windows';
+    }
+
+    // 根据平台打开文件夹
+    openFolderByPlatform(folderPath, platform) {
+        switch (platform) {
+            case 'windows':
+                this.openFolderWindows(folderPath);
+                break;
+            case 'mac':
+                this.openFolderMac(folderPath);
+                break;
+            case 'linux':
+                this.openFolderLinux(folderPath);
+                break;
+            default:
+                this.log(`⚠️ 未知平台: ${platform}，尝试Windows方法`, 'warning');
+                this.openFolderWindows(folderPath);
+                break;
         }
     }
 
@@ -2163,28 +2187,174 @@ class AEExtension {
         this.openFolder(exportPath);
     }
 
-    // 尝试使用cmd打开文件夹
-    tryOpenWithCmd(exportPath) {
+    // Windows平台打开文件夹
+    openFolderWindows(folderPath) {
+        this.log('🪟 使用Windows方法打开文件夹...', 'info');
+
+        const explorerPath = 'C:\\Windows\\explorer.exe';
+
+        // 方法1: 直接打开文件夹
+        window.cep.process.createProcess(
+            explorerPath,
+            folderPath,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ Windows Explorer失败: ${err}`, 'error');
+                    // 尝试方法2: 使用 /select 参数
+                    this.tryWindowsSelect(folderPath);
+                } else {
+                    this.log('✅ 文件夹已通过Windows Explorer打开', 'success');
+                }
+            }
+        );
+    }
+
+    // Mac平台打开文件夹
+    openFolderMac(folderPath) {
+        this.log('🍎 使用Mac方法打开文件夹...', 'info');
+
+        // Mac使用 /usr/bin/open 命令
+        window.cep.process.createProcess(
+            '/usr/bin/open',
+            folderPath,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ Mac open失败: ${err}`, 'error');
+                    // 尝试备选方案
+                    this.tryMacFinder(folderPath);
+                } else {
+                    this.log('✅ 文件夹已通过Mac Finder打开', 'success');
+                }
+            }
+        );
+    }
+
+    // Linux平台打开文件夹
+    openFolderLinux(folderPath) {
+        this.log('🐧 使用Linux方法打开文件夹...', 'info');
+
+        // Linux尝试多种文件管理器
+        const fileManagers = [
+            'xdg-open',      // 通用的Linux打开命令
+            'nautilus',      // GNOME文件管理器
+            'dolphin',       // KDE文件管理器
+            'thunar',        // XFCE文件管理器
+            'pcmanfm'        // LXDE文件管理器
+        ];
+
+        this.tryLinuxFileManagers(folderPath, fileManagers, 0);
+    }
+
+    // 尝试Windows /select 参数
+    tryWindowsSelect(folderPath) {
+        this.log('🔄 尝试Windows /select 参数...', 'info');
+
+        const explorerPath = 'C:\\Windows\\explorer.exe';
+        const selectCommand = `/select,"${folderPath}"`;
+
+        window.cep.process.createProcess(
+            explorerPath,
+            selectCommand,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ Windows /select 方法也失败: ${err}`, 'error');
+                    // 最后尝试CMD方法
+                    this.tryWindowsCmd(folderPath);
+                } else {
+                    this.log('✅ 文件夹已通过Windows /select 打开', 'success');
+                }
+            }
+        );
+    }
+
+    // Windows CMD备选方案
+    tryWindowsCmd(folderPath) {
         try {
-            const cmdCommand = `start "" "${exportPath}"`;
-            this.log(`🔄 尝试CMD命令: ${cmdCommand}`, 'info');
+            const cmdCommand = `start "" "${folderPath}"`;
+            this.log(`🔄 尝试Windows CMD命令: ${cmdCommand}`, 'info');
 
             window.cep.process.createProcess(
                 'cmd.exe',
-                ['/c', cmdCommand],
+                `/c ${cmdCommand}`,
                 (err, stdout, stderr) => {
                     if (err) {
-                        this.log(`❌ CMD也失败: ${err}`, 'error');
-                        this.copyPathToClipboard(exportPath);
+                        this.log(`❌ Windows CMD也失败: ${err}`, 'error');
+                        this.copyPathToClipboard(folderPath);
                     } else {
-                        this.log('📁 文件夹已通过CMD打开', 'success');
+                        this.log('✅ 文件夹已通过Windows CMD打开', 'success');
                     }
                 }
             );
         } catch (error) {
-            this.log(`❌ CMD命令失败: ${error.message}`, 'error');
-            this.copyPathToClipboard(exportPath);
+            this.log(`❌ Windows CMD命令失败: ${error.message}`, 'error');
+            this.copyPathToClipboard(folderPath);
         }
+    }
+
+    // Mac Finder备选方案
+    tryMacFinder(folderPath) {
+        this.log('🔄 尝试Mac Finder备选方案...', 'info');
+
+        // 尝试使用AppleScript
+        const appleScript = `tell application "Finder" to open folder POSIX file "${folderPath}"`;
+
+        window.cep.process.createProcess(
+            '/usr/bin/osascript',
+            `-e '${appleScript}'`,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ Mac AppleScript也失败: ${err}`, 'error');
+                    // 最后尝试终端命令
+                    this.tryMacTerminal(folderPath);
+                } else {
+                    this.log('✅ 文件夹已通过Mac AppleScript打开', 'success');
+                }
+            }
+        );
+    }
+
+    // Mac终端备选方案
+    tryMacTerminal(folderPath) {
+        this.log('🔄 尝试Mac终端命令...', 'info');
+
+        window.cep.process.createProcess(
+            '/bin/sh',
+            `-c "open '${folderPath}'"`,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ Mac终端命令也失败: ${err}`, 'error');
+                    this.copyPathToClipboard(folderPath);
+                } else {
+                    this.log('✅ 文件夹已通过Mac终端打开', 'success');
+                }
+            }
+        );
+    }
+
+    // Linux文件管理器尝试
+    tryLinuxFileManagers(folderPath, fileManagers, index) {
+        if (index >= fileManagers.length) {
+            this.log('❌ 所有Linux文件管理器都失败了', 'error');
+            this.copyPathToClipboard(folderPath);
+            return;
+        }
+
+        const fileManager = fileManagers[index];
+        this.log(`🔄 尝试Linux文件管理器: ${fileManager}`, 'info');
+
+        window.cep.process.createProcess(
+            fileManager,
+            folderPath,
+            (err, stdout, stderr) => {
+                if (err) {
+                    this.log(`❌ ${fileManager} 失败: ${err}`, 'info');
+                    // 尝试下一个文件管理器
+                    this.tryLinuxFileManagers(folderPath, fileManagers, index + 1);
+                } else {
+                    this.log(`✅ 文件夹已通过 ${fileManager} 打开`, 'success');
+                }
+            }
+        );
     }
 
     // 复制文本到剪切板（通用函数）
@@ -2480,62 +2650,28 @@ class AEExtension {
 
 
 
-    // 打开导出文件夹
+    // 打开导出文件夹（跨平台）
     openExportFolder(exportPath) {
         try {
-            this.log(`📁 尝试打开文件夹: ${exportPath}`, 'info');
+            this.log(`📁 尝试打开导出文件夹: ${exportPath}`, 'info');
 
             if (window.cep && window.cep.process) {
-                // 方法1: 使用explorer直接打开文件夹
-                window.cep.process.createProcess(
-                    'explorer.exe',
-                    [exportPath],
-                    (err, stdout, stderr) => {
-                        if (err) {
-                            console.error('Explorer error:', err);
-                            this.log(`❌ 打开文件夹失败: ${err}`, 'error');
-                            // 尝试备选方案
-                            this.tryAlternativeOpenFolder(exportPath);
-                        } else {
-                            this.log('📁 文件夹已打开', 'success');
-                        }
-                    }
-                );
+                // 使用跨平台的打开方法
+                const platform = this.detectPlatform();
+                this.log(`🖥️ 检测到平台: ${platform}`, 'info');
+
+                this.openFolderByPlatform(exportPath, platform);
             } else {
                 this.log('❌ CEP process API不可用', 'error');
-                this.tryAlternativeOpenFolder(exportPath);
+                this.copyPathToClipboard(exportPath);
             }
         } catch (error) {
             this.log(`❌ 打开文件夹出错: ${error.message}`, 'error');
-            this.tryAlternativeOpenFolder(exportPath);
+            this.copyPathToClipboard(exportPath);
         }
     }
 
-    // 尝试备选方案打开文件夹
-    tryAlternativeOpenFolder(exportPath) {
-        try {
-            if (window.cep && window.cep.process) {
-                // 方法2: 使用cmd命令打开
-                const cmdCommand = `start "" "${exportPath}"`;
-                window.cep.process.createProcess(
-                    'cmd.exe',
-                    ['/c', cmdCommand],
-                    (err, stdout, stderr) => {
-                        if (err) {
-                            console.error('CMD error:', err);
-                            this.showPathAsFallback(exportPath);
-                        } else {
-                            this.log('📁 文件夹已打开（备选方案）', 'success');
-                        }
-                    }
-                );
-            } else {
-                this.showPathAsFallback(exportPath);
-            }
-        } catch (error) {
-            this.showPathAsFallback(exportPath);
-        }
-    }
+    // 已移除旧的tryAlternativeOpenFolder方法，现在使用跨平台的方法
 
     // 显示路径作为最后的备选方案
     showPathAsFallback(exportPath) {
@@ -2562,9 +2698,10 @@ class AEExtension {
             openFolderBtn.style.margin = '5px';
 
             openFolderBtn.onclick = () => {
-                // 使用CEP的shell API打开文件夹
-                if (window.cep && window.cep.fs) {
-                    window.cep.process.createProcess('explorer.exe', exportPath);
+                // 使用跨平台的方法打开文件夹
+                if (window.cep && window.cep.process) {
+                    const platform = this.detectPlatform();
+                    this.openFolderByPlatform(exportPath, platform);
                 } else {
                     // 备选方案：复制路径到粘贴板
                     navigator.clipboard.writeText(exportPath).then(() => {
