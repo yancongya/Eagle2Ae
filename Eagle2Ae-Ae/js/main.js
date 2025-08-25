@@ -3017,8 +3017,25 @@ class AEExtension {
 
     // 更新项目信息UI
     updateProjectUI(projectInfo) {
-        document.getElementById('project-name').textContent = projectInfo.projectName || '未打开项目';
-        document.getElementById('comp-name').textContent = projectInfo.activeComp?.name || '无';
+        // 更新项目名称并添加悬浮提示
+        const projectNameElement = document.getElementById('project-name');
+        const projectName = projectInfo.projectName || '未打开项目';
+        projectNameElement.textContent = projectName;
+        if (projectName && projectName !== '未打开项目') {
+            projectNameElement.title = projectName; // 添加悬浮提示
+        } else {
+            projectNameElement.removeAttribute('title');
+        }
+
+        // 更新合成名称并添加悬浮提示
+        const compNameElement = document.getElementById('comp-name');
+        const compName = projectInfo.activeComp?.name || '无';
+        compNameElement.textContent = compName;
+        if (compName && compName !== '无') {
+            compNameElement.title = compName; // 添加悬浮提示
+        } else {
+            compNameElement.removeAttribute('title');
+        }
 
         // 更新项目路径
         const projectPathElement = document.getElementById('project-path');
@@ -3076,13 +3093,16 @@ class AEExtension {
                     // 组合显示版本信息
                     const fullVersion = `${version}`;
                     versionElement.textContent = fullVersion;
+                    versionElement.title = `After Effects版本: ${fullVersion}`; // 添加悬浮提示
                     console.log(`AE版本获取成功: ${fullVersion}`);
                 } else {
                     versionElement.textContent = '未知';
+                    versionElement.removeAttribute('title');
                     console.warn('无法获取AE版本信息');
                 }
             } else {
                 versionElement.textContent = '未知';
+                versionElement.removeAttribute('title');
                 console.warn('CSInterface不可用');
             }
         } catch (error) {
@@ -3090,6 +3110,7 @@ class AEExtension {
             const versionElement = document.getElementById('ae-version');
             if (versionElement) {
                 versionElement.textContent = '获取失败';
+                versionElement.removeAttribute('title');
             }
         }
     }
@@ -3097,7 +3118,15 @@ class AEExtension {
     // 更新Eagle信息UI
     updateEagleUI(eagleStatus) {
         if (eagleStatus) {
-            document.getElementById('eagle-version').textContent = eagleStatus.version || '未知';
+            // 更新Eagle版本并添加悬浮提示
+            const eagleVersionElement = document.getElementById('eagle-version');
+            const eagleVersion = eagleStatus.version || '未知';
+            eagleVersionElement.textContent = eagleVersion;
+            if (eagleVersion && eagleVersion !== '未知') {
+                eagleVersionElement.title = `Eagle版本: ${eagleVersion}`; // 添加悬浮提示
+            } else {
+                eagleVersionElement.removeAttribute('title');
+            }
 
             // 更新Eagle路径并设置悬浮显示 - 显示安装路径
             const eaglePathElement = document.getElementById('eagle-path');
@@ -3105,7 +3134,9 @@ class AEExtension {
             eaglePathElement.textContent = eaglePath;
             // 只有在eaglePath不是undefined且不是字符串"undefined"时才设置title
             if (eaglePath && eaglePath !== '未知' && eaglePath !== 'undefined') {
-                eaglePathElement.title = eaglePath; // 设置悬浮显示完整路径
+                eaglePathElement.title = `Eagle安装路径: ${eaglePath}`; // 设置悬浮显示完整路径
+            } else {
+                eaglePathElement.removeAttribute('title');
             }
 
             // Eagle路径不设置点击事件
@@ -3130,9 +3161,19 @@ class AEExtension {
             }
 
             eagleLibraryElement.textContent = displayText;
-            // 只有在libraryPath不是undefined且不是字符串"undefined"时才设置title
+            // 设置悬浮显示完整信息
             if (libraryPath && libraryPath !== '未知' && libraryPath !== 'undefined') {
-                eagleLibraryElement.title = libraryPath; // 悬浮显示完整路径
+                let tooltipText = `资源库路径: ${libraryPath}`;
+                if (libraryName && libraryName !== '未知') {
+                    tooltipText = `资源库: ${libraryName}\n路径: ${libraryPath}`;
+                }
+                if (eagleStatus.librarySize !== undefined && eagleStatus.librarySize !== null && eagleStatus.librarySize > 0) {
+                    const formattedSize = this.formatFileSize(eagleStatus.librarySize);
+                    tooltipText += `\n大小: ${formattedSize}`;
+                }
+                eagleLibraryElement.title = tooltipText;
+            } else {
+                eagleLibraryElement.removeAttribute('title');
             }
 
             // 资源库可以双击打开
@@ -3144,24 +3185,36 @@ class AEExtension {
                 eagleLibraryElement.onclick = null;
             }
 
-            document.getElementById('eagle-folder').textContent = eagleStatus.folderPath || '未选择';
+            // 更新当前组并添加悬浮提示
+            const eagleFolderElement = document.getElementById('eagle-folder');
+            const folderPath = eagleStatus.folderPath || '未选择';
+            eagleFolderElement.textContent = folderPath;
+            if (folderPath && folderPath !== '未选择') {
+                eagleFolderElement.title = `当前组: ${folderPath}`; // 添加悬浮提示
+            } else {
+                eagleFolderElement.removeAttribute('title');
+            }
         } else {
-            document.getElementById('eagle-version').textContent = '未连接';
+            // 未连接状态下清除所有悬浮提示
+            const eagleVersionElement = document.getElementById('eagle-version');
+            eagleVersionElement.textContent = '未连接';
+            eagleVersionElement.removeAttribute('title');
 
             const eaglePathElement = document.getElementById('eagle-path');
             eaglePathElement.textContent = '未连接';
-            eaglePathElement.title = '未连接';
+            eaglePathElement.removeAttribute('title');
             eaglePathElement.classList.remove('clickable');
             eaglePathElement.onclick = null;
 
             const eagleLibraryElement = document.getElementById('eagle-library');
             eagleLibraryElement.textContent = '未连接';
-            eagleLibraryElement.title = '未连接';
+            eagleLibraryElement.removeAttribute('title');
             eagleLibraryElement.classList.remove('clickable');
             eagleLibraryElement.onclick = null;
 
-            document.getElementById('eagle-library').textContent = '未连接';
-            document.getElementById('eagle-folder').textContent = '未连接';
+            const eagleFolderElement = document.getElementById('eagle-folder');
+            eagleFolderElement.textContent = '未连接';
+            eagleFolderElement.removeAttribute('title');
         }
     }
 

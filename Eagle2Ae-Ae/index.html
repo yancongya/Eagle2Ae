@@ -350,13 +350,13 @@
             color: #e0e0e0;
         }
 
-        /* 路径不换行样式 */
+        /* 路径不换行样式 - 优化省略显示 */
         .eagle-info #eagle-path,
         .project-info #project-path {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 100px;
+            max-width: 180px; /* 增加最大宽度，让路径显示更多内容 */
             display: inline-block;
             vertical-align: top;
             cursor: help;
@@ -424,14 +424,15 @@
             white-space: nowrap;
         }
 
-        /* Eagle路径不换行 */
+        /* Eagle路径不换行 - 与上面统一样式 */
         .eagle-info #eagle-path {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 200px;
+            max-width: 180px; /* 与上面保持一致 */
             display: inline-block;
             vertical-align: top;
+            cursor: help;
         }
 
         /* 项目信息和Eagle信息的每一行 */

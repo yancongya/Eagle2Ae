@@ -813,6 +813,7 @@ class DemoMode {
         const aeVersion = document.getElementById('ae-version');
         if (aeVersion) {
             aeVersion.textContent = aeData.version;
+            aeVersion.title = `After Effects版本: ${aeData.version}`; // 添加悬浮提示
             console.log('✅ AE版本已设置:', aeData.version);
         } else {
             console.warn('❌ 未找到ae-version元素');
@@ -838,6 +839,7 @@ class DemoMode {
         const projectName = document.getElementById('project-name');
         if (projectName) {
             projectName.textContent = aeData.projectName;
+            projectName.title = aeData.projectName; // 添加悬浮提示
             console.log('✅ 项目名称已设置:', aeData.projectName);
         } else {
             console.warn('❌ 未找到project-name元素');
@@ -847,6 +849,7 @@ class DemoMode {
         const compName = document.getElementById('comp-name');
         if (compName) {
             compName.textContent = aeData.activeComp;
+            compName.title = aeData.activeComp; // 添加悬浮提示
             console.log('✅ 合成名称已设置:', aeData.activeComp);
         } else {
             console.warn('❌ 未找到comp-name元素');
@@ -863,6 +866,7 @@ class DemoMode {
         const eagleVersion = document.getElementById('eagle-version');
         if (eagleVersion) {
             eagleVersion.textContent = eagleData.version;
+            eagleVersion.title = `Eagle版本: ${eagleData.version}`; // 添加悬浮提示
             console.log('✅ Eagle版本已设置:', eagleData.version);
         } else {
             console.warn('❌ 未找到eagle-version元素');
@@ -871,8 +875,9 @@ class DemoMode {
         // Eagle路径 - 显示安装路径
         const eaglePath = document.getElementById('eagle-path');
         if (eaglePath) {
-            eaglePath.textContent = eagleData.execPath || '演示路径';
-            eaglePath.title = eagleData.execPath || '演示路径';
+            const execPath = eagleData.execPath || '演示路径';
+            eaglePath.textContent = execPath;
+            eaglePath.title = `Eagle安装路径: ${execPath}`; // 优化悬浮提示
             // Eagle路径不设置点击事件
             eaglePath.classList.remove('clickable');
             eaglePath.onclick = null;
@@ -884,15 +889,22 @@ class DemoMode {
         // 资源库 - 可以点击打开
         const eagleLibrary = document.getElementById('eagle-library');
         if (eagleLibrary) {
-            eagleLibrary.textContent = eagleData.libraryName || '演示资源库';
-            eagleLibrary.title = eagleData.libraryPath || '演示路径';
+            const libraryName = eagleData.libraryName || '演示资源库';
+            const libraryPath = eagleData.libraryPath || '演示路径';
+            eagleLibrary.textContent = libraryName;
+            // 优化悬浮提示，显示更多信息
+            let tooltipText = `资源库: ${libraryName}\n路径: ${libraryPath}`;
+            if (eagleData.librarySize) {
+                tooltipText += `\n大小: ${eagleData.librarySize}`;
+            }
+            eagleLibrary.title = tooltipText;
             // 添加点击样式和事件
             eagleLibrary.classList.add('clickable');
             eagleLibrary.onclick = () => {
                 console.log('🎭 演示模式：模拟打开Eagle资源库文件夹');
-                alert('演示模式：这里会打开Eagle资源库文件夹\n' + eagleData.libraryPath);
+                alert('演示模式：这里会打开Eagle资源库文件夹\n' + libraryPath);
             };
-            console.log('✅ Eagle资源库已设置:', eagleData.libraryName);
+            console.log('✅ Eagle资源库已设置:', libraryName);
         } else {
             console.warn('❌ 未找到eagle-library元素');
         }
@@ -902,8 +914,10 @@ class DemoMode {
         // 当前组
         const eagleFolder = document.getElementById('eagle-folder');
         if (eagleFolder) {
-            eagleFolder.textContent = eagleData.selectedFolder;
-            console.log('✅ Eagle当前组已设置:', eagleData.selectedFolder);
+            const selectedFolder = eagleData.selectedFolder;
+            eagleFolder.textContent = selectedFolder;
+            eagleFolder.title = `当前组: ${selectedFolder}`; // 添加悬浮提示
+            console.log('✅ Eagle当前组已设置:', selectedFolder);
         } else {
             console.warn('❌ 未找到eagle-folder元素');
         }

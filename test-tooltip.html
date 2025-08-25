@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>测试悬浮提示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #383838;
+            color: #e0e0e0;
+            margin: 20px;
+            line-height: 1.4;
+        }
+
+        .project-info-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 0;
+        }
+
+        .project-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            min-width: 0;
+            max-width: 50%;
+        }
+
+        .project-info .ae-title {
+            color: #9966cc;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-info .ae-title::before {
+            content: "●";
+            color: #9966cc;
+            font-size: 8px;
+        }
+
+        .eagle-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            border-left: 1px solid rgba(74, 144, 226, 0.3);
+            padding-left: 15px;
+            position: relative;
+            min-width: 0;
+            max-width: 50%;
+        }
+
+        .eagle-info::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #4a90e2, rgba(74, 144, 226, 0.3));
+            border-radius: 1px;
+        }
+
+        .eagle-info .eagle-title {
+            color: #4a90e2;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .eagle-info .eagle-title::before {
+            content: "●";
+            color: #4a90e2;
+            font-size: 8px;
+        }
+
+        .project-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .eagle-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .project-info span:not(.label):not(.ae-title) {
+            color: #e0e0e0;
+        }
+
+        .eagle-info span:not(.label):not(.eagle-title) {
+            color: #e0e0e0;
+        }
+
+        /* 路径不换行样式 - 优化省略显示 */
+        .eagle-info #eagle-path,
+        .project-info #project-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* 可点击路径样式 */
+        .eagle-info #eagle-path.clickable,
+        .eagle-info #eagle-library.clickable,
+        .project-info #project-path.clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #4a90e2;
+        }
+
+        .eagle-info #eagle-path.clickable:hover,
+        .eagle-info #eagle-library.clickable:hover,
+        .project-info #project-path.clickable:hover {
+            color: #66a3ff;
+            text-decoration: underline;
+        }
+
+        /* 确保包含路径的div不会超出容器 */
+        .eagle-info > div,
+        .project-info > div {
+            max-width: 100%;
+            overflow: hidden;
+            word-break: break-all;
+        }
+
+        /* 值部分允许收缩 */
+        .eagle-info span:not(.label):not(.eagle-title),
+        .project-info span:not(.label):not(.ae-title) {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Eagle路径不换行 - 与上面保持一致 */
+        .eagle-info #eagle-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* 项目信息和Eagle信息的每一行 */
+        .project-info > div, .eagle-info > div {
+            margin: 3px 0;
+            word-break: keep-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <h2>项目信息面板优化测试</h2>
+    <div class="project-info-container">
+        <div class="project-info">
+            <div class="ae-title">After Effects</div>
+            <div><span class="label">版本:</span> <span id="ae-version" title="After Effects版本: 23.5">23.5</span></div>
+            <div><span class="label">路径:</span> <span id="project-path" class="clickable" title="E:\工作\2025080\半屏座驾-炫辉之战\半屏座驾-炫辉之战.aep">E:\工作\2025080\半屏座驾-炫辉之战\半屏座驾-炫辉之战.aep</span></div>
+            <div><span class="label">项目:</span> <span id="project-name" title="半屏座驾-炫辉之战">半屏座驾-炫辉之战</span></div>
+            <div><span class="label">合成:</span> <span id="comp-name" title="炫辉之战">炫辉之战</span></div>
+        </div>
+        <div class="eagle-info">
+            <div class="eagle-title">Eagle</div>
+            <div><span class="label">版本:</span> <span id="eagle-version" title="Eagle版本: 4.0.0 build 1 pid 49...">4.0.0 build 1 pid 49...</span></div>
+            <div><span class="label">路径:</span> <span id="eagle-path" title="Eagle安装路径: C:\Program Files\Eagle\Eagle.exe">C:\Program Files\Eagle\Eagle.exe</span></div>
+            <div><span class="label">资源库:</span> <span id="eagle-library" class="clickable" title="资源库: 工作library&#10;路径: E:\Eagle\工作library&#10;大小: 217.7GB">工作library | 217.7GB</span></div>
+            <div><span class="label">当前组:</span> <span id="eagle-folder" title="当前组: 图片">图片</span></div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟点击事件
+        document.getElementById('project-path').onclick = () => {
+            alert('模拟打开项目文件夹');
+        };
+
+        document.getElementById('eagle-library').onclick = () => {
+            alert('模拟打开Eagle资源库文件夹');
+        };
+    </script>
+</body>
+</html>

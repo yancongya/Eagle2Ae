@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>演示模式悬浮提示测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #383838;
+            color: #e0e0e0;
+            margin: 20px;
+            line-height: 1.4;
+        }
+
+        .project-info-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 0;
+        }
+
+        .project-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            min-width: 0;
+            max-width: 50%;
+        }
+
+        .project-info .ae-title {
+            color: #9966cc;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-info .ae-title::before {
+            content: "●";
+            color: #9966cc;
+            font-size: 8px;
+        }
+
+        .eagle-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            border-left: 1px solid rgba(74, 144, 226, 0.3);
+            padding-left: 15px;
+            position: relative;
+            min-width: 0;
+            max-width: 50%;
+        }
+
+        .eagle-info::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #4a90e2, rgba(74, 144, 226, 0.3));
+            border-radius: 1px;
+        }
+
+        .eagle-info .eagle-title {
+            color: #4a90e2;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .eagle-info .eagle-title::before {
+            content: "●";
+            color: #4a90e2;
+            font-size: 8px;
+        }
+
+        .project-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .eagle-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .project-info span:not(.label):not(.ae-title) {
+            color: #e0e0e0;
+        }
+
+        .eagle-info span:not(.label):not(.eagle-title) {
+            color: #e0e0e0;
+        }
+
+        /* 路径不换行样式 - 优化省略显示 */
+        .eagle-info #eagle-path,
+        .project-info #project-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* 可点击路径样式 */
+        .eagle-info #eagle-path.clickable,
+        .eagle-info #eagle-library.clickable,
+        .project-info #project-path.clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #4a90e2;
+        }
+
+        .eagle-info #eagle-path.clickable:hover,
+        .eagle-info #eagle-library.clickable:hover,
+        .project-info #project-path.clickable:hover {
+            color: #66a3ff;
+            text-decoration: underline;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .test-section h3 {
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+
+        .test-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 11px;
+        }
+
+        .test-button:hover {
+            background: #66a3ff;
+        }
+    </style>
+</head>
+<body>
+    <h2>演示模式悬浮提示测试</h2>
+    
+    <div class="test-section">
+        <h3>连接状态 - 应该有悬浮提示</h3>
+        <div class="project-info-container">
+            <div class="project-info">
+                <div class="ae-title">After Effects</div>
+                <div><span class="label">版本:</span> <span id="ae-version">23.5</span></div>
+                <div><span class="label">路径:</span> <span id="project-path" class="clickable">E:\工作\2025080\半屏座驾-炫辉之战\半屏座驾-炫辉之战.aep</span></div>
+                <div><span class="label">项目:</span> <span id="project-name">半屏座驾-炫辉之战</span></div>
+                <div><span class="label">合成:</span> <span id="comp-name">炫辉之战</span></div>
+            </div>
+            <div class="eagle-info">
+                <div class="eagle-title">Eagle</div>
+                <div><span class="label">版本:</span> <span id="eagle-version">4.0.0 build 1 pid 41536</span></div>
+                <div><span class="label">路径:</span> <span id="eagle-path">C:\Program Files\Eagle\Eagle.exe</span></div>
+                <div><span class="label">资源库:</span> <span id="eagle-library" class="clickable">仓鼠library</span></div>
+                <div><span class="label">当前组:</span> <span id="eagle-folder">仓鼠党</span></div>
+            </div>
+        </div>
+        <button class="test-button" onclick="setConnectedTooltips()">设置连接状态悬浮提示</button>
+    </div>
+
+    <div class="test-section">
+        <h3>未连接状态 - 不应该有悬浮提示</h3>
+        <div class="project-info-container">
+            <div class="project-info">
+                <div class="ae-title">After Effects</div>
+                <div><span class="label">版本:</span> <span id="ae-version-2">获取中...</span></div>
+                <div><span class="label">路径:</span> <span id="project-path-2">获取中...</span></div>
+                <div><span class="label">项目:</span> <span id="project-name-2">获取中...</span></div>
+                <div><span class="label">合成:</span> <span id="comp-name-2">获取中...</span></div>
+            </div>
+            <div class="eagle-info">
+                <div class="eagle-title">Eagle</div>
+                <div><span class="label">版本:</span> <span id="eagle-version-2">获取中...</span></div>
+                <div><span class="label">路径:</span> <span id="eagle-path-2">获取中...</span></div>
+                <div><span class="label">资源库:</span> <span id="eagle-library-2">获取中...</span></div>
+                <div><span class="label">当前组:</span> <span id="eagle-folder-2">获取中...</span></div>
+            </div>
+        </div>
+        <button class="test-button" onclick="setDisconnectedTooltips()">设置未连接状态悬浮提示</button>
+    </div>
+
+    <script>
+        function setConnectedTooltips() {
+            // 模拟演示模式连接状态的悬浮提示设置
+            const aeVersion = document.getElementById('ae-version');
+            aeVersion.title = 'After Effects版本: 23.5';
+
+            const projectPath = document.getElementById('project-path');
+            projectPath.title = 'E:\\工作\\2025080\\半屏座驾-炫辉之战\\半屏座驾-炫辉之战.aep';
+
+            const projectName = document.getElementById('project-name');
+            projectName.title = '半屏座驾-炫辉之战';
+
+            const compName = document.getElementById('comp-name');
+            compName.title = '炫辉之战';
+
+            const eagleVersion = document.getElementById('eagle-version');
+            eagleVersion.title = 'Eagle版本: 4.0.0 build 1 pid 41536';
+
+            const eaglePath = document.getElementById('eagle-path');
+            eaglePath.title = 'Eagle安装路径: C:\\Program Files\\Eagle\\Eagle.exe';
+
+            const eagleLibrary = document.getElementById('eagle-library');
+            eagleLibrary.title = '资源库: 仓鼠library\n路径: E:\\Eagle\\仓鼠library\n大小: 217.7GB';
+
+            const eagleFolder = document.getElementById('eagle-folder');
+            eagleFolder.title = '当前组: 仓鼠党';
+
+            alert('已设置连接状态悬浮提示，请将鼠标悬停在各个信息项上查看效果');
+        }
+
+        function setDisconnectedTooltips() {
+            // 模拟演示模式未连接状态的悬浮提示设置（移除所有title）
+            const elements = [
+                'ae-version-2', 'project-path-2', 'project-name-2', 'comp-name-2',
+                'eagle-version-2', 'eagle-path-2', 'eagle-library-2', 'eagle-folder-2'
+            ];
+
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.removeAttribute('title');
+                }
+            });
+
+            alert('已移除未连接状态的悬浮提示，将鼠标悬停在各个信息项上应该没有提示');
+        }
+
+        // 初始设置
+        setConnectedTooltips();
+        setDisconnectedTooltips();
+    </script>
+</body>
+</html>

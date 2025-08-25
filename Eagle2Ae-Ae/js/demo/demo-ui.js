@@ -122,14 +122,26 @@ class DemoUI {
             };
         }
 
-        // 更新项目名称
+        // 更新项目名称并添加悬浮提示
         if (this.elements.projectName) {
-            this.elements.projectName.textContent = globalAEData?.projectName || this.demoData.ae.projectName;
+            const projectName = globalAEData?.projectName || this.demoData.ae.projectName;
+            this.elements.projectName.textContent = projectName;
+            if (projectName && projectName !== '未打开项目') {
+                this.elements.projectName.title = projectName;
+            } else {
+                this.elements.projectName.removeAttribute('title');
+            }
         }
 
-        // 更新合成名称
+        // 更新合成名称并添加悬浮提示
         if (this.elements.compName) {
-            this.elements.compName.textContent = globalAEData?.activeComp || this.demoData.ae.activeComp;
+            const compName = globalAEData?.activeComp || this.demoData.ae.activeComp;
+            this.elements.compName.textContent = compName;
+            if (compName && compName !== '无') {
+                this.elements.compName.title = compName;
+            } else {
+                this.elements.compName.removeAttribute('title');
+            }
         }
 
         // console.log('🎬 AE信息已更新为连接状态');
@@ -179,20 +191,29 @@ class DemoUI {
         // 使用全局演示数据而不是配置中的数据
         const globalEagleData = window.__DEMO_DATA__?.eagle?.connected;
 
-        // 更新Eagle版本信息
+        // 更新Eagle版本信息并添加悬浮提示
         if (this.elements.eagleVersion) {
-            this.elements.eagleVersion.textContent = globalEagleData?.version || this.demoData.eagle.version;
+            const eagleVersion = globalEagleData?.version || this.demoData.eagle.version;
+            this.elements.eagleVersion.textContent = eagleVersion;
+            if (eagleVersion && eagleVersion !== '获取中...') {
+                this.elements.eagleVersion.title = `Eagle版本: ${eagleVersion}`;
+            } else {
+                this.elements.eagleVersion.removeAttribute('title');
+            }
         }
 
         // 更新Eagle路径 - 显示安装路径
         if (this.elements.eaglePath) {
             const execPath = globalEagleData?.execPath || '演示路径';
             this.elements.eaglePath.textContent = execPath;
-            // 正确设置title
+            // 设置悬浮显示完整信息
             if (execPath && execPath !== '演示路径' && execPath !== 'undefined') {
+                const tooltipText = `Eagle安装路径: ${execPath}`;
                 this.elements.eaglePath.removeAttribute('title');
-                this.elements.eaglePath.setAttribute('title', execPath);
-                this.elements.eaglePath.title = execPath;
+                this.elements.eaglePath.setAttribute('title', tooltipText);
+                this.elements.eaglePath.title = tooltipText;
+            } else {
+                this.elements.eaglePath.removeAttribute('title');
             }
             // Eagle路径不设置点击事件
             this.elements.eaglePath.classList.remove('clickable');
@@ -213,11 +234,21 @@ class DemoUI {
             }
 
             this.elements.eagleLibrary.textContent = displayText;
-            // 正确设置title
+            // 设置悬浮显示完整信息
             if (libraryPath && libraryPath !== '演示路径' && libraryPath !== 'undefined') {
+                let tooltipText = `资源库路径: ${libraryPath}`;
+                if (libraryName && libraryName !== '演示资源库') {
+                    tooltipText = `资源库: ${libraryName}\n路径: ${libraryPath}`;
+                }
+                if (librarySize > 0) {
+                    const formattedSize = this.formatFileSize(librarySize);
+                    tooltipText += `\n大小: ${formattedSize}`;
+                }
                 this.elements.eagleLibrary.removeAttribute('title');
-                this.elements.eagleLibrary.setAttribute('title', libraryPath);
-                this.elements.eagleLibrary.title = libraryPath;
+                this.elements.eagleLibrary.setAttribute('title', tooltipText);
+                this.elements.eagleLibrary.title = tooltipText;
+            } else {
+                this.elements.eagleLibrary.removeAttribute('title');
             }
 
             // 添加点击样式和事件
@@ -230,9 +261,15 @@ class DemoUI {
             console.warn('❌ eagleLibrary 元素不存在');
         }
 
-        // 更新当前组
+        // 更新当前组并添加悬浮提示
         if (this.elements.eagleFolder) {
-            this.elements.eagleFolder.textContent = this.demoData.eagle.selectedFolder;
+            const selectedFolder = globalEagleData?.selectedFolder || this.demoData.eagle.selectedFolder;
+            this.elements.eagleFolder.textContent = selectedFolder;
+            if (selectedFolder && selectedFolder !== '获取中...') {
+                this.elements.eagleFolder.title = `当前组: ${selectedFolder}`;
+            } else {
+                this.elements.eagleFolder.removeAttribute('title');
+            }
         }
 
         // console.log('🦅 Eagle信息已更新为连接状态');
@@ -252,17 +289,13 @@ class DemoUI {
         // 更新Eagle版本信息
         if (this.elements.eagleVersion) {
             this.elements.eagleVersion.textContent = disconnectedData.version;
+            this.elements.eagleVersion.removeAttribute('title'); // 未连接状态移除悬浮提示
         }
 
         // 更新Eagle路径
         if (this.elements.eaglePath) {
             this.elements.eaglePath.textContent = disconnectedData.execPath;
-            // 只有在有有效路径时才设置title
-            if (disconnectedData.execPath && disconnectedData.execPath !== '获取中...' && disconnectedData.execPath !== 'undefined') {
-                this.elements.eaglePath.removeAttribute('title');
-                this.elements.eaglePath.setAttribute('title', disconnectedData.execPath);
-                this.elements.eaglePath.title = disconnectedData.execPath;
-            }
+            this.elements.eaglePath.removeAttribute('title'); // 未连接状态移除悬浮提示
             this.elements.eaglePath.classList.remove('clickable');
             this.elements.eaglePath.onclick = null;
         }
@@ -270,12 +303,7 @@ class DemoUI {
         // 更新资源库
         if (this.elements.eagleLibrary) {
             this.elements.eagleLibrary.textContent = '获取中...';
-            // 只有在有有效路径时才设置title
-            if (disconnectedData.libraryPath && disconnectedData.libraryPath !== '获取中...' && disconnectedData.libraryPath !== 'undefined') {
-                this.elements.eagleLibrary.removeAttribute('title');
-                this.elements.eagleLibrary.setAttribute('title', disconnectedData.libraryPath);
-                this.elements.eagleLibrary.title = disconnectedData.libraryPath;
-            }
+            this.elements.eagleLibrary.removeAttribute('title'); // 未连接状态移除悬浮提示
             this.elements.eagleLibrary.classList.remove('clickable');
             this.elements.eagleLibrary.onclick = null;
         }
@@ -283,6 +311,7 @@ class DemoUI {
         // 更新当前组
         if (this.elements.eagleFolder) {
             this.elements.eagleFolder.textContent = disconnectedData.selectedFolder;
+            this.elements.eagleFolder.removeAttribute('title'); // 未连接状态移除悬浮提示
         }
 
         // console.log('🦅 Eagle信息已更新为未连接状态');
