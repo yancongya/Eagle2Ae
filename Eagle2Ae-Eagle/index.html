@@ -377,6 +377,375 @@
 </head>
 
 <body>
+    <div class="export-ae-panel">
+        <h2>Eagle2Ae - 后台服务管理</h2>
+
+        <!-- 服务信息 -->
+        <div class="service-info">
+            <p class="service-description">
+                <strong>后台服务模式：</strong>插件已在后台自动启动，会监控Eagle中的文件选择操作。
+                当您在Eagle中选择文件并点击插件时，会自动导出到After Effects。
+            </p>
+            <p class="service-note">
+                此窗口用于监控服务状态和手动操作，关闭窗口不会停止后台服务。
+            </p>
+        </div>
+
+        <!-- 服务状态 -->
+        <div class="status-section">
+            <h3>服务状态</h3>
+            <div class="status-item">
+                <span class="status-label">后台服务</span>
+                <span id="service-status" class="status-value connected">运行中</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">HTTP服务器</span>
+                <span id="http-status" class="status-value disconnected">未启动</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">After Effects连接</span>
+                <span id="ae-status" class="status-value disconnected">未连接</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">服务端口</span>
+                <span id="service-port" class="status-value">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">运行时间</span>
+                <span id="uptime" class="status-value">--</span>
+            </div>
+        </div>
+
+        <!-- 当前选中文件 -->
+        <div class="files-section">
+            <h3>当前选中文件</h3>
+            <div id="files-count" class="files-count">未选择文件</div>
+            <div id="files-list" class="files-list">
+                <div class="no-files">请在Eagle中选择要导出的文件</div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="actions-section">
+            <button id="export-button" class="export-button" disabled>手动导出选中文件</button>
+            <button id="settings-button" class="settings-button">设置</button>
+        </div>
+
+        <!-- 日志输出 -->
+        <div class="log-section">
+            <h3>操作日志</h3>
+            <div id="log-output" class="log-output">
+                <div class="log-info">等待操作日志...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置对话框 -->
+    <div id="settings-overlay" class="settings-overlay" style="display: none;">
+        <div class="settings-dialog">
+            <h3>Eagle2Ae 设置</h3>
+
+            <div class="setting-item">
+                <label for="ae-project-path">After Effects项目路径:</label>
+                <input type="text" id="ae-project-path" placeholder="选择AE项目文件路径">
+                <button onclick="selectAeProject()">浏览</button>
+            </div>
+
+            <div class="setting-item">
+                <label for="export-folder">导出文件夹名称:</label>
+                <input type="text" id="export-folder" value="Eagle_Import" placeholder="在AE项目中创建的文件夹名称">
+            </div>
+
+            <div class="setting-item">
+                <label for="auto-import">
+                    <input type="checkbox" id="auto-import" checked>
+                    自动导入到AE项目
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <label for="show-notifications">
+                    <input type="checkbox" id="show-notifications" checked>
+                    显示操作通知
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <label for="server-port">HTTP服务器端口:</label>
+                <input type="number" id="server-port" value="8080" min="1024" max="65535">
+            </div>
+
+            <div class="setting-actions">
+                <button id="save-settings">保存设置</button>
+                <button id="cancel-settings">取消</button>
+            </div>
+        </div>
+    </div>
+
     <div id="message"></div>
+
+    <script>
+        // UI管理脚本
+        let uiUpdateInterval = null;
+        let startTime = Date.now();
+
+        // 初始化UI
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Eagle2Ae UI 初始化');
+
+            // 绑定事件
+            bindEvents();
+
+            // 开始定期更新UI
+            startUIUpdates();
+
+            // 初始化设置
+            loadSettings();
+        });
+
+        function bindEvents() {
+            // 手动导出按钮
+            document.getElementById('export-button').addEventListener('click', async function() {
+                await handleManualExport();
+            });
+
+            // 设置按钮
+            document.getElementById('settings-button').addEventListener('click', function() {
+                showSettings();
+            });
+
+            // 设置对话框按钮
+            document.getElementById('save-settings').addEventListener('click', function() {
+                saveSettings();
+            });
+
+            document.getElementById('cancel-settings').addEventListener('click', function() {
+                hideSettings();
+            });
+
+            // 点击遮罩关闭设置
+            document.getElementById('settings-overlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideSettings();
+                }
+            });
+        }
+
+        function startUIUpdates() {
+            // 每秒更新一次UI
+            uiUpdateInterval = setInterval(updateUI, 1000);
+            updateUI(); // 立即更新一次
+        }
+
+        async function updateUI() {
+            // 更新运行时间
+            const uptime = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            document.getElementById('uptime').textContent =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // 更新选中文件列表
+            await updateSelectedFiles();
+
+            // 更新服务状态（如果有全局的eagle2ae实例）
+            if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                updateServiceStatus();
+            }
+        }
+
+        async function updateSelectedFiles() {
+            try {
+                const selectedItems = await eagle.item.getSelected();
+                const filesCount = document.getElementById('files-count');
+                const filesList = document.getElementById('files-list');
+                const exportButton = document.getElementById('export-button');
+
+                if (selectedItems && selectedItems.length > 0) {
+                    filesCount.textContent = `已选择 ${selectedItems.length} 个文件`;
+
+                    // 显示文件列表
+                    filesList.innerHTML = '';
+                    selectedItems.slice(0, 10).forEach(item => { // 最多显示10个
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+
+                        const fileName = document.createElement('span');
+                        fileName.className = 'file-name';
+                        fileName.textContent = item.name || '未知文件';
+
+                        const fileType = document.createElement('span');
+                        fileType.className = 'file-type';
+                        fileType.textContent = (item.ext || '').toUpperCase();
+
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(fileType);
+                        filesList.appendChild(fileItem);
+                    });
+
+                    if (selectedItems.length > 10) {
+                        const moreItem = document.createElement('div');
+                        moreItem.className = 'file-item';
+                        moreItem.style.fontStyle = 'italic';
+                        moreItem.style.color = '#666';
+                        moreItem.textContent = `... 还有 ${selectedItems.length - 10} 个文件`;
+                        filesList.appendChild(moreItem);
+                    }
+
+                    exportButton.disabled = false;
+                } else {
+                    filesCount.textContent = '未选择文件';
+                    filesList.innerHTML = '<div class="no-files">请在Eagle中选择要导出的文件</div>';
+                    exportButton.disabled = true;
+                }
+            } catch (error) {
+                console.error('更新选中文件失败:', error);
+            }
+        }
+
+        function updateServiceStatus() {
+            // 更新HTTP服务器状态
+            if (eagle2ae.httpServer && eagle2ae.httpServer.listening) {
+                document.getElementById('http-status').textContent = '运行中';
+                document.getElementById('http-status').className = 'status-value connected';
+                document.getElementById('service-port').textContent = eagle2ae.currentPort || '--';
+            } else {
+                document.getElementById('http-status').textContent = '未启动';
+                document.getElementById('http-status').className = 'status-value disconnected';
+            }
+
+            // 更新AE连接状态（这里可以根据实际情况调整）
+            document.getElementById('ae-status').textContent = '待检测';
+            document.getElementById('ae-status').className = 'status-value';
+        }
+
+        async function handleManualExport() {
+            const button = document.getElementById('export-button');
+            const originalText = button.textContent;
+
+            try {
+                button.disabled = true;
+                button.textContent = '导出中...';
+
+                const selectedItems = await eagle.item.getSelected();
+                if (selectedItems && selectedItems.length > 0) {
+                    addLog(`开始手动导出 ${selectedItems.length} 个文件...`, 'info');
+
+                    // 调用插件的导出功能
+                    if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                        await eagle2ae.handleSelectedFiles(selectedItems);
+                        addLog('手动导出完成', 'info');
+                    } else {
+                        addLog('服务未就绪，请稍后重试', 'warning');
+                    }
+                } else {
+                    addLog('没有选中的文件', 'warning');
+                }
+            } catch (error) {
+                console.error('手动导出失败:', error);
+                addLog(`导出失败: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        function addLog(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+
+            const time = new Date().toLocaleTimeString();
+            logEntry.innerHTML = `<span class="log-time">[${time}]</span>${message}`;
+
+            // 如果是第一条日志，清除占位符
+            if (logOutput.querySelector('.log-info')) {
+                logOutput.innerHTML = '';
+            }
+
+            logOutput.appendChild(logEntry);
+
+            // 保持最多50条日志
+            const entries = logOutput.querySelectorAll('.log-entry');
+            if (entries.length > 50) {
+                entries[0].remove();
+            }
+
+            // 滚动到底部
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function showSettings() {
+            document.getElementById('settings-overlay').style.display = 'flex';
+        }
+
+        function hideSettings() {
+            document.getElementById('settings-overlay').style.display = 'none';
+        }
+
+        function loadSettings() {
+            // 从本地存储加载设置（如果有的话）
+            try {
+                const settings = JSON.parse(localStorage.getItem('eagle2ae-settings') || '{}');
+
+                if (settings.aeProjectPath) {
+                    document.getElementById('ae-project-path').value = settings.aeProjectPath;
+                }
+                if (settings.exportFolder) {
+                    document.getElementById('export-folder').value = settings.exportFolder;
+                }
+                if (typeof settings.autoImport === 'boolean') {
+                    document.getElementById('auto-import').checked = settings.autoImport;
+                }
+                if (typeof settings.showNotifications === 'boolean') {
+                    document.getElementById('show-notifications').checked = settings.showNotifications;
+                }
+                if (settings.serverPort) {
+                    document.getElementById('server-port').value = settings.serverPort;
+                }
+            } catch (error) {
+                console.error('加载设置失败:', error);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const settings = {
+                    aeProjectPath: document.getElementById('ae-project-path').value,
+                    exportFolder: document.getElementById('export-folder').value,
+                    autoImport: document.getElementById('auto-import').checked,
+                    showNotifications: document.getElementById('show-notifications').checked,
+                    serverPort: parseInt(document.getElementById('server-port').value)
+                };
+
+                localStorage.setItem('eagle2ae-settings', JSON.stringify(settings));
+                addLog('设置已保存', 'info');
+                hideSettings();
+
+                // 如果有全局实例，更新配置
+                if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                    eagle2ae.updateSettings(settings);
+                }
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                addLog('保存设置失败', 'error');
+            }
+        }
+
+        function selectAeProject() {
+            // 这里可以调用Eagle的文件选择对话框
+            addLog('请手动输入AE项目路径', 'info');
+        }
+
+        // 暴露给全局使用的函数
+        window.uiAddLog = addLog;
+        window.uiUpdateStatus = updateServiceStatus;
+
+        // 初始日志
+        setTimeout(() => {
+            addLog('Eagle2Ae 管理界面已启动', 'info');
+        }, 100);
+    </script>
 </body>
 </html>

@@ -80,15 +80,30 @@ class FileHandler {
     }
 
     // 直接导入模式
-    async processDirectImport(files, settings) {
-        // 直接使用原始文件路径
-        return files.map(file => ({
-            originalPath: file.path,
-            importPath: file.path,
-            name: this.processFileName(file.name, settings),
-            tags: file.tags || [],
-            processed: false // 标记为未处理（直接使用原文件）
-        }));
+    async processDirectImport(files, settings, projectInfo) {
+        const processedFiles = [];
+
+        for (const file of files) {
+            // 检查是否为临时文件（剪贴板导入的临时文件）
+            if (file.isTemporary && file.isClipboardImport) {
+                this.log('FileHandler: 检测到临时文件，强制使用项目旁复制模式', 'info');
+
+                // 临时文件强制使用项目旁复制模式
+                const tempProcessed = await this.processProjectAdjacentImport([file], settings, projectInfo);
+                processedFiles.push(...tempProcessed);
+            } else {
+                // 普通文件直接使用原始文件路径
+                processedFiles.push({
+                    originalPath: file.path,
+                    importPath: file.path,
+                    name: this.processFileName(file.name, settings),
+                    tags: file.tags || [],
+                    processed: false // 标记为未处理（直接使用原文件）
+                });
+            }
+        }
+
+        return processedFiles;
     }
 
     // 项目旁复制模式
@@ -149,6 +164,11 @@ class FileHandler {
 
     // 复制文件到指定目录
     async copyFileToDirectory(file, targetDir, settings) {
+        // 处理剪贴板文件的特殊情况
+        if (file.isClipboardImport && file.file) {
+            return await this.copyClipboardFileToDirectory(file, targetDir, settings);
+        }
+
         // 从原始路径提取完整文件名（包含扩展名）
         const originalFileName = this.getFileNameFromPath(file.path);
         const fileName = this.processFileName(originalFileName, settings);
@@ -182,6 +202,121 @@ class FileHandler {
         // 静默模式下不显示处理结果
 
         return result;
+    }
+
+    // 复制剪贴板文件到指定目录
+    async copyClipboardFileToDirectory(file, targetDir, settings) {
+        this.log('FileHandler: 处理剪贴板文件', 'debug');
+
+        // 使用处理后的文件名（可能已经重命名）
+        const fileName = this.processFileName(file.name, settings);
+        let targetPath = this.joinPath(targetDir, fileName);
+
+        // 如果启用了标签文件夹
+        if (settings.fileManagement.createTagFolders && file.tags && file.tags.length > 0) {
+            const tagFolder = file.tags[0]; // 使用第一个标签作为文件夹名
+            const tagDir = this.joinPath(targetDir, this.sanitizeFolderName(tagFolder));
+            await this.ensureDirectoryExists(tagDir);
+            targetPath = this.joinPath(tagDir, fileName);
+        }
+
+        // 规范化路径
+        const normalizedTargetPath = this.normalizePath(targetPath);
+
+        // 将File对象写入到目标路径
+        await this.writeFileObjectToPath(file.file, normalizedTargetPath);
+
+        const result = {
+            originalPath: file.path,
+            importPath: normalizedTargetPath,
+            name: fileName,
+            tags: file.tags || [],
+            processed: true,
+            isClipboardFile: true
+        };
+
+        this.log(`FileHandler: 剪贴板文件已保存到 ${normalizedTargetPath}`, 'debug');
+
+        return result;
+    }
+
+    // 将File对象写入到指定路径
+    async writeFileObjectToPath(fileObject, targetPath) {
+        return new Promise((resolve, reject) => {
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        const base64Data = this.arrayBufferToBase64Fast(arrayBuffer);
+
+                        // 使用JSX脚本写入文件
+                        const script = `writeBase64ToFile("${base64Data}", "${targetPath.replace(/\\/g, '/')}")`;
+
+                        const csInterface = new CSInterface();
+                        csInterface.evalScript(script, (result) => {
+                            try {
+                                const response = JSON.parse(result);
+                                if (response.success) {
+                                    resolve();
+                                } else {
+                                    reject(new Error(`JSX文件写入失败: ${response.error}`));
+                                }
+                            } catch (parseError) {
+                                reject(new Error(`JSX响应解析失败: ${result}`));
+                            }
+                        });
+
+                    } catch (writeError) {
+                        reject(new Error(`处理文件数据失败: ${writeError.message}`));
+                    }
+                };
+
+                reader.onerror = () => {
+                    reject(new Error('读取文件对象失败'));
+                };
+
+                reader.readAsArrayBuffer(fileObject);
+
+            } catch (error) {
+                reject(new Error(`处理文件对象失败: ${error.message}`));
+            }
+        });
+    }
+
+    // 优化的Base64编码方法
+    arrayBufferToBase64Fast(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+
+        // 对于小文件，使用原来的方法
+        if (len < 1024 * 1024) { // 1MB以下
+            return this.arrayBufferToBase64(bytes);
+        }
+
+        // 对于大文件，分块处理
+        let binary = '';
+        const chunkSize = 8192; // 8KB chunks
+
+        for (let i = 0; i < len; i += chunkSize) {
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));
+            for (let j = 0; j < chunk.length; j++) {
+                binary += String.fromCharCode(chunk[j]);
+            }
+        }
+
+        return window.btoa(binary);
+    }
+
+    // 将ArrayBuffer转换为Base64
+    arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
     }
 
     // 处理文件名

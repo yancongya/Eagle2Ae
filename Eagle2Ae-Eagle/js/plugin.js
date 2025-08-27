@@ -225,47 +225,63 @@ class Eagle2Ae {
             }
         };
 
-        // 立即隐藏窗口（在任何其他操作之前）
-        this.immediateHideWindow();
+        // 检测是否有UI环境
+        if (typeof document !== 'undefined' && document.querySelector('#message')) {
+            this.uiMode = true;
+            this.log('检测到UI环境，启用窗口模式');
+        } else {
+            this.log('纯服务模式，无UI界面');
+        }
 
         // 始终启动后台服务
         this.init();
 
-        // 如果有DOM环境，也初始化UI
-        if (typeof document !== 'undefined' && document.querySelector('#message')) {
-            this.uiMode = true;
+        // 如果有UI环境，初始化UI
+        if (this.uiMode) {
             this.initializeUI();
             this.startServiceStatusCheck();
         }
     }
 
-    // 立即隐藏窗口（构造函数中调用）
-    immediateHideWindow() {
+    // 更新设置（从UI调用）
+    updateSettings(settings) {
         try {
-            // 立即隐藏DOM元素
-            if (document.documentElement) {
-                document.documentElement.style.display = 'none';
-                document.documentElement.style.visibility = 'hidden';
-                document.documentElement.style.opacity = '0';
+            if (settings.aeProjectPath) {
+                this.config.aeProjectPath = settings.aeProjectPath;
+            }
+            if (settings.exportFolder) {
+                this.config.exportFolder = settings.exportFolder;
+            }
+            if (typeof settings.autoImport === 'boolean') {
+                this.config.autoImport = settings.autoImport;
+            }
+            if (typeof settings.showNotifications === 'boolean') {
+                this.config.showNotifications = settings.showNotifications;
+            }
+            if (settings.serverPort && settings.serverPort !== this.config.httpPort) {
+                this.config.httpPort = settings.serverPort;
+                // 重启HTTP服务器
+                this.restartHttpServer();
             }
 
-            if (document.body) {
-                document.body.style.display = 'none';
-                document.body.style.visibility = 'hidden';
-                document.body.style.opacity = '0';
-            }
-
-            // 立即尝试隐藏Eagle窗口
-            if (typeof eagle !== 'undefined' && eagle.window) {
-                if (eagle.window.hide) eagle.window.hide();
-                if (eagle.window.setVisible) eagle.window.setVisible(false);
-                if (eagle.window.setSize) eagle.window.setSize(0, 0);
-                if (eagle.window.setPosition) eagle.window.setPosition(-99999, -99999);
-            }
-
-            eagle.log.debug('立即窗口隐藏已执行');
+            this.log('设置已更新', 'info');
         } catch (error) {
-            eagle.log.warn('立即窗口隐藏失败:', error);
+            this.log(`更新设置失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 重启HTTP服务器
+    async restartHttpServer() {
+        try {
+            if (this.httpServer) {
+                this.httpServer.close();
+                this.log('HTTP服务器已停止', 'info');
+            }
+
+            // 重新启动
+            await this.startHttpServer();
+        } catch (error) {
+            this.log(`重启HTTP服务器失败: ${error.message}`, 'error');
         }
     }
 
@@ -278,9 +294,11 @@ class Eagle2Ae {
             eagle.log.debug(`当前目录: ${process.cwd ? process.cwd() : 'unknown'}`);
             eagle.log.info(`服务模式: ${this.isServiceMode ? '后台服务' : 'UI模式'}`);
 
-            // 立即隐藏窗口（仅在服务模式下）
-            if (this.isServiceMode) {
+            // 在纯服务模式下隐藏窗口，在UI模式下保持窗口可见
+            if (this.isServiceMode && !this.uiMode) {
                 this.forceHideWindow();
+            } else if (this.uiMode) {
+                this.log('UI模式：保持窗口可见');
             }
 
             // 首先加载端口配置（在启动HTTP服务器之前）
@@ -3041,17 +3059,19 @@ eagle.onPluginRun(async () => {
 
             eagle2ae.log('检测到用户点击插件，准备导出...');
 
-            // 立即隐藏任何可能显示的UI
-            setTimeout(() => {
-                try {
-                    if (typeof eagle !== 'undefined' && eagle.window) {
-                        if (eagle.window.hide) eagle.window.hide();
-                        if (eagle.window.close) eagle.window.close();
+            // 在纯服务模式下隐藏UI，在UI模式下保持可见
+            if (!eagle2ae.uiMode) {
+                setTimeout(() => {
+                    try {
+                        if (typeof eagle !== 'undefined' && eagle.window) {
+                            if (eagle.window.hide) eagle.window.hide();
+                            if (eagle.window.close) eagle.window.close();
+                        }
+                    } catch (error) {
+                        console.log('隐藏窗口失败:', error);
                     }
-                } catch (error) {
-                    console.log('隐藏窗口失败:', error);
-                }
-            }, 50);
+                }, 50);
+            }
 
             // 获取当前选中的文件
             const selectedItems = await eagle.item.getSelected();
@@ -3095,23 +3115,28 @@ eagle.onPluginRun(async () => {
 eagle.onPluginShow(() => {
     eagle.log.debug('Eagle2Ae 插件显示');
 
-    // 在服务模式下，立即强制隐藏窗口
-    if (eagle2ae && !eagle2ae.uiMode) {
-        eagle2ae.log('服务模式：检测到窗口显示，立即强制隐藏');
+    if (eagle2ae) {
+        if (eagle2ae.uiMode) {
+            eagle2ae.log('UI面板已显示');
+            // 在UI模式下，更新界面状态
+            if (typeof window !== 'undefined' && window.uiUpdateStatus) {
+                window.uiUpdateStatus();
+            }
+            if (typeof window !== 'undefined' && window.uiAddLog) {
+                window.uiAddLog('管理窗口已显示', 'info');
+            }
+        } else {
+            // 纯服务模式下仍然隐藏窗口
+            eagle2ae.log('纯服务模式：检测到窗口显示，立即强制隐藏');
+            eagle2ae.forceHideWindow();
 
-        // 立即隐藏，不等待
-        eagle2ae.forceHideWindow();
-
-        // 多次尝试隐藏
-        [50, 100, 200, 500, 1000].forEach(delay => {
-            setTimeout(() => {
-                eagle2ae.forceHideWindowDelayed();
-            }, delay);
-        });
-
-    } else if (eagle2ae && eagle2ae.uiMode) {
-        eagle2ae.log('UI面板已显示');
-        eagle2ae.refreshServiceStatus();
+            // 多次尝试隐藏
+            [50, 100, 200, 500, 1000].forEach(delay => {
+                setTimeout(() => {
+                    eagle2ae.forceHideWindowDelayed();
+                }, delay);
+            });
+        }
     }
 });
 

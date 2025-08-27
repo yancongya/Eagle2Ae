@@ -1599,3 +1599,135 @@ function createImportFolder(folderName) {
         });
     }
 }
+
+// 写入Base64数据到文件
+function writeBase64ToFile(base64Data, targetPath) {
+    try {
+        // 创建文件对象
+        var file = new File(targetPath);
+
+        // 设置编码为二进制
+        file.encoding = "BINARY";
+
+        // 打开文件用于写入
+        if (!file.open("w")) {
+            return JSON.stringify({
+                success: false,
+                error: "无法打开文件进行写入: " + targetPath
+            });
+        }
+
+        // 解码Base64数据
+        var binaryData = decodeBase64(base64Data);
+
+        // 写入二进制数据
+        file.write(binaryData);
+
+        // 关闭文件
+        file.close();
+
+        return JSON.stringify({
+            success: true,
+            path: targetPath
+        });
+
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: "写入文件失败: " + error.toString()
+        });
+    }
+}
+
+// 优化的Base64解码函数
+function decodeBase64(base64) {
+    // 使用ExtendScript内置的解码方法（如果可用）
+    try {
+        // 尝试使用更快的方法
+        return decodeBase64Fast(base64);
+    } catch (error) {
+        // 回退到原始方法
+        return decodeBase64Fallback(base64);
+    }
+}
+
+// 快速Base64解码（使用查找表）
+function decodeBase64Fast(base64) {
+    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var lookup = {};
+
+    // 创建查找表
+    for (var i = 0; i < chars.length; i++) {
+        lookup[chars.charAt(i)] = i;
+    }
+
+    var result = "";
+    var i = 0;
+
+    // 移除非Base64字符
+    base64 = base64.replace(/[^A-Za-z0-9+\/]/g, "");
+
+    // 分块处理以提高性能
+    var chunkSize = 1024;
+    for (var start = 0; start < base64.length; start += chunkSize) {
+        var chunk = base64.substring(start, Math.min(start + chunkSize, base64.length));
+        result += decodeBase64Chunk(chunk, lookup);
+    }
+
+    return result;
+}
+
+// 解码单个块
+function decodeBase64Chunk(chunk, lookup) {
+    var result = "";
+    var i = 0;
+
+    while (i < chunk.length) {
+        var encoded1 = lookup[chunk.charAt(i++)] || 0;
+        var encoded2 = lookup[chunk.charAt(i++)] || 0;
+        var encoded3 = lookup[chunk.charAt(i++)] || 0;
+        var encoded4 = lookup[chunk.charAt(i++)] || 0;
+
+        var bitmap = (encoded1 << 18) | (encoded2 << 12) | (encoded3 << 6) | encoded4;
+
+        result += String.fromCharCode((bitmap >> 16) & 255);
+
+        if (i - 2 < chunk.length) {
+            result += String.fromCharCode((bitmap >> 8) & 255);
+        }
+        if (i - 1 < chunk.length) {
+            result += String.fromCharCode(bitmap & 255);
+        }
+    }
+
+    return result;
+}
+
+// 回退的Base64解码方法
+function decodeBase64Fallback(base64) {
+    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var result = "";
+    var i = 0;
+
+    base64 = base64.replace(/[^A-Za-z0-9+\/]/g, "");
+
+    while (i < base64.length) {
+        var encoded1 = chars.indexOf(base64.charAt(i++));
+        var encoded2 = chars.indexOf(base64.charAt(i++));
+        var encoded3 = chars.indexOf(base64.charAt(i++));
+        var encoded4 = chars.indexOf(base64.charAt(i++));
+
+        var bitmap = (encoded1 << 18) | (encoded2 << 12) | (encoded3 << 6) | encoded4;
+
+        result += String.fromCharCode((bitmap >> 16) & 255);
+
+        if (encoded3 !== 64) {
+            result += String.fromCharCode((bitmap >> 8) & 255);
+        }
+        if (encoded4 !== 64) {
+            result += String.fromCharCode(bitmap & 255);
+        }
+    }
+
+    return result;
+}

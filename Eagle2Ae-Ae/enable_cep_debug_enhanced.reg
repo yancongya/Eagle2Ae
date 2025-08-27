@@ -1,0 +1,57 @@
+Windows Registry Editor Version 5.00
+
+; Enhanced CEP Debug Mode for After Effects
+; This version includes additional ExtendScript permissions
+; 增强版CEP调试模式，包含ExtendScript权限设置
+
+; CSXS.6 - After Effects CC 2015
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.6]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.7 - After Effects CC 2017
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.7]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.8 - After Effects CC 2018
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.8]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.9 - After Effects CC 2019
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.9]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.10 - After Effects CC 2020-2021
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.10]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.11 - After Effects CC 2022-2023
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; CSXS.12 - After Effects CC 2024+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.12]
+"PlayerDebugMode"="1"
+"LogLevel"="6"
+"ExtendScriptDebugMode"="1"
+
+; Additional ExtendScript permissions for AE 2023
+[HKEY_CURRENT_USER\Software\Adobe\After Effects\23.0]
+"Enable Unsigned Scripts"=dword:00000001
+"Allow Scripts to Write Files and Access Network"=dword:00000001
+
+; Additional ExtendScript permissions for AE 2024
+[HKEY_CURRENT_USER\Software\Adobe\After Effects\24.0]
+"Enable Unsigned Scripts"=dword:00000001
+"Allow Scripts to Write Files and Access Network"=dword:00000001

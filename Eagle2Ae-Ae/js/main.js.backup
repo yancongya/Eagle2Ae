@@ -1,8 +1,6 @@
 // Eagle2Ae - After Effects CEP扩展
 // 与Eagle插件进行手动控制的HTTP通信
 
-
-
 // 连接状态枚举
 const ConnectionState = {
     DISCONNECTED: 'disconnected',
@@ -241,209 +239,6 @@ class AEExtension {
         }
     }
 
-    /**
-     * 异步函数：从剪贴板读取内容（使用 @crosscopy/clipboard 库）
-     * @returns {Promise<string|null>} 返回剪贴板中的文本内容，如果出错则返回 null
-     */
-    async handleClipboardPaste(event) {
-        try {
-            // 防止在输入框中触发
-            if (event.target && (
-                event.target.tagName === 'INPUT' ||
-                event.target.tagName === 'TEXTAREA' ||
-                event.target.contentEditable === 'true'
-            )) {
-                return;
-            }
-
-            this.log('检测到剪贴板粘贴操作', 'debug');
-
-            let clipboardData = null;
-
-            // 尝试从事件获取剪贴板数据
-            if (event.clipboardData) {
-                clipboardData = event.clipboardData;
-            } else {
-                // 尝试使用现代剪贴板API
-                try {
-                    const clipboardItems = await navigator.clipboard.read();
-                    if (clipboardItems && clipboardItems.length > 0) {
-                        // 构造类似clipboardData的对象
-                        clipboardData = {
-                            files: [],
-                            types: [],
-                            getData: () => ''
-                        };
-
-                        // 首先尝试获取文本信息，可能包含文件名
-                        let possibleFileName = null;
-                        for (const item of clipboardItems) {
-                            if (item.types.includes('text/plain')) {
-                                try {
-                                    const text = await item.getType('text/plain');
-                                    const textContent = await text.text();
-                                    // 检查文本是否像文件路径
-                                    const filePathMatch = textContent.match(/([^\\\\/]+\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg))$/i);
-                                    if (filePathMatch) {
-                                        possibleFileName = filePathMatch[1];
-                                    }
-                                } catch (e) {
-                                    // 忽略文本获取错误
-                                }
-                            }
-                        }
-
-                        for (const item of clipboardItems) {
-                            for (const type of item.types) {
-                                clipboardData.types.push(type);
-                                if (type.startsWith('image/')) {
-                                    const blob = await item.getType(type);
-                                    const ext = type.split('/')[1] === 'jpeg' ? 'jpg' : type.split('/')[1];
-
-                                    // 智能文件名选择
-                                    let fileName;
-                                    if (possibleFileName && this.isValidImageFileName(possibleFileName)) {
-                                        // 使用检测到的原始文件名
-                                        fileName = possibleFileName;
-                                    } else {
-                                        // 使用通用名称，将被标记为临时文件
-                                        fileName = `clipboard_image.${ext}`;
-                                    }
-
-                                    const file = new File([blob], fileName, { type });
-                                    clipboardData.files.push(file);
-                                }
-                            }
-                        }
-                    }
-                } catch (clipboardError) {
-                    this.log(`无法访问剪贴板API: ${clipboardError.message}`, 'debug');
-                }
-            }
-
-            if (!clipboardData) {
-                this.log('无法获取剪贴板数据', 'debug');
-                return;
-            }
-
-            // 检测剪贴板内容
-            const clipboardContent = await this.detectClipboardContent(clipboardData);
-
-            if (clipboardContent && clipboardContent.files.length > 0) {
-                this.log(`检测到剪贴板中有 ${clipboardContent.files.length} 个可导入文件`, 'info');
-
-                // 预处理文件名称，在显示对话框时就显示最终名称
-                const processedFiles = clipboardContent.files.map(file => {
-                    if (file.isTemporary && !file.hasOriginalName) {
-                        // 只有临时文件且没有原始名称时才重命名
-                        const ext = this.getFileExtension(file.name);
-                        const newName = this.generateTimestampFilename(ext);
-
-                        return {
-                            ...file,
-                            displayName: newName, // 用于显示的名称
-                            originalName: file.name, // 保存原始名称
-                            name: newName, // 更新实际名称
-                            isTemporary: true,
-                            wasRenamed: true // 标记已重命名
-                        };
-                    } else if (file.hasOriginalName) {
-                        // 有原始名称的文件，保持原名
-                        return {
-                            ...file,
-                            displayName: file.name,
-                            hasOriginalName: true
-                        };
-                    }
-                    return {
-                        ...file,
-                        displayName: file.name
-                    };
-                });
-
-                this.showClipboardConfirmDialog({ ...clipboardContent, files: processedFiles });
-            } else {
-                this.log('剪贴板中没有可导入的内容', 'debug');
-            }
-
-        } catch (error) {
-            this.log(`处理剪贴板粘贴失败: ${error.message}`, 'error');
-        }
-    }
-
-    // 检测剪贴板内容
-    async detectClipboardContent(clipboardData) {
-        try {
-            const result = {
-                files: [],
-                hasImages: false,
-                hasFilePaths: false
-            };
-
-            // 检查文件
-            if (clipboardData.files && clipboardData.files.length > 0) {
-                const files = Array.from(clipboardData.files);
-                for (const file of files) {
-                    if (this.isImportableFile(file)) {
-                        const fileName = file.path || file.name;
-                        // 改进的临时文件检测逻辑
-                        const isTemp = this.isTemporaryFileEnhanced(fileName);
-
-                        result.files.push({
-                            name: file.name,
-                            path: file.path || file.name,
-                            size: file.size,
-                            type: file.type,
-                            lastModified: file.lastModified || Date.now(),
-                            isClipboardImport: true,
-                            isTemporary: isTemp,
-                            hasOriginalName: !isTemp, // 如果不是临时文件，说明有原始名称
-                            file: file // 保存原始文件对象
-                        });
-                        result.hasImages = true;
-                    }
-                }
-            }
-
-            // 检查文本内容（可能包含文件路径）
-            if (clipboardData.getData) {
-                const textData = clipboardData.getData('text/plain') || '';
-                if (textData.trim()) {
-                    const filePaths = this.extractFilePathsFromText(textData);
-                    if (filePaths.length > 0) {
-                        result.hasFilePaths = true;
-                        // 这里可以进一步处理文件路径，但需要文件系统访问权限
-                        this.log(`检测到 ${filePaths.length} 个文件路径`, 'debug');
-                    }
-                }
-            }
-
-            return result.files.length > 0 ? result : null;
-
-        } catch (error) {
-            this.log(`检测剪贴板内容失败: ${error.message}`, 'error');
-            return null;
-        }
-    }
-
-    // 检查文件是否可导入
-    isImportableFile(file) {
-        if (!file || !file.type) return false;
-
-        const importableTypes = [
-            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp',
-            'image/tiff', 'image/webp', 'image/svg+xml',
-            'video/mp4', 'video/mov', 'video/avi', 'video/mkv', 'video/webm',
-            'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg'
-        ];
-
-        return importableTypes.some(type => file.type.startsWith(type.split('/')[0]));
-    }
-
-
-
-
-
     // 初始化扩展
     init() {
         // 静默初始化
@@ -564,9 +359,7 @@ class AEExtension {
             logSwitch: document.getElementById('log-switch-btn'),
             logPanelToggle: document.getElementById('log-panel-toggle'),
             detectLayers: document.getElementById('detect-layers-btn'),
-            exportLayers: document.getElementById('export-layers-btn'),
-            debugTest: document.getElementById('debug-test-btn'),
-
+            exportLayers: document.getElementById('export-layers-btn')
         };
 
         // 安全绑定事件监听器
@@ -633,13 +426,10 @@ class AEExtension {
                 this.exportLayers();
             });
         }
-        if (buttons.debugTest) {
-            buttons.debugTest.addEventListener('click', () => {
-                this.runDebugAndTest();
-            });
-        }
 
-        // 剪贴板测试按钮已移除
+
+
+
 
         if (buttons.clearLog) {
             buttons.clearLog.addEventListener('click', () => {
@@ -1360,7 +1150,7 @@ class AEExtension {
     executeExtendScript(functionName, params) {
         return new Promise((resolve, reject) => {
             const script = `${functionName}(${JSON.stringify(params)})`;
-
+            
             this.csInterface.evalScript(script, (result) => {
                 try {
                     const parsedResult = JSON.parse(result);
@@ -1397,167 +1187,6 @@ class AEExtension {
             }
         } catch (error) {
             this.log(`ExtendScript测试出错: ${error.message}`, 'error');
-            return false;
-        }
-    }
-    // 整合的调试和测试方法
-    async runDebugAndTest() {
-        this.log('🔧 开始Node.js环境调试与测试...', 'info');
-
-        // 先运行CEP环境调试
-        this.debugCEPEnvironment();
-
-        // 等待一小段时间让CEP调试完成
-        setTimeout(() => {
-            // 然后运行Node.js连接测试
-            this.testNodeJSConnection();
-        }, 500);
-    }
-
-    // 测试Node.js连接
-    async testNodeJSConnection() {
-        this.log('🧪 开始Node.js连接测试...', 'info');
-
-        // 首先进行详细的环境诊断
-        this.performNodeJSDiagnostics();
-
-        try {
-            // 检查测试类是否可用
-            if (typeof window.NodeJSTest === 'undefined') {
-                this.log('❌ Node.js测试脚本未加载', 'error');
-                return false;
-            }
-
-            // 创建测试实例并运行测试
-            const tester = new window.NodeJSTest();
-            const testResult = tester.runAllTests();
-
-            // 输出测试日志到主日志系统
-            testResult.logs.forEach(logEntry => {
-                this.log(logEntry.message, logEntry.type);
-            });
-
-            if (testResult.success) {
-                this.log('🎉 Node.js集成测试全部通过！', 'success');
-
-                // 显示详细的成功信息
-                this.log('📋 测试结果详情:', 'info');
-                Object.entries(testResult.results).forEach(([testName, result]) => {
-                    const status = result ? '✅' : '❌';
-                    this.log(`  ${status} ${testName}`, result ? 'success' : 'error');
-                });
-
-                return true;
-            } else {
-                this.log('⚠️ Node.js集成测试部分失败', 'warning');
-                this.performAdvancedDiagnostics();
-
-                return false;
-            }
-
-        } catch (error) {
-            this.log(`❌ Node.js测试执行失败: ${error.message}`, 'error');
-            this.performAdvancedDiagnostics();
-
-            return false;
-        }
-    }
-
-    // 执行Node.js环境诊断
-    performNodeJSDiagnostics() {
-        this.log('🔍 执行Node.js环境诊断...', 'info');
-
-        // 检查各种可能的Node.js入口点
-        const checks = [
-            { name: 'window.cep_node', value: typeof window.cep_node },
-            { name: 'window.require', value: typeof window.require },
-            { name: 'global require', value: typeof require },
-            { name: 'window.process', value: typeof window.process },
-            { name: 'global process', value: typeof process },
-            { name: 'window.Buffer', value: typeof window.Buffer },
-            { name: 'global Buffer', value: typeof Buffer },
-            { name: '__NODE_JS_AVAILABLE__', value: window.__NODE_JS_AVAILABLE__ }
-        ];
-
-        checks.forEach(check => {
-            this.log(`  ${check.name}: ${check.value}`, 'debug');
-        });
-
-        // 检查window对象中的CEP相关属性
-        const cepKeys = Object.keys(window).filter(key =>
-            key.toLowerCase().includes('cep') ||
-            key.toLowerCase().includes('node') ||
-            key.toLowerCase().includes('require')
-        );
-
-        if (cepKeys.length > 0) {
-            this.log(`🔍 发现CEP相关属性: ${cepKeys.join(', ')}`, 'info');
-        } else {
-            this.log('⚠️ 未发现CEP相关属性', 'warning');
-        }
-    }
-
-    // 执行高级诊断
-    performAdvancedDiagnostics() {
-        this.log('🔧 执行高级诊断...', 'info');
-
-        // 检查CEP版本
-        if (typeof CSInterface !== 'undefined') {
-            try {
-                const csInterface = new CSInterface();
-                const hostEnv = csInterface.getHostEnvironment();
-                this.log(`CEP版本: ${hostEnv.appVersion}`, 'info');
-                this.log(`应用程序: ${hostEnv.appName}`, 'info');
-            } catch (error) {
-                this.log(`CEP信息获取失败: ${error.message}`, 'warning');
-            }
-        }
-
-        // 提供详细的修复建议
-        this.log('💡 详细修复建议:', 'info');
-        this.log('1. 确认manifest.xml中CEFCommandLine配置正确', 'info');
-        this.log('2. 检查After Effects版本是否支持Node.js集成', 'info');
-        this.log('3. 尝试完全重启After Effects', 'info');
-        this.log('4. 检查系统权限和防火墙设置', 'info');
-        this.log('5. 确认CEP调试模式已启用', 'info');
-
-        // 显示当前manifest.xml路径
-        const extensionPath = this.csInterface.getSystemPath('extension');
-        this.log(`扩展路径: ${extensionPath}`, 'info');
-        this.log(`manifest.xml位置: ${extensionPath}/CSXS/manifest.xml`, 'info');
-    }
-
-    // CEP环境调试
-    debugCEPEnvironment() {
-        this.log('🔍 开始CEP环境调试...', 'info');
-
-        try {
-            // 检查调试器是否可用
-            if (typeof window.CEPDebugger === 'undefined') {
-                this.log('❌ CEP调试器未加载', 'error');
-                return false;
-            }
-
-            // 创建调试器实例并运行完整诊断
-            const cepDebugger = new window.CEPDebugger();
-            const debugResult = cepDebugger.runFullDiagnostics();
-
-            // 输出调试日志到主日志系统
-            debugResult.logs.forEach(logEntry => {
-                this.log(logEntry.message, logEntry.type);
-            });
-
-            if (debugResult.success) {
-                this.log('🎉 CEP调试完成，Node.js环境可用！', 'success');
-                return true;
-            } else {
-                this.log('⚠️ CEP调试完成，Node.js环境不可用', 'warning');
-                this.log('💡 这可能表明After Effects 2023不支持Node.js集成', 'info');
-                return false;
-            }
-
-        } catch (error) {
-            this.log(`❌ CEP调试执行失败: ${error.message}`, 'error');
             return false;
         }
     }
@@ -3529,7 +3158,7 @@ class AEExtension {
     async sendAEStatus() {
         try {
             const projectInfo = await this.getProjectInfo();
-
+            
             this.sendToEagle({
                 type: 'ae_status',
                 data: {
@@ -3540,10 +3169,10 @@ class AEExtension {
                     version: this.csInterface.hostEnvironment.appVersion
                 }
             });
-
+            
             // 更新UI
             this.updateProjectUI(projectInfo);
-
+            
         } catch (error) {
             this.log(`获取AE状态失败: ${error.message}`, 'error');
         }
@@ -7006,9 +6635,10 @@ class AEExtension {
                                     const text = await item.getType('text/plain');
                                     const textContent = await text.text();
                                     // 检查文本是否像文件路径
-                                    const filePathMatch = textContent.match(/([^\\\\/]+\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg))$/i);
+                                    const filePathMatch = textContent.match(/([^\\\/]+\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg))$/i);
                                     if (filePathMatch) {
                                         possibleFileName = filePathMatch[1];
+
                                     }
                                 } catch (e) {
                                     // 忽略文本获取错误
@@ -7028,9 +6658,11 @@ class AEExtension {
                                     if (possibleFileName && this.isValidImageFileName(possibleFileName)) {
                                         // 使用检测到的原始文件名
                                         fileName = possibleFileName;
+
                                     } else {
                                         // 使用通用名称，将被标记为临时文件
                                         fileName = `clipboard_image.${ext}`;
+
                                     }
 
                                     const file = new File([blob], fileName, { type });

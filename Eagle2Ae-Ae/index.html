@@ -3,6 +3,109 @@
 <head>
     <meta charset="utf-8">
     <title>Eagle2AE</title>
+
+    <!-- Node.js 初始化脚本 -->
+    <script type="text/javascript">
+        // Node.js环境检测和初始化 (基于CEP官方文档)
+        (function() {
+            console.log('🔍 开始检测Node.js环境...');
+            console.log('CEP环境信息:', {
+                cep: typeof cep,
+                __adobe_cep__: typeof __adobe_cep__,
+                cep_node: typeof cep_node,
+                require: typeof require,
+                process: typeof process
+            });
+
+            // 初始化标志
+            window.__NODE_JS_AVAILABLE__ = false;
+
+            // 方法1: 检查cep_node对象 (CEP 8+官方推荐方式)
+            if (typeof cep_node !== 'undefined') {
+                console.log('✅ 检测到 cep_node 对象 (CEP 8+)');
+                try {
+                    // 根据官方文档，cep_node包含: Buffer, global, process, require
+                    window.require = cep_node.require;
+                    window.Buffer = cep_node.Buffer;
+                    window.process = cep_node.process;
+                    window.global = cep_node.global;
+
+                    // 测试require是否工作
+                    const os = window.require('os');
+                    if (os) {
+                        console.log('✅ Node.js环境已通过cep_node初始化');
+                        console.log('Node.js版本:', window.process.version);
+                        console.log('平台:', os.platform());
+                        window.__NODE_JS_AVAILABLE__ = true;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ cep_node初始化失败:', error.message);
+                }
+            }
+
+            // 方法2: 检查CEP对象的process属性 (CEP提供的原生API)
+            if (typeof cep !== 'undefined' && cep.process) {
+                console.log('✅ 检测到 cep.process (CEP原生API)');
+                try {
+                    window.process = cep.process;
+
+                    // CEP可能提供fs等API
+                    if (cep.fs) {
+                        window.cepfs = cep.fs;
+                        console.log('✅ cep.fs可用');
+                    }
+
+                    console.log('✅ Node.js环境已通过cep对象初始化');
+                    console.log('平台:', window.process.platform || 'unknown');
+                    window.__NODE_JS_AVAILABLE__ = true;
+                    return;
+                } catch (error) {
+                    console.warn('⚠️ cep对象初始化失败:', error.message);
+                }
+            }
+
+            // 方法3: 检查全局require (传统方式)
+            if (typeof require !== 'undefined') {
+                console.log('✅ 检测到全局require函数');
+                try {
+                    window.require = require;
+                    const testModule = require('os');
+                    if (testModule) {
+                        console.log('✅ Node.js环境已通过全局require初始化');
+                        window.__NODE_JS_AVAILABLE__ = true;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ 全局require测试失败:', error.message);
+                }
+            }
+
+            // 方法4: 检查全局process对象
+            if (typeof process !== 'undefined' && process.versions) {
+                console.log('✅ 检测到全局process对象');
+                try {
+                    window.process = process;
+                    console.log('✅ Node.js环境已通过全局process初始化');
+                    console.log('Node.js版本:', process.version);
+                    window.__NODE_JS_AVAILABLE__ = true;
+                    return;
+                } catch (error) {
+                    console.warn('⚠️ 全局process初始化失败:', error.message);
+                }
+            }
+
+            // 所有方法都失败
+            console.error('❌ Node.js环境不可用');
+            console.log('🔍 可能的原因:');
+            console.log('1. manifest.xml中缺少--enable-nodejs参数');
+            console.log('2. CEP版本不支持Node.js');
+            console.log('3. 需要启用CEP调试模式');
+            console.log('4. After Effects版本过新，Node.js集成方式已改变');
+
+            window.__NODE_JS_AVAILABLE__ = false;
+        })();
+    </script>
     <style>
         * {
             margin: 0;
@@ -90,6 +193,17 @@
         .icon-btn .icon {
             font-size: 14px;
             line-height: 1;
+        }
+
+        /* 调试测试按钮特殊样式 */
+        #debug-test-btn {
+            background: #3d4a2d;
+            border-color: #6a7c4a;
+        }
+
+        #debug-test-btn:hover {
+            background: #4d5a3d;
+            border-color: #7a8c5a;
         }
 
         /* 项目信息面板头部样式 */
@@ -446,8 +560,8 @@
 
         .actions-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 6px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
             margin-bottom: 12px;
         }
 
@@ -2391,6 +2505,104 @@
         .drop-message-warning {
             border-left: 3px solid #f39c12;
         }
+
+        /* 剪贴板导入相关样式 */
+        .clipboard-preview {
+            margin: 12px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .clipboard-preview .file-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .clipboard-preview .file-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .clipboard-preview .file-icon {
+            font-size: 16px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .clipboard-preview .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .clipboard-preview .file-name-container {
+            margin-bottom: 2px;
+            word-break: break-all;
+        }
+
+        .clipboard-preview .file-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #e0e0e0;
+            display: inline;
+        }
+
+        .clipboard-preview .file-name.editable {
+            cursor: pointer;
+            padding: 1px 2px;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+
+        .clipboard-preview .file-name.editable:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+
+        .clipboard-preview .file-ext {
+            font-size: 12px;
+            font-weight: 500;
+            color: #999;
+            display: inline;
+        }
+
+        .clipboard-preview .file-details {
+            font-size: 10px;
+            color: #999;
+        }
+
+        .temp-file-warning {
+            color: #f39c12;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
+        .original-file-info {
+            color: #27ae60;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
+        .import-info {
+            margin-top: 12px;
+            padding: 8px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        .import-mode-info {
+            font-size: 11px;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .import-mode-info strong {
+            color: #3498db;
+        }
     </style>
 </head>
 <body>
@@ -2398,8 +2610,12 @@
         <div class="header">
             <div class="title">Eagle2AE</div>
             <div class="header-actions">
+                <button id="debug-test-btn" class="icon-btn" title="Node.js环境测试与诊断">
+                    <span class="icon">🔧</span>
+                </button>
+
                 <button id="log-panel-toggle" class="icon-btn" title="显示/隐藏日志">
-                    <span class="icon">📋</span>
+                    <span class="icon">📄</span>
                 </button>
                 <button id="settings-btn" class="icon-btn" title="高级设置">
                     <span class="icon">⚙️</span>
@@ -2482,7 +2698,7 @@
                         </label>
                     </div>
                 </div>
-                <div class="actions-grid-compact">
+                <div class="actions-grid">
                     <button id="detect-layers-btn" class="btn btn-info">
                         <span class="btn-icon">🔍</span>
                         <span class="btn-text">检测图层</span>
@@ -3787,6 +4003,8 @@
     <script src="js/services/PortDiscovery.js"></script>
     <script src="js/utils/SoundPlayer.js"></script>
     <script src="js/utils/LogManager.js"></script>
+    <script src="js/cep-debug.js"></script>
+    <script src="js/nodejs-test.js"></script>
 
     <!-- 演示模式脚本 -->
     <script src="js/demo/demo-apis.js"></script>
@@ -3936,6 +4154,63 @@
         // 页面加载完成
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📄 页面加载完成');
+
+            // 延迟执行Node.js检测，确保CEP环境完全初始化
+            setTimeout(function() {
+                console.log('🔄 重新检测Node.js环境...');
+
+                // 尝试多种方式检测Node.js
+                let nodeDetected = false;
+
+                // 方法1: 检查window.cep_node
+                if (window.cep_node && window.cep_node.require) {
+                    console.log('✅ 通过cep_node检测到Node.js');
+                    window.require = window.cep_node.require;
+                    window.process = window.cep_node.process;
+                    window.Buffer = window.cep_node.Buffer;
+                    nodeDetected = true;
+                }
+
+                // 方法2: 检查全局require
+                if (!nodeDetected && typeof require !== 'undefined') {
+                    console.log('✅ 检测到全局require');
+                    try {
+                        const testOs = require('os');
+                        if (testOs) {
+                            window.require = require;
+                            nodeDetected = true;
+                        }
+                    } catch (e) {
+                        console.warn('全局require测试失败:', e.message);
+                    }
+                }
+
+                // 方法3: 尝试通过eval执行Node.js代码
+                if (!nodeDetected) {
+                    try {
+                        eval('if (typeof require !== "undefined") { window.require = require; window.__NODE_EVAL_SUCCESS__ = true; }');
+                        if (window.__NODE_EVAL_SUCCESS__) {
+                            console.log('✅ 通过eval检测到Node.js');
+                            nodeDetected = true;
+                        }
+                    } catch (e) {
+                        console.warn('eval检测失败:', e.message);
+                    }
+                }
+
+                // 更新全局标志
+                window.__NODE_JS_AVAILABLE__ = nodeDetected;
+
+                if (nodeDetected) {
+                    console.log('🎉 Node.js环境检测成功！');
+                    if (window.process && window.process.version) {
+                        console.log('Node.js版本:', window.process.version);
+                    }
+                } else {
+                    console.error('❌ Node.js环境检测失败');
+                    console.log('请检查manifest.xml配置和After Effects版本');
+                }
+            }, 1000); // 延迟1秒执行
         });
     </script>
 </body>
