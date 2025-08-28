@@ -121,6 +121,10 @@ class AEExtension {
         // 消息去重
         this.processedMessages = new Set();
         this.lastPollTime = 0;
+        
+        // 防重复导入机制
+        this.lastImportSignature = null;
+        this.lastImportTime = 0;
 
         // 日志管理
         this.logManager = new LogManager();
@@ -398,7 +402,8 @@ class AEExtension {
                             isClipboardImport: true,
                             isTemporary: isTemp,
                             hasOriginalName: !isTemp, // 如果不是临时文件，说明有原始名称
-                            file: file // 保存原始文件对象
+                            file: file, // 保存原始文件对象
+                            confirmed: false // 标记为未确认，防止在用户确认前写入磁盘
                         });
                         result.hasImages = true;
                     }
@@ -428,16 +433,102 @@ class AEExtension {
 
     // 检查文件是否可导入
     isImportableFile(file) {
-        if (!file || !file.type) return false;
+        if (!file || (!file.type && !file.name)) return false;
 
-        const importableTypes = [
-            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp',
-            'image/tiff', 'image/webp', 'image/svg+xml',
-            'video/mp4', 'video/mov', 'video/avi', 'video/mkv', 'video/webm',
-            'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg'
-        ];
+        // 通过MIME类型检测
+        if (file.type) {
+            const importableTypes = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp',
+                'image/tiff', 'image/webp', 'image/svg+xml', 'image/x-targa',
+                'video/mp4', 'video/mov', 'video/avi', 'video/mkv', 'video/webm',
+                'video/x-msvideo', 'video/quicktime', 'video/x-ms-wmv',
+                'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg',
+                'audio/mpeg', 'audio/x-wav', 'audio/x-aiff'
+            ];
+            
+            if (importableTypes.some(type => file.type.startsWith(type.split('/')[0]))) {
+                return true;
+            }
+        }
 
-        return importableTypes.some(type => file.type.startsWith(type.split('/')[0]));
+        // 通过文件扩展名检测（用于没有MIME类型的情况）
+        if (file.name) {
+            const ext = this.getFileExtension(file.name).toLowerCase();
+            const supportedExts = [
+                // 图片格式
+                'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg',
+                'tga', 'psd', 'ai', 'eps', 'pdf', 'exr', 'hdr', 'dpx', 'cin',
+                // 视频格式
+                'mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mxf', 'r3d',
+                'cinema', 'c4d', 'prores', 'dnxhd', 'h264', 'h265', 'hevc',
+                // 音频格式
+                'mp3', 'wav', 'aac', 'flac', 'm4a', 'aiff', 'ogg', 'wma',
+                // 项目文件
+                'aep', 'aet'
+            ];
+            
+            return supportedExts.includes(ext);
+        }
+
+        return false;
+    }
+
+    // 获取文件类型分类
+    getFileCategory(file) {
+        const type = file.type || '';
+        const name = file.name || '';
+        const ext = this.getFileExtension(name).toLowerCase();
+
+        // 图片格式
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'tga', 'psd', 'ai', 'eps', 'pdf', 'exr', 'hdr', 'dpx', 'cin'];
+        // 视频格式
+        const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mxf', 'r3d', 'cinema', 'c4d', 'prores', 'dnxhd', 'h264', 'h265', 'hevc'];
+        // 音频格式
+        const audioExts = ['mp3', 'wav', 'aac', 'flac', 'm4a', 'aiff', 'ogg', 'wma'];
+        // 设计文件
+        const designExts = ['psd', 'ai', 'eps', 'pdf', 'sketch', 'fig', 'xd'];
+        // 项目文件
+        const projectExts = ['aep', 'aet'];
+
+        // 根据MIME类型判断
+        if (type.startsWith('image/')) return 'image';
+        if (type.startsWith('video/')) return 'video';
+        if (type.startsWith('audio/')) return 'audio';
+
+        // 根据扩展名判断
+        if (imageExts.includes(ext)) return 'image';
+        if (videoExts.includes(ext)) return 'video';
+        if (audioExts.includes(ext)) return 'audio';
+        if (designExts.includes(ext)) return 'design';
+        if (projectExts.includes(ext)) return 'project';
+
+        return 'unknown';
+    }
+
+    // 获取文件类型字符串
+    getFileType(file) {
+        const type = file.type || '';
+        const name = file.name || '';
+        const ext = this.getFileExtension(name).toLowerCase();
+
+        // 根据MIME类型判断
+        if (type.startsWith('image/')) {
+            return type.split('/')[1] || ext || 'image';
+        }
+        if (type.startsWith('video/')) {
+            return type.split('/')[1] || ext || 'video';
+        }
+        if (type.startsWith('audio/')) {
+            return type.split('/')[1] || ext || 'audio';
+        }
+
+        // 根据扩展名返回具体类型
+        if (ext) {
+            return ext;
+        }
+
+        // 如果都没有，返回通用类型
+        return type || 'unknown';
     }
 
 
@@ -1158,10 +1249,40 @@ class AEExtension {
         const files = message.files || (message.data && message.data.files) || [];
         const projectInfo = message.projectInfo || null;
         const messageSettings = message.settings || null;
+        const requestId = message.requestId || null;
+        const timestamp = message.timestamp || Date.now();
 
         // 检测导入类型
         const isDragImport = message.isDragImport || message.source === 'drag_drop';
         const isClipboardImport = message.isClipboardImport || message.source === 'clipboard_import';
+        const isSequenceImport = message.type === 'import_sequence';
+        const isFolderImport = message.type === 'import_folder';
+        
+        // 处理序列帧导入
+        if (isSequenceImport && message.sequence) {
+            return await this.handleSequenceImportToAE(message.sequence);
+        }
+        
+        // 处理文件夹导入
+        if (isFolderImport && message.folder) {
+            return await this.handleFolderImportToAE(message.folder);
+        }
+        
+        // 防重复导入机制（仅对Eagle导出请求生效，不影响拖拽和剪贴板导入）
+        if (!isDragImport && !isClipboardImport && files.length > 0) {
+            const fileSignature = this.generateFileSignature(files);
+            
+            // 检查是否为重复请求（10秒内相同文件列表）
+            if (this.lastImportSignature === fileSignature && 
+                (timestamp - this.lastImportTime) < 10000) {
+                this.log('检测到重复导入请求，已忽略', 'warning');
+                return { success: false, error: '重复请求已忽略', importedCount: 0 };
+            }
+            
+            // 更新防重复记录
+            this.lastImportSignature = fileSignature;
+            this.lastImportTime = timestamp;
+        }
 
         let importSource = 'Eagle导出';
         if (isDragImport) {
@@ -3550,6 +3671,34 @@ class AEExtension {
     }
 
     // 获取项目信息
+    // 调用AE脚本
+    async callAEScript(functionName, data) {
+        return new Promise((resolve, reject) => {
+            try {
+                // 构造脚本调用
+                const scriptCall = `${functionName}(${JSON.stringify(data)})`;
+                
+                this.csInterface.evalScript(scriptCall, (result) => {
+                    try {
+                        if (result === 'EvalScript error.') {
+                            reject(new Error(`AE脚本执行失败: ${functionName}`));
+                            return;
+                        }
+                        
+                        // 尝试解析JSON结果
+                        const parsedResult = JSON.parse(result);
+                        resolve(parsedResult);
+                    } catch (parseError) {
+                        // 如果不是JSON，直接返回字符串结果
+                        resolve({ success: true, result: result });
+                    }
+                });
+            } catch (error) {
+                reject(new Error(`调用AE脚本失败: ${error.message}`));
+            }
+        });
+    }
+
     async getProjectInfo() {
         // 如果是演示模式，返回演示数据
         if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
@@ -3993,7 +4142,7 @@ class AEExtension {
 
     // Eagle专用日志方法
     logEagle(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
+        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
         const logData = {
             message,
             type,
@@ -4263,10 +4412,7 @@ class AEExtension {
                 if (radio.checked) {
                     this.log(`高级设置时间轴已更改为: ${radio.value}`, 'info');
 
-                    // 显示sequence模态框
-                    if (radio.value === 'sequence') {
-                        this.showSequenceModal();
-                    }
+                    // 移除了sequence模态框逻辑
 
                     this.updateSettingsUI();
                     // 实时同步时间轴选项
@@ -4283,8 +4429,6 @@ class AEExtension {
                         // 显示设置说明
                         const descriptions = {
                             'current_time': '素材将放置在当前时间指针位置',
-                            'sequence': '素材将按顺序排列，每个间隔指定时间',
-                            'stack': '所有素材将叠加在同一时间点',
                             'timeline_start': '素材将移至时间轴开始处（0秒位置）'
                         };
                         this.log(`设置说明: ${descriptions[radio.value]}`, 'info');
@@ -4512,7 +4656,7 @@ class AEExtension {
         this.logManager.log(message, type, options);
 
         // 保持原有的日志数组（用于兼容性）
-        const timestamp = new Date().toLocaleTimeString();
+        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
         const fullTimestamp = new Date().toISOString();
 
         const logData = {
@@ -5810,10 +5954,7 @@ class AEExtension {
                 if (e.target.checked) {
                     this.log(`时间轴设置已更改为: ${e.target.value}`, 'info');
 
-                    // 显示sequence模态框
-                    if (e.target.value === 'sequence') {
-                        this.showSequenceModal();
-                    }
+                    // 移除了sequence模态框逻辑
 
                     this.updateQuickSetting('timelineOptions.placement', e.target.value);
 
@@ -5829,8 +5970,6 @@ class AEExtension {
                     // 显示设置说明
                     const descriptions = {
                         'current_time': '素材将放置在当前时间指针位置',
-                        'sequence': '素材将按顺序排列，每个间隔指定时间',
-                        'stack': '所有素材将叠加在同一时间点',
                         'timeline_start': '素材将移至时间轴开始处（0秒位置）'
                     };
                     this.log(`设置说明: ${descriptions[e.target.value]}`, 'info');
@@ -6258,11 +6397,7 @@ class AEExtension {
     }
 
     // 显示序列模态框
-    showSequenceModal() {
-        if (typeof window.showSequenceModal === 'function') {
-            window.showSequenceModal();
-        }
-    }
+    // 移除了showSequenceModal方法，因为不再支持顺序排列
 
     // 测试快速设置事件监听器
     testQuickSettingsEventListeners() {
@@ -6539,20 +6674,25 @@ class AEExtension {
 
         try {
             const files = Array.from(event.dataTransfer.files);
-            if (files.length === 0) {
+            const items = Array.from(event.dataTransfer.items);
+            
+            if (files.length === 0 && items.length === 0) {
                 this.log('拖拽中没有检测到文件', 'warning');
                 this.showDropMessage('未检测到文件', 'warning');
                 return;
             }
 
-            // 移除检测提示，直接处理
+            this.log(`检测到拖拽内容: ${files.length} 个文件, ${items.length} 个项目`, 'info');
 
-            // 检测是否为Eagle拖拽
-            if (this.isEagleDrag(event.dataTransfer, files)) {
-                await this.handleEagleDragImport(files);
+            // 检查是否包含文件夹
+            const hasDirectories = items.some(item => item.webkitGetAsEntry && item.webkitGetAsEntry()?.isDirectory);
+            
+            if (hasDirectories) {
+                // 处理文件夹拖拽（可能包含序列帧）
+                await this.handleDirectoryDrop(items, files);
             } else {
-                // 非Eagle拖拽，显示确认对话框让用户选择是否导入
-                this.showNonEagleConfirmDialog(files);
+                // 处理普通文件拖拽
+                await this.handleFilesDrop(files, event.dataTransfer);
             }
         } catch (error) {
             this.log(`处理拖拽失败: ${error.message}`, 'error');
@@ -6560,6 +6700,683 @@ class AEExtension {
         }
     }
 
+    // 处理文件夹拖拽
+    async handleDirectoryDrop(items, files) {
+        this.log('检测到文件夹拖拽，开始处理...', 'info');
+        
+        const allFiles = [];
+        
+        // 递归读取文件夹内容
+        for (const item of items) {
+            const entry = item.webkitGetAsEntry();
+            if (entry) {
+                const entryFiles = await this.readDirectoryEntry(entry);
+                allFiles.push(...entryFiles);
+            }
+        }
+        
+        // 添加直接拖拽的文件
+        allFiles.push(...files);
+        
+        if (allFiles.length === 0) {
+            this.showDropMessage('文件夹中没有找到可导入的文件', 'warning');
+            return;
+        }
+        
+        this.log(`文件夹中找到 ${allFiles.length} 个文件`, 'info');
+        
+        // 分析文件类型和序列帧
+        const analysis = this.analyzeDroppedFiles(allFiles);
+        
+        // 显示导入选项对话框
+        this.showFileImportDialog(allFiles, analysis);
+    }
+    
+    // 递归读取文件夹内容
+    async readDirectoryEntry(entry) {
+        const files = [];
+        
+        if (entry.isFile) {
+            return new Promise((resolve) => {
+                entry.file((file) => {
+                    // 添加路径信息
+                    file.fullPath = entry.fullPath;
+                    file.relativePath = entry.fullPath;
+                    resolve([file]);
+                }, () => resolve([]));
+            });
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            
+            // 修复：循环读取所有文件，因为readEntries可能不会一次性返回所有文件
+            const allEntries = [];
+            let entries;
+            do {
+                entries = await new Promise((resolve) => {
+                    reader.readEntries(resolve, () => resolve([]));
+                });
+                allEntries.push(...entries);
+                this.log(`读取目录 ${entry.fullPath}: 本次获取 ${entries.length} 个条目，累计 ${allEntries.length} 个`, 'debug');
+            } while (entries.length > 0);
+            
+            this.log(`目录 ${entry.fullPath} 总共包含 ${allEntries.length} 个条目`, 'debug');
+            
+            for (const childEntry of allEntries) {
+                const childFiles = await this.readDirectoryEntry(childEntry);
+                files.push(...childFiles);
+            }
+        }
+        
+        return files;
+    }
+    
+    // 分析拖拽的文件
+    analyzeDroppedFiles(files) {
+        this.log(`开始分析拖拽文件，总数: ${files.length}`, 'info');
+        
+        const analysis = {
+            total: files.length,
+            categories: {
+                image: [],
+                video: [],
+                audio: [],
+                design: [],
+                project: [],
+                unknown: []
+            },
+            sequences: [],
+            folders: new Set()
+        };
+        
+        // 按文件夹分组
+        const folderGroups = {};
+        
+        files.forEach(file => {
+            const category = this.getFileCategory(file);
+            analysis.categories[category].push(file);
+            
+            // 提取文件夹路径
+            const path = file.fullPath || file.relativePath || file.webkitRelativePath || '';
+            const folderPath = path.substring(0, path.lastIndexOf('/'));
+            if (folderPath) {
+                analysis.folders.add(folderPath);
+                if (!folderGroups[folderPath]) {
+                    folderGroups[folderPath] = [];
+                }
+                folderGroups[folderPath].push(file);
+            }
+        });
+        
+        this.log(`文件分类统计: 图像${analysis.categories.image.length}, 视频${analysis.categories.video.length}, 音频${analysis.categories.audio.length}, 设计${analysis.categories.design.length}, 项目${analysis.categories.project.length}, 未知${analysis.categories.unknown.length}`, 'info');
+        this.log(`检测到 ${analysis.folders.size} 个文件夹`, 'info');
+        
+        // 检测序列帧
+        let totalSequenceFiles = 0;
+        for (const [folderPath, folderFiles] of Object.entries(folderGroups)) {
+            this.log(`检查文件夹: ${folderPath}, 文件数: ${folderFiles.length}`, 'debug');
+            const sequence = this.detectImageSequence(folderFiles);
+            if (sequence) {
+                analysis.sequences.push({
+                    folder: folderPath,
+                    files: sequence.files,
+                    pattern: sequence.pattern,
+                    start: sequence.start,
+                    end: sequence.end,
+                    step: sequence.step,
+                    totalFiles: sequence.totalFiles
+                });
+                totalSequenceFiles += sequence.totalFiles;
+                this.log(`✅ 文件夹 ${folderPath} 识别为序列帧: ${sequence.pattern}`, 'info');
+            } else {
+                this.log(`❌ 文件夹 ${folderPath} 未识别为序列帧`, 'debug');
+            }
+        }
+        
+        this.log(`序列帧检测完成: 发现 ${analysis.sequences.length} 个序列帧文件夹，共 ${totalSequenceFiles} 个序列帧文件`, 'info');
+        
+        return analysis;
+    }
+    
+    // 检测图片序列帧
+    detectImageSequence(files) {
+        // 只检测图片文件
+        const imageFiles = files.filter(file => this.getFileCategory(file) === 'image');
+        
+        this.log(`检测序列帧: 图像文件数 ${imageFiles.length}`, 'debug');
+        
+        if (imageFiles.length < 2) return null; // 至少需要2个文件才算序列帧
+        
+        // 按文件名排序
+        imageFiles.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // 尝试找到数字模式
+        const patterns = [];
+        
+        for (const file of imageFiles) {
+            const name = file.name;
+            const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
+            
+            // 查找数字模式 - 支持多种数字格式，优先匹配最后一个数字序列
+            const numberMatches = nameWithoutExt.match(/(.*?)(\d+)([^\d]*)$/); // 匹配最后一个数字序列
+            if (numberMatches) {
+                const [, prefix, number, suffix] = numberMatches;
+                patterns.push({
+                    prefix: prefix || '',
+                    number: parseInt(number),
+                    suffix: suffix || '',
+                    numberLength: number.length,
+                    originalNumber: number,
+                    file
+                });
+                this.log(`文件 ${file.name} 匹配模式: 前缀="${prefix}", 数字=${number}, 后缀="${suffix}"`, 'debug');
+            } else {
+                this.log(`文件 ${file.name} 未匹配数字模式`, 'debug');
+            }
+        }
+        
+        this.log(`找到 ${patterns.length} 个符合数字模式的文件`, 'debug');
+        
+        if (patterns.length < 2) {
+            this.log('数字模式文件数量不足，不构成序列', 'debug');
+            return null;
+        }
+        
+        // 找到最一致的模式
+        const patternGroups = {};
+        patterns.forEach(p => {
+            const key = `${p.prefix}_${p.suffix}_${p.numberLength}`;
+            if (!patternGroups[key]) {
+                patternGroups[key] = [];
+            }
+            patternGroups[key].push(p);
+        });
+        
+        this.log(`找到 ${Object.keys(patternGroups).length} 个不同的模式组`, 'debug');
+        
+        // 找到最大的组
+        let bestGroup = null;
+        let maxSize = 0;
+        
+        for (const [key, group] of Object.entries(patternGroups)) {
+            this.log(`模式组 ${key}: ${group.length} 个文件`, 'debug');
+            if (group.length > maxSize) {
+                maxSize = group.length;
+                bestGroup = group;
+            }
+        }
+        
+        // 对于大量文件，降低要求；对于少量文件，保持较高要求
+        const minGroupSize = imageFiles.length >= 10 ? Math.max(2, Math.floor(imageFiles.length * 0.8)) : 2;
+        if (!bestGroup || bestGroup.length < minGroupSize) {
+            this.log(`没有找到足够大的模式组，需要至少${minGroupSize}个文件，实际最大组${bestGroup ? bestGroup.length : 0}个`, 'debug');
+            return null;
+        }
+        
+        this.log(`选择最佳模式组，包含 ${bestGroup.length} 个文件`, 'debug');
+        
+        // 排序并检查连续性
+        bestGroup.sort((a, b) => a.number - b.number);
+        
+        const numbers = bestGroup.map(p => p.number);
+        const start = numbers[0];
+        const end = numbers[numbers.length - 1];
+        
+        // 检测步长
+        let step = 1;
+        if (numbers.length > 1) {
+            const diffs = [];
+            for (let i = 1; i < numbers.length; i++) {
+                diffs.push(numbers[i] - numbers[i - 1]);
+            }
+            
+            // 找到最常见的差值作为步长
+            const diffCounts = {};
+            diffs.forEach(diff => {
+                diffCounts[diff] = (diffCounts[diff] || 0) + 1;
+            });
+            
+            let maxCount = 0;
+            for (const [diff, count] of Object.entries(diffCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    step = parseInt(diff);
+                }
+            }
+        }
+        
+        // 构建模式字符串
+        const firstPattern = bestGroup[0];
+        const pattern = `${firstPattern.prefix}[${start}-${end}]${firstPattern.suffix}`;
+        
+        const result = {
+            files: bestGroup.map(p => p.file),
+            pattern,
+            start,
+            end,
+            step,
+            totalFiles: bestGroup.length,
+            detectedRange: `${start}-${end}`,
+            prefix: firstPattern.prefix,
+            suffix: firstPattern.suffix,
+            numberLength: firstPattern.numberLength
+        };
+        
+        this.log(`✅ 检测到序列帧: ${pattern}, 范围: ${start}-${end}, 步长: ${step}, 文件数: ${bestGroup.length}`, 'info');
+        
+        return result;
+    }
+    
+    // 处理普通文件拖拽
+    async handleFilesDrop(files, dataTransfer) {
+        // 检测是否为Eagle拖拽
+        if (this.isEagleDrag(dataTransfer, files)) {
+            await this.handleEagleDragImport(files);
+        } else {
+            // 分析文件类型
+            const analysis = this.analyzeDroppedFiles(files);
+            
+            // 显示导入选项对话框
+            this.showFileImportDialog(files, analysis);
+        }
+    }
+    
+    // 显示文件导入对话框
+    showFileImportDialog(files, analysis) {
+        // 移除现有对话框
+        const existingDialog = document.querySelector('.eagle-confirm-dialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        // 检测是否包含序列帧文件夹
+        const hasSequences = analysis.sequences && analysis.sequences.length > 0;
+        const folderCount = analysis.folders ? analysis.folders.size : 0;
+        
+        // 生成检测统计信息
+        let detectionInfo = '';
+        if (hasSequences) {
+            // 计算实际序列帧文件数量
+            const totalSequenceFiles = analysis.sequences.reduce((sum, seq) => sum + seq.files.length, 0);
+            detectionInfo = `检测到 ${analysis.sequences.length} 个序列帧文件夹，共 ${totalSequenceFiles} 个文件`;
+        } else if (folderCount > 0) {
+            detectionInfo = `检测到 ${folderCount} 个文件夹，共 ${files.length} 个文件`;
+        } else {
+            detectionInfo = `检测到 ${files.length} 个文件`;
+        }
+        
+        // 确定要显示的文件列表
+        let displayFiles = files;
+        let totalDisplayFiles = files.length;
+        
+        if (hasSequences) {
+            // 对于序列帧，显示序列帧中的文件
+            displayFiles = [];
+            analysis.sequences.forEach(seq => {
+                displayFiles = displayFiles.concat(seq.files.slice(0, Math.max(1, Math.floor(5 / analysis.sequences.length))));
+            });
+            totalDisplayFiles = analysis.sequences.reduce((sum, seq) => sum + seq.files.length, 0);
+        }
+        
+        // 生成文件信息HTML
+        let fileInfoHtml = '';
+        
+        if (hasSequences) {
+            // 序列帧显示为单行
+            analysis.sequences.forEach(seq => {
+                // 计算序列帧总大小
+                const totalSize = seq.files.reduce((sum, file) => sum + (file.size || 0), 0);
+                const sizeText = this.formatFileSize(totalSize);
+                
+                fileInfoHtml += `
+                    <div class="file-item-simple">
+                        <span class="file-icon">🎞️</span>
+                        <span class="file-name">${seq.pattern}</span>
+                        <span class="file-size">${sizeText}</span>
+                        <span class="file-type">序列帧</span>
+                    </div>
+                `;
+            });
+        } else {
+            // 普通文件显示
+            fileInfoHtml = displayFiles.slice(0, 5).map(file => {
+                const icon = this.getFileIcon(file);
+                const size = this.formatFileSize(file.size);
+                const type = this.getFileType(file);
+                return `
+                    <div class="file-item-simple">
+                        <span class="file-icon">${icon}</span>
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${size}</span>
+                        <span class="file-type">${type}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 如果文件数量超过5个，显示省略提示（仅对非序列帧）
+        const moreFilesHtml = (!hasSequences && totalDisplayFiles > 5) ? 
+            `<div class="file-item-simple"><span class="file-name">... 还有 ${totalDisplayFiles - Math.min(5, displayFiles.length)} 个文件</span></div>` : '';
+        
+        // 获取当前设置并确定导入模式和行为
+        const settings = this.settingsManager.getSettings();
+        
+        // 导入模式映射
+        const importModeText = {
+            'direct': '直接导入',
+            'project_adjacent': '项目旁复制',
+            'custom_folder': '自定义文件夹'
+        }[settings.mode] || settings.mode;
+        
+        // 根据是否自动添加到合成来确定导入行为
+        let importBehavior;
+        if (settings.addToComposition) {
+            // 如果自动添加到合成，显示时间轴放置位置
+            const timelinePlacement = {
+                'current_time': '当前时间',
+                'timeline_start': '时间轴开始'
+            }[settings.timelineOptions?.placement] || '当前时间';
+            importBehavior = timelinePlacement;
+        } else {
+            // 如果不自动添加到合成，显示"不导入合成"
+            importBehavior = '不导入合成';
+        }
+        
+        let importMode = importModeText;
+        
+        // 检查是否是序列帧或文件夹，并根据情况调整导入行为显示
+        // 只有当用户没有明确设置导入行为时，才显示特殊的序列帧/文件夹导入提示
+        if (hasSequences && settings.mode === ImportModes.DIRECT) { // 假设直接导入模式下，序列帧导入是特殊行为
+            importBehavior = '序列帧导入';
+        } else if (folderCount > 0 && settings.mode === ImportModes.DIRECT) { // 假设直接导入模式下，文件夹导入是特殊行为
+            importBehavior = '文件夹导入';
+        }
+        
+        // 创建对话框
+        const dialog = document.createElement('div');
+        dialog.className = 'eagle-confirm-dialog';
+        
+        dialog.innerHTML = `
+            <div class="eagle-confirm-content">
+                <div class="eagle-confirm-header">
+                    <h3>拖拽导入确认</h3>
+                </div>
+                <div class="eagle-confirm-body">
+                    <p>${detectionInfo}，是否要导入到After Effects?</p>
+                    <div class="file-list">
+                        ${fileInfoHtml}
+                        ${moreFilesHtml}
+                    </div>
+                    <div class="import-settings">
+                        <span><strong>导入模式：</strong>${importMode}</span>
+                        <span><strong>导入行为：</strong>${importBehavior}</span>
+                    </div>
+                </div>
+                <div class="eagle-confirm-actions">
+                    <button id="drag-confirm-no" class="btn-secondary">取消</button>
+                    <button id="drag-confirm-yes" class="btn-primary">确定导入</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // 绑定事件
+        document.getElementById('drag-confirm-yes').onclick = async () => {
+            dialog.remove();
+            // 根据检测结果选择导入方式
+            if (hasSequences) {
+                await this.handleImportAction(files, analysis, 'sequences');
+            } else if (folderCount > 0) {
+                await this.handleImportAction(files, analysis, 'folders');
+            } else {
+                await this.handleImportAction(files, analysis, 'all');
+            }
+        };
+        
+        document.getElementById('drag-confirm-no').onclick = () => {
+            dialog.remove();
+        };
+        
+        // 样式已统一使用剪贴板导入确认面板的样式
+    }
+    
+    // 处理导入操作
+    async handleImportAction(files, analysis, action) {
+        let filesToImport = [];
+        
+        switch (action) {
+            case 'all':
+                filesToImport = files;
+                break;
+            case 'sequences':
+                // 导入所有序列帧（以序列为单位）
+                this.log(`检测到 ${analysis.sequences.length} 个序列帧文件夹`, 'info');
+                await this.handleSequenceImport(analysis.sequences);
+                return;
+            case 'folders':
+                // 导入文件夹（以文件夹为单位）
+                this.log(`检测到 ${analysis.folders.size} 个文件夹`, 'info');
+                await this.handleFolderImport(analysis, files);
+                return;
+            case 'images':
+                filesToImport = analysis.categories.image;
+                break;
+            case 'videos':
+                filesToImport = analysis.categories.video;
+                break;
+            default:
+                filesToImport = files;
+        }
+        
+        if (filesToImport.length === 0) {
+            this.showDropMessage('没有文件需要导入', 'warning');
+            return;
+        }
+        
+        this.log(`开始导入 ${filesToImport.length} 个文件 (${action} 模式)`, 'info');
+        
+        // 普通文件导入
+        await this.handleNonEagleDragImport(filesToImport);
+    }
+    
+    // 处理序列帧导入
+    async handleSequenceImport(sequences) {
+        let successCount = 0;
+        let totalSequences = sequences.length;
+        
+        for (const sequence of sequences) {
+            try {
+                this.log(`导入序列帧文件夹: ${sequence.folder} (${sequence.pattern})`, 'info');
+                this.log(`序列帧范围: ${sequence.start}-${sequence.end}, 步长: ${sequence.step}, 文件数: ${sequence.files.length}`, 'info');
+                
+                // 构造序列帧导入消息
+                const message = {
+                    type: 'import_sequence',
+                    sequence: {
+                        files: sequence.files.map(file => ({
+                            name: file.name,
+                            path: file.fullPath || file.relativePath || file.name,
+                            size: file.size,
+                            type: file.type,
+                            lastModified: file.lastModified
+                        })),
+                        pattern: sequence.pattern,
+                        start: sequence.start,
+                        end: sequence.end,
+                        step: sequence.step,
+                        folder: sequence.folder,
+                        totalFiles: sequence.files.length
+                    },
+                    source: 'sequence_drag_drop',
+                    timestamp: Date.now(),
+                    isDragImport: true
+                };
+                
+                // 调用序列帧导入处理
+                const result = await this.handleImportFiles(message);
+                if (result && result.success) {
+                    successCount++;
+                    this.log(`✅ 序列帧文件夹导入成功: ${sequence.folder}`, 'success');
+                } else {
+                    this.log(`❌ 序列帧文件夹导入失败: ${sequence.folder}`, 'error');
+                }
+                
+            } catch (error) {
+                this.log(`❌ 序列帧导入失败: ${sequence.folder} - ${error.message}`, 'error');
+            }
+        }
+        
+        if (successCount === totalSequences) {
+            this.showDropMessage(`✅ 所有序列帧文件夹导入完成 (${successCount}/${totalSequences})`, 'success');
+        } else {
+            this.showDropMessage(`⚠️ 序列帧导入完成 (${successCount}/${totalSequences})`, 'warning');
+        }
+    }
+    
+    // 处理文件夹导入
+    async handleFolderImport(analysis, allFiles) {
+        const folderGroups = {};
+        
+        // 按文件夹分组文件
+        allFiles.forEach(file => {
+            const path = file.fullPath || file.relativePath || file.webkitRelativePath || '';
+            const folderPath = path.substring(0, path.lastIndexOf('/'));
+            if (folderPath) {
+                if (!folderGroups[folderPath]) {
+                    folderGroups[folderPath] = [];
+                }
+                folderGroups[folderPath].push(file);
+            }
+        });
+        
+        let successCount = 0;
+        let totalFolders = Object.keys(folderGroups).length;
+        
+        // 逐个文件夹导入
+        for (const [folderPath, folderFiles] of Object.entries(folderGroups)) {
+            try {
+                this.log(`导入文件夹: ${folderPath} (${folderFiles.length} 个文件)`, 'info');
+                
+                // 构造文件夹导入消息
+                const message = {
+                    type: 'import_folder',
+                    folder: {
+                        path: folderPath,
+                        files: folderFiles.map(file => ({
+                            name: file.name,
+                            path: file.fullPath || file.relativePath || file.name,
+                            size: file.size,
+                            type: file.type,
+                            lastModified: file.lastModified
+                        })),
+                        totalFiles: folderFiles.length
+                    },
+                    source: 'folder_drag_drop',
+                    timestamp: Date.now(),
+                    isDragImport: true
+                };
+                
+                // 调用文件夹导入处理
+                const result = await this.handleImportFiles(message);
+                if (result && result.success) {
+                    successCount++;
+                    this.log(`✅ 文件夹导入成功: ${folderPath}`, 'success');
+                } else {
+                    this.log(`❌ 文件夹导入失败: ${folderPath}`, 'error');
+                }
+                
+            } catch (error) {
+            this.log(`❌ 文件夹导入失败: ${folderPath} - ${error.message}`, 'error');
+        }
+    }
+    
+    if (successCount === totalFolders) {
+        this.showDropMessage(`✅ 所有文件夹导入完成 (${successCount}/${totalFolders})`, 'success');
+    } else {
+        this.showDropMessage(`⚠️ 文件夹导入完成 (${successCount}/${totalFolders})`, 'warning');
+    }
+}
+
+// 处理序列帧导入到AE
+async handleSequenceImportToAE(sequence) {
+    try {
+        this.log(`🎞️ 开始导入序列帧: ${sequence.folder}`, 'info');
+        this.log(`📊 序列帧信息: ${sequence.pattern}, 范围: ${sequence.start}-${sequence.end}, 文件数: ${sequence.totalFiles}`, 'info');
+        
+        // 获取项目信息
+        await this.refreshProjectInfo();
+        const projectInfo = await this.getProjectInfo();
+        
+        if (!projectInfo.activeComp) {
+            throw new Error('没有活动合成，请先选择或创建一个合成');
+        }
+        
+        // 构造序列帧导入参数
+        const sequenceData = {
+            type: 'sequence',
+            folder: sequence.folder,
+            pattern: sequence.pattern,
+            start: sequence.start,
+            end: sequence.end,
+            step: sequence.step || 1,
+            files: sequence.files,
+            totalFiles: sequence.totalFiles
+        };
+        
+        // 调用AE脚本导入序列帧
+        const result = await this.callAEScript('importSequence', sequenceData);
+        
+        if (result && result.success) {
+            this.log(`✅ 序列帧导入成功: ${sequence.folder}`, 'success');
+            return { success: true, importedCount: 1, targetComp: projectInfo.activeComp.name };
+        } else {
+            throw new Error(result ? result.error : '序列帧导入失败');
+        }
+        
+    } catch (error) {
+        this.log(`❌ 序列帧导入失败: ${error.message}`, 'error');
+        return { success: false, error: error.message, importedCount: 0 };
+    }
+}
+
+// 处理文件夹导入到AE
+async handleFolderImportToAE(folder) {
+    try {
+        this.log(`📁 开始导入文件夹: ${folder.path}`, 'info');
+        this.log(`📊 文件夹信息: ${folder.totalFiles} 个文件`, 'info');
+        
+        // 获取项目信息
+        await this.refreshProjectInfo();
+        const projectInfo = await this.getProjectInfo();
+        
+        if (!projectInfo.activeComp) {
+            throw new Error('没有活动合成，请先选择或创建一个合成');
+        }
+        
+        // 构造文件夹导入参数
+        const folderData = {
+            type: 'folder',
+            path: folder.path,
+            files: folder.files,
+            totalFiles: folder.totalFiles
+        };
+        
+        // 调用AE脚本导入文件夹
+        const result = await this.callAEScript('importFolder', folderData);
+        
+        if (result && result.success) {
+            this.log(`✅ 文件夹导入成功: ${folder.path}`, 'success');
+            return { success: true, importedCount: folder.totalFiles, targetComp: projectInfo.activeComp.name };
+        } else {
+            throw new Error(result ? result.error : '文件夹导入失败');
+        }
+        
+    } catch (error) {
+        this.log(`❌ 文件夹导入失败: ${error.message}`, 'error');
+        return { success: false, error: error.message, importedCount: 0 };
+    }
+}
+    
     // 识别Eagle拖拽
     isEagleDrag(dataTransfer, files) {
         try {
@@ -6809,29 +7626,18 @@ class AEExtension {
 
     // 获取文件图标
     getFileIcon(file) {
-        const type = file.type || '';
-        const name = file.name || '';
-        const ext = name.split('.').pop()?.toLowerCase() || '';
-
-        // 根据MIME类型判断
-        if (type.startsWith('image/')) return '🖼️';
-        if (type.startsWith('video/')) return '🎬';
-        if (type.startsWith('audio/')) return '🎵';
-
-        // 根据扩展名判断
-        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg'];
-        const videoExts = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', 'm4v'];
-        const audioExts = ['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma'];
-        const docExts = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
-        const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
-
-        if (imageExts.includes(ext)) return '🖼️';
-        if (videoExts.includes(ext)) return '🎬';
-        if (audioExts.includes(ext)) return '🎵';
-        if (docExts.includes(ext)) return '📄';
-        if (archiveExts.includes(ext)) return '📦';
-
-        return '📁';
+        const category = this.getFileCategory(file);
+        const icons = {
+            'image': '🖼️',
+            'video': '🎬',
+            'audio': '🎵',
+            'design': '🎨',
+            'project': '📋',
+            'sequence': '🎞️',
+            'folder': '📁',
+            'unknown': '📄'
+        };
+        return icons[category] || '📄';
     }
 
     // 显示非Eagle文件确认对话框
@@ -7250,55 +8056,46 @@ class AEExtension {
             const dialog = document.createElement('div');
             dialog.className = 'eagle-confirm-dialog';
 
-            // 构建文件预览信息
-            const filePreviewHtml = files.map((file, index) => {
+            // 构建文件信息 - 简化为一行显示
+            const fileInfoHtml = files.map((file, index) => {
                 const sizeText = file.size ? this.formatFileSize(file.size) : '未知大小';
                 const typeIcon = this.getFileIcon(file);
-
-                // 根据文件状态显示不同的提示
-                let tempWarning = '';
-                if (file.hasOriginalName) {
-                    tempWarning = ' <span class="original-file-info">(原始文件名)</span>';
-                } else if (file.isTemporary && file.wasRenamed) {
-                    tempWarning = ' <span class="temp-file-warning">(已重命名)</span>';
-                } else if (file.isTemporary) {
-                    tempWarning = ' <span class="temp-file-warning">(临时文件，将重命名)</span>';
-                }
-
-                // 获取不带扩展名的文件名和扩展名
                 const displayName = file.displayName || file.name;
-                const nameWithoutExt = this.getFileNameWithoutExtension(displayName);
-                const ext = this.getFileExtension(displayName);
-
-
+                const fileType = file.type || '未知类型';
 
                 return `
-                    <div class="file-item" data-file-index="${index}">
+                    <div class="file-item-simple" data-file-index="${index}">
                         <span class="file-icon">${typeIcon}</span>
-                        <div class="file-info">
-                            <div class="file-name-container">
-                                <span class="file-name editable" data-original-name="${displayName}" title="双击编辑文件名">${nameWithoutExt}</span><span class="file-ext">${ext}</span>${tempWarning}
-                            </div>
-                            <div class="file-details">${sizeText} • ${file.type || '未知类型'}</div>
-                        </div>
+                        <span class="file-name" title="${displayName}">${displayName}</span>
+                        <span class="file-size">${sizeText}</span>
+                        <span class="file-type">${fileType}</span>
                     </div>
                 `;
             }).join('');
 
-            // 构建导入信息
+            // 构建导入设置信息 - 简化显示
             const importModeText = {
                 'direct': '直接导入',
                 'project_adjacent': '项目旁复制',
                 'custom_folder': '自定义文件夹'
             }[settings.mode] || settings.mode;
 
-            const hasTemporaryFiles = files.some(f => f.isTemporary);
-            const importInfoHtml = `
-                <div class="import-mode-info">
-                    <strong>导入模式：</strong>${importModeText}
-                    ${hasTemporaryFiles ? '<br><strong>注意：</strong>临时文件将强制复制到项目旁文件夹并重命名' : ''}
-                </div>
-            `;
+            // 获取当前设置
+            const currentSettings = this.settingsManager.getSettings();
+            
+            // 根据是否自动添加到合成来确定导入行为
+            let importBehavior;
+            if (currentSettings.addToComposition) {
+                // 如果自动添加到合成，显示时间轴放置位置
+                const timelinePlacement = {
+                    'current_time': '当前时间',
+                    'timeline_start': '时间轴开始'
+                }[currentSettings.timelineOptions?.placement] || '当前时间';
+                importBehavior = timelinePlacement;
+            } else {
+                // 如果不自动添加到合成，显示"不导入合成"
+                importBehavior = '不导入合成';
+            }
 
             dialog.innerHTML = `
                 <div class="eagle-confirm-content">
@@ -7307,11 +8104,12 @@ class AEExtension {
                     </div>
                     <div class="eagle-confirm-body">
                         <p>检测到剪贴板中有 ${files.length} 个可导入文件，是否要导入到After Effects？</p>
-                        <div class="clipboard-preview">
-                            ${filePreviewHtml}
+                        <div class="file-list">
+                            ${fileInfoHtml}
                         </div>
-                        <div class="import-info">
-                            ${importInfoHtml}
+                        <div class="import-settings">
+                            <span><strong>导入模式：</strong>${importModeText}</span>
+                            <span><strong>导入行为：</strong>${importBehavior}</span>
                         </div>
                     </div>
                     <div class="eagle-confirm-actions">
@@ -7322,9 +8120,6 @@ class AEExtension {
             `;
 
             document.body.appendChild(dialog);
-
-            // 添加文件名编辑功能
-            this.setupFileNameEditing(dialog, files);
 
             // 绑定事件
             document.getElementById('clipboard-confirm-yes').onclick = async () => {
@@ -7365,9 +8160,13 @@ class AEExtension {
         try {
             // 不显示处理提示，直接开始导入
 
-            // 处理临时文件重命名
+            // 处理临时文件重命名并标记为已确认
             const processedFiles = files.map(file => {
-
+                // 标记文件为已确认导入
+                const confirmedFile = {
+                    ...file,
+                    confirmed: true
+                };
 
                 if (file.isTemporary && !file.customName && !file.wasRenamed) {
                     // 只有在用户没有自定义文件名且未重命名时才自动重命名
@@ -7377,7 +8176,7 @@ class AEExtension {
                     this.log(`临时文件重命名: ${file.name} -> ${newName}`, 'info');
 
                     return {
-                        ...file,
+                        ...confirmedFile,
                         name: newName,
                         originalName: file.originalName || file.name,
                         isTemporary: true
@@ -7385,7 +8184,7 @@ class AEExtension {
                 } else if (file.isTemporary && (file.customName || file.wasRenamed)) {
                     this.log(`保留文件名: ${file.name} (用户自定义: ${file.customName}, 已重命名: ${file.wasRenamed})`, 'info');
                 }
-                return file;
+                return confirmedFile;
             });
 
             // 构造消息对象，模拟文件导入消息格式
@@ -7554,6 +8353,32 @@ class AEExtension {
         });
     }
 
+    // 生成文件签名（用于防重复导入）
+    generateFileSignature(files) {
+        if (!files || files.length === 0) return '';
+        
+        // 基于文件路径和大小生成签名
+        const signature = files
+            .map(file => `${file.path || file.name}:${file.size || 0}`)
+            .sort() // 排序确保顺序一致
+            .join('|');
+        
+        return this.simpleHash(signature);
+    }
+
+    // 简单哈希函数
+    simpleHash(str) {
+        let hash = 0;
+        if (str.length === 0) return hash.toString();
+        
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // 转换为32位整数
+        }
+        
+        return Math.abs(hash).toString(36);
+    }
 
 }
 

@@ -17,8 +17,7 @@ const ExportModes = {
 // 时间轴放置选项
 const TimelinePlacement = {
     CURRENT_TIME: 'current_time',
-    SEQUENCE: 'sequence',
-    STACK: 'stack'
+    TIMELINE_START: 'timeline_start'
 };
 
 // 存储键值
@@ -40,8 +39,7 @@ const DEFAULT_IMPORT_SETTINGS = {
     addToComposition: true,
     timelineOptions: {
         enabled: true,
-        placement: TimelinePlacement.CURRENT_TIME,
-        sequenceInterval: 1.0
+        placement: TimelinePlacement.CURRENT_TIME
     },
     
     // 文件管理设置
@@ -121,10 +119,7 @@ const UI_STATE_RULES = {
     timelineOptionsEnabled: (settings) => settings.addToComposition,
     projectFolderVisible: (settings) => settings.mode === ImportModes.PROJECT_ADJACENT,
     customFolderVisible: (settings) => settings.mode === ImportModes.CUSTOM_FOLDER,
-    sequenceIntervalVisible: (settings) =>
-        settings.addToComposition &&
-        settings.timelineOptions.enabled &&
-        settings.timelineOptions.placement === TimelinePlacement.SEQUENCE,
+    // 移除了sequenceIntervalVisible规则，因为不再支持顺序排列
 
     // 导出设置UI规则
     exportProjectFolderVisible: (settings) => settings.exportSettings.mode === ExportModes.PROJECT_ADJACENT,

@@ -134,6 +134,7 @@ class Eagle2Ae {
         this.compatibilityLayer = null; // 兼容性处理层
         this.eagleWebSocket = null; // Eagle兼容WebSocket
         this.aeConnection = null;
+        this.clipboardHandler = null; // 剪切板处理器
 
         // 动态端口分配器
         this.portAllocator = null;
@@ -205,6 +206,10 @@ class Eagle2Ae {
         this.sentLogIds = new Set(); // 记录已发送的日志ID
         this.maxLogQueue = 50; // 最多保留50条日志
         this.logSendInterval = null;
+        
+        // 防重复导入机制
+        this.lastExportSignature = null;
+        this.lastExportTime = 0;
 
         // 导入设置（从AE扩展同步）
         this.importSettings = {
@@ -316,6 +321,9 @@ class Eagle2Ae {
             // 启用Eagle兼容WebSocket
             this.initEagleWebSocket();
 
+            // 初始化剪切板处理器
+            this.initClipboardHandler();
+
             // 设置文件选择监听
             this.setupEventListeners();
 
@@ -379,64 +387,44 @@ class Eagle2Ae {
 
     // 初始化用户界面
     initializeUI() {
-        const messageDiv = document.querySelector('#message');
-        messageDiv.innerHTML = `
-            <div class="export-ae-panel">
-                <h2>Eagle2Ae - 服务状态</h2>
-                <div class="service-info">
-                    <p class="service-description">
-                        🚀 后台服务已自动启动，无需手动操作。<br>
-                        此面板仅用于查看状态和配置设置。
-                    </p>
-                </div>
-
-                <div class="status-section">
-                    <h3>服务状态</h3>
-                    <div class="status-item">
-                        <span class="status-label">后台服务:</span>
-                        <span id="service-status" class="status-value">检查中...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">HTTP服务器:</span>
-                        <span id="server-status" class="status-value">检查中...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">After Effects:</span>
-                        <span id="ae-status" class="status-value">未连接</span>
-                    </div>
-                </div>
-
-                <div class="files-section">
-                    <h3>当前选中文件</h3>
-                    <div id="selected-files" class="files-list">
-                        <p class="no-files">请在Eagle中选择文件</p>
-                    </div>
-                </div>
-
-                <div class="actions-section">
-                    <button id="refresh-btn" class="export-button">刷新状态</button>
-                    <button id="settings-btn" class="settings-button">设置</button>
-                </div>
-
-                <div class="log-section">
-                    <h3>服务日志</h3>
-                    <div id="log-output" class="log-output">
-                        <p class="log-info">后台服务日志将在这里显示...</p>
-                    </div>
-                </div>
-            </div>
-        `;
-
+        // 不再创建重复的UI面板，直接设置事件监听器
+        // UI面板已在index.html中定义
         this.setupUIEventListeners();
     }
 
     // 设置UI事件监听
     setupUIEventListeners() {
-        const refreshBtn = document.getElementById('refresh-btn');
-        const settingsBtn = document.getElementById('settings-btn');
+        const exportBtn = document.getElementById('export-button');
+        const settingsBtn = document.getElementById('settings-button');
 
-        refreshBtn.addEventListener('click', () => this.refreshServiceStatus());
-        settingsBtn.addEventListener('click', () => this.showSettings());
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.handleManualExport());
+        }
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => this.showSettings());
+        }
+    }
+
+    // 手动导出处理
+    async handleManualExport() {
+        try {
+            this.log('开始手动导出...', 'info');
+            
+            // 获取选中的文件
+            const selectedItems = await eagle.item.getSelected();
+            if (selectedItems && selectedItems.length > 0) {
+                this.log(`开始手动导出 ${selectedItems.length} 个文件...`, 'info');
+                
+                // 调用现有的文件处理方法
+                await this.handleSelectedFiles(selectedItems);
+                this.log('手动导出完成', 'success');
+            } else {
+                this.log('没有选中的文件', 'warning');
+            }
+        } catch (error) {
+            this.log(`手动导出失败: ${error.message}`, 'error');
+            throw error;
+        }
     }
 
     // 开始检查服务状态
@@ -479,27 +467,43 @@ class Eagle2Ae {
         this.serviceStatus = status;
 
         if (status.running) {
-            this.updateStatus('service-status', '运行中', 'connected');
-            this.updateStatus('server-status', `端口:${this.config.wsPort}`, 'connected');
-            this.updateStatus('ae-status', status.aeConnected ? '已连接' : '未连接',
-                status.aeConnected ? 'connected' : 'disconnected');
+            // 更新AE连接端口
+            const aePortElement = document.getElementById('ae-port');
+            if (aePortElement) {
+                aePortElement.textContent = this.config.wsPort || '8080';
+            }
 
-            // 更新选中文件数量
-            if (status.selectedFiles > 0) {
-                document.getElementById('selected-files').innerHTML = `
-                    <div class="files-count">${status.selectedFiles} 个文件已选中</div>
-                    <p class="service-note">文件将自动导入到AE（如果启用自动导出）</p>
-                `;
-            } else {
-                document.getElementById('selected-files').innerHTML =
-                    '<p class="no-files">请在Eagle中选择文件</p>';
+            // 更新连接状态
+            const connectionStatusElement = document.getElementById('connection-status');
+            if (connectionStatusElement) {
+                if (status.aeConnected || (this.httpServer && this.httpServer.listening)) {
+                    connectionStatusElement.textContent = '已连接';
+                    connectionStatusElement.className = 'status-value connected';
+                } else {
+                    connectionStatusElement.textContent = '未连接';
+                    connectionStatusElement.className = 'status-value disconnected';
+                }
+            }
+
+            // 调用全局的updateSelectedFiles函数来更新选中文件显示
+            if (typeof window.updateSelectedFiles === 'function') {
+                window.updateSelectedFiles();
             }
 
             this.log('服务状态已更新', 'success');
         } else {
-            this.updateStatus('service-status', '未运行', 'error');
-            this.updateStatus('server-status', '未启动', 'error');
-            this.updateStatus('ae-status', '无法连接', 'error');
+            // 更新为错误状态
+            const aePortElement = document.getElementById('ae-port');
+            if (aePortElement) {
+                aePortElement.textContent = '--';
+            }
+
+            const connectionStatusElement = document.getElementById('connection-status');
+            if (connectionStatusElement) {
+                connectionStatusElement.textContent = '未连接';
+                connectionStatusElement.className = 'status-value disconnected';
+            }
+
             this.log(`服务检查失败: ${status.error || '未知错误'}`, 'error');
         }
     }
@@ -516,6 +520,63 @@ class Eagle2Ae {
             }
         } catch (error) {
             this.log(`Eagle兼容WebSocket初始化失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 初始化剪切板处理器
+    initClipboardHandler() {
+        try {
+            // 动态加载剪切板处理器
+            if (typeof ClipboardHandler !== 'undefined') {
+                this.clipboardHandler = new ClipboardHandler(this);
+                this.log('✅ 剪切板处理器已初始化', 'success');
+
+                // 自动启动剪切板监控
+                this.clipboardHandler.startMonitoring();
+                this.log('✅ 剪切板监控已启动', 'success');
+            } else {
+                this.log('⚠️ 剪切板处理器类未找到，尝试加载...', 'warning');
+
+                // 尝试动态加载剪切板处理器脚本
+                this.loadClipboardHandlerScript();
+            }
+        } catch (error) {
+            this.log(`剪切板处理器初始化失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 动态加载剪切板处理器脚本
+    loadClipboardHandlerScript() {
+        try {
+            // 在浏览器环境中动态加载脚本
+            if (typeof document !== 'undefined') {
+                const script = document.createElement('script');
+                script.src = './js/clipboard-handler.js';
+                script.onload = () => {
+                    this.log('剪切板处理器脚本已加载', 'info');
+                    // 重新尝试初始化
+                    setTimeout(() => {
+                        this.initClipboardHandler();
+                    }, 100);
+                };
+                script.onerror = () => {
+                    this.log('剪切板处理器脚本加载失败', 'error');
+                };
+                document.head.appendChild(script);
+            } else {
+                // Node.js环境中直接require
+                try {
+                    const ClipboardHandler = require('./clipboard-handler.js');
+                    if (ClipboardHandler) {
+                        window.ClipboardHandler = ClipboardHandler;
+                        this.initClipboardHandler();
+                    }
+                } catch (requireError) {
+                    this.log(`无法加载剪切板处理器: ${requireError.message}`, 'error');
+                }
+            }
+        } catch (error) {
+            this.log(`加载剪切板处理器脚本失败: ${error.message}`, 'error');
         }
     }
 
@@ -1981,7 +2042,8 @@ class Eagle2Ae {
     // 处理导入结果
     handleImportResult(result) {
         if (result.success) {
-            this.log(`成功导入 ${result.importedCount} 个文件到合成 "${result.targetComp}"`);
+            const targetComp = result.targetComp || '未知合成';
+            this.log(`成功导入 ${result.importedCount} 个文件到合成 "${targetComp}"`);
         } else {
             this.log(`导入失败: ${result.error}`, 'error');
         }
@@ -2105,7 +2167,7 @@ class Eagle2Ae {
 
     // 记录日志
     log(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
+        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
         const fullTimestamp = new Date().toISOString();
         const logMessage = `[${timestamp}] [Eagle2Ae] ${message}`;
 
@@ -2126,18 +2188,24 @@ class Eagle2Ae {
 
         // UI日志（仅在UI模式下）
         if (this.uiMode && typeof document !== 'undefined') {
-            const logOutput = document.getElementById('log-output');
-            if (logOutput) {
-                const logEntry = document.createElement('div');
-                logEntry.className = `log-entry log-${type}`;
-                logEntry.innerHTML = `<span class="log-time">${timestamp}</span> ${message}`;
+            // 优先使用index.html中的addLog函数
+            if (typeof window.addLog === 'function') {
+                window.addLog(message, type);
+            } else {
+                // 备选方案：直接操作DOM
+                const logOutput = document.getElementById('log-output');
+                if (logOutput) {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-entry log-${type}`;
+                    logEntry.innerHTML = `<span class="log-time">${timestamp}</span> ${message}`;
 
-                logOutput.appendChild(logEntry);
-                logOutput.scrollTop = logOutput.scrollHeight;
+                    logOutput.appendChild(logEntry);
+                    logOutput.scrollTop = logOutput.scrollHeight;
 
-                // 限制日志条数
-                while (logOutput.children.length > 50) {
-                    logOutput.removeChild(logOutput.firstChild);
+                    // 限制日志条数
+                    while (logOutput.children.length > 50) {
+                        logOutput.removeChild(logOutput.firstChild);
+                    }
                 }
             }
         }
@@ -2233,49 +2301,48 @@ class Eagle2Ae {
 
     // 显示设置对话框
     showSettings() {
-        const settingsHtml = `
-            <div class="settings-dialog">
-                <h3>插件设置</h3>
-                <div class="setting-item">
-                    <label>HTTP服务器端口:</label>
-                    <input type="number" id="ws-port" value="${this.config.wsPort}" min="1024" max="65535">
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" id="auto-export" ${this.config.autoExport ? 'checked' : ''}>
-                        自动导出选中文件
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label>目标目录:</label>
-                    <input type="text" id="target-dir" value="${this.config.targetDirectory || ''}" placeholder="留空使用AE项目目录">
-                    <button id="browse-dir">浏览</button>
-                </div>
-                <div class="setting-actions">
-                    <button id="save-settings">保存</button>
-                    <button id="cancel-settings">取消</button>
-                </div>
-            </div>
-        `;
+        // 使用index.html中现有的设置对话框
+        if (typeof window.showSettings === 'function') {
+            window.showSettings();
+        } else {
+            // 备选方案：直接显示设置覆盖层
+            const settingsOverlay = document.getElementById('settings-overlay');
+            if (settingsOverlay) {
+                settingsOverlay.style.display = 'flex';
+            }
+        }
+    }
 
-        // 创建设置对话框
-        const overlay = document.createElement('div');
-        overlay.className = 'settings-overlay';
-        overlay.innerHTML = settingsHtml;
-        document.body.appendChild(overlay);
-
-        // 设置事件监听
-        overlay.querySelector('#save-settings').addEventListener('click', () => {
-            this.saveSettings(overlay);
-        });
-
-        overlay.querySelector('#cancel-settings').addEventListener('click', () => {
-            document.body.removeChild(overlay);
-        });
-
-        overlay.querySelector('#browse-dir').addEventListener('click', () => {
-            this.browseDirectory();
-        });
+    // 更新设置（供index.html调用）
+    updateSettings(settings) {
+        try {
+            // 更新配置
+            const oldPort = this.config.wsPort;
+            
+            if (settings.serverPort && settings.serverPort !== this.config.wsPort) {
+                this.config.wsPort = settings.serverPort;
+                
+                // 如果端口改变，重启HTTP服务器
+                if (oldPort !== settings.serverPort) {
+                    this.log('端口已更改，重启HTTP服务器...', 'info');
+                    if (this.httpServer) {
+                        this.httpServer.close();
+                    }
+                    setTimeout(() => {
+                        this.startHttpServer();
+                    }, 1000);
+                }
+            }
+            
+            // 更新剪切板检查间隔
+            if (settings.clipboardInterval && this.clipboardHandler) {
+                this.clipboardHandler.setCheckInterval(settings.clipboardInterval);
+            }
+            
+            this.log('设置已更新', 'success');
+        } catch (error) {
+            this.log(`更新设置失败: ${error.message}`, 'error');
+        }
     }
 
     // 保存设置
@@ -2369,8 +2436,11 @@ class Eagle2Ae {
             if (isRunning) {
                 if (!this.aeStatus.connected) {
                     this.log('检测到AE正在运行，等待连接...');
-                    if (this.uiMode) {
-                        this.updateStatus('ae-status', 'AE运行中，等待连接', 'warning');
+                    // 更新连接状态显示
+                    const connectionStatusElement = document.getElementById('connection-status');
+                    if (connectionStatusElement) {
+                        connectionStatusElement.textContent = 'AE运行中，等待连接';
+                        connectionStatusElement.className = 'status-value warning';
                     }
                 }
             } else {
@@ -2378,8 +2448,11 @@ class Eagle2Ae {
                     this.log('AE已关闭');
                     this.aeStatus.connected = false;
                 }
-                if (this.uiMode) {
-                    this.updateStatus('ae-status', 'AE未运行', 'disconnected');
+                // 更新连接状态显示
+                const connectionStatusElement = document.getElementById('connection-status');
+                if (connectionStatusElement) {
+                    connectionStatusElement.textContent = 'AE未运行';
+                    connectionStatusElement.className = 'status-value disconnected';
                 }
                 if (this.aeConnection) {
                     this.aeConnection = null;
@@ -2441,6 +2514,21 @@ class Eagle2Ae {
     // 处理文件导出（核心导出逻辑）
     handleFileExport(data) {
         try {
+            // 防重复导入机制
+            const currentTimestamp = data.timestamp || Date.now();
+            const fileSignature = this.generateFileSignature(data.files);
+            
+            // 检查是否为重复请求（5秒内相同文件列表）
+            if (this.lastExportSignature === fileSignature && 
+                (currentTimestamp - this.lastExportTime) < 5000) {
+                this.log('检测到重复导出请求，已忽略', 'warning');
+                return;
+            }
+            
+            // 更新防重复记录
+            this.lastExportSignature = fileSignature;
+            this.lastExportTime = currentTimestamp;
+
             this.log(`开始处理 ${data.files.length} 个文件的导出...`);
             this.log(`当前导入模式: ${this.importSettings.mode}`, 'info');
 
@@ -2460,7 +2548,8 @@ class Eagle2Ae {
                     annotation: file.annotation || ''
                 })),
                 settings: this.importSettings, // 包含导入设置
-                timestamp: data.timestamp,
+                timestamp: currentTimestamp,
+                requestId: this.generateRequestId(), // 添加唯一请求ID
                 projectInfo: this.aeStatus.projectPath ? {
                     path: this.aeStatus.projectPath,
                     comp: this.aeStatus.activeComp
@@ -2521,6 +2610,38 @@ class Eagle2Ae {
         return `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
+    // 生成文件签名（用于防重复导入）
+    generateFileSignature(files) {
+        if (!files || files.length === 0) return '';
+        
+        // 基于文件路径和大小生成签名
+        const signature = files
+            .map(file => `${file.path}:${file.size || 0}`)
+            .sort() // 排序确保顺序一致
+            .join('|');
+        
+        return this.simpleHash(signature);
+    }
+
+    // 生成唯一请求ID
+    generateRequestId() {
+        return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // 简单哈希函数
+    simpleHash(str) {
+        let hash = 0;
+        if (str.length === 0) return hash.toString();
+        
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // 转换为32位整数
+        }
+        
+        return Math.abs(hash).toString(36);
+    }
+
     // 清理日志队列
     clearLogQueue() {
         const clearedLogQueueCount = this.logQueue.length;
@@ -2530,6 +2651,10 @@ class Eagle2Ae {
         this.logQueue = [];
         this.eagleLogs = []; // 同时清理Eagle日志历史
         this.sentLogIds.clear();
+        
+        // 清理防重复导入记录
+        this.lastExportSignature = null;
+        this.lastExportTime = 0;
 
         // 强制清理后添加一条确认日志
         this.log(`🧹 Eagle日志已完全清理 - 队列: ${clearedLogQueueCount} 条, 历史: ${clearedEagleLogsCount} 条`, 'success');
@@ -2773,6 +2898,10 @@ class Eagle2Ae {
     // 检测AE扩展端口并自动匹配
     async detectAndMatchAEPort() {
         try {
+            // 暂时禁用自动端口检测，避免循环切换
+            // 这个功能需要更智能的检测逻辑
+            return;
+
             // 检测常用端口上的AE扩展
             const commonPorts = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089];
             const currentEaglePort = this.config.wsPort;
@@ -2784,23 +2913,27 @@ class Eagle2Ae {
 
                 try {
                     // 尝试检测AE扩展的特征请求
-                    const response = await fetch(`http://localhost:${port}/ae-status`, {
+                    const response = await fetch(`http://localhost:${port}/ae-extension-info`, {
                         method: 'GET',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'Eagle2Ae-Detection'
                         },
-                        signal: AbortSignal.timeout(1000) // 1秒超时
+                        signal: AbortSignal.timeout(500) // 减少超时时间
                     });
 
                     if (response.ok) {
-                        // 这可能是AE扩展在尝试连接
-                        this.log(`🔍 检测到可能的AE扩展活动在端口 ${port}`, 'info');
+                        const data = await response.json();
+                        // 只有确认是AE扩展才进行切换
+                        if (data && data.type === 'ae-extension') {
+                            this.log(`🔍 检测到AE扩展在端口 ${port}`, 'info');
 
-                        // 检查是否需要切换端口
-                        if (port !== currentEaglePort) {
-                            this.log(`💡 发现AE扩展期望的端口: ${port}，当前Eagle端口: ${currentEaglePort}`, 'info');
-                            await this.switchToMatchAEPort(port);
-                            return;
+                            // 检查是否需要切换端口
+                            if (port !== currentEaglePort) {
+                                this.log(`💡 发现AE扩展期望的端口: ${port}，当前Eagle端口: ${currentEaglePort}`, 'info');
+                                await this.switchToMatchAEPort(port);
+                                return;
+                            }
                         }
                     }
                 } catch (error) {
@@ -3018,6 +3151,7 @@ class Eagle2Ae {
 let eagle2ae = null;
 
 // Eagle插件事件处理
+if (typeof eagle !== 'undefined') {
 eagle.onPluginCreate((plugin) => {
     eagle.log.info('Eagle2Ae 插件初始化（服务模式）');
     eagle.log.debug('插件信息:', plugin);
@@ -3111,7 +3245,6 @@ eagle.onPluginRun(async () => {
         }
     }
 });
-
 eagle.onPluginShow(() => {
     eagle.log.debug('Eagle2Ae 插件显示');
 
@@ -3171,3 +3304,5 @@ eagle.onPluginBeforeExit((event) => {
         }
     }
 });
+
+} // 结束eagle对象检查

@@ -2600,6 +2600,79 @@
             line-height: 1.4;
         }
 
+        /* 新的简化文件列表样式 */
+        .file-item-simple {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .file-item-simple:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-item-simple .file-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+
+        .file-item-simple .file-name {
+            flex: 1;
+            color: #e0e0e0;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .file-item-simple .file-size {
+            color: #999;
+            font-size: 10px;
+            flex-shrink: 0;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .file-item-simple .file-type {
+            color: #999;
+            font-size: 10px;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* 导入设置样式 */
+        .import-settings {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .import-settings span {
+            font-size: 11px;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .import-settings strong {
+            color: #3498db;
+            font-weight: 600;
+        }
+
         .import-mode-info strong {
             color: #3498db;
         }
@@ -2683,14 +2756,6 @@
                         <label class="timeline-option" title="将素材放置在当前时间指针位置">
                             <input type="radio" name="quick-timeline-placement" value="current_time" checked>
                             <span>当前时间</span>
-                        </label>
-                        <label class="timeline-option" title="按导入顺序依次排列，可设置间隔时间">
-                            <input type="radio" name="quick-timeline-placement" value="sequence">
-                            <span>顺序排列</span>
-                        </label>
-                        <label class="timeline-option" title="所有素材叠加在同一时间点">
-                            <input type="radio" name="quick-timeline-placement" value="stack">
-                            <span>叠加模式</span>
                         </label>
                         <label class="timeline-option" title="将素材移至时间轴开始处（0秒位置）">
                             <input type="radio" name="quick-timeline-placement" value="timeline_start">
@@ -2803,19 +2868,10 @@
                                 <input type="radio" name="timeline-placement" value="current_time" checked>
                                 <span>当前时间</span>
                             </label>
-                            <label class="timeline-option" title="按导入顺序依次排列，可设置间隔时间">
-                                <input type="radio" name="timeline-placement" value="sequence">
-                                <span>顺序排列</span>
-                            </label>
-                            <label class="timeline-option" title="所有素材叠加在同一时间点">
-                                <input type="radio" name="timeline-placement" value="stack">
-                                <span>叠加模式</span>
-                            </label>
                             <label class="timeline-option" title="将素材移至时间轴开始处（0秒位置）">
                                 <input type="radio" name="timeline-placement" value="timeline_start">
                                 <span>时间轴开始</span>
                             </label>
-
                         </div>
                     </div>
                 </div>
@@ -2884,39 +2940,7 @@
     </div>
 
     <script src="js/CSInterface.js"></script>
-    <!-- 顺序排列间隔设置弹窗 -->
-    <div id="sequence-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>顺序排列间隔设置</h3>
-                <button class="modal-close" onclick="closeSequenceModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="interval-setting">
-                    <div class="interval-input-section">
-                        <input type="number" id="interval-value" value="1" min="0.1" step="0.1">
-                    </div>
-                    <div class="interval-unit-section">
-                        <button class="unit-button" id="unit-frame" onclick="selectUnit('frame')">
-                            <span>帧</span>
-                            <small>Frame</small>
-                        </button>
-                        <button class="unit-button active" id="unit-second" onclick="selectUnit('second')">
-                            <span>秒</span>
-                            <small>Second</small>
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-description">
-                    <p id="unit-description">设置素材之间的时间间隔（秒）</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn cancel" onclick="closeSequenceModal()">取消</button>
-                <button class="modal-btn confirm" onclick="confirmSequenceSettings()">确认</button>
-            </div>
-        </div>
-    </div>
+    <!-- 移除了顺序排列间隔设置弹窗，因为不再支持顺序排列 -->
 
     <!-- 项目旁复制模式设置弹窗 -->
     <div id="project-adjacent-modal" class="modal-overlay" style="display: none;">
@@ -3049,11 +3073,7 @@
     </div>
 
     <script>
-        // 顺序排列间隔设置弹窗功能
-        let sequenceSettings = {
-            value: 1,
-            unit: 'second' // 'second' 或 'frame'
-        };
+        // 移除了sequenceSettings变量，因为不再支持顺序排列
 
         // 导入模式设置
         let projectAdjacentSettings = {
@@ -3114,115 +3134,7 @@
 
         // 模态框显示逻辑现在由main.js处理，避免事件监听器冲突
 
-        function showSequenceModal() {
-            const modal = document.getElementById('sequence-modal');
-            const valueInput = document.getElementById('interval-value');
-
-            // 设置当前值
-            valueInput.value = sequenceSettings.value;
-
-            // 设置当前单位
-            selectUnit(sequenceSettings.unit);
-
-            modal.style.display = 'flex';
-            valueInput.focus();
-            valueInput.select();
-        }
-
-        function closeSequenceModal() {
-            const modal = document.getElementById('sequence-modal');
-            modal.style.display = 'none';
-
-            // 如果用户取消，恢复到之前的选择
-            const currentTimeRadio = document.querySelector('input[name="timeline-placement"][value="current_time"]');
-            if (currentTimeRadio) {
-                currentTimeRadio.checked = true;
-            }
-        }
-
-        function selectUnit(unit) {
-            const frameButton = document.getElementById('unit-frame');
-            const secondButton = document.getElementById('unit-second');
-            const valueInput = document.getElementById('interval-value');
-            const description = document.getElementById('unit-description');
-
-            // 更新按钮状态
-            frameButton.classList.remove('active');
-            secondButton.classList.remove('active');
-
-            if (unit === 'frame') {
-                frameButton.classList.add('active');
-                valueInput.step = '1';
-                valueInput.min = '1';
-                description.textContent = '设置素材之间的帧数间隔';
-
-                // 如果当前是小数，转换为整数
-                const currentValue = parseFloat(valueInput.value);
-                if (currentValue % 1 !== 0) {
-                    valueInput.value = Math.round(currentValue);
-                }
-            } else {
-                secondButton.classList.add('active');
-                valueInput.step = '0.1';
-                valueInput.min = '0.1';
-                description.textContent = '设置素材之间的时间间隔（秒）';
-            }
-
-            sequenceSettings.unit = unit;
-        }
-
-        function confirmSequenceSettings() {
-            const valueInput = document.getElementById('interval-value');
-            const value = parseFloat(valueInput.value);
-
-            // 验证输入
-            if (isNaN(value) || value <= 0) {
-                alert('请输入有效的数值');
-                return;
-            }
-
-            if (sequenceSettings.unit === 'frame' && value % 1 !== 0) {
-                alert('帧数必须为整数');
-                return;
-            }
-
-            // 保存设置
-            sequenceSettings.value = value;
-
-            // 关闭弹窗
-            const modal = document.getElementById('sequence-modal');
-            modal.style.display = 'none';
-
-            // 保存到本地存储
-            saveSequenceSettings();
-
-            console.log('顺序排列设置已保存:', sequenceSettings);
-        }
-
-        function saveSequenceSettings() {
-            try {
-                localStorage.setItem('ae_extension_sequence_settings', JSON.stringify(sequenceSettings));
-            } catch (e) {
-                console.warn('无法保存顺序排列设置到本地存储:', e);
-            }
-        }
-
-        function loadSequenceSettings() {
-            try {
-                const saved = localStorage.getItem('ae_extension_sequence_settings');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    sequenceSettings = { ...sequenceSettings, ...parsed };
-                }
-            } catch (e) {
-                console.warn('无法从本地存储加载顺序排列设置:', e);
-            }
-        }
-
-        // 页面加载时恢复设置
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSequenceSettings();
-        });
+        // 移除了sequence相关的函数，因为不再支持顺序排列
 
         // 数据持久化功能
         function saveProjectAdjacentSettings() {
@@ -3288,13 +3200,10 @@
 
         // 点击弹窗外部关闭
         document.addEventListener('click', function(e) {
-            const sequenceModal = document.getElementById('sequence-modal');
             const projectModal = document.getElementById('project-adjacent-modal');
             const customModal = document.getElementById('custom-folder-modal');
 
-            if (e.target === sequenceModal) {
-                closeSequenceModal();
-            } else if (e.target === projectModal) {
+            if (e.target === projectModal) {
                 closeProjectAdjacentModal();
             } else if (e.target === customModal) {
                 closeCustomFolderModal();

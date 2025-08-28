@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@crosscopy/clipboard": "^0.2.8",
+    "fs-extra": "^11.3.1"
+  }
+}

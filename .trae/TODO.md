@@ -1,9 +1,8 @@
 # TODO:
 
-- [x] remove_crosscopy_import: 移除main.js开头的@crosscopy/clipboard库引入代码 (priority: High)
-- [x] delete_package_files: 删除package.json和package-lock.json文件 (priority: High)
-- [x] restore_clipboard_methods: 将main.js中的readClipboardContent方法替换为原始的handleClipboardPaste和detectClipboardContent方法 (priority: High)
-- [x] restore_clipboard_listener: 恢复原始的setupClipboardListener方法实现 (priority: High)
-- [x] remove_test_method: 移除testClipboardFunction方法 (priority: Medium)
-- [x] remove_test_button: 移除index.html中添加的剪贴板测试按钮 (priority: Medium)
-- [ ] test_restored_functionality: 测试恢复后的剪贴板功能是否正常工作 (**IN PROGRESS**) (priority: Medium)
+- [x] 1: 检查序列帧导入的文件路径构造逻辑，修复路径分隔符和文件名构造问题 (priority: High)
+- [x] 2: 修复importSequence函数中的文件路径处理，确保能正确找到序列帧文件 (priority: High)
+- [x] 3: 检查导入模式的实现，确保序列帧导入时正确执行文件复制操作 (priority: High)
+- [x] 4: 修复序列帧导入时只生成空文件夹的问题，确保实际导入序列帧到AE项目 (priority: High)
+- [x] 5: 验证三种导入模式（直接导入、项目旁复制、指定文件夹）在序列帧导入中的正确执行 (priority: Medium)
+- [ ] 6: 测试修复后的序列帧导入功能，确保能正确导入序列帧到AE项目 (priority: High)

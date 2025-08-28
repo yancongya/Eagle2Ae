@@ -49,7 +49,7 @@ class FileHandler {
                 success: true,
                 importedCount: importResult.importedCount,
                 processedFiles: processedFiles,
-                message: `成功导入 ${importResult.importedCount} 个文件`
+                targetComp: importResult.targetComp
             };
 
         } catch (error) {
@@ -223,8 +223,15 @@ class FileHandler {
         // 规范化路径
         const normalizedTargetPath = this.normalizePath(targetPath);
 
-        // 将File对象写入到目标路径
-        await this.writeFileObjectToPath(file.file, normalizedTargetPath);
+        // 只有在用户确认后才写入文件
+        // 检查文件是否已确认导入
+        if (file.confirmed !== false) {
+            // 将File对象写入到目标路径
+            await this.writeFileObjectToPath(file.file, normalizedTargetPath);
+            this.log(`FileHandler: 剪贴板文件已保存到 ${normalizedTargetPath}`, 'debug');
+        } else {
+            this.log('FileHandler: 剪贴板文件未确认，跳过写入', 'debug');
+        }
 
         const result = {
             originalPath: file.path,
@@ -232,10 +239,9 @@ class FileHandler {
             name: fileName,
             tags: file.tags || [],
             processed: true,
-            isClipboardFile: true
+            isClipboardFile: true,
+            confirmed: file.confirmed
         };
-
-        this.log(`FileHandler: 剪贴板文件已保存到 ${normalizedTargetPath}`, 'debug');
 
         return result;
     }

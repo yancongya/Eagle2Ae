@@ -48,6 +48,16 @@ function getProjectInfo() {
                     duration: app.project.activeItem.duration,
                     frameRate: app.project.activeItem.frameRate
                 };
+            } else {
+                // 确保activeComp有默认值，避免undefined
+                result.activeComp = {
+                    name: null,
+                    id: null,
+                    width: null,
+                    height: null,
+                    duration: null,
+                    frameRate: null
+                };
             }
         }
         
@@ -145,10 +155,7 @@ function importFiles(data) {
                         if (data.importOptions && data.importOptions.createLayers) {
                             var layer = targetComp.layers.add(footage);
                             
-                            // 如果需要按序列排列
-                            if (data.importOptions.arrangeInSequence && i > 0) {
-                                layer.startTime = i * (footage.duration || 1);
-                            }
+                            // 移除了顺序排列逻辑，简化为基本的时间轴放置
                             
                             // 设置图层名称
                             layer.name = fileData.name;
@@ -212,7 +219,8 @@ function importFilesWithSettings(data) {
             success: false,
             importedCount: 0,
             error: null,
-            debug: debugLog
+            debug: debugLog,
+            targetComp: null
         };
 
         if (!data || !data.files || data.files.length === 0) {
@@ -302,7 +310,7 @@ function importFilesWithSettings(data) {
                             var layer = comp.layers.add(footageItem);
                             debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
 
-                            // 根据时间轴设置放置层
+                            // 根据时间轴设置放置层（简化版）
                             if (settings.timelineOptions && settings.timelineOptions.enabled) {
                                 debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
                                 switch (settings.timelineOptions.placement) {
@@ -310,14 +318,9 @@ function importFilesWithSettings(data) {
                                         layer.startTime = comp.time;
                                         debugLog.push("ExtendScript: 放置在当前时间: " + comp.time);
                                         break;
-                                    case 'sequence':
-                                        var interval = settings.timelineOptions.sequenceInterval || 1.0;
-                                        layer.startTime = comp.time + (i * interval);
-                                        debugLog.push("ExtendScript: 按顺序放置，时间: " + layer.startTime);
-                                        break;
-                                    case 'stack':
-                                        layer.startTime = comp.time;
-                                        debugLog.push("ExtendScript: 叠加放置，时间: " + comp.time);
+                                    case 'timeline_start':
+                                        layer.startTime = 0;
+                                        debugLog.push("ExtendScript: 放置在时间轴开始: 0");
                                         break;
                                     default:
                                         debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
@@ -348,6 +351,13 @@ function importFilesWithSettings(data) {
         result.success = true;
         result.importedCount = importedCount;
         result.debug = debugLog;
+        
+        // 设置目标合成名称
+        if (settings.addToComposition && project.activeItem && project.activeItem instanceof CompItem) {
+            result.targetComp = project.activeItem.name;
+        } else {
+            result.targetComp = "未知合成";
+        }
 
         debugLog.push("ExtendScript: 导入完成，成功导入: " + importedCount + " 个文件");
         return JSON.stringify(result);
@@ -1097,6 +1107,259 @@ function sanitizeFileName(name) {
     }
 
     return result;
+}
+
+// 导入序列帧
+function importSequence(data) {
+    try {
+        var result = {
+            success: false,
+            importedCount: 0,
+            error: null
+        };
+        
+        // 检查是否有项目
+        if (!app.project) {
+            result.error = "没有打开的项目";
+            return JSON.stringify(result);
+        }
+        
+        var targetComp = null;
+        
+        // 使用当前激活的合成
+        if (app.project.activeItem instanceof CompItem) {
+            targetComp = app.project.activeItem;
+        } else {
+            // 创建新合成
+            targetComp = app.project.items.addComp("序列帧合成 - " + data.folder, 1920, 1080, 1, 10, 30);
+        }
+        
+        app.beginUndoGroup("Eagle2Ae - 导入序列帧");
+        
+        try {
+            // 创建导入文件夹
+            var importFolder = app.project.items.addFolder("序列帧 - " + data.folder + " - " + new Date().toLocaleString());
+            
+            // 构造序列帧的第一个文件路径
+            if (data.pattern && data.start !== undefined && data.folder) {
+                // 从pattern中提取前缀和后缀
+                var patternParts = data.pattern.split('[');
+                var prefix = patternParts[0] || '';
+                var suffix = '';
+                if (patternParts.length > 1) {
+                    var rangePart = patternParts[1].split(']');
+                    if (rangePart.length > 1) {
+                        suffix = rangePart[1] || '';
+                    }
+                }
+                
+                // 直接使用序列中的第一个文件名，而不是根据start构造
+                var firstFileName = '';
+                if (data.files && data.files.length > 0) {
+                    firstFileName = data.files[0].name || data.files[0].path.split('/').pop().split('\\').pop();
+                } else {
+                    // 备用方案：根据start构造文件名
+                    var paddedNumber = String(data.start);
+                    // 根据模式确定数字位数（假设至少5位）
+                    var numberLength = 5;
+                    if (data.pattern) {
+                        var numberMatch = data.pattern.match(/\[(\d+)-(\d+)\]/);
+                        if (numberMatch) {
+                            numberLength = Math.max(numberMatch[1].length, numberMatch[2].length);
+                        }
+                    }
+                    while (paddedNumber.length < numberLength) {
+                        paddedNumber = '0' + paddedNumber;
+                    }
+                    firstFileName = prefix + paddedNumber + suffix;
+                }
+                // 首先尝试使用传递的文件路径
+                var firstFile = null;
+                var firstFilePath = '';
+                
+                if (data.files && data.files.length > 0) {
+                    // 优先使用传递的第一个文件路径
+                    firstFilePath = data.files[0].path;
+                    firstFile = new File(firstFilePath);
+                }
+                
+                // 如果传递的路径不存在，尝试构造路径
+                if (!firstFile || !firstFile.exists) {
+                    firstFilePath = data.folder + '/' + firstFileName;
+                    firstFile = new File(firstFilePath);
+                    
+                    // 尝试Windows路径分隔符
+                    if (!firstFile.exists) {
+                        firstFilePath = data.folder + '\\' + firstFileName;
+                        firstFile = new File(firstFilePath);
+                    }
+                }
+                
+                if (firstFile.exists) {
+                    var importOptions = new ImportOptions(firstFile);
+                    importOptions.importAs = ImportAsType.FOOTAGE;
+                    importOptions.sequence = true; // 作为序列帧导入
+                    
+                    var footage = app.project.importFile(importOptions);
+                    
+                    if (footage) {
+                        // 设置到导入文件夹
+                        footage.parentFolder = importFolder;
+                        
+                        // 添加到合成
+                        var layer = targetComp.layers.add(footage);
+                        layer.name = "序列帧 - " + data.folder.split('/').pop().split('\\').pop();
+                        
+                        result.success = true;
+                        result.importedCount = 1;
+                        result.targetComp = targetComp.name;
+                    } else {
+                        result.error = "序列帧导入失败";
+                    }
+                } else {
+                    result.error = "序列帧文件不存在: " + firstFilePath;
+                }
+            } else if (data.files && data.files.length > 0) {
+                // 备用方案：使用传递的第一个文件
+                var firstFile = new File(data.files[0].path);
+                
+                if (firstFile.exists) {
+                    var importOptions = new ImportOptions(firstFile);
+                    importOptions.importAs = ImportAsType.FOOTAGE;
+                    importOptions.sequence = true; // 作为序列帧导入
+                    
+                    var footage = app.project.importFile(importOptions);
+                    
+                    if (footage) {
+                        // 设置到导入文件夹
+                        footage.parentFolder = importFolder;
+                        
+                        // 添加到合成
+                        var layer = targetComp.layers.add(footage);
+                        layer.name = "序列帧 - " + data.folder;
+                        
+                        result.success = true;
+                        result.importedCount = 1;
+                        result.targetComp = targetComp.name;
+                    } else {
+                        result.error = "序列帧导入失败";
+                    }
+                } else {
+                    result.error = "序列帧文件不存在: " + data.files[0].path;
+                }
+            } else {
+                result.error = "没有序列帧文件或模式信息";
+            }
+            
+        } finally {
+            app.endUndoGroup();
+        }
+        
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            importedCount: 0
+        });
+    }
+}
+
+// 导入文件夹
+function importFolder(data) {
+    try {
+        var result = {
+            success: false,
+            importedCount: 0,
+            error: null
+        };
+        
+        // 检查是否有项目
+        if (!app.project) {
+            result.error = "没有打开的项目";
+            return JSON.stringify(result);
+        }
+        
+        var targetComp = null;
+        
+        // 使用当前激活的合成
+        if (app.project.activeItem instanceof CompItem) {
+            targetComp = app.project.activeItem;
+        } else {
+            // 创建新合成
+            targetComp = app.project.items.addComp("文件夹合成 - " + data.path, 1920, 1080, 1, 10, 30);
+        }
+        
+        app.beginUndoGroup("Eagle2Ae - 导入文件夹");
+        
+        try {
+            // 创建导入文件夹
+            var importFolder = app.project.items.addFolder("文件夹 - " + data.path + " - " + new Date().toLocaleString());
+            
+            var importedCount = 0;
+            var failedFiles = [];
+            
+            // 逐个导入文件
+            for (var i = 0; i < data.files.length; i++) {
+                var fileData = data.files[i];
+                var file = new File(fileData.path);
+                
+                if (!file.exists) {
+                    failedFiles.push(fileData.name);
+                    continue;
+                }
+                
+                try {
+                    var importOptions = new ImportOptions(file);
+                    importOptions.importAs = ImportAsType.FOOTAGE;
+                    
+                    var footage = app.project.importFile(importOptions);
+                    
+                    if (footage) {
+                        // 设置到导入文件夹
+                        footage.parentFolder = importFolder;
+                        
+                        // 添加到合成
+                        var layer = targetComp.layers.add(footage);
+                        layer.name = fileData.name;
+                        
+                        // 按顺序排列图层
+                        if (i > 0) {
+                            layer.startTime = i * 0.5; // 每个文件间隔0.5秒
+                        }
+                        
+                        importedCount++;
+                    } else {
+                        failedFiles.push(fileData.name);
+                    }
+                    
+                } catch (fileError) {
+                    failedFiles.push(fileData.name);
+                }
+            }
+            
+            result.success = importedCount > 0;
+            result.importedCount = importedCount;
+            result.targetComp = targetComp.name;
+            
+            if (failedFiles.length > 0) {
+                result.error = "部分文件导入失败: " + failedFiles.join(", ");
+            }
+            
+        } finally {
+            app.endUndoGroup();
+        }
+        
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            importedCount: 0
+        });
+    }
 }
 
 // 辅助函数：格式化时间字符串（ExtendScript兼容）
