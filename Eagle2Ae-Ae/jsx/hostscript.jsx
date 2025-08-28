@@ -458,6 +458,94 @@ function copyFile(sourcePath, targetPath) {
     }
 }
 
+// 递归复制文件夹
+function copyFolder(sourceFolderPath, targetFolderPath) {
+    try {
+        // 解码和规范化路径
+        var normalizedSourcePath = decodeURIComponent(sourceFolderPath).replace(/\//g, File.fs === "Windows" ? "\\" : "/");
+        var normalizedTargetPath = decodeURIComponent(targetFolderPath).replace(/\//g, File.fs === "Windows" ? "\\" : "/");
+        
+        var sourceFolder = new Folder(normalizedSourcePath);
+        var targetFolder = new Folder(normalizedTargetPath);
+        
+        if (!sourceFolder.exists) {
+            return JSON.stringify({
+                success: false,
+                error: "源文件夹不存在: " + normalizedSourcePath
+            });
+        }
+        
+        // 创建目标文件夹
+        if (!targetFolder.exists) {
+            var created = targetFolder.create();
+            if (!created) {
+                return JSON.stringify({
+                    success: false,
+                    error: "无法创建目标文件夹: " + normalizedTargetPath
+                });
+            }
+        }
+        
+        var copiedFiles = 0;
+        var failedFiles = [];
+        
+        // 获取源文件夹中的所有文件和子文件夹
+        var contents = sourceFolder.getFiles();
+        
+        for (var i = 0; i < contents.length; i++) {
+            var item = contents[i];
+            var itemName = item.name;
+            var targetItemPath = normalizedTargetPath + (File.fs === "Windows" ? "\\" : "/") + itemName;
+            
+            if (item instanceof File) {
+                // 复制文件
+                var copyResult = copyFile(item.fsName, targetItemPath);
+                var copyResultObj = JSON.parse(copyResult);
+                
+                if (copyResultObj.success) {
+                    copiedFiles++;
+                } else {
+                    failedFiles.push({
+                        file: itemName,
+                        error: copyResultObj.error
+                    });
+                }
+            } else if (item instanceof Folder) {
+                // 递归复制子文件夹
+                var subFolderResult = copyFolder(item.fsName, targetItemPath);
+                var subFolderResultObj = JSON.parse(subFolderResult);
+                
+                if (subFolderResultObj.success) {
+                    copiedFiles += subFolderResultObj.copiedFiles || 0;
+                    if (subFolderResultObj.failedFiles && subFolderResultObj.failedFiles.length > 0) {
+                        failedFiles = failedFiles.concat(subFolderResultObj.failedFiles);
+                    }
+                } else {
+                    failedFiles.push({
+                        file: itemName + " (文件夹)",
+                        error: subFolderResultObj.error
+                    });
+                }
+            }
+        }
+        
+        return JSON.stringify({
+            success: failedFiles.length === 0,
+            copiedFiles: copiedFiles,
+            failedFiles: failedFiles,
+            error: failedFiles.length > 0 ? "部分文件复制失败" : null
+        });
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            sourcePath: sourceFolderPath,
+            targetPath: targetFolderPath
+        });
+    }
+}
+
 // 检查是否为图片序列
 function isImageSequence(filename) {
     // 简单的图片序列检测逻辑
@@ -1111,37 +1199,155 @@ function sanitizeFileName(name) {
 
 // 导入序列帧
 function importSequence(data) {
+    var debugLog = [];
+    
     try {
+        debugLog.push("ExtendScript: importSequence 开始");
+        debugLog.push("ExtendScript: 接收到的数据: " + JSON.stringify(data));
+        
         var result = {
             success: false,
             importedCount: 0,
-            error: null
+            error: null,
+            debug: debugLog,
+            targetComp: null
         };
         
         // 检查是否有项目
         if (!app.project) {
             result.error = "没有打开的项目";
+            debugLog.push("ExtendScript: 没有打开的项目");
             return JSON.stringify(result);
         }
         
+        var project = app.project;
+        var settings = data.settings || {};
+        
+        debugLog.push("ExtendScript: 设置详情: " + JSON.stringify(settings));
+        debugLog.push("ExtendScript: 导入模式: " + settings.mode);
+        debugLog.push("ExtendScript: addToComposition = " + settings.addToComposition);
+        debugLog.push("ExtendScript: timelineOptions = " + JSON.stringify(settings.timelineOptions));
+        
         var targetComp = null;
         
-        // 使用当前激活的合成
-        if (app.project.activeItem instanceof CompItem) {
-            targetComp = app.project.activeItem;
+        // 根据导入行为设置决定目标合成
+        if (settings.addToComposition) {
+            if (project.activeItem instanceof CompItem) {
+                targetComp = project.activeItem;
+                debugLog.push("ExtendScript: 使用活动合成: " + targetComp.name);
+            } else {
+                result.error = "没有活动合成，请先选择或创建一个合成";
+                debugLog.push("ExtendScript: 没有活动合成");
+                return JSON.stringify(result);
+            }
         } else {
-            // 创建新合成
-            targetComp = app.project.items.addComp("序列帧合成 - " + data.folder, 1920, 1080, 1, 10, 30);
+            debugLog.push("ExtendScript: 设置为不添加到合成，仅导入到项目");
         }
         
         app.beginUndoGroup("Eagle2Ae - 导入序列帧");
         
         try {
-            // 创建导入文件夹
-            var importFolder = app.project.items.addFolder("序列帧 - " + data.folder + " - " + new Date().toLocaleString());
+            // 创建导入文件夹（根据设置）
+            var importFolder = null;
+            if (settings.fileManagement && settings.fileManagement.createTagFolders) {
+                importFolder = project.items.addFolder("序列帧 - " + data.folder + " - " + new Date().toLocaleString());
+                debugLog.push("ExtendScript: 创建了导入文件夹");
+            }
+            
+            // 根据导入模式处理序列帧文件
+            var processedSequencePath = null;
+            var sequenceFolderName = data.folder.split('/').pop().split('\\').pop();
+            
+            debugLog.push("ExtendScript: 开始根据导入模式处理序列帧");
+            debugLog.push("ExtendScript: 原始文件夹: " + data.folder);
+            
+            switch (settings.mode) {
+                case 'direct':
+                    debugLog.push("ExtendScript: 使用直接导入模式");
+                    processedSequencePath = data.folder;
+                    break;
+                    
+                case 'project_adjacent':
+                    debugLog.push("ExtendScript: 使用项目旁复制模式");
+                    if (!project.file) {
+                        result.error = "项目未保存，无法使用项目旁复制模式";
+                        debugLog.push("ExtendScript: 项目未保存");
+                        return JSON.stringify(result);
+                    }
+                    
+                    var projectDir = project.file.parent.fsName;
+                    var targetFolder = settings.projectAdjacentFolder || 'Eagle_Assets';
+                    var targetDir = projectDir + '\\' + targetFolder + '\\' + sequenceFolderName;
+                    
+                    debugLog.push("ExtendScript: 目标目录: " + targetDir);
+                    
+                    // 使用递归复制整个序列帧文件夹
+                    var sourceFolderPath = data.folder; // 原始序列帧文件夹路径
+                    debugLog.push("ExtendScript: 开始复制序列帧文件夹: " + sourceFolderPath + " -> " + targetDir);
+                    
+                    var copyFolderResult = copyFolder(sourceFolderPath, targetDir);
+                    var copyFolderResultObj = JSON.parse(copyFolderResult);
+                    
+                    debugLog.push("ExtendScript: 文件夹复制结果: " + copyFolderResult);
+                    
+                    if (!copyFolderResultObj.success) {
+                        result.error = "序列帧文件夹复制失败: " + copyFolderResultObj.error;
+                        debugLog.push("ExtendScript: 序列帧文件夹复制失败，终止导入");
+                        return JSON.stringify(result);
+                    } else {
+                        debugLog.push("ExtendScript: 成功复制了 " + copyFolderResultObj.copiedFiles + " 个序列帧文件");
+                        if (copyFolderResultObj.failedFiles && copyFolderResultObj.failedFiles.length > 0) {
+                            debugLog.push("ExtendScript: 部分文件复制失败: " + copyFolderResultObj.failedFiles.length + " 个");
+                        }
+                    }
+                    
+                    processedSequencePath = targetDir;
+                    break;
+                    
+                case 'custom_folder':
+                    debugLog.push("ExtendScript: 使用指定文件夹模式");
+                    if (!settings.customFolderPath) {
+                        result.error = "未设置自定义文件夹路径";
+                        debugLog.push("ExtendScript: 未设置自定义文件夹路径");
+                        return JSON.stringify(result);
+                    }
+                    
+                    var customTargetDir = settings.customFolderPath + '\\' + sequenceFolderName;
+                    debugLog.push("ExtendScript: 自定义目标目录: " + customTargetDir);
+                    
+                    // 使用递归复制整个序列帧文件夹到自定义目录
+                    var sourceFolderPath2 = data.folder; // 原始序列帧文件夹路径
+                    debugLog.push("ExtendScript: 开始复制序列帧文件夹到自定义目录: " + sourceFolderPath2 + " -> " + customTargetDir);
+                    
+                    var copyFolderResult2 = copyFolder(sourceFolderPath2, customTargetDir);
+                    var copyFolderResultObj2 = JSON.parse(copyFolderResult2);
+                    
+                    debugLog.push("ExtendScript: 自定义文件夹复制结果: " + copyFolderResult2);
+                    
+                    if (!copyFolderResultObj2.success) {
+                        result.error = "序列帧文件夹复制失败: " + copyFolderResultObj2.error;
+                        debugLog.push("ExtendScript: 序列帧文件夹复制失败，终止导入");
+                        return JSON.stringify(result);
+                    } else {
+                        debugLog.push("ExtendScript: 成功复制了 " + copyFolderResultObj2.copiedFiles + " 个序列帧文件到自定义文件夹");
+                        if (copyFolderResultObj2.failedFiles && copyFolderResultObj2.failedFiles.length > 0) {
+                            debugLog.push("ExtendScript: 部分文件复制失败: " + copyFolderResultObj2.failedFiles.length + " 个");
+                        }
+                    }
+                    
+                    processedSequencePath = customTargetDir;
+                    break;
+                    
+                default:
+                    debugLog.push("ExtendScript: 未知的导入模式，使用直接导入");
+                    processedSequencePath = data.folder;
+                    break;
+            }
+            
+            debugLog.push("ExtendScript: 处理后的序列帧路径: " + processedSequencePath);
             
             // 构造序列帧的第一个文件路径
-            if (data.pattern && data.start !== undefined && data.folder) {
+            if (data.pattern && data.start !== undefined && processedSequencePath) {
                 // 从pattern中提取前缀和后缀
                 var patternParts = data.pattern.split('[');
                 var prefix = patternParts[0] || '';
@@ -1173,27 +1379,40 @@ function importSequence(data) {
                     }
                     firstFileName = prefix + paddedNumber + suffix;
                 }
-                // 首先尝试使用传递的文件路径
+                // 根据导入模式，使用处理后的路径构造第一个文件路径
                 var firstFile = null;
                 var firstFilePath = '';
                 
-                if (data.files && data.files.length > 0) {
-                    // 优先使用传递的第一个文件路径
+                // 对于直接导入模式，优先使用传递的文件路径
+                if (settings.mode === 'direct' && data.files && data.files.length > 0) {
                     firstFilePath = data.files[0].path;
                     firstFile = new File(firstFilePath);
-                }
-                
-                // 如果传递的路径不存在，尝试构造路径
-                if (!firstFile || !firstFile.exists) {
-                    firstFilePath = data.folder + '/' + firstFileName;
-                    firstFile = new File(firstFilePath);
+                    debugLog.push("ExtendScript: 直接导入模式，使用原始文件路径: " + firstFilePath);
+                } else {
+                    // 对于复制模式，使用处理后的路径和实际的第一个文件名构造文件路径
+                    var actualFirstFileName = '';
+                    if (data.files && data.files.length > 0) {
+                        // 使用实际的第一个文件名，而不是构造的文件名
+                        actualFirstFileName = data.files[0].name || data.files[0].path.split('/').pop().split('\\').pop();
+                    } else {
+                        // 如果没有文件列表，使用构造的文件名
+                        actualFirstFileName = firstFileName;
+                    }
                     
-                    // 尝试Windows路径分隔符
+                    firstFilePath = processedSequencePath + '\\' + actualFirstFileName;
+                    firstFile = new File(firstFilePath);
+                    debugLog.push("ExtendScript: 复制模式，构造文件路径: " + firstFilePath + " (使用文件名: " + actualFirstFileName + ")");
+                    
+                    // 如果Windows路径分隔符不存在，尝试Unix路径分隔符
                     if (!firstFile.exists) {
-                        firstFilePath = data.folder + '\\' + firstFileName;
+                        firstFilePath = processedSequencePath + '/' + actualFirstFileName;
                         firstFile = new File(firstFilePath);
+                        debugLog.push("ExtendScript: 尝试Unix路径分隔符: " + firstFilePath);
                     }
                 }
+                
+                debugLog.push("ExtendScript: 第一个文件路径: " + firstFilePath);
+                debugLog.push("ExtendScript: 文件是否存在: " + firstFile.exists);
                 
                 if (firstFile.exists) {
                     var importOptions = new ImportOptions(firstFile);
@@ -1203,49 +1422,151 @@ function importSequence(data) {
                     var footage = app.project.importFile(importOptions);
                     
                     if (footage) {
-                        // 设置到导入文件夹
-                        footage.parentFolder = importFolder;
+                        debugLog.push("ExtendScript: 序列帧导入成功: " + footage.name);
                         
-                        // 添加到合成
-                        var layer = targetComp.layers.add(footage);
-                        layer.name = "序列帧 - " + data.folder.split('/').pop().split('\\').pop();
+                        // 重命名序列帧为文件夹名称
+                        footage.name = sequenceFolderName;
+                        debugLog.push("ExtendScript: 序列帧重命名为: " + footage.name);
+                        
+                        // 设置到导入文件夹
+                        if (importFolder) {
+                            footage.parentFolder = importFolder;
+                            debugLog.push("ExtendScript: 移动到导入文件夹");
+                        }
+                        
+                        // 根据设置决定是否添加到合成
+                        if (settings.addToComposition && targetComp) {
+                            debugLog.push("ExtendScript: 开始添加到合成: " + targetComp.name);
+                            
+                            var layer = targetComp.layers.add(footage);
+                            layer.name = "序列帧 - " + sequenceFolderName;
+                            debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
+                            
+                            // 根据时间轴设置放置层
+                            if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                                debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
+                                switch (settings.timelineOptions.placement) {
+                                    case 'current_time':
+                                        layer.startTime = targetComp.time;
+                                        debugLog.push("ExtendScript: 放置在当前时间: " + targetComp.time);
+                                        break;
+                                    case 'timeline_start':
+                                        layer.startTime = 0;
+                                        debugLog.push("ExtendScript: 放置在时间轴开始: 0");
+                                        break;
+                                    default:
+                                        debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
+                                        break;
+                                }
+                            } else {
+                                debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                            }
+                        } else {
+                            debugLog.push("ExtendScript: 未添加到合成 - addToComposition: " + settings.addToComposition);
+                        }
                         
                         result.success = true;
                         result.importedCount = 1;
-                        result.targetComp = targetComp.name;
+                        result.targetComp = targetComp ? targetComp.name : null;
                     } else {
                         result.error = "序列帧导入失败";
+                        debugLog.push("ExtendScript: 序列帧导入失败，footage为null");
                     }
                 } else {
                     result.error = "序列帧文件不存在: " + firstFilePath;
                 }
             } else if (data.files && data.files.length > 0) {
-                // 备用方案：使用传递的第一个文件
-                var firstFile = new File(data.files[0].path);
+                // 备用方案：根据导入模式处理文件
+                debugLog.push("ExtendScript: 使用备用方案，根据导入模式处理文件");
                 
-                if (firstFile.exists) {
-                    var importOptions = new ImportOptions(firstFile);
+                var backupFirstFile = null;
+                var backupFirstFilePath = '';
+                
+                if (settings.mode === 'direct') {
+                    // 直接导入模式，使用原始文件路径
+                    backupFirstFilePath = data.files[0].path;
+                    backupFirstFile = new File(backupFirstFilePath);
+                    debugLog.push("ExtendScript: 备用方案 - 直接导入模式，使用原始路径: " + backupFirstFilePath);
+                } else {
+                    // 复制模式，使用处理后的路径
+                    var backupFileName = data.files[0].name || data.files[0].path.split('/').pop().split('\\').pop();
+                    backupFirstFilePath = processedSequencePath + '\\' + backupFileName;
+                    backupFirstFile = new File(backupFirstFilePath);
+                    debugLog.push("ExtendScript: 备用方案 - 复制模式，构造路径: " + backupFirstFilePath + " (使用文件名: " + backupFileName + ")");
+                    
+                    // 如果Windows路径分隔符不存在，尝试Unix路径分隔符
+                    if (!backupFirstFile.exists) {
+                        backupFirstFilePath = processedSequencePath + '/' + backupFileName;
+                        backupFirstFile = new File(backupFirstFilePath);
+                        debugLog.push("ExtendScript: 备用方案 - 尝试Unix路径分隔符: " + backupFirstFilePath);
+                    }
+                }
+                
+                debugLog.push("ExtendScript: 备用方案文件路径: " + backupFirstFilePath);
+                debugLog.push("ExtendScript: 备用方案文件是否存在: " + backupFirstFile.exists);
+                
+                if (backupFirstFile.exists) {
+                    var importOptions = new ImportOptions(backupFirstFile);
                     importOptions.importAs = ImportAsType.FOOTAGE;
                     importOptions.sequence = true; // 作为序列帧导入
                     
                     var footage = app.project.importFile(importOptions);
                     
                     if (footage) {
-                        // 设置到导入文件夹
-                        footage.parentFolder = importFolder;
+                        debugLog.push("ExtendScript: 备用方案序列帧导入成功: " + footage.name);
                         
-                        // 添加到合成
-                        var layer = targetComp.layers.add(footage);
-                        layer.name = "序列帧 - " + data.folder;
+                        // 重命名序列帧为文件夹名称
+                        footage.name = sequenceFolderName;
+                        debugLog.push("ExtendScript: 序列帧重命名为: " + footage.name);
+                        
+                        // 设置到导入文件夹
+                        if (importFolder) {
+                            footage.parentFolder = importFolder;
+                            debugLog.push("ExtendScript: 移动到导入文件夹");
+                        }
+                        
+                        // 根据设置决定是否添加到合成
+                        if (settings.addToComposition && targetComp) {
+                            debugLog.push("ExtendScript: 开始添加到合成: " + targetComp.name);
+                            
+                            var layer = targetComp.layers.add(footage);
+                            // 使用已计算的文件夹名称
+                            var folderName = sequenceFolderName;
+                            layer.name = "序列帧 - " + folderName;
+                            debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
+                            
+                            // 根据时间轴设置放置层
+                            if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                                debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
+                                switch (settings.timelineOptions.placement) {
+                                    case 'current_time':
+                                        layer.startTime = targetComp.time;
+                                        debugLog.push("ExtendScript: 放置在当前时间: " + targetComp.time);
+                                        break;
+                                    case 'timeline_start':
+                                        layer.startTime = 0;
+                                        debugLog.push("ExtendScript: 放置在时间轴开始: 0");
+                                        break;
+                                    default:
+                                        debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
+                                        break;
+                                }
+                            } else {
+                                debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                            }
+                        } else {
+                            debugLog.push("ExtendScript: 未添加到合成 - addToComposition: " + settings.addToComposition);
+                        }
                         
                         result.success = true;
                         result.importedCount = 1;
-                        result.targetComp = targetComp.name;
+                        result.targetComp = targetComp ? targetComp.name : null;
                     } else {
                         result.error = "序列帧导入失败";
+                        debugLog.push("ExtendScript: 备用方案序列帧导入失败，footage为null");
                     }
                 } else {
-                    result.error = "序列帧文件不存在: " + data.files[0].path;
+                    result.error = "序列帧文件不存在: " + backupFirstFilePath;
                 }
             } else {
                 result.error = "没有序列帧文件或模式信息";
@@ -1255,13 +1576,18 @@ function importSequence(data) {
             app.endUndoGroup();
         }
         
+        debugLog.push("ExtendScript: 序列帧导入完成，成功导入: " + result.importedCount + " 个序列帧");
+        result.debug = debugLog;
         return JSON.stringify(result);
         
     } catch (error) {
+        app.endUndoGroup();
+        debugLog.push("ExtendScript: 全局错误: " + error.toString());
         return JSON.stringify({
             success: false,
             error: error.toString(),
-            importedCount: 0
+            importedCount: 0,
+            debug: debugLog
         });
     }
 }

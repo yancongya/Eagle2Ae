@@ -483,6 +483,31 @@ class FileHandler {
         });
     }
 
+    // 工具方法：递归复制文件夹
+    async copyFolder(sourceFolderPath, targetFolderPath) {
+        return new Promise((resolve, reject) => {
+            // 转义路径中的特殊字符
+            const escapedSourcePath = this.escapePathForScript(sourceFolderPath);
+            const escapedTargetPath = this.escapePathForScript(targetFolderPath);
+
+            this.csInterface.evalScript(`copyFolder(${escapedSourcePath}, ${escapedTargetPath})`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+                    if (parsedResult.success) {
+                        this.log(`FileHandler: 文件夹复制成功，复制了 ${parsedResult.copiedFiles} 个文件`, 'info');
+                        resolve(parsedResult);
+                    } else {
+                        this.log(`FileHandler: 文件夹复制失败: ${parsedResult.error}`, 'error');
+                        reject(new Error(parsedResult.error || '复制文件夹失败'));
+                    }
+                } catch (error) {
+                    this.log(`FileHandler: 解析文件夹复制结果失败: ${result}`, 'error');
+                    reject(new Error(`复制文件夹失败: ${result}`));
+                }
+            });
+        });
+    }
+
     // 工具方法：为ExtendScript转义路径
     escapePathForScript(path) {
         if (!path) return '""';

@@ -1260,7 +1260,25 @@ class AEExtension {
         
         // 处理序列帧导入
         if (isSequenceImport && message.sequence) {
-            return await this.handleSequenceImportToAE(message.sequence);
+            // 确定使用的设置：合并Eagle设置和本地最新设置
+            let effectiveSettings;
+            const localSettings = this.settingsManager.getSettings();
+
+            if (messageSettings) {
+                // 使用Eagle设置作为基础，但用本地设置覆盖关键选项
+                effectiveSettings = {
+                    ...messageSettings,
+                    // 强制使用本地的时间轴设置（用户可能刚刚更改过）
+                    timelineOptions: localSettings.timelineOptions,
+                    addToComposition: localSettings.addToComposition
+                };
+                this.log(`使用Eagle设置: ${messageSettings.mode} 模式，时间轴: ${effectiveSettings.timelineOptions.placement}`, 'info');
+            } else {
+                effectiveSettings = localSettings;
+                this.log(`使用本地设置: ${effectiveSettings.mode} 模式，时间轴: ${effectiveSettings.timelineOptions.placement}`, 'info');
+            }
+            
+            return await this.handleSequenceImportToAE(message.sequence, effectiveSettings);
         }
         
         // 处理文件夹导入
@@ -3808,7 +3826,7 @@ class AEExtension {
             // 发送更新后的状态到Eagle
             await this.sendAEStatus();
 
-            this.logDebug(`项目信息已刷新: ${projectInfo.projectName} - ${projectInfo.activeComp}`, 'debug');
+            this.logDebug(`项目信息已刷新: ${projectInfo.projectName} - ${projectInfo.activeComp ? projectInfo.activeComp.name : 'No Active Comp'}`, 'debug');
 
             return projectInfo;
         } catch (error) {
@@ -6790,6 +6808,7 @@ class AEExtension {
         
         // 按文件夹分组
         const folderGroups = {};
+        const folderFullPaths = {}; // 存储文件夹的完整路径映射
         
         files.forEach(file => {
             const category = this.getFileCategory(file);
@@ -6798,12 +6817,29 @@ class AEExtension {
             // 提取文件夹路径
             const path = file.fullPath || file.relativePath || file.webkitRelativePath || '';
             const folderPath = path.substring(0, path.lastIndexOf('/'));
+            
             if (folderPath) {
                 analysis.folders.add(folderPath);
                 if (!folderGroups[folderPath]) {
                     folderGroups[folderPath] = [];
                 }
                 folderGroups[folderPath].push(file);
+                
+                // 尝试获取完整的文件夹路径
+                if (file.originalFile && file.originalFile.path) {
+                    // 从完整文件路径中提取文件夹路径
+                    const fullFilePath = file.originalFile.path;
+                    const fullFolderPath = fullFilePath.substring(0, fullFilePath.lastIndexOf('\\'));
+                    if (fullFolderPath && !folderFullPaths[folderPath]) {
+                        folderFullPaths[folderPath] = fullFolderPath;
+                    }
+                } else if (file.path && file.path.includes('\\')) {
+                    // 直接从文件路径提取
+                    const fullFolderPath = file.path.substring(0, file.path.lastIndexOf('\\'));
+                    if (fullFolderPath && !folderFullPaths[folderPath]) {
+                        folderFullPaths[folderPath] = fullFolderPath;
+                    }
+                }
             }
         });
         
@@ -6816,8 +6852,11 @@ class AEExtension {
             this.log(`检查文件夹: ${folderPath}, 文件数: ${folderFiles.length}`, 'debug');
             const sequence = this.detectImageSequence(folderFiles);
             if (sequence) {
+                // 使用完整路径或回退到相对路径
+                const fullFolderPath = folderFullPaths[folderPath] || folderPath;
+                
                 analysis.sequences.push({
-                    folder: folderPath,
+                    folder: fullFolderPath, // 使用完整路径
                     files: sequence.files,
                     pattern: sequence.pattern,
                     start: sequence.start,
@@ -7298,7 +7337,7 @@ class AEExtension {
 }
 
 // 处理序列帧导入到AE
-async handleSequenceImportToAE(sequence) {
+async handleSequenceImportToAE(sequence, settings = null) {
     try {
         this.log(`🎞️ 开始导入序列帧: ${sequence.folder}`, 'info');
         this.log(`📊 序列帧信息: ${sequence.pattern}, 范围: ${sequence.start}-${sequence.end}, 文件数: ${sequence.totalFiles}`, 'info');
@@ -7311,6 +7350,9 @@ async handleSequenceImportToAE(sequence) {
             throw new Error('没有活动合成，请先选择或创建一个合成');
         }
         
+        // 使用传入的设置或默认设置
+        const effectiveSettings = settings || this.settingsManager.getSettings();
+        
         // 构造序列帧导入参数
         const sequenceData = {
             type: 'sequence',
@@ -7320,7 +7362,9 @@ async handleSequenceImportToAE(sequence) {
             end: sequence.end,
             step: sequence.step || 1,
             files: sequence.files,
-            totalFiles: sequence.totalFiles
+            totalFiles: sequence.totalFiles,
+            // 添加导入设置
+            settings: effectiveSettings
         };
         
         // 调用AE脚本导入序列帧
@@ -7328,7 +7372,7 @@ async handleSequenceImportToAE(sequence) {
         
         if (result && result.success) {
             this.log(`✅ 序列帧导入成功: ${sequence.folder}`, 'success');
-            return { success: true, importedCount: 1, targetComp: projectInfo.activeComp.name };
+            return { success: true, importedCount: 1, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
         } else {
             throw new Error(result ? result.error : '序列帧导入失败');
         }
@@ -7366,7 +7410,7 @@ async handleFolderImportToAE(folder) {
         
         if (result && result.success) {
             this.log(`✅ 文件夹导入成功: ${folder.path}`, 'success');
-            return { success: true, importedCount: folder.totalFiles, targetComp: projectInfo.activeComp.name };
+            return { success: true, importedCount: folder.totalFiles, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
         } else {
             throw new Error(result ? result.error : '文件夹导入失败');
         }
@@ -7427,14 +7471,30 @@ async handleFolderImportToAE(folder) {
             // 移除开始导入提示，直接处理
 
             // 转换文件格式以匹配现有的导入接口
-            const fileData = files.map(file => ({
-                name: file.name,
-                path: file.path || file.webkitRelativePath || file.name,
-                size: file.size,
-                type: file.type,
-                lastModified: file.lastModified,
-                isDragImport: true
-            }));
+            const fileData = files.map(file => {
+                // 尝试获取完整路径信息
+                let fullPath = file.path || file.webkitRelativePath || file.name;
+                
+                // 如果是拖拽导入且有完整路径信息，尝试提取目录路径
+                if (file.path && file.path.includes('\\')) {
+                    // Windows路径格式，保持完整路径
+                    fullPath = file.path;
+                } else if (file.webkitRelativePath) {
+                    // 相对路径，需要结合其他信息构建完整路径
+                    fullPath = file.webkitRelativePath;
+                }
+                
+                return {
+                    name: file.name,
+                    path: fullPath,
+                    size: file.size,
+                    type: file.type,
+                    lastModified: file.lastModified,
+                    isDragImport: true,
+                    // 添加原始文件对象引用，用于后续路径解析
+                    originalFile: file
+                };
+            });
 
             // 构造消息对象，模拟Eagle扩展发送的消息格式
             const message = {
