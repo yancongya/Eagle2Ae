@@ -4411,6 +4411,45 @@ class AEExtension {
             });
         }
 
+        // 高级设置导入行为选项
+        const advancedImportBehaviorRadios = document.querySelectorAll('input[name="advanced-import-behavior"]');
+        advancedImportBehaviorRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    this.log(`高级设置导入行为已更改为: ${radio.value}`, 'info');
+                    
+                    // 根据导入行为更新设置
+                    if (radio.value === 'no_import') {
+                        // 不导入合成
+                        this.settingsManager.updateField('addToComposition', false, false);
+                    } else {
+                        // 导入到合成，并设置时间轴位置
+                        this.settingsManager.updateField('addToComposition', true, false);
+                        this.settingsManager.updateField('timelineOptions.placement', radio.value, false);
+                    }
+                    
+                    this.updateSettingsUI();
+                    
+                    // 同步到快速设置面板
+                    if (this.quickSettingsInitialized) {
+                        const quickRadio = document.querySelector(`input[name="import-behavior"][value="${radio.value}"]`);
+                        if (quickRadio) {
+                            quickRadio.checked = true;
+                            this.log(`已同步到快速设置面板: ${radio.value}`, 'info');
+                        }
+                    }
+                    
+                    // 显示设置说明
+                    const descriptions = {
+                        'no_import': '素材将仅复制到项目文件夹，不导入到合成',
+                        'current_time': '素材将导入到合成并放置在当前时间指针位置',
+                        'timeline_start': '素材将导入到合成并移至时间轴开始处（0秒位置）'
+                    };
+                    this.log(`设置说明: ${descriptions[radio.value]}`, 'info');
+                }
+            });
+        });
+
         // 合成导入选项
         const addToCompositionCheckbox = document.getElementById('add-to-composition');
         if (addToCompositionCheckbox) {
@@ -4438,7 +4477,7 @@ class AEExtension {
                         this.settingsManager.updateField('timelineOptions.placement', radio.value, false);
 
                         // 同步到快速设置面板
-                        const quickRadio = document.querySelector(`input[name="quick-timeline-placement"][value="${radio.value}"]`);
+                        const quickRadio = document.querySelector(`input[name="import-behavior"][value="${radio.value}"]`);
                         if (quickRadio) {
                             quickRadio.checked = true;
                             this.log(`已同步到快速设置面板: ${radio.value}`, 'info');
@@ -4607,27 +4646,39 @@ class AEExtension {
         const addToComposition = document.getElementById('add-to-composition');
         if (addToComposition) {
             addToComposition.checked = settings.addToComposition;
-            // 同步到快速设置
-            const quickAddToComp = document.getElementById('quick-add-to-comp');
-            if (quickAddToComp) {
-                if (settings.addToComposition) {
-                    quickAddToComp.classList.add('active');
-                    quickAddToComp.querySelector('span').textContent = '✓ 导入合成';
-                } else {
-                    quickAddToComp.classList.remove('active');
-                    quickAddToComp.querySelector('span').textContent = '导入合成';
-                }
-            }
+        }
+
+        // 高级设置导入行为选项
+        let advancedImportBehaviorValue;
+        if (!settings.addToComposition) {
+            advancedImportBehaviorValue = 'no_import';
+        } else {
+            advancedImportBehaviorValue = settings.timelineOptions.placement;
+        }
+        
+        const advancedImportBehaviorRadio = document.querySelector(`input[name="advanced-import-behavior"][value="${advancedImportBehaviorValue}"]`);
+        if (advancedImportBehaviorRadio) {
+            advancedImportBehaviorRadio.checked = true;
         }
 
         // 时间轴选项
         const timelinePlacementRadio = document.querySelector(`input[name="timeline-placement"][value="${settings.timelineOptions.placement}"]`);
         if (timelinePlacementRadio) {
             timelinePlacementRadio.checked = true;
-            // 同步到快速设置
-            const quickTimelineRadio = document.querySelector(`input[name="quick-timeline-placement"][value="${settings.timelineOptions.placement}"]`);
+        }
+        
+        // 同步到快速设置的导入行为选项
+        if (settings.addToComposition) {
+            // 如果启用了添加到合成，则根据时间轴位置设置对应选项
+            const quickTimelineRadio = document.querySelector(`input[name="import-behavior"][value="${settings.timelineOptions.placement}"]`);
             if (quickTimelineRadio) {
                 quickTimelineRadio.checked = true;
+            }
+        } else {
+            // 如果禁用了添加到合成，则选择"不导入合成"
+            const noImportRadio = document.querySelector('input[name="import-behavior"][value="no_import"]');
+            if (noImportRadio) {
+                noImportRadio.checked = true;
             }
         }
 
@@ -5894,9 +5945,7 @@ class AEExtension {
 
         // 获取快速设置控件
         const quickImportModeRadios = document.querySelectorAll('input[name="quick-import-mode"]');
-        const quickAddToComp = document.getElementById('quick-add-to-comp');
-        const behaviorDetails = document.getElementById('behavior-details');
-        const quickTimelinePlacementRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
+        const importBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
 
         // 静默检查快速设置元素
 
@@ -5907,14 +5956,8 @@ class AEExtension {
             this.quickSettingsInitialized = false;
             return;
         }
-        if (quickTimelinePlacementRadios.length === 0) {
-            this.log('⚠️ 未找到快速时间轴选项，检查DOM结构', 'error');
-            this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
-            this.quickSettingsInitialized = false;
-            return;
-        }
-        if (!quickAddToComp) {
-            this.log('⚠️ 未找到快速添加到合成元素，检查DOM结构', 'error');
+        if (importBehaviorRadios.length === 0) {
+            this.log('⚠️ 未找到导入行为选项，检查DOM结构', 'error');
             this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
             this.quickSettingsInitialized = false;
             return;
@@ -5938,59 +5981,67 @@ class AEExtension {
             });
         });
 
-        // 添加到合成按钮点击
-        quickAddToComp.addEventListener('click', (e) => {
-            e.preventDefault();
-            const isActive = quickAddToComp.classList.contains('active');
-            const newState = !isActive;
-
-            // 切换按钮状态
-            if (newState) {
-                quickAddToComp.classList.add('active');
-                quickAddToComp.querySelector('span').textContent = '✓ 导入合成';
-            } else {
-                quickAddToComp.classList.remove('active');
-                quickAddToComp.querySelector('span').textContent = '导入合成';
-            }
-
-            // 静默更新设置
-            this.updateQuickSetting('addToComposition', newState);
-            this.updateQuickSettingsVisibility();
-
-            // 同步到高级设置面板
-            const advancedAddToComp = document.getElementById('add-to-composition');
-            if (advancedAddToComp) {
-                advancedAddToComp.checked = newState;
-            }
-        });
-
-        // 时间轴放置模式变化
-        quickTimelinePlacementRadios.forEach((radio, index) => {
-            // 绑定时间轴选项事件
+        // 导入行为变化 - 重新实现的纯radio按钮逻辑
+        importBehaviorRadios.forEach(radio => {
             radio.addEventListener('change', (e) => {
-                this.log(`快速时间轴选项被点击: ${e.target.value}, checked: ${e.target.checked}`, 'info');
                 if (e.target.checked) {
-                    this.log(`时间轴设置已更改为: ${e.target.value}`, 'info');
-
-                    // 移除了sequence模态框逻辑
-
-                    this.updateQuickSetting('timelineOptions.placement', e.target.value);
-
-                    // 同步到高级设置面板
-                    const advancedRadio = document.querySelector(`input[name="timeline-placement"][value="${e.target.value}"]`);
-                    if (advancedRadio) {
-                        advancedRadio.checked = true;
-                        this.log(`已同步到高级设置面板: ${e.target.value}`, 'info');
+                    this.log(`导入行为已更改为: ${e.target.value}`, 'info');
+                    
+                    // 更新图层操作按钮的视觉状态
+                    this.updateLayerOperationButtonsVisual(e.target.value);
+                    
+                    // 根据选择的行为更新设置
+                    if (e.target.value === 'no_import') {
+                        // 选择"不导入合成"
+                        this.updateQuickSetting('addToComposition', false);
+                        
+                        // 同步到高级设置面板
+                        const advancedAddToComp = document.getElementById('add-to-composition');
+                        if (advancedAddToComp) {
+                            advancedAddToComp.checked = false;
+                        }
+                        
+                        // 同步到高级设置导入行为单选按钮
+                        const advancedImportBehaviorRadio = document.querySelector(`input[name="advanced-import-behavior"][value="no_import"]`);
+                        if (advancedImportBehaviorRadio) {
+                            advancedImportBehaviorRadio.checked = true;
+                            this.log(`已同步到高级设置导入行为: no_import`, 'info');
+                        }
+                        
+                        this.log('设置说明: 素材将仅导入到项目面板，不会添加到合成中', 'info');
                     } else {
-                        this.log(`未找到对应的高级设置选项: ${e.target.value}`, 'warning');
+                        // 选择时间轴相关选项
+                        this.updateQuickSetting('addToComposition', true);
+                        this.updateQuickSetting('timelineOptions.placement', e.target.value);
+                        
+                        // 同步到高级设置面板
+                        const advancedAddToComp = document.getElementById('add-to-composition');
+                        if (advancedAddToComp) {
+                            advancedAddToComp.checked = true;
+                        }
+                        
+                        const advancedRadio = document.querySelector(`input[name="timeline-placement"][value="${e.target.value}"]`);
+                        if (advancedRadio) {
+                            advancedRadio.checked = true;
+                            this.log(`已同步到高级设置面板: ${e.target.value}`, 'info');
+                        }
+                        
+                        // 同步到高级设置导入行为单选按钮
+                        const advancedImportBehaviorRadio = document.querySelector(`input[name="advanced-import-behavior"][value="${e.target.value}"]`);
+                        if (advancedImportBehaviorRadio) {
+                            advancedImportBehaviorRadio.checked = true;
+                            this.log(`已同步到高级设置导入行为: ${e.target.value}`, 'info');
+                        }
+                        
+                        // 显示设置说明
+                        const descriptions = {
+                            'current_time': '素材将添加到合成并放置在当前时间指针位置',
+                            'timeline_start': '素材将添加到合成并移至时间轴开始处（0秒位置）'
+                        };
+                        this.log(`设置说明: ${descriptions[e.target.value]}`, 'info');
                     }
-
-                    // 显示设置说明
-                    const descriptions = {
-                        'current_time': '素材将放置在当前时间指针位置',
-                        'timeline_start': '素材将移至时间轴开始处（0秒位置）'
-                    };
-                    this.log(`设置说明: ${descriptions[e.target.value]}`, 'info');
+                    
+                    this.updateQuickSettingsVisibility();
                 }
             });
         });
@@ -6005,17 +6056,33 @@ class AEExtension {
             }
         });
 
-        this.settingsManager.addFieldListener('timelineOptions.placement', (newValue) => {
-            const currentRadio = document.querySelector(`input[name="quick-timeline-placement"][value="${newValue}"]`);
-            if (currentRadio && !currentRadio.checked) {
-                currentRadio.checked = true;
+        this.settingsManager.addFieldListener('addToComposition', (newValue) => {
+            // 根据addToComposition的值来设置导入行为选项
+            if (newValue) {
+                // 如果启用了添加到合成，则根据timelineOptions.placement设置对应选项
+                const placement = this.settingsManager.getField('timelineOptions.placement');
+                const currentRadio = document.querySelector(`input[name="import-behavior"][value="${placement}"]`);
+                if (currentRadio && !currentRadio.checked) {
+                    currentRadio.checked = true;
+                }
+            } else {
+                // 如果禁用了添加到合成，则选择"不导入合成"
+                const noImportRadio = document.querySelector('input[name="import-behavior"][value="no_import"]');
+                if (noImportRadio && !noImportRadio.checked) {
+                    noImportRadio.checked = true;
+                }
             }
+            this.updateQuickSettingsVisibility();
         });
 
-        this.settingsManager.addFieldListener('addToComposition', (newValue) => {
-            if (quickAddToComp.checked !== newValue) {
-                quickAddToComp.checked = newValue;
-                this.updateQuickSettingsVisibility();
+        this.settingsManager.addFieldListener('timelineOptions.placement', (newValue) => {
+            // 只有在addToComposition为true时才更新导入行为选项
+            const addToComp = this.settingsManager.getField('addToComposition');
+            if (addToComp) {
+                const currentRadio = document.querySelector(`input[name="import-behavior"][value="${newValue}"]`);
+                if (currentRadio && !currentRadio.checked) {
+                    currentRadio.checked = true;
+                }
             }
         });
 
@@ -6075,20 +6142,26 @@ class AEExtension {
 
     // 更新快速设置的可见性
     updateQuickSettingsVisibility() {
-        const addToCompButton = document.getElementById('quick-add-to-comp');
-        const timelineOptionsContainer = addToCompButton ? addToCompButton.parentElement : null;
+        // 新的导入行为单选按钮不需要特殊的可见性控制
+        // 因为所有选项都是平等的单选按钮
+        // 这个函数保留为空，以保持兼容性
+    }
 
-        // 检查元素是否存在
-        if (!addToCompButton || !timelineOptionsContainer) {
-            return;
-        }
-
-        // 根据添加到合成按钮状态显示/隐藏时间轴选择器
-        const isActive = addToCompButton.classList.contains('active');
-        if (isActive) {
-            timelineOptionsContainer.classList.remove('disabled');
-        } else {
-            timelineOptionsContainer.classList.add('disabled');
+    // 更新图层操作按钮的视觉状态
+    updateLayerOperationButtonsVisual(importBehavior) {
+        const detectButton = document.querySelector('.layer-operation-button[onclick*="detectLayers"]');
+        const exportButton = document.querySelector('.layer-operation-button[onclick*="exportLayers"]');
+        
+        if (detectButton && exportButton) {
+            if (importBehavior === 'no_import') {
+                // 当选择"不导入合成"时，添加dimmed类使按钮变灰
+                detectButton.classList.add('dimmed');
+                exportButton.classList.add('dimmed');
+            } else {
+                // 其他情况下移除dimmed类，恢复正常样式
+                detectButton.classList.remove('dimmed');
+                exportButton.classList.remove('dimmed');
+            }
         }
     }
 
@@ -6107,28 +6180,23 @@ class AEExtension {
                 this.log(`找不到导入模式选项: ${settings.mode}`, 'warning');
             }
 
-            // 设置添加到合成按钮
-            const quickAddToComp = document.getElementById('quick-add-to-comp');
-            if (quickAddToComp) {
-                if (settings.addToComposition) {
-                    quickAddToComp.classList.add('active');
-                    quickAddToComp.querySelector('span').textContent = '✓ 导入合成';
+            // 设置导入行为选项
+            if (settings.addToComposition) {
+                // 如果启用了添加到合成，则根据时间轴位置设置对应选项
+                const quickTimelineRadio = document.querySelector(`input[name="import-behavior"][value="${settings.timelineOptions.placement}"]`);
+                if (quickTimelineRadio) {
+                    quickTimelineRadio.checked = true;
                 } else {
-                    quickAddToComp.classList.remove('active');
-                    quickAddToComp.querySelector('span').textContent = '导入合成';
+                    this.log(`找不到导入行为选项: ${settings.timelineOptions.placement}`, 'warning');
                 }
-                // 快速添加到合成已设置
             } else {
-                this.log('找不到快速添加到合成按钮', 'warning');
-            }
-
-            // 设置时间轴放置模式
-            const quickTimelineRadio = document.querySelector(`input[name="quick-timeline-placement"][value="${settings.timelineOptions.placement}"]`);
-            if (quickTimelineRadio) {
-                quickTimelineRadio.checked = true;
-                // 快速时间轴模式已设置
-            } else {
-                this.log(`找不到时间轴放置选项: ${settings.timelineOptions.placement}`, 'warning');
+                // 如果禁用了添加到合成，则选择"不导入合成"
+                const noImportRadio = document.querySelector('input[name="import-behavior"][value="no_import"]');
+                if (noImportRadio) {
+                    noImportRadio.checked = true;
+                } else {
+                    this.log('找不到"不导入合成"选项', 'warning');
+                }
             }
 
             // 同步到高级设置面板
@@ -6139,6 +6207,10 @@ class AEExtension {
 
             // 更新按钮样式
             this.updateModeButtonStyles();
+
+            // 更新图层操作按钮的视觉状态
+            const currentImportBehavior = settings.addToComposition ? settings.timelineOptions.placement : 'no_import';
+            this.updateLayerOperationButtonsVisual(currentImportBehavior);
 
             // 快速设置加载完成
 
@@ -6160,19 +6232,21 @@ class AEExtension {
                 }
             }
 
-            // 同步添加到合成
-            const quickAddToComp = document.getElementById('quick-add-to-comp');
+            // 同步导入行为选项
+            const quickImportBehavior = document.querySelector('input[name="import-behavior"]:checked');
             const advancedAddToComp = document.getElementById('add-to-composition');
-            if (quickAddToComp && advancedAddToComp) {
-                advancedAddToComp.checked = quickAddToComp.checked;
-            }
-
-            // 同步时间轴选项
-            const quickTimelinePlacement = document.querySelector('input[name="quick-timeline-placement"]:checked');
-            if (quickTimelinePlacement) {
-                const advancedTimelinePlacement = document.querySelector(`input[name="timeline-placement"][value="${quickTimelinePlacement.value}"]`);
-                if (advancedTimelinePlacement) {
-                    advancedTimelinePlacement.checked = true;
+            
+            if (quickImportBehavior && advancedAddToComp) {
+                if (quickImportBehavior.value === 'no_import') {
+                    // 选择了"不导入合成"
+                    advancedAddToComp.checked = false;
+                } else {
+                    // 选择了时间轴位置选项
+                    advancedAddToComp.checked = true;
+                    const advancedTimelinePlacement = document.querySelector(`input[name="timeline-placement"][value="${quickImportBehavior.value}"]`);
+                    if (advancedTimelinePlacement) {
+                        advancedTimelinePlacement.checked = true;
+                    }
                 }
             }
 
@@ -6185,7 +6259,7 @@ class AEExtension {
 
     // 更新模式按钮样式
     updateModeButtonStyles() {
-        const modeButtons = document.querySelectorAll('.mode-button');
+        const modeButtons = document.querySelectorAll('.mode-button, .import-behavior-button');
         modeButtons.forEach(button => {
             const radio = button.querySelector('input[type="radio"]');
             if (radio && radio.checked) {
@@ -6221,22 +6295,22 @@ class AEExtension {
         // 检查快速设置初始化状态
         this.log(`快速设置初始化状态: ${this.quickSettingsInitialized}`, 'info');
 
-        // 检查时间轴选项的DOM状态（分组显示）
-        const quickTimelineRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
+        // 检查导入行为选项的DOM状态（分组显示）
+        const quickImportBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
         const advancedTimelineRadios = document.querySelectorAll('input[name="timeline-placement"]');
 
-        this.log(`快速选项: ${quickTimelineRadios.length}个, 高级选项: ${advancedTimelineRadios.length}个`, 'info');
+        this.log(`快速导入行为选项: ${quickImportBehaviorRadios.length}个, 高级时间轴选项: ${advancedTimelineRadios.length}个`, 'info');
 
-        quickTimelineRadios.forEach((radio, index) => {
-            this.log(`快速选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}`, 'debug', {
+        quickImportBehaviorRadios.forEach((radio, index) => {
+            this.log(`快速导入行为选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}`, 'debug', {
                 group: 'DOM状态检查',
                 collapsed: true,
-                groupEnd: index === quickTimelineRadios.length - 1 && advancedTimelineRadios.length === 0
+                groupEnd: index === quickImportBehaviorRadios.length - 1 && advancedTimelineRadios.length === 0
             });
         });
 
         advancedTimelineRadios.forEach((radio, index) => {
-            this.log(`高级选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}`, 'debug', {
+            this.log(`高级时间轴选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}`, 'debug', {
                 group: 'DOM状态检查',
                 collapsed: true,
                 groupEnd: index === advancedTimelineRadios.length - 1
@@ -6244,21 +6318,24 @@ class AEExtension {
         });
 
         // 检查当前设置和UI是否一致
-        const currentSetting = this.settingsManager.getSettings().timelineOptions.placement;
-        const quickCheckedRadio = document.querySelector('input[name="quick-timeline-placement"]:checked');
+        const settings = this.settingsManager.getSettings();
+        const quickCheckedRadio = document.querySelector('input[name="import-behavior"]:checked');
         const advancedCheckedRadio = document.querySelector('input[name="timeline-placement"]:checked');
         const quickCheckedValue = quickCheckedRadio ? quickCheckedRadio.value : 'none';
         const advancedCheckedValue = advancedCheckedRadio ? advancedCheckedRadio.value : 'none';
+        
+        // 根据设置确定期望的快速选项值
+        const expectedQuickValue = settings.addToComposition ? settings.timelineOptions.placement : 'no_import';
 
-        this.log(`设置存储值: ${currentSetting}`, 'info');
+        this.log(`期望的快速选项值: ${expectedQuickValue}`, 'info');
         this.log(`快速UI选中值: ${quickCheckedValue}`, 'info');
         this.log(`高级UI选中值: ${advancedCheckedValue}`, 'info');
-        this.log(`快速设置和存储一致: ${currentSetting === quickCheckedValue}`, 'info');
-        this.log(`高级设置和存储一致: ${currentSetting === advancedCheckedValue}`, 'info');
-        this.log(`快速和高级设置一致: ${quickCheckedValue === advancedCheckedValue}`, 'info');
+        this.log(`快速设置和期望一致: ${expectedQuickValue === quickCheckedValue}`, 'info');
+        this.log(`高级设置和存储一致: ${settings.timelineOptions.placement === advancedCheckedValue}`, 'info');
+        this.log(`添加到合成设置: ${settings.addToComposition}`, 'info');
 
         // 检查设置同步状态
-        if (currentSetting !== quickCheckedValue || currentSetting !== advancedCheckedValue) {
+        if (expectedQuickValue !== quickCheckedValue || settings.timelineOptions.placement !== advancedCheckedValue) {
             this.log('⚠️ 检测到设置不同步，尝试修复...', 'warning');
             this.syncSettingsUI();
         } else {
@@ -6275,20 +6352,25 @@ class AEExtension {
     // 同步设置UI
     syncSettingsUI() {
         const settings = this.settingsManager.getSettings();
-        const targetPlacement = settings.timelineOptions.placement;
+        const expectedQuickValue = settings.addToComposition ? settings.timelineOptions.placement : 'no_import';
 
-        this.log(`正在同步UI到设置值: ${targetPlacement}`, 'info');
+        this.log(`正在同步UI到设置值: addToComposition=${settings.addToComposition}, placement=${settings.timelineOptions.placement}`, 'info');
 
-        // 同步快速设置
-        const quickRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
+        // 同步快速导入行为设置
+        const quickRadios = document.querySelectorAll('input[name="import-behavior"]');
         quickRadios.forEach(radio => {
-            radio.checked = (radio.value === targetPlacement);
+            radio.checked = (radio.value === expectedQuickValue);
         });
 
         // 同步高级设置
+        const advancedAddToComp = document.getElementById('add-to-composition');
+        if (advancedAddToComp) {
+            advancedAddToComp.checked = settings.addToComposition;
+        }
+        
         const advancedRadios = document.querySelectorAll('input[name="timeline-placement"]');
         advancedRadios.forEach(radio => {
-            radio.checked = (radio.value === targetPlacement);
+            radio.checked = (radio.value === settings.timelineOptions.placement);
         });
 
         this.log('UI同步完成', 'success');
@@ -6421,11 +6503,11 @@ class AEExtension {
     testQuickSettingsEventListeners() {
         this.log('🧪 测试快速设置事件监听器...', 'info');
 
-        // 测试快速时间轴选项
-        const quickTimelineRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
-        quickTimelineRadios.forEach((radio, index) => {
+        // 测试快速导入行为选项
+        const quickImportBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
+        quickImportBehaviorRadios.forEach((radio, index) => {
             const hasEventListener = radio.onclick !== null || radio.onchange !== null;
-            this.log(`快速时间轴选项 ${index + 1} (${radio.value}): 事件监听器${hasEventListener ? '已绑定' : '未绑定'}`, hasEventListener ? 'info' : 'warning');
+            this.log(`快速导入行为选项 ${index + 1} (${radio.value}): 事件监听器${hasEventListener ? '已绑定' : '未绑定'}`, hasEventListener ? 'info' : 'warning');
         });
 
         // 测试快速导入模式选项
@@ -6450,16 +6532,16 @@ class AEExtension {
         this.log(`🔧 手动测试快速设置变化: ${type} = ${value}`, 'info');
         this.log(`当前快速设置初始化状态: ${this.quickSettingsInitialized}`, 'info');
 
-        if (type === 'timeline') {
-            const radio = document.querySelector(`input[name="quick-timeline-placement"][value="${value}"]`);
+        if (type === 'import_behavior') {
+            const radio = document.querySelector(`input[name="import-behavior"][value="${value}"]`);
             if (radio) {
-                this.log(`找到时间轴选项元素: ${value}`, 'info');
+                this.log(`找到导入行为选项元素: ${value}`, 'info');
                 radio.checked = true;
                 this.log(`已设置checked为true`, 'info');
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
-                this.log(`✅ 已触发快速时间轴选项变化: ${value}`, 'success');
+                this.log(`✅ 已触发快速导入行为选项变化: ${value}`, 'success');
             } else {
-                this.log(`❌ 未找到快速时间轴选项: ${value}`, 'error');
+                this.log(`❌ 未找到快速导入行为选项: ${value}`, 'error');
             }
         } else if (type === 'mode') {
             const radio = document.querySelector(`input[name="quick-import-mode"][value="${value}"]`);
@@ -6502,12 +6584,10 @@ class AEExtension {
 
         // 检查DOM元素
         const quickImportModeRadios = document.querySelectorAll('input[name="quick-import-mode"]');
-        const quickTimelinePlacementRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
-        const quickAddToComp = document.getElementById('quick-add-to-comp');
+        const quickImportBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
 
         this.log(`快速导入模式选项数量: ${quickImportModeRadios.length}`, 'info');
-        this.log(`快速时间轴选项数量: ${quickTimelinePlacementRadios.length}`, 'info');
-        this.log(`快速添加到合成元素: ${quickAddToComp ? '存在' : '不存在'}`, 'info');
+        this.log(`快速导入行为选项数量: ${quickImportBehaviorRadios.length}`, 'info');
 
         // 检查每个导入模式选项
         quickImportModeRadios.forEach((radio, index) => {
@@ -6519,9 +6599,9 @@ class AEExtension {
             this.log(`  事件监听器: change=${hasChangeListener}, click=${hasClickListener}`, 'info');
         });
 
-        // 检查每个时间轴选项
-        quickTimelinePlacementRadios.forEach((radio, index) => {
-            this.log(`时间轴选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}, id="${radio.id}"`, 'info');
+        // 检查每个导入行为选项
+        quickImportBehaviorRadios.forEach((radio, index) => {
+            this.log(`导入行为选项 ${index + 1}: value="${radio.value}", checked=${radio.checked}, id="${radio.id}"`, 'info');
 
             // 检查事件监听器
             const hasChangeListener = radio.onchange !== null;
@@ -6564,41 +6644,36 @@ class AEExtension {
             });
         });
 
-        // 重新绑定时间轴事件监听器
-        const quickTimelinePlacementRadios = document.querySelectorAll('input[name="quick-timeline-placement"]');
-        quickTimelinePlacementRadios.forEach((radio) => {
-            // 重新绑定时间轴选项
+        // 重新绑定导入行为事件监听器
+        const quickImportBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
+        quickImportBehaviorRadios.forEach((radio) => {
+            // 重新绑定导入行为选项
 
             // 移除旧的监听器（如果存在）
             radio.onchange = null;
 
             // 添加新的监听器
             radio.addEventListener('change', (e) => {
-                this.log(`🎯 时间轴事件触发: ${e.target.value}, checked: ${e.target.checked}`, 'info');
+                this.log(`🎯 导入行为事件触发: ${e.target.value}, checked: ${e.target.checked}`, 'info');
                 if (e.target.checked) {
-                    this.log(`时间轴设置已更改为: ${e.target.value}`, 'info');
+                    this.log(`导入行为设置已更改为: ${e.target.value}`, 'info');
 
-                    // 显示sequence模态框
-                    if (e.target.value === 'sequence') {
-                        this.showSequenceModal();
+                    if (e.target.value === 'no_import') {
+                        // 选择了"不导入合成"
+                        this.updateQuickSetting('addToComposition', false);
+                    } else {
+                        // 选择了时间轴位置选项
+                        this.updateQuickSetting('addToComposition', true);
+                        this.updateQuickSetting('timelineOptions.placement', e.target.value);
                     }
-
-                    this.updateQuickSetting('timelineOptions.placement', e.target.value);
 
                     // 同步到高级设置面板
-                    const advancedRadio = document.querySelector(`input[name="timeline-placement"][value="${e.target.value}"]`);
-                    if (advancedRadio) {
-                        advancedRadio.checked = true;
-                        this.log(`已同步到高级设置面板: ${e.target.value}`, 'info');
-                    } else {
-                        this.log(`未找到对应的高级设置选项: ${e.target.value}`, 'warning');
-                    }
+                    this.syncQuickToAdvanced();
 
                     // 显示设置说明
                     const descriptions = {
+                        'no_import': '素材将不会添加到合成中',
                         'current_time': '素材将放置在当前时间指针位置',
-                        'sequence': '素材将按顺序排列，每个间隔指定时间',
-                        'stack': '所有素材将叠加在同一时间点',
                         'timeline_start': '素材将移至时间轴开始处（0秒位置）'
                     };
                     this.log(`设置说明: ${descriptions[e.target.value]}`, 'info');
@@ -7140,19 +7215,19 @@ class AEExtension {
                     <h3>拖拽导入确认</h3>
                 </div>
                 <div class="eagle-confirm-body">
-                    <p>${detectionInfo}，是否要导入到After Effects?</p>
+                    <p>${detectionInfo}</p>
                     <div class="file-list">
                         ${fileInfoHtml}
                         ${moreFilesHtml}
                     </div>
-                    <div class="import-settings">
-                        <span><strong>导入模式：</strong>${importMode}</span>
-                        <span><strong>导入行为：</strong>${importBehavior}</span>
+                    <div class="import-settings-dark">
+                        <div class="setting-item"><span class="setting-label">导入模式:</span><span class="setting-value">${importMode}</span></div>
+                        <div class="setting-item"><span class="setting-label">导入行为:</span><span class="setting-value">${importBehavior}</span></div>
                     </div>
                 </div>
-                <div class="eagle-confirm-actions">
-                    <button id="drag-confirm-no" class="btn-secondary">取消</button>
-                    <button id="drag-confirm-yes" class="btn-primary">确定导入</button>
+                <div class="eagle-confirm-actions-flex">
+                    <button id="drag-confirm-yes" class="btn-outline-primary">确认导入</button>
+                    <button id="drag-confirm-no" class="btn-outline-secondary">取消</button>
                 </div>
             </div>
         `;
@@ -8163,18 +8238,18 @@ async handleFolderImportToAE(folder) {
                         <h3>剪贴板导入确认</h3>
                     </div>
                     <div class="eagle-confirm-body">
-                        <p>检测到剪贴板中有 ${files.length} 个可导入文件，是否要导入到After Effects？</p>
+                        <p>检测到剪贴板中有 ${files.length} 个可导入文件</p>
                         <div class="file-list">
                             ${fileInfoHtml}
                         </div>
-                        <div class="import-settings">
-                            <span><strong>导入模式：</strong>${importModeText}</span>
-                            <span><strong>导入行为：</strong>${importBehavior}</span>
+                        <div class="import-settings-dark">
+                            <div class="setting-item"><span class="setting-label">导入模式:</span><span class="setting-value">${importModeText}</span></div>
+                            <div class="setting-item"><span class="setting-label">导入行为:</span><span class="setting-value">${importBehavior}</span></div>
                         </div>
                     </div>
-                    <div class="eagle-confirm-actions">
-                        <button class="btn-cancel" id="clipboard-confirm-no">取消</button>
-                        <button class="btn-primary" id="clipboard-confirm-yes">导入文件</button>
+                    <div class="eagle-confirm-actions-flex">
+                        <button class="btn-outline-primary" id="clipboard-confirm-yes">导入文件</button>
+                        <button class="btn-outline-secondary" id="clipboard-confirm-no">取消</button>
                     </div>
                 </div>
             `;

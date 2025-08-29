@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Eagle2AE</title>
+    <link rel="icon" type="image/png" href="pubic/logo.png">
 
     <!-- Node.js 初始化脚本 -->
     <script type="text/javascript">
@@ -437,7 +438,7 @@
             font-size: 12px;
             font-weight: 600;
             color: #ffffff;
-            margin: 0;
+            margin: 0 0 12px 0;
             line-height: 24px;
             display: flex;
             align-items: center;
@@ -2026,7 +2027,7 @@
 
         /* 导入模式选择样式 */
         .import-mode-selection {
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
 
         .mode-buttons {
@@ -2058,13 +2059,25 @@
             color: #e0e0e0;
         }
 
-        .mode-button input[type="radio"] {
-            display: none;
+        .mode-button input[type="radio"],
+        .mode-button input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
         }
 
-        .mode-button input[type="radio"]:checked + .mode-text {
+        .mode-button input[type="radio"]:checked + .mode-text,
+        .mode-button input[type="checkbox"]:checked + .mode-text {
             color: #007acc;
             font-weight: 500;
+        }
+
+        .mode-button:has(input[type="radio"]:checked),
+        .mode-button:has(input[type="checkbox"]:checked) {
+            background: #1e3a5f;
+            border-color: #007acc;
         }
 
         /* 导入合成按钮激活状态 */
@@ -2090,105 +2103,169 @@
 
         /* 导入行为设置样式 */
         .import-behavior {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #444;
+            margin-bottom: 16px;
+            margin-top: 16px;
         }
 
-        .behavior-checkbox {
+        .import-behavior-buttons {
             display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-size: 11px;
-            color: #e0e0e0;
-            user-select: none;
-            white-space: nowrap;
+            gap: 4px;
             margin-bottom: 8px;
-            margin-right: 16px;
         }
 
-
-
-
-
-        .behavior-checkbox input[type="checkbox"] {
-            display: none;
-        }
-
-        .checkmark {
-            width: 14px;
-            height: 14px;
-            background: #1e1e1e;
-            border: 1px solid #555;
-            border-radius: 2px;
-            margin-right: 8px;
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        .behavior-checkbox input[type="checkbox"]:checked + .checkmark {
-            background: #007acc;
-            border-color: #007acc;
-        }
-
-        .behavior-checkbox input[type="checkbox"]:checked + .checkmark::after {
-            content: '✓';
-            position: absolute;
-            left: 2px;
-            top: -1px;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-        }
-
-        .checkbox-text {
+        .import-behavior-button {
             flex: 1;
-        }
-
-        .behavior-details {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 10px;
-            color: #888;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .behavior-details.visible {
-            opacity: 1;
-        }
-
-        .detail-label {
-            color: #b0b0b0;
-        }
-
-        .detail-value {
-            color: #007acc;
-            font-weight: 500;
-            background: #1e3a5f;
-            padding: 2px 6px;
-            border-radius: 3px;
-            border: 1px solid #007acc;
-        }
-
-        .detail-select {
-            background: #1e1e1e;
+            justify-content: center;
+            padding: 6px 8px;
+            background: #2a2a2a;
             border: 1px solid #555;
-            border-radius: 3px;
-            color: #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
             font-size: 10px;
-            padding: 2px 6px;
-            min-width: 80px;
+            color: #b0b0b0;
+            user-select: none;
         }
 
-        .detail-select:focus {
-            outline: none;
-            border-color: #007acc;
-            box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.3);
+        .import-behavior-button:hover {
+            background: #333;
+            border-color: #666;
+            color: #e0e0e0;
+        }
+
+        .import-behavior-button input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .import-behavior-button input[type="radio"]:checked + .behavior-text {
+            color: #ff8c00;
+            font-weight: 500;
+        }
+
+        .import-behavior-button:has(input[type="radio"]:checked) {
+            background: #3d2a1a;
+            border-color: #ff8c00;
+        }
+
+        .behavior-text {
+            transition: color 0.2s ease;
+        }
+
+        /* 图层操作按钮样式 */
+        .layer-operations {
+            margin-top: 16px;
+        }
+
+        .layer-operation-buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .layer-operation-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            color: #b0b0b0;
+            user-select: none;
+        }
+
+        .layer-operation-button:hover {
+            background: #333;
+            border-color: #666;
+            color: #e0e0e0;
+        }
+
+        .layer-operation-button:active {
+            background: #1a1a1a;
+            transform: translateY(1px);
+        }
+
+        /* 图层操作按钮变灰样式 */
+        .layer-operation-button.dimmed {
+            opacity: 0.4;
+            color: #666;
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+            cursor: not-allowed;
+            filter: grayscale(50%);
+            transition: all 0.3s ease;
+        }
+        
+        .layer-operation-button.dimmed:hover {
+            opacity: 0.4;
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+            transform: none;
+        }
+
+        .layer-operation-button.dimmed:hover {
+            opacity: 0.6;
+            color: #777;
+        }
+
+        .operation-text {
+            transition: color 0.2s ease;
+        }
+
+        /* 高级设置导入行为按钮样式 */
+        .import-behavior-options-horizontal {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .import-behavior-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 9px;
+            color: #e0e0e0;
+            min-height: 28px;
+        }
+
+        .import-behavior-option:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .import-behavior-option input[type="radio"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .import-behavior-option input[type="radio"]:checked + span {
+            color: #ff8c00;
+            font-weight: 500;
+        }
+
+        .import-behavior-option:has(input[type="radio"]:checked) {
+            background: #3d2a1a;
+            border-color: #ff8c00;
         }
 
         .btn-small {
@@ -2440,6 +2517,80 @@
             background: #2980b9;
         }
 
+        /* 新增的导入设置暗色样式 */
+        .import-settings-dark {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #e0e0e0;
+            font-size: 11px;
+            flex: 1;
+        }
+
+        .setting-label {
+            color: #999;
+            font-weight: normal;
+        }
+
+        .setting-value {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        /* 新增的按钮布局样式 */
+        .eagle-confirm-actions-flex {
+            padding: 16px 20px;
+            border-top: 1px solid #555;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* 新增的描边按钮样式 */
+        .btn-outline-secondary {
+            padding: 8px 16px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: transparent;
+            color: #ccc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            border-color: #777;
+            background: rgba(102, 102, 102, 0.1);
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            padding: 8px 16px;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            background: transparent;
+            color: #3498db;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-primary:hover {
+            border-color: #2980b9;
+            background: rgba(52, 152, 219, 0.1);
+            color: #2980b9;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -2683,10 +2834,6 @@
         <div class="header">
             <div class="title">Eagle2AE</div>
             <div class="header-actions">
-                <button id="debug-test-btn" class="icon-btn" title="Node.js环境测试与诊断">
-                    <span class="icon">🔧</span>
-                </button>
-
                 <button id="log-panel-toggle" class="icon-btn" title="显示/隐藏日志">
                     <span class="icon">📄</span>
                 </button>
@@ -2726,13 +2873,14 @@
                 </div>
             </div>
 
+            <!-- 导入模式和行为面板 -->
             <div class="section">
-                <div class="section-title">操作</div>
+                <div class="section-title">导入模式&行为</div>
 
                 <!-- 导入模式选择 -->
                 <div class="import-mode-selection">
                     <div class="mode-buttons">
-                        <label class="mode-button" title="从Eagle直接导入到AE项目，不复制文件">
+                        <label class="mode-button" title="从源目录直接导入到AE项目，不复制文件">
                             <input type="radio" name="quick-import-mode" value="direct">
                             <span class="mode-text">直接导入</span>
                         </label>
@@ -2749,34 +2897,40 @@
 
                 <!-- 导入行为设置 -->
                 <div class="import-behavior">
-                    <div class="timeline-options-horizontal">
-                        <button id="quick-add-to-comp" class="composition-toggle active" title="自动将导入的素材添加到当前活动的合成中">
-                            <span>✓ 导入合成</span>
-                        </button>
-                        <label class="timeline-option" title="将素材放置在当前时间指针位置">
-                            <input type="radio" name="quick-timeline-placement" value="current_time" checked>
-                            <span>当前时间</span>
+                    <div class="import-behavior-buttons">
+                        <label class="import-behavior-button" title="不将导入的素材添加到合成中">
+                            <input type="radio" name="import-behavior" value="no_import">
+                            <span class="behavior-text">不导入合成</span>
                         </label>
-                        <label class="timeline-option" title="将素材移至时间轴开始处（0秒位置）">
-                            <input type="radio" name="quick-timeline-placement" value="timeline_start">
-                            <span>时间轴开始</span>
+                        <label class="import-behavior-button" title="将素材放置在当前时间指针位置">
+                            <input type="radio" name="import-behavior" value="current_time" checked>
+                            <span class="behavior-text">当前时间</span>
+                        </label>
+                        <label class="import-behavior-button" title="将素材移至时间轴开始处（0秒位置）">
+                            <input type="radio" name="import-behavior" value="timeline_start">
+                            <span class="behavior-text">时间轴开始</span>
                         </label>
                     </div>
                 </div>
-                <div class="actions-grid">
-                    <button id="detect-layers-btn" class="btn btn-info">
-                        <span class="btn-icon">🔍</span>
-                        <span class="btn-text">检测图层</span>
-                    </button>
 
-                    <button id="export-layers-btn" class="btn btn-success">
-                        <span class="btn-icon">📤</span>
-                        <span class="btn-text">导出图层</span>
-                    </button>
+                <!-- 图层操作按钮 -->
+                <div class="layer-operations" style="margin-top: 16px;">
+                    <div class="layer-operation-buttons">
+                        <button class="layer-operation-button" id="detect-layers-btn" title="检测当前合成中的图层">
+                            <span class="operation-text">检测图层</span>
+                        </button>
+                        <button class="layer-operation-button" id="export-layers-btn" title="导出选中的图层">
+                            <span class="operation-text">导出图层</span>
+                        </button>
+                    </div>
                 </div>
+            </div>
 
 
 
+            <!-- 状态信息面板 -->
+            <div class="section">
+                <div class="section-title">状态信息</div>
                 <div id="import-status" class="import-status idle">
                     <span id="latest-log-message" class="status-message">等待导入请求...</span>
                 </div>
@@ -2857,22 +3011,19 @@
                 <!-- 导入行为设置 -->
                 <div class="settings-section">
                     <div class="settings-section-title">导入行为</div>
-                    <div class="checkbox-group">
-                        <label class="checkbox-option">
-                            <input type="checkbox" id="add-to-composition" checked>
-                            <span class="checkbox-label">自动添加到当前合成</span>
+                    <div class="import-behavior-options-horizontal">
+                        <label class="import-behavior-option" title="不将导入的素材添加到合成中">
+                            <input type="radio" name="advanced-import-behavior" value="no_import">
+                            <span>不导入合成</span>
                         </label>
-
-                        <div id="timeline-options" class="timeline-options-horizontal">
-                            <label class="timeline-option" title="将素材放置在当前时间指针位置">
-                                <input type="radio" name="timeline-placement" value="current_time" checked>
-                                <span>当前时间</span>
-                            </label>
-                            <label class="timeline-option" title="将素材移至时间轴开始处（0秒位置）">
-                                <input type="radio" name="timeline-placement" value="timeline_start">
-                                <span>时间轴开始</span>
-                            </label>
-                        </div>
+                        <label class="import-behavior-option" title="将素材放置在当前时间指针位置">
+                            <input type="radio" name="advanced-import-behavior" value="current_time" checked>
+                            <span>当前时间</span>
+                        </label>
+                        <label class="import-behavior-option" title="将素材移至时间轴开始处（0秒位置）">
+                            <input type="radio" name="advanced-import-behavior" value="timeline_start">
+                            <span>时间轴开始</span>
+                        </label>
                     </div>
                 </div>
 
@@ -3094,18 +3245,13 @@
                 advancedImportMode.checked = true;
             }
 
-            // 同步导入行为 - 自动添加到合成
-            const quickAddToComp = document.getElementById('quick-add-to-comp');
-            const advancedAddToComp = document.getElementById('add-to-composition');
-            if (quickAddToComp && advancedAddToComp) {
-                advancedAddToComp.checked = quickAddToComp.checked;
-            }
-
-            // 同步时间轴选项
-            const quickTimelinePlacement = document.querySelector('input[name="quick-timeline-placement"]:checked');
-            const advancedTimelinePlacement = document.querySelector(`input[name="timeline-placement"][value="${quickTimelinePlacement?.value}"]`);
-            if (advancedTimelinePlacement) {
-                advancedTimelinePlacement.checked = true;
+            // 同步导入行为 - 直接同步快速面板和高级设置的导入行为按钮
+            const quickImportBehavior = document.querySelector('input[name="import-behavior"]:checked');
+            if (quickImportBehavior) {
+                const advancedImportBehavior = document.querySelector(`input[name="advanced-import-behavior"][value="${quickImportBehavior.value}"]`);
+                if (advancedImportBehavior) {
+                    advancedImportBehavior.checked = true;
+                }
             }
         }
 
@@ -3117,18 +3263,13 @@
                 quickImportMode.checked = true;
             }
 
-            // 同步导入行为 - 自动添加到合成
-            const advancedAddToComp = document.getElementById('add-to-composition');
-            const quickAddToComp = document.getElementById('quick-add-to-comp');
-            if (advancedAddToComp && quickAddToComp) {
-                quickAddToComp.checked = advancedAddToComp.checked;
-            }
-
-            // 同步时间轴选项
-            const advancedTimelinePlacement = document.querySelector('input[name="timeline-placement"]:checked');
-            const quickTimelinePlacement = document.querySelector(`input[name="quick-timeline-placement"][value="${advancedTimelinePlacement?.value}"]`);
-            if (quickTimelinePlacement) {
-                quickTimelinePlacement.checked = true;
+            // 同步导入行为 - 直接同步高级设置和快速面板的导入行为按钮
+            const advancedImportBehavior = document.querySelector('input[name="advanced-import-behavior"]:checked');
+            if (advancedImportBehavior) {
+                const quickImportBehavior = document.querySelector(`input[name="import-behavior"][value="${advancedImportBehavior.value}"]`);
+                if (quickImportBehavior) {
+                    quickImportBehavior.checked = true;
+                }
             }
         }
 
