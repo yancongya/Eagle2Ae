@@ -4567,7 +4567,7 @@ class AEExtension {
             recentFoldersSelect.addEventListener('change', () => {
                 const selectedPath = recentFoldersSelect.value;
                 if (selectedPath) {
-                    document.getElementById('custom-folder-path').value = selectedPath;
+                    document.getElementById('custom-folder-path-input').value = selectedPath;
                     // 实时同步到快速设置
                     if (this.quickSettingsInitialized) {
                         this.settingsManager.updateField('customFolderPath', selectedPath, false);
@@ -4578,7 +4578,7 @@ class AEExtension {
         }
 
         // 自定义文件夹路径输入框变化
-        const customFolderPath = document.getElementById('custom-folder-path');
+        const customFolderPath = document.getElementById('custom-folder-path-input');
         if (customFolderPath) {
             customFolderPath.addEventListener('change', () => {
                 const path = customFolderPath.value.trim();
@@ -4634,7 +4634,7 @@ class AEExtension {
         }
 
         // 自定义文件夹路径
-        const customFolderPath = document.getElementById('custom-folder-path');
+        const customFolderPath = document.getElementById('custom-folder-path-input');
         if (customFolderPath) {
             customFolderPath.value = settings.customFolderPath;
         }
@@ -4836,22 +4836,22 @@ class AEExtension {
     // 从UI获取设置
     getSettingsFromUI() {
         try {
-            const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || 'project_adjacent';
+            // 获取当前保存的设置作为基础
+            const currentSettings = this.settingsManager.getSettings();
+            
+            const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || currentSettings.mode;
 
             // 注意：这些元素可能在模态框中，不一定总是存在
             const projectFolderSelect = document.getElementById('project-folder-preset-select');
-            const customFolderPath = document.getElementById('custom-folder-path');
+            const customFolderPath = document.getElementById('custom-folder-path-input');
             const addToComposition = document.getElementById('add-to-composition');
-            const timelinePlacement = document.querySelector('input[name="timeline-placement"]:checked')?.value || 'current_time';
+            const timelinePlacement = document.querySelector('input[name="timeline-placement"]:checked')?.value || currentSettings.timelineOptions.placement;
             const sequenceInterval = document.getElementById('interval-value');
 
-            // 检查关键的DOM元素（允许某些元素不存在）
-            if (!addToComposition) {
-                throw new Error('找不到添加到合成元素');
-            }
-            // 序列间隔元素在模态框中，可能不存在，不强制要求
-
-            // 检查文件管理相关元素（可能不存在，使用默认值）
+            // 如果关键元素不存在，使用当前保存的设置值
+            const addToCompValue = addToComposition ? addToComposition.checked : currentSettings.addToComposition;
+            
+            // 检查文件管理相关元素（可能不存在，使用当前设置或默认值）
             const keepOriginalName = document.getElementById('keep-original-name');
             const addTimestamp = document.getElementById('add-timestamp');
             const createTagFolders = document.getElementById('create-tag-folders');
@@ -4859,25 +4859,25 @@ class AEExtension {
 
             return {
                 mode: importMode,
-                projectAdjacentFolder: projectFolderSelect ? projectFolderSelect.value : 'Eagle_Assets',
-                customFolderPath: customFolderPath ? customFolderPath.value : '',
-                addToComposition: addToComposition.checked,
+                projectAdjacentFolder: projectFolderSelect ? projectFolderSelect.value : currentSettings.projectAdjacentFolder,
+                customFolderPath: customFolderPath ? customFolderPath.value : currentSettings.customFolderPath,
+                addToComposition: addToCompValue,
                 timelineOptions: {
-                    enabled: addToComposition.checked,
+                    enabled: addToCompValue,
                     placement: timelinePlacement,
-                    sequenceInterval: sequenceInterval ? parseFloat(sequenceInterval.value) || 1.0 : 1.0
+                    sequenceInterval: sequenceInterval ? parseFloat(sequenceInterval.value) || 1.0 : currentSettings.timelineOptions.sequenceInterval
                 },
                 fileManagement: {
-                    keepOriginalName: keepOriginalName ? keepOriginalName.checked : true,
-                    addTimestamp: addTimestamp ? addTimestamp.checked : false,
-                    createTagFolders: createTagFolders ? createTagFolders.checked : false,
-                    deleteFromEagle: deleteFromEagle ? deleteFromEagle.checked : false
+                    keepOriginalName: keepOriginalName ? keepOriginalName.checked : currentSettings.fileManagement.keepOriginalName,
+                    addTimestamp: addTimestamp ? addTimestamp.checked : currentSettings.fileManagement.addTimestamp,
+                    createTagFolders: createTagFolders ? createTagFolders.checked : currentSettings.fileManagement.createTagFolders,
+                    deleteFromEagle: deleteFromEagle ? deleteFromEagle.checked : currentSettings.fileManagement.deleteFromEagle
                 },
                 exportSettings: this.getExportSettingsFromUI()
             };
         } catch (error) {
             this.log(`获取UI设置失败: ${error.message}`, 'error');
-            // 返回默认设置
+            // 返回当前保存的设置
             return this.settingsManager.getSettings();
         }
     }
@@ -4913,7 +4913,7 @@ class AEExtension {
     // 使用 ExtendScript 文件夹选择对话框
     tryExtendScriptFolderPicker() {
         try {
-            const currentPath = document.getElementById('custom-folder-path').value || '';
+            const currentPath = document.getElementById('custom-folder-path-input').value || '';
             this.log('正在打开文件夹选择对话框...', 'info');
 
             // 调用 ExtendScript 的文件夹选择函数
@@ -5043,7 +5043,7 @@ class AEExtension {
     useCEPFolderPicker() {
         this.log('使用CEP ExtendScript选择文件夹...', 'info');
 
-        const currentPath = document.getElementById('custom-folder-path').value;
+        const currentPath = document.getElementById('custom-folder-path-input').value;
 
         // 调用ExtendScript来打开文件夹选择对话框
         this.csInterface.evalScript(`selectFolder("${currentPath}", "选择目标文件夹")`, (result) => {
@@ -5073,7 +5073,7 @@ class AEExtension {
 
         if (newPath && newPath.trim()) {
             const trimmedPath = newPath.trim();
-            document.getElementById('custom-folder-path').value = trimmedPath;
+            document.getElementById('custom-folder-path-input').value = trimmedPath;
             this.settingsManager.addRecentFolder(trimmedPath);
             this.updateRecentFoldersDropdown();
 
@@ -5126,7 +5126,7 @@ class AEExtension {
         }
 
         // 更新输入框
-        document.getElementById('custom-folder-path').value = folderPath;
+        document.getElementById('custom-folder-path-input').value = folderPath;
 
         // 添加到最近使用的文件夹
         this.settingsManager.addRecentFolder(folderPath);
@@ -6354,7 +6354,13 @@ class AEExtension {
         const settings = this.settingsManager.getSettings();
         const expectedQuickValue = settings.addToComposition ? settings.timelineOptions.placement : 'no_import';
 
-        this.log(`正在同步UI到设置值: addToComposition=${settings.addToComposition}, placement=${settings.timelineOptions.placement}`, 'info');
+        this.log(`正在同步UI到设置值: mode=${settings.mode}, addToComposition=${settings.addToComposition}, placement=${settings.timelineOptions.placement}`, 'info');
+
+        // 同步快速导入模式设置
+        const quickModeRadios = document.querySelectorAll('input[name="quick-import-mode"]');
+        quickModeRadios.forEach(radio => {
+            radio.checked = (radio.value === settings.mode);
+        });
 
         // 同步快速导入行为设置
         const quickRadios = document.querySelectorAll('input[name="import-behavior"]');
@@ -6372,6 +6378,9 @@ class AEExtension {
         advancedRadios.forEach(radio => {
             radio.checked = (radio.value === settings.timelineOptions.placement);
         });
+
+        // 更新按钮样式以反映选中状态
+        this.updateModeButtonStyles();
 
         this.log('UI同步完成', 'success');
     }
