@@ -1035,6 +1035,10 @@ function analyzeLayer(layer, index) {
 
 // 图层导出函数（完整版本）
 function exportSelectedLayers(exportSettings) {
+    // 保存当前状态
+    var originalActiveItem = null;
+    var originalSelectedLayers = [];
+    
     try {
         var result = {
             success: false,
@@ -1053,6 +1057,20 @@ function exportSelectedLayers(exportSettings) {
         }
 
         var comp = app.project.activeItem;
+        
+        // 保存当前状态
+        originalActiveItem = comp;
+        try {
+            // 保存当前选中的图层
+            var selectedLayers = comp.selectedLayers;
+            for (var s = 0; s < selectedLayers.length; s++) {
+                originalSelectedLayers.push(selectedLayers[s]);
+            }
+            result.logs.push("💾 已保存当前合成和图层选择状态");
+        } catch (saveError) {
+            result.logs.push("⚠️ 保存状态时出现警告: " + saveError.toString());
+        }
+        
         result.compName = comp.name;
         result.logs.push("📋 开始导出合成: " + comp.name);
 
@@ -1145,13 +1163,64 @@ function exportSelectedLayers(exportSettings) {
         result.logs.push("🎉 导出完成! 共导出 " + result.totalExported + " 个图层，跳过 " + result.skippedCount + " 个");
         result.success = true;
 
+        // 恢复原始状态
+        try {
+            if (originalActiveItem) {
+                // 恢复活动合成
+                originalActiveItem.openInViewer();
+                
+                // 恢复图层选择
+                if (originalSelectedLayers.length > 0) {
+                    // 先取消所有选择
+                    var currentLayers = originalActiveItem.selectedLayers;
+                    for (var c = 0; c < currentLayers.length; c++) {
+                        currentLayers[c].selected = false;
+                    }
+                    
+                    // 重新选择原来的图层
+                    for (var r = 0; r < originalSelectedLayers.length; r++) {
+                        try {
+                            originalSelectedLayers[r].selected = true;
+                        } catch (layerError) {
+                            // 图层可能已被删除，忽略错误
+                        }
+                    }
+                }
+                result.logs.push("🔄 已恢复到原始合成和图层选择状态");
+            }
+        } catch (restoreError) {
+            result.logs.push("⚠️ 恢复状态时出现警告: " + restoreError.toString());
+        }
+
         return JSON.stringify(result);
 
     } catch (error) {
+        // 即使出现错误也要尝试恢复状态
+        try {
+            if (originalActiveItem) {
+                originalActiveItem.openInViewer();
+                if (originalSelectedLayers.length > 0) {
+                    var currentLayers = originalActiveItem.selectedLayers;
+                    for (var c = 0; c < currentLayers.length; c++) {
+                        currentLayers[c].selected = false;
+                    }
+                    for (var r = 0; r < originalSelectedLayers.length; r++) {
+                        try {
+                            originalSelectedLayers[r].selected = true;
+                        } catch (layerError) {
+                            // 忽略图层选择错误
+                        }
+                    }
+                }
+            }
+        } catch (restoreError) {
+            // 忽略恢复错误
+        }
+        
         var errorResult = {
             success: false,
             error: error.toString(),
-            logs: ["❌ 导出过程出错: " + error.toString()]
+            logs: ["❌ 导出过程出错: " + error.toString(), "🔄 已尝试恢复原始状态"]
         };
         return JSON.stringify(errorResult);
     }

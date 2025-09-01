@@ -1931,6 +1931,9 @@ class Eagle2Ae {
             case 'import_result':
                 this.handleImportResult(message.data);
                 break;
+            case 'importFiles':
+                this.handleImportFilesToEagle(message.data);
+                break;
             case 'error':
                 this.log(`AE错误: ${message.data.message}`, 'error');
                 break;
@@ -2046,6 +2049,197 @@ class Eagle2Ae {
             this.log(`成功导入 ${result.importedCount} 个文件到合成 "${targetComp}"`);
         } else {
             this.log(`导入失败: ${result.error}`, 'error');
+        }
+    }
+
+    // 处理导入文件到Eagle的请求
+    async handleImportFilesToEagle(data) {
+        try {
+            this.log(`📥 收到导入文件到Eagle请求: ${data.files?.length || 0} 个文件`, 'info');
+            
+            if (!data.files || data.files.length === 0) {
+                throw new Error('没有提供要导入的文件');
+            }
+
+            // 获取目标文件夹ID
+            const targetFolderId = await this.getCurrentFolderId();
+            if (!targetFolderId) {
+                throw new Error('无法获取目标文件夹ID');
+            }
+
+            this.log(`🎯 目标文件夹ID: ${targetFolderId}`, 'info');
+
+            // 导入文件到Eagle
+            const result = await this.importFilesToEagle(data.files, targetFolderId);
+            
+            // 发送结果回AE
+            this.sendToAE({
+                type: 'eagle_import_result',
+                data: result
+            });
+
+        } catch (error) {
+            this.log(`❌ 导入文件到Eagle失败: ${error.message}`, 'error');
+            
+            // 发送错误结果回AE
+            this.sendToAE({
+                type: 'eagle_import_result',
+                data: {
+                    success: false,
+                    error: error.message
+                }
+            });
+        }
+    }
+
+    // 获取当前文件夹ID
+    async getCurrentFolderId() {
+        try {
+            // 优先使用当前Eagle状态中的currentFolder
+            if (this.eagleStatus.currentFolder) {
+                this.log(`🎯 使用当前选定文件夹: ${this.eagleStatus.currentFolderName} (${this.eagleStatus.currentFolder})`, 'info');
+                return this.eagleStatus.currentFolder;
+            }
+
+            this.log(`🔍 当前没有选定文件夹，尝试获取最近使用的文件夹...`, 'info');
+
+            // 备用方案1: 获取最近使用的文件夹
+            try {
+                const recentResponse = await fetch('http://localhost:41595/api/folder/listRecent');
+                if (recentResponse.ok) {
+                    const recentData = await recentResponse.json();
+                    if (recentData.status === 'success' && recentData.data && recentData.data.length > 0) {
+                        const recentFolder = recentData.data[0];
+                        this.log(`📁 使用最近文件夹: ${recentFolder.name} (${recentFolder.id})`, 'info');
+                        return recentFolder.id;
+                    }
+                }
+            } catch (recentError) {
+                this.log(`⚠️ 获取最近文件夹失败: ${recentError.message}`, 'warning');
+            }
+
+            // 备用方案2: 获取根文件夹
+            try {
+                const foldersResponse = await fetch('http://localhost:41595/api/folder/list');
+                if (foldersResponse.ok) {
+                    const foldersData = await foldersResponse.json();
+                    if (foldersData.status === 'success' && foldersData.data && foldersData.data.length > 0) {
+                        const rootFolder = foldersData.data[0];
+                        this.log(`🏠 使用根文件夹: ${rootFolder.name} (${rootFolder.id})`, 'info');
+                        return rootFolder.id;
+                    }
+                }
+            } catch (rootError) {
+                this.log(`⚠️ 获取根文件夹失败: ${rootError.message}`, 'warning');
+            }
+
+            throw new Error('无法获取任何可用的文件夹');
+
+        } catch (error) {
+            this.log(`❌ 获取文件夹ID失败: ${error.message}`, 'error');
+            return null;
+        }
+    }
+
+    // 导入文件到Eagle
+    async importFilesToEagle(files, targetFolderId) {
+        try {
+            this.log(`🚀 开始导入 ${files.length} 个文件到Eagle...`, 'info');
+
+            // 准备文件路径列表
+            const filePaths = files.map(file => {
+                // 如果file是对象且有path属性，使用path；否则直接使用file作为路径
+                return typeof file === 'object' ? (file.path || file.exportPath || file.filePath) : file;
+            }).filter(path => path); // 过滤掉空路径
+
+            if (filePaths.length === 0) {
+                throw new Error('没有有效的文件路径');
+            }
+
+            this.log(`📋 文件路径列表: ${filePaths.join(', ')}`, 'debug');
+
+            // 调用Eagle API添加文件
+            const result = await this.addFilesToEagle(filePaths, targetFolderId);
+            
+            this.log(`✅ 文件导入完成: 成功 ${result.successCount || 0} 个，失败 ${result.failureCount || 0} 个`, 'success');
+            
+            // 显示导入成功通知
+            try {
+                if (result.successCount > 0) {
+                    eagle.notification.show({
+                        title: '🎉 AE图层导入成功',
+                        description: `已成功导入 ${result.successCount} 个文件到当前分组`,
+                        type: 'success',
+                        duration: 5000
+                    });
+                }
+            } catch (notificationError) {
+                this.log(`通知显示失败: ${notificationError.message}`, 'warning');
+            }
+            
+            return {
+                success: true,
+                importedCount: result.successCount || 0,
+                failedCount: result.failureCount || 0,
+                details: result.details || []
+            };
+
+        } catch (error) {
+            this.log(`❌ 导入文件到Eagle失败: ${error.message}`, 'error');
+            return {
+                success: false,
+                error: error.message,
+                importedCount: 0,
+                failedCount: files.length
+            };
+        }
+    }
+
+    // 使用Eagle API添加文件
+    async addFilesToEagle(filePaths, folderId) {
+        try {
+            this.log(`📤 调用Eagle API添加文件...`, 'info');
+
+            const requestBody = {
+                items: filePaths.map(path => ({ path: path })),
+                folderId: folderId
+            };
+
+            this.log(`📋 请求体: ${JSON.stringify(requestBody, null, 2)}`, 'debug');
+
+            const response = await fetch('http://localhost:41595/api/item/addFromPaths', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Eagle API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            this.log(`📥 Eagle API响应: ${JSON.stringify(result)}`, 'debug');
+
+            if (result.status !== 'success') {
+                throw new Error(`Eagle API返回错误: ${result.message || '未知错误'}`);
+            }
+
+            // 解析结果
+            const successCount = result.data ? (Array.isArray(result.data) ? result.data.length : 1) : filePaths.length;
+            const failureCount = filePaths.length - successCount;
+
+            return {
+                successCount: successCount,
+                failureCount: failureCount,
+                details: result.data || []
+            };
+
+        } catch (error) {
+            this.log(`❌ Eagle API调用失败: ${error.message}`, 'error');
+            throw error;
         }
     }
 

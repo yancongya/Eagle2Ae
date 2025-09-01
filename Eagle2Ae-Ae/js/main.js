@@ -656,6 +656,7 @@ class AEExtension {
             logPanelToggle: document.getElementById('log-panel-toggle'),
             detectLayers: document.getElementById('detect-layers-btn'),
             exportLayers: document.getElementById('export-layers-btn'),
+            exportToEagle: document.getElementById('export-to-eagle-btn'),
             debugTest: document.getElementById('debug-test-btn'),
 
         };
@@ -722,6 +723,12 @@ class AEExtension {
         if (buttons.exportLayers) {
             buttons.exportLayers.addEventListener('click', () => {
                 this.exportLayers();
+            });
+        }
+
+        if (buttons.exportToEagle) {
+            buttons.exportToEagle.addEventListener('click', () => {
+                this.exportToEagle();
             });
         }
         if (buttons.debugTest) {
@@ -1237,6 +1244,10 @@ class AEExtension {
             case 'import_files':
                 // 兼容旧版本
                 this.handleImportFiles(message.data);
+                break;
+            case 'eagle_import_result':
+                // 处理Eagle导入结果
+                this.handleEagleImportResult(message.data || message);
                 break;
             default:
                 this.log(`未知消息类型: ${message.type}`, 'warning');
@@ -3414,6 +3425,176 @@ class AEExtension {
         } catch (error) {
             this.log(`检测过程出错: ${error.message}`, 'error');
             this.log('建议：1. 检查是否选择了合成 2. 检查是否选中了图层', 'warning');
+        }
+    }
+
+    // 导出到Eagle
+    async exportToEagle() {
+        this.log('开始导出图层到Eagle...', 'info');
+
+        // 验证前置条件
+        const connectionOk = await this.testExtendScriptConnection();
+        if (!connectionOk) {
+            this.log('ExtendScript连接失败，请检查扩展配置', 'error');
+            return;
+        }
+
+        if (this.connectionState !== ConnectionState.CONNECTED) {
+            this.log('未连接到Eagle，请先建立连接', 'error');
+            return;
+        }
+
+        try {
+            // 获取当前设置
+            const currentSettings = this.settingsManager.getSettings();
+            
+            // 固定使用项目旁复制模式的路径设置
+            const projectInfo = await this.getProjectInfo();
+            if (!projectInfo || !projectInfo.projectPath) {
+                this.log('无法获取AE项目路径，请确保项目已保存后再使用导出到Eagle功能', 'error');
+                return;
+            }
+            
+            const projectDir = projectInfo.projectPath.replace(/[^\\]*$/, '');
+            const folderName = currentSettings.projectAdjacentFolder || 'Eagle_Assets';
+            const exportPath = projectDir + folderName;
+            
+            this.log(`使用项目旁复制路径设置: ${exportPath}`, 'info');
+            this.log(`文件夹名称: ${folderName}`, 'info');
+
+            // 准备导出设置
+            let exportSettings = {
+                exportSettings: {
+                    mode: 'custom_folder',
+                    customExportPath: exportPath,
+                    autoCopy: false, // 导出到Eagle不需要自动复制
+                    burnAfterReading: false,
+                    addTimestamp: false,
+                    createSubfolders: false
+                },
+                fileManagement: currentSettings.fileManagement,
+                timelineOptions: currentSettings.timelineOptions
+            };
+            
+            this.log(`开始导出图层到路径: ${exportPath}`, 'info');
+
+            // 执行导出
+            const result = await this.executeExtendScript('exportSelectedLayers', exportSettings);
+
+            if (result.success) {
+                this.log(`🎉 导出完成: ${result.totalExported} 个图层已导出`, 'success');
+                this.log(`📁 导出路径: ${result.exportPath}`, 'info');
+
+                // 播放成功音效
+                try {
+                    if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
+                        this.soundPlayer.playConnectionSuccess();
+                    }
+                } catch (soundError) {
+                    // 忽略音效播放错误
+                }
+
+                // 自动导入到Eagle
+                if (result.exportedLayers && result.exportedLayers.length > 0) {
+                    this.log('正在将导出的文件导入到Eagle...', 'info');
+                    try {
+                        // 发送importFiles消息到Eagle插件
+                        // 添加调试日志显示发送的文件信息
+                        const filesToImport = result.exportedLayers.map(layer => ({
+                            path: layer.filePath,
+                            name: layer.layerName || layer.name,
+                            filePath: layer.filePath
+                        }));
+                        
+                        this.log(`📤 准备导入 ${filesToImport.length} 个文件到Eagle:`, 'debug');
+                        filesToImport.forEach((file, index) => {
+                            this.log(`  ${index + 1}. ${file.name} -> ${file.path}`, 'debug');
+                        });
+                        
+                        await this.sendToEagle({
+                            type: 'importFiles',
+                            data: {
+                                files: filesToImport
+                            }
+                        });
+
+                        this.log('📤 导入请求已发送到Eagle，等待处理结果...', 'info');
+                        
+                        // 注意：实际的导入结果会通过eagle_import_result消息异步返回
+                        // 这里不需要等待同步响应
+                        
+                    } catch (importError) {
+                        this.log(`发送Eagle导入请求失败: ${importError.message}`, 'warning');
+                        this.log('💡 文件已导出，可手动拖拽到Eagle中', 'info');
+                    }
+                }
+
+                // 输出导出日志
+                if (result.logs && result.logs.length > 0) {
+                    result.logs.forEach((logMessage, index) => {
+                        this.log(logMessage, 'debug', {
+                            group: '导出详情',
+                            collapsed: true,
+                            groupEnd: index === result.logs.length - 1
+                        });
+                    });
+                }
+
+            } else {
+                this.log(`❌ 导出失败: ${result.error || '未知错误'}`, 'error');
+                if (result.logs) {
+                    result.logs.forEach(logMessage => {
+                        this.log(logMessage, 'error');
+                    });
+                }
+            }
+        } catch (error) {
+            this.log(`导出到Eagle过程出错: ${error.message}`, 'error');
+            this.log('建议：1. 检查是否选择了合成 2. 检查是否选中了图层 3. 检查Eagle连接状态', 'warning');
+        }
+    }
+
+    // 处理Eagle导入结果
+    handleEagleImportResult(result) {
+        try {
+            if (result.success) {
+                this.log(`✅ Eagle导入成功: ${result.importedCount} 个文件已导入`, 'success');
+                
+                if (result.failedCount > 0) {
+                    this.log(`⚠️ ${result.failedCount} 个文件导入失败`, 'warning');
+                }
+                
+                // 播放成功音效
+                try {
+                    if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
+                        this.soundPlayer.playConnectionSuccess();
+                    }
+                } catch (soundError) {
+                    // 忽略音效播放错误
+                }
+                
+            } else {
+                this.log(`❌ Eagle导入失败: ${result.error || '未知错误'}`, 'error');
+                this.log('💡 文件已导出，可手动拖拽到Eagle中', 'info');
+            }
+        } catch (error) {
+            this.log(`处理Eagle导入结果时出错: ${error.message}`, 'error');
+        }
+    }
+
+    // 获取项目信息
+    async getProjectInfo() {
+        try {
+            const result = await this.executeExtendScript('getProjectInfo', {});
+            if (result.success) {
+                return result.projectInfo;
+            } else {
+                this.log(`获取项目信息失败: ${result.error}`, 'warning');
+                return null;
+            }
+        } catch (error) {
+            this.log(`获取项目信息出错: ${error.message}`, 'error');
+            return null;
         }
     }
 

@@ -325,6 +325,13 @@ class Eagle2AeWebSocketClient {
             }
         });
 
+        // Eagle导入结果
+        this.messageHandlers.set('eagle_import_result', (message) => {
+            if (this.aeExtension) {
+                this.aeExtension.handleEagleImportResult(message.data);
+            }
+        });
+
         // 状态同步
         this.messageHandlers.set('status.eagle', (message) => {
             if (this.aeExtension) {
