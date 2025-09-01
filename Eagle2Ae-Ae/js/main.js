@@ -867,8 +867,8 @@ class AEExtension {
 
             const data = await response.json();
 
-            if (data.pong !== true) {
-                throw new Error('无效的响应格式');
+            if (data.pong !== true || data.service !== 'Eagle2Ae') {
+                throw new Error('无效的响应格式或服务标识不匹配');
             }
 
             // 记录连接质量
@@ -4103,22 +4103,68 @@ class AEExtension {
             return;
         }
 
-        // 使用ID去重，如果没有ID则使用时间戳+消息内容作为唯一标识
-        const existingIds = new Set(this.eagleLogs.map(log =>
-            log.id || `${log.timestamp}_${log.message}`
-        ));
+        // 初始化重复日志计数器
+        if (!this.logDuplicateTracker) {
+            this.logDuplicateTracker = new Map();
+        }
 
-        const uniqueNewLogs = newLogs.filter(log => {
+        const processedLogs = [];
+        const now = Date.now();
+        const duplicateWindow = 60000; // 60秒内的重复消息会被合并
+
+        newLogs.forEach(log => {
+            // 生成消息的唯一键（忽略时间戳，只看消息内容）
+            const messageKey = this.generateLogKey(log.message);
+            
+            // 检查是否是重复消息
+            if (this.logDuplicateTracker.has(messageKey)) {
+                const existing = this.logDuplicateTracker.get(messageKey);
+                
+                // 如果在时间窗口内，增加计数
+                if (now - existing.firstSeen < duplicateWindow) {
+                    existing.count++;
+                    existing.lastSeen = now;
+                    existing.lastTimestamp = log.timestamp;
+                    
+                    // 更新现有日志的显示
+                    this.updateDuplicateLogDisplay(existing);
+                    return; // 不添加新的日志条目
+                } else {
+                    // 超出时间窗口，重置计数
+                    existing.count = 1;
+                    existing.firstSeen = now;
+                    existing.lastSeen = now;
+                    existing.lastTimestamp = log.timestamp;
+                }
+            } else {
+                // 新消息，添加到跟踪器
+                this.logDuplicateTracker.set(messageKey, {
+                    count: 1,
+                    firstSeen: now,
+                    lastSeen: now,
+                    originalLog: log,
+                    lastTimestamp: log.timestamp,
+                    logIndex: this.eagleLogs.length + processedLogs.length
+                });
+            }
+            
+            // 检查是否已存在相同ID的日志
             const logId = log.id || `${log.timestamp}_${log.message}`;
-            return !existingIds.has(logId);
+            const existingIds = new Set(this.eagleLogs.map(existingLog =>
+                existingLog.id || `${existingLog.timestamp}_${existingLog.message}`
+            ));
+            
+            if (!existingIds.has(logId)) {
+                processedLogs.push(log);
+            }
         });
 
-        if (uniqueNewLogs.length === 0) {
+        if (processedLogs.length === 0) {
             return; // 没有新日志，不需要更新
         }
 
         // 添加新日志
-        uniqueNewLogs.forEach(logData => {
+        processedLogs.forEach(logData => {
             this.eagleLogs.push(logData);
         });
 
@@ -4132,7 +4178,7 @@ class AEExtension {
 
         // 如果当前显示Eagle日志，实时更新显示
         if (this.currentLogView === 'eagle') {
-            this.updateEagleLogDisplayRealtime(uniqueNewLogs);
+            this.updateEagleLogDisplayRealtime(processedLogs);
         }
     }
 
@@ -4145,7 +4191,19 @@ class AEExtension {
         newLogs.forEach(logData => {
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry ${logData.type} ${logData.source || 'eagle'}`;
-            logEntry.innerHTML = `<span class="log-time">${logData.time}</span>${logData.message}`;
+            
+            // 生成消息键用于重复检测
+            const messageKey = this.generateLogKey(logData.message);
+            const duplicateInfo = this.logDuplicateTracker?.get(messageKey);
+            
+            // 如果有重复计数，显示计数信息
+            let displayMessage = logData.message;
+            if (duplicateInfo && duplicateInfo.count > 1) {
+                displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
+            }
+            
+            logEntry.innerHTML = `<span class="log-time">${logData.time}</span>${displayMessage}`;
+            logEntry.setAttribute('data-message-key', messageKey);
             logOutput.appendChild(logEntry);
         });
 
@@ -4156,6 +4214,71 @@ class AEExtension {
 
         // 滚动到底部
         logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // 生成日志消息的唯一键（用于重复检测）
+    generateLogKey(message) {
+        // 移除时间戳和动态内容，只保留核心消息
+        let key = message
+            .replace(/\d{2}:\d{2}:\d{2}/g, '') // 移除时间戳
+            .replace(/\d+ms/g, '') // 移除延迟时间
+            .replace(/\d+个文件/g, 'N个文件') // 标准化文件数量
+            .replace(/\d+\.\d+\s*(GB|MB|KB)/g, 'SIZE') // 标准化文件大小
+            .replace(/\d+/g, 'NUM') // 标准化其他数字
+            .trim();
+        
+        // 特殊处理剪切板内容
+        if (key.includes('剪切板文本内容')) {
+            return '剪切板文本内容';
+        }
+        
+        return key;
+    }
+
+    // 更新重复日志的显示
+    updateDuplicateLogDisplay(duplicateInfo) {
+        if (this.currentLogView !== 'eagle') return;
+        
+        const logOutput = document.getElementById('log-output');
+        if (!logOutput) return;
+        
+        // 查找对应的日志条目
+        const messageKey = this.generateLogKey(duplicateInfo.originalLog.message);
+        // 转义CSS选择器中的特殊字符
+        const escapedKey = messageKey.replace(/["\\]/g, '\\$&');
+        const logEntries = logOutput.querySelectorAll(`[data-message-key="${escapedKey}"]`);
+        
+        if (logEntries.length > 0) {
+            // 更新最后一个匹配的日志条目
+            const lastEntry = logEntries[logEntries.length - 1];
+            const timeSpan = lastEntry.querySelector('.log-time');
+            const timeText = timeSpan ? timeSpan.outerHTML : '';
+            
+            let displayMessage = duplicateInfo.originalLog.message;
+            if (duplicateInfo.count > 1) {
+                displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
+            }
+            
+            lastEntry.innerHTML = timeText + displayMessage;
+        } else {
+            // 如果找不到对应的条目，可能是因为选择器问题，使用遍历方式查找
+            const allEntries = logOutput.querySelectorAll('.log-entry.eagle');
+            for (let i = allEntries.length - 1; i >= 0; i--) {
+                const entry = allEntries[i];
+                if (entry.getAttribute('data-message-key') === messageKey) {
+                    const timeSpan = entry.querySelector('.log-time');
+                    const timeText = timeSpan ? timeSpan.outerHTML : '';
+                    
+                    let displayMessage = duplicateInfo.originalLog.message;
+                    if (duplicateInfo.count > 1) {
+                        displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
+                    }
+                    
+                    entry.innerHTML = timeText + displayMessage;
+                    break;
+                }
+            }
+        }
     }
 
     // Eagle专用日志方法
@@ -4169,7 +4292,50 @@ class AEExtension {
             source: 'eagle'
         };
 
-        // 添加到Eagle日志数组
+        // 初始化重复日志计数器
+        if (!this.logDuplicateTracker) {
+            this.logDuplicateTracker = new Map();
+        }
+
+        const now = Date.now();
+        const duplicateWindow = 60000; // 60秒内的重复消息会被合并
+        const messageKey = this.generateLogKey(message);
+
+        // 检查是否是重复消息
+        if (this.logDuplicateTracker.has(messageKey)) {
+            const existing = this.logDuplicateTracker.get(messageKey);
+            
+            // 如果在时间窗口内，增加计数
+            if (now - existing.firstSeen < duplicateWindow) {
+                existing.count++;
+                existing.lastSeen = now;
+                existing.lastTimestamp = logData.timestamp;
+                
+                // 更新现有日志的显示
+                this.updateDuplicateLogDisplay(existing);
+                return; // 不添加新的日志条目
+            } else {
+                // 超出时间窗口，重置计数并创建新条目
+                existing.count = 1;
+                existing.firstSeen = now;
+                existing.lastSeen = now;
+                existing.lastTimestamp = logData.timestamp;
+                existing.originalLog = logData;
+                // 继续执行下面的代码创建新条目
+            }
+        } else {
+            // 新消息，添加到跟踪器
+            this.logDuplicateTracker.set(messageKey, {
+                count: 1,
+                firstSeen: now,
+                lastSeen: now,
+                originalLog: logData,
+                lastTimestamp: logData.timestamp,
+                logIndex: this.eagleLogs.length
+            });
+        }
+
+        // 添加到Eagle日志数组（只有新消息或超出时间窗口的消息）
         this.eagleLogs.push(logData);
 
         // 如果当前显示Eagle日志，实时更新显示
@@ -4177,7 +4343,9 @@ class AEExtension {
             const logOutput = document.getElementById('log-output');
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry ${type} eagle`;
+            
             logEntry.innerHTML = `<span class="log-time">${timestamp}</span>${message}`;
+            logEntry.setAttribute('data-message-key', messageKey);
             logOutput.appendChild(logEntry);
             logOutput.scrollTop = logOutput.scrollHeight;
         }

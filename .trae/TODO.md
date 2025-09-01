@@ -1,6 +1,6 @@
 # TODO:
 
-- [x] advanced-import-behavior-listeners: 为高级设置的导入行为部分添加三个单选按钮的事件监听器 (priority: High)
-- [x] load-advanced-import-behavior: 修改loadSettingsToUI函数以正确加载高级设置导入行为单选按钮状态 (priority: High)
-- [x] sync-quick-to-advanced: 修改快速设置的导入行为事件监听器以同步到高级设置导入行为单选按钮 (priority: High)
-- [x] test-bidirectional-sync: 测试高级设置与快速面板的双向同步功能 (priority: Medium)
+- [x] 9: 在index.html中添加DatabaseService.js的script标签引用 (priority: High)
+- [x] 10: 修改DatabaseService.js为全局类定义，移除module.exports (priority: High)
+- [x] 11: 修改main.js中testDatabaseAccess方法，直接使用全局DatabaseService类 (priority: High)
+- [x] 12: 测试修复后的CEP环境模块加载功能 (priority: Medium)
