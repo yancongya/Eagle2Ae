@@ -2061,6 +2061,14 @@ class Eagle2Ae {
                 throw new Error('没有提供要导入的文件');
             }
 
+            // 检查是否启用阅后即焚模式
+            const burnAfterReading = data.burnAfterReading || false;
+            const tempFiles = data.tempFiles || [];
+            
+            if (burnAfterReading) {
+                this.log(`🔥 阅后即焚模式已启用，将在导入后删除 ${tempFiles.length} 个临时文件`, 'info');
+            }
+
             // 获取目标文件夹ID
             const targetFolderId = await this.getCurrentFolderId();
             if (!targetFolderId) {
@@ -2072,10 +2080,20 @@ class Eagle2Ae {
             // 导入文件到Eagle
             const result = await this.importFilesToEagle(data.files, targetFolderId);
             
+            // 如果导入成功且启用阅后即焚，删除临时文件
+            if (result.success && burnAfterReading && tempFiles.length > 0) {
+                this.log(`🔥 开始执行阅后即焚：删除 ${tempFiles.length} 个临时文件...`, 'info');
+                await this.deleteTempFiles(tempFiles);
+            }
+            
             // 发送结果回AE
             this.sendToAE({
                 type: 'eagle_import_result',
-                data: result
+                data: {
+                    ...result,
+                    burnAfterReading: burnAfterReading,
+                    deletedTempFiles: burnAfterReading ? tempFiles.length : 0
+                }
             });
 
         } catch (error) {
@@ -2241,6 +2259,43 @@ class Eagle2Ae {
             this.log(`❌ Eagle API调用失败: ${error.message}`, 'error');
             throw error;
         }
+    }
+
+    // 删除临时文件（阅后即焚功能）
+    async deleteTempFiles(tempFiles) {
+        let deletedCount = 0;
+        let failedCount = 0;
+        
+        for (const filePath of tempFiles) {
+            try {
+                // 检查文件是否存在
+                const fs = require('fs');
+                if (fs.existsSync(filePath)) {
+                    // 删除文件
+                    fs.unlinkSync(filePath);
+                    deletedCount++;
+                    this.log(`🗑️ 已删除临时文件: ${filePath}`, 'debug');
+                } else {
+                    this.log(`⚠️ 临时文件不存在，跳过删除: ${filePath}`, 'warning');
+                }
+            } catch (deleteError) {
+                failedCount++;
+                this.log(`❌ 删除临时文件失败: ${filePath} - ${deleteError.message}`, 'error');
+            }
+        }
+        
+        if (deletedCount > 0) {
+            this.log(`🔥 阅后即焚完成: 成功删除 ${deletedCount} 个临时文件`, 'success');
+        }
+        
+        if (failedCount > 0) {
+            this.log(`⚠️ ${failedCount} 个临时文件删除失败`, 'warning');
+        }
+        
+        return {
+            deletedCount: deletedCount,
+            failedCount: failedCount
+        };
     }
 
     // 导出选中文件到AE

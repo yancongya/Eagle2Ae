@@ -1658,6 +1658,33 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recent-folder-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .recent-folder-delete {
+            background: #e74c3c;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 8px;
+            padding: 2px 4px;
+            margin-left: 6px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .recent-folder-delete:hover {
+            background: #c0392b;
         }
 
         .recent-folder-item:hover {
@@ -3056,17 +3083,17 @@
                 <div class="settings-section">
                     <div class="settings-section-title">导出路径设置</div>
                     <div class="import-mode-options-horizontal">
-                        <label class="import-mode-option" title="在AE项目文件旁边创建导出文件夹">
-                            <input type="radio" name="export-mode" value="project_adjacent" checked>
+                        <label class="import-mode-option" title="直接导出到桌面">
+                            <input type="radio" name="export-mode" value="desktop" checked>
+                            <span>桌面导出</span>
+                        </label>
+                        <label class="import-mode-option" title="导出到AE项目文件旁边的文件夹（与导入模式设置一致）">
+                            <input type="radio" name="export-mode" value="project_adjacent">
                             <span>项目旁导出</span>
                         </label>
-                        <label class="import-mode-option" id="export-custom-folder-option" title="指定任意文件夹作为导出目录">
+                        <label class="import-mode-option" id="export-custom-folder-option" title="导出到指定文件夹（与导入模式设置一致）">
                             <input type="radio" name="export-mode" value="custom_folder">
-                            <span>自定义文件夹</span>
-                        </label>
-                        <label class="import-mode-option" title="直接导出到桌面">
-                            <input type="radio" name="export-mode" value="desktop">
-                            <span>桌面导出</span>
+                            <span>指定文件夹</span>
                         </label>
                     </div>
 
@@ -3183,70 +3210,7 @@
         </div>
     </div>
 
-    <!-- 导出项目旁模式设置弹窗 -->
-    <div id="export-project-adjacent-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>项目旁导出设置</h3>
-                <button class="modal-close" onclick="closeExportProjectAdjacentModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="folder-setting">
-                    <div class="folder-preset-section">
-                        <select id="export-project-folder-preset-select">
-                            <option value="Export">Export</option>
-                            <option value="AE_Export">AE_Export</option>
-                            <option value="Output">Output</option>
-                            <option value="Render">Render</option>
-                            <option value="Frames">Frames</option>
-                            <option value="custom">自定义...</option>
-                        </select>
-                    </div>
-                    <div class="custom-folder-section">
-                        <input type="text" id="export-project-custom-folder-input" placeholder="或输入自定义文件夹名">
-                    </div>
-                </div>
-                <div class="modal-description">
-                    <p>选择在AE项目文件旁边创建的导出文件夹名称</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn cancel" onclick="closeExportProjectAdjacentModal()">取消</button>
-                <button class="modal-btn confirm" onclick="confirmExportProjectAdjacentSettings()">确认</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 导出自定义文件夹设置弹窗 -->
-    <div id="export-custom-folder-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>自定义导出文件夹设置</h3>
-                <button class="modal-close" onclick="closeExportCustomFolderModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="folder-path-setting">
-                    <div class="folder-path-section">
-                        <input type="text" id="export-custom-folder-path-input" placeholder="点击浏览选择导出文件夹路径" readonly title="鼠标悬浮查看完整路径">
-                        <button class="browse-button" onclick="browseExportFolderPath()">浏览...</button>
-                    </div>
-                    <div class="recent-folders-section" id="export-recent-folders-section" style="display: none;">
-                        <div class="recent-folders-title">最近使用的导出文件夹</div>
-                        <div class="recent-folders-list" id="export-recent-folders-list">
-                            <!-- 最近使用的导出文件夹将动态添加到这里 -->
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-description">
-                    <p>选择用于导出图层的目标文件夹</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn cancel" onclick="closeExportCustomFolderModal()">取消</button>
-                <button class="modal-btn confirm" onclick="confirmExportCustomFolderSettings()">确认</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         // 移除了sequenceSettings变量，因为不再支持顺序排列
@@ -3362,6 +3326,11 @@
             // 加载设置
             loadProjectAdjacentSettings();
             loadCustomFolderSettings();
+            
+            // 初始化指定文件夹按钮的悬浮提示
+            setTimeout(() => {
+                updateCustomFolderTooltip();
+            }, 100);
         });
 
         // 点击弹窗外部关闭
@@ -3447,6 +3416,9 @@
 
             // 显示最近使用的文件夹
             updateRecentFoldersList();
+            
+            // 更新悬浮提示
+            updateCustomFolderTooltip();
 
             modal.style.display = 'flex';
         }
@@ -3466,47 +3438,78 @@
             try {
                 console.log('正在使用Web API文件夹选择...');
 
-                // 首先尝试使用现代的 File System Access API
+                // 优先使用 ExtendScript 方法，因为它能获取真实路径
+                if (window.csInterface) {
+                    console.log('使用 ExtendScript 方法获取真实路径');
+                    useExtendScriptFolderPicker('custom-folder-path-input', customFolderSettings.folderPath || '', '选择目标文件夹');
+                    return;
+                }
+
+                // 回退方案1：使用现代的 File System Access API
                 if ('showDirectoryPicker' in window) {
                     console.log('使用 File System Access API');
                     showDirectoryPicker()
-                        .then(directoryHandle => {
+                        .then(async directoryHandle => {
                             const pathInput = document.getElementById('custom-folder-path-input');
-                            // 注意：File System Access API 不能直接获取完整路径，但可以获取文件夹名称
-                            pathInput.value = `[已选择] ${directoryHandle.name}`;
-                            console.log('已选择文件夹:', directoryHandle.name);
+                            
+                            // 尝试获取实际路径，如果不能获取则使用句柄
+                            let actualPath = '';
+                            try {
+                                // 在某些浏览器中可能可以获取路径
+                                if (directoryHandle.getDirectoryHandle) {
+                                    actualPath = directoryHandle.name; // 至少保存文件夹名
+                                }
+                            } catch (e) {
+                                actualPath = directoryHandle.name;
+                            }
+                            
+                            // 验证路径格式，拒绝保存无效路径
+                            if (!actualPath || actualPath.startsWith('[已选择]')) {
+                                console.warn('无法获取有效路径，回退到ExtendScript方法');
+                                useExtendScriptFolderPicker('custom-folder-path-input', '', '选择目标文件夹');
+                                return;
+                            }
+                            
+                            pathInput.value = actualPath;
+                            console.log('已选择文件夹:', actualPath);
 
-                            // 保存文件夹句柄以供后续使用
+                            // 保存文件夹信息
                             customFolderSettings.directoryHandle = directoryHandle;
-                            customFolderSettings.folderPath = directoryHandle.name;
+                            customFolderSettings.folderPath = actualPath;
+                            
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.customFolderPath = actualPath;
+                                window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                console.log('路径已同步到SettingsManager:', actualPath);
+                            }
+                            // 更新悬浮提示
+                            updateCustomFolderTooltip();
                         })
                         .catch(error => {
                             if (error.name === 'AbortError') {
                                 console.log('用户取消了文件夹选择');
                             } else {
                                 console.error('File System Access API 失败:', error);
-                                // 回退到 webkitdirectory 方法
-                                useWebkitDirectoryPicker('custom-folder-path-input');
+                                // 回退到 ExtendScript 方法
+                                if (window.csInterface) {
+                                    useExtendScriptFolderPicker('custom-folder-path-input', '', '选择目标文件夹');
+                                }
                             }
                         });
                     return;
                 }
 
-                // 回退方案1：使用 webkitdirectory
+                // 回退方案2：使用 webkitdirectory（最后选择，因为路径获取有限）
                 if (supportsWebkitDirectory()) {
                     console.log('使用 webkitdirectory API');
                     useWebkitDirectoryPicker('custom-folder-path-input');
                     return;
                 }
 
-                // 回退方案2：使用 ExtendScript
-                if (window.csInterface) {
-                    console.log('回退到 ExtendScript 方法');
-                    useExtendScriptFolderPicker('custom-folder-path-input', customFolderSettings.folderPath || '', '选择目标文件夹');
-                } else {
-                    console.warn('所有文件夹选择方法都不可用');
-                    alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器');
-                }
+                console.warn('所有文件夹选择方法都不可用');
+                alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器，或确保AE扩展环境正常');
             } catch (error) {
                 console.error('文件夹选择出错:', error);
                 alert('文件夹选择功能出现错误: ' + error.message);
@@ -3533,22 +3536,78 @@
             input.addEventListener('change', (event) => {
                 const files = event.target.files;
                 if (files.length > 0) {
-                    // 从第一个文件的路径中提取文件夹路径
+                    // 从第一个文件的路径中提取实际的文件夹路径
                     const firstFile = files[0];
-                    const fullPath = firstFile.webkitRelativePath;
-                    const folderName = fullPath.split('/')[0]; // 获取顶级文件夹名称
+                    const relativePath = firstFile.webkitRelativePath;
+                    
+                    // 尝试构建实际的文件夹路径
+                    let actualFolderPath = '';
+                    try {
+                        // 获取文件的完整路径，然后移除相对路径部分
+                        const fullFilePath = firstFile.path || firstFile.webkitRelativePath;
+                        if (fullFilePath && relativePath) {
+                            // 计算父文件夹路径
+                            const pathParts = fullFilePath.split('/');
+                            const relativeParts = relativePath.split('/');
+                            
+                            if (pathParts.length > relativeParts.length) {
+                                // 移除相对路径部分，获取父文件夹路径
+                                const parentParts = pathParts.slice(0, pathParts.length - relativeParts.length + 1);
+                                actualFolderPath = parentParts.join('/');
+                            } else {
+                                // 回退：使用文件夹名称
+                                actualFolderPath = relativePath.split('/')[0];
+                            }
+                        } else {
+                            // 回退：使用顶级文件夹名称
+                            actualFolderPath = relativePath.split('/')[0];
+                        }
+                    } catch (error) {
+                        console.warn('无法提取实际路径，使用文件夹名称:', error);
+                        actualFolderPath = relativePath.split('/')[0];
+                    }
+                    
+                    // 验证路径格式
+                    if (!actualFolderPath || actualFolderPath.startsWith('[已选择]')) {
+                        console.error('获取到无效的文件夹路径，回退到ExtendScript方法');
+                        if (window.csInterface) {
+                            useExtendScriptFolderPicker(inputId, '', '选择目标文件夹');
+                        } else {
+                            alert('无法获取有效的文件夹路径，请使用其他方法选择文件夹');
+                        }
+                        document.body.removeChild(input);
+                        return;
+                    }
 
                     const pathInput = document.getElementById(inputId);
-                    pathInput.value = `[已选择] ${folderName}`;
-                    console.log('已选择文件夹:', folderName);
+                    pathInput.value = actualFolderPath;
+                    console.log('已选择文件夹路径:', actualFolderPath);
 
                     // 保存文件夹信息
                     if (inputId === 'custom-folder-path-input') {
-                        customFolderSettings.folderPath = folderName;
+                        customFolderSettings.folderPath = actualFolderPath;
                         customFolderSettings.files = Array.from(files);
+                        
+                        // 同步到SettingsManager
+                        if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                            const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                            currentSettings.customFolderPath = actualFolderPath;
+                            window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                            console.log('导入路径已同步到SettingsManager:', actualFolderPath);
+                        }
+                        // 更新悬浮提示
+                        updateCustomFolderTooltip();
                     } else if (inputId === 'export-custom-folder-path-input') {
-                        exportCustomFolderSettings.folderPath = folderName;
+                        exportCustomFolderSettings.folderPath = actualFolderPath;
                         exportCustomFolderSettings.files = Array.from(files);
+                        
+                        // 同步到SettingsManager
+                        if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                            const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                            currentSettings.exportSettings.customExportPath = actualFolderPath;
+                            window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                            console.log('导出路径已同步到SettingsManager:', actualFolderPath);
+                        }
                     }
                 } else {
                     console.log('用户取消了文件夹选择');
@@ -3601,6 +3660,8 @@
                                         window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
                                         console.log('导入路径已同步到SettingsManager:', selectedPath);
                                     }
+                                    // 更新悬浮提示
+                                    updateCustomFolderTooltip();
                                 } else if (inputId === 'export-custom-folder-path-input') {
                                     exportCustomFolderSettings.folderPath = selectedPath;
                                     // 同步到SettingsManager
@@ -3646,9 +3707,26 @@
                         pathInput.value = parsedResult.path;
                         console.log('已选择文件夹:', parsedResult.path);
 
+                        // 验证路径格式，拒绝保存无效路径
+                        if (parsedResult.path.startsWith('[已选择]')) {
+                            console.error('检测到无效路径格式，拒绝保存:', parsedResult.path);
+                            alert('获取到无效的文件夹路径，请重新选择');
+                            return;
+                        }
+                        
                         // 保存路径到相应的设置对象
                         if (inputId === 'custom-folder-path-input') {
                             customFolderSettings.folderPath = parsedResult.path;
+                            
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.customFolderPath = parsedResult.path;
+                                window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                console.log('导入路径已同步到SettingsManager:', parsedResult.path);
+                            }
+                            // 更新悬浮提示
+                            updateCustomFolderTooltip();
                         } else if (inputId === 'export-custom-folder-path-input') {
                             exportCustomFolderSettings.folderPath = parsedResult.path;
 
@@ -3725,22 +3803,53 @@
                 recentSection.style.display = 'block';
                 recentList.innerHTML = '';
 
-                customFolderSettings.recentFolders.forEach(folder => {
+                customFolderSettings.recentFolders.forEach((folder, index) => {
                     const item = document.createElement('button');
                     item.className = 'recent-folder-item';
-                    item.textContent = folder;
-                    item.onclick = function() {
+                    
+                    // 创建文件夹路径文本
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'recent-folder-text';
+                    textSpan.textContent = folder;
+                    textSpan.title = folder; // 悬浮显示完整路径
+                    
+                    // 创建删除按钮
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'recent-folder-delete';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = '删除此记录';
+                    deleteBtn.onclick = function(e) {
+                        e.stopPropagation(); // 阻止事件冒泡
+                        removeRecentFolder(index);
+                    };
+                    
+                    // 点击文件夹路径选择该路径
+                    textSpan.onclick = function() {
                         document.getElementById('custom-folder-path-input').value = folder;
                         // 更新选中状态
                         document.querySelectorAll('.recent-folder-item').forEach(btn => {
                             btn.classList.remove('selected');
                         });
-                        this.classList.add('selected');
+                        item.classList.add('selected');
                     };
+                    
+                    item.appendChild(textSpan);
+                    item.appendChild(deleteBtn);
                     recentList.appendChild(item);
                 });
             } else {
                 recentSection.style.display = 'none';
+            }
+        }
+
+        // 删除最近使用的文件夹记录
+        function removeRecentFolder(index) {
+            if (index >= 0 && index < customFolderSettings.recentFolders.length) {
+                customFolderSettings.recentFolders.splice(index, 1);
+                saveCustomFolderSettings();
+                updateRecentFoldersList();
+                updateCustomFolderTooltip(); // 更新指定文件夹按钮的悬浮提示
+                console.log('已删除最近使用的文件夹记录，索引:', index);
             }
         }
 
@@ -3773,238 +3882,38 @@
             saveCustomFolderSettings();
 
             console.log('指定文件夹设置已保存:', customFolderSettings);
+            
+            // 更新指定文件夹按钮的悬浮提示
+            updateCustomFolderTooltip();
         }
 
-        // 导出路径设置
-        let exportProjectAdjacentSettings = {
-            folderName: 'Export'
-        };
-
-        let exportCustomFolderSettings = {
-            folderPath: '',
-            recentFolders: []
-        };
-
-        // 导出项目旁模式弹窗功能
-        function showExportProjectAdjacentModal() {
-            const modal = document.getElementById('export-project-adjacent-modal');
-            const presetSelect = document.getElementById('export-project-folder-preset-select');
-            const customInput = document.getElementById('export-project-custom-folder-input');
-
-            // 设置当前值
-            presetSelect.value = exportProjectAdjacentSettings.folderName;
-            customInput.value = '';
-
-            // 根据选择显示/隐藏自定义输入框
-            customInput.style.display = presetSelect.value === 'custom' ? 'block' : 'none';
-
-            modal.style.display = 'flex';
-        }
-
-        function closeExportProjectAdjacentModal() {
-            const modal = document.getElementById('export-project-adjacent-modal');
-            modal.style.display = 'none';
-        }
-
-        function confirmExportProjectAdjacentSettings() {
-            const presetSelect = document.getElementById('export-project-folder-preset-select');
-            const customInput = document.getElementById('export-project-custom-folder-input');
-
-            let folderName;
-            if (presetSelect.value === 'custom') {
-                folderName = customInput.value.trim();
-                if (!folderName) {
-                    alert('请输入自定义文件夹名');
-                    return;
-                }
-            } else {
-                folderName = presetSelect.value;
-            }
-
-            // 保存设置到全局变量
-            exportProjectAdjacentSettings.folderName = folderName;
-
-            // 同步到SettingsManager
-            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
-                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
-                currentSettings.exportSettings.projectAdjacentFolder = folderName;
-                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
-            }
-
-            // 关闭弹窗
-            closeExportProjectAdjacentModal();
-
-            console.log('导出项目旁设置已保存:', exportProjectAdjacentSettings);
-        }
-
-        // 导出自定义文件夹模式弹窗功能
-        function showExportCustomFolderModal() {
-            const modal = document.getElementById('export-custom-folder-modal');
-            const pathInput = document.getElementById('export-custom-folder-path-input');
-
-            // 从SettingsManager获取保存的路径
-            let savedPath = '';
-            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
-                const settings = window.eagleToAeApp.settingsManager.getSettings();
-                savedPath = settings.exportSettings.customExportPath || '';
-            }
-
-            // 如果SettingsManager中有路径，使用它；否则使用全局变量
-            const currentPath = savedPath || exportCustomFolderSettings.folderPath || '';
-
-            // 设置当前值和tooltip
-            pathInput.value = currentPath;
-            if (currentPath) {
-                updatePathTooltip('export-custom-folder-path-input', currentPath);
-                exportCustomFolderSettings.folderPath = currentPath; // 同步到全局变量
-            }
-
-            // 显示最近使用的导出文件夹
-            updateExportRecentFoldersList();
-
-            modal.style.display = 'flex';
-        }
-
-        function closeExportCustomFolderModal() {
-            const modal = document.getElementById('export-custom-folder-modal');
-            modal.style.display = 'none';
-        }
-
-        function updateExportRecentFoldersList() {
-            const recentList = document.getElementById('export-recent-folders-list');
-            const recentSection = document.getElementById('export-recent-folders-section');
-
-            if (exportCustomFolderSettings.recentFolders.length > 0) {
-                recentList.innerHTML = '';
-                exportCustomFolderSettings.recentFolders.forEach(folder => {
-                    const folderItem = document.createElement('div');
-                    folderItem.className = 'recent-folder-item';
-                    folderItem.textContent = folder;
-                    folderItem.onclick = () => {
-                        document.getElementById('export-custom-folder-path-input').value = folder;
-                    };
-                    recentList.appendChild(folderItem);
-                });
-                recentSection.style.display = 'block';
-            } else {
-                recentSection.style.display = 'none';
-            }
-        }
-
-        function confirmExportCustomFolderSettings() {
-            const pathInput = document.getElementById('export-custom-folder-path-input');
-            const folderPath = pathInput.value.trim();
-
-            if (!folderPath) {
-                alert('请选择导出文件夹路径');
-                return;
-            }
-
-            // 保存设置到全局变量
-            exportCustomFolderSettings.folderPath = folderPath;
-
-            // 添加到最近使用列表
-            if (!exportCustomFolderSettings.recentFolders.includes(folderPath)) {
-                exportCustomFolderSettings.recentFolders.unshift(folderPath);
-                // 限制最近使用列表长度
-                if (exportCustomFolderSettings.recentFolders.length > 5) {
-                    exportCustomFolderSettings.recentFolders = exportCustomFolderSettings.recentFolders.slice(0, 5);
-                }
-            }
-
-            // 同步到SettingsManager
-            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
-                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
-                currentSettings.exportSettings.customExportPath = folderPath;
-                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
-            }
-
-            // 更新tooltip显示
-            updateExportCustomFolderTooltip(folderPath);
-
-            // 关闭弹窗
-            closeExportCustomFolderModal();
-
-            console.log('导出自定义文件夹设置已保存:', exportCustomFolderSettings);
-        }
-
-        function browseExportFolderPath() {
-            try {
-                console.log('正在选择导出文件夹...');
-
-                // 优先使用CEP的文件夹选择器
-                if (window.cep && window.cep.fs) {
-                    console.log('使用 CEP 文件夹选择器');
-                    useCEPFolderPicker('export-custom-folder-path-input', exportCustomFolderSettings.folderPath || '', '选择导出文件夹');
-                    return;
-                }
-
-                // 回退方案1：使用现代的 File System Access API
-                if ('showDirectoryPicker' in window) {
-                    console.log('使用 File System Access API');
-                    showDirectoryPicker()
-                        .then(async directoryHandle => {
-                            const pathInput = document.getElementById('export-custom-folder-path-input');
-
-                            // 尝试获取完整路径
-                            let fullPath = directoryHandle.name;
-                            try {
-                                // 使用 resolve 方法获取相对路径，然后构建完整路径
-                                const entries = [];
-                                for await (const entry of directoryHandle.values()) {
-                                    entries.push(entry);
-                                    break; // 只需要一个条目来测试路径
-                                }
-
-                                // 如果可以访问文件系统，尝试获取更完整的路径信息
-                                if (directoryHandle.resolve) {
-                                    // 这是一个实验性API，可能不可用
-                                    fullPath = await directoryHandle.resolve() || directoryHandle.name;
-                                }
-                            } catch (e) {
-                                // 如果无法获取完整路径，使用文件夹名称
-                                console.log('无法获取完整路径，使用文件夹名称:', directoryHandle.name);
-                            }
-
-                            pathInput.value = fullPath;
-                            console.log('已选择导出文件夹:', fullPath);
-
-                            // 保存文件夹句柄和路径以供后续使用
-                            exportCustomFolderSettings.directoryHandle = directoryHandle;
-                            exportCustomFolderSettings.folderPath = fullPath;
-                        })
-                        .catch(error => {
-                            if (error.name === 'AbortError') {
-                                console.log('用户取消了导出文件夹选择');
-                            } else {
-                                console.error('File System Access API 失败:', error);
-                                // 回退到 webkitdirectory 方法
-                                useWebkitDirectoryPicker('export-custom-folder-path-input');
-                            }
-                        });
-                    return;
-                }
-
-                // 回退方案1：使用 webkitdirectory
-                if (supportsWebkitDirectory()) {
-                    console.log('使用 webkitdirectory API');
-                    useWebkitDirectoryPicker('export-custom-folder-path-input');
-                    return;
-                }
-
-                // 回退方案2：使用 ExtendScript
-                if (window.csInterface) {
-                    console.log('回退到 ExtendScript 方法');
-                    useExtendScriptFolderPicker('export-custom-folder-path-input', exportCustomFolderSettings.folderPath || '', '选择导出文件夹');
+        // 更新指定文件夹按钮的悬浮提示
+        function updateCustomFolderTooltip() {
+            const customFolderOption = document.querySelector('label[title*="复制到指定文件夹后导入"]');
+            if (customFolderOption) {
+                const baseTooltip = '复制到指定文件夹后导入';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
                 } else {
-                    console.warn('所有文件夹选择方法都不可用');
-                    alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器');
+                    customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
                 }
-            } catch (error) {
-                console.error('导出文件夹选择出错:', error);
-                alert('导出文件夹选择功能出现错误: ' + error.message);
+            }
+            
+            // 同时更新导出的指定文件夹按钮悬浮提示
+            const exportCustomFolderOption = document.getElementById('export-custom-folder-option');
+            if (exportCustomFolderOption) {
+                const baseTooltip = '导出到指定文件夹（与导入模式设置一致）';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                } else {
+                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
             }
         }
+
+
 
         // ESC键关闭弹窗
         document.addEventListener('keydown', function(e) {
@@ -4012,8 +3921,6 @@
                 const sequenceModal = document.getElementById('sequence-modal');
                 const projectModal = document.getElementById('project-adjacent-modal');
                 const customModal = document.getElementById('custom-folder-modal');
-                const exportProjectModal = document.getElementById('export-project-adjacent-modal');
-                const exportCustomModal = document.getElementById('export-custom-folder-modal');
 
                 if (sequenceModal.style.display === 'flex') {
                     closeSequenceModal();
@@ -4021,44 +3928,11 @@
                     closeProjectAdjacentModal();
                 } else if (customModal.style.display === 'flex') {
                     closeCustomFolderModal();
-                } else if (exportProjectModal.style.display === 'flex') {
-                    closeExportProjectAdjacentModal();
-                } else if (exportCustomModal.style.display === 'flex') {
-                    closeExportCustomFolderModal();
                 }
             }
         });
 
-        // 初始化导出路径显示
-        function initializeExportPathDisplay() {
-            // 等待应用初始化完成
-            setTimeout(() => {
-                if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
-                    const settings = window.eagleToAeApp.settingsManager.getSettings();
-                    const savedPath = settings.exportSettings.customExportPath;
 
-                    // 更新全局变量和输入框
-                    exportCustomFolderSettings.folderPath = savedPath || '';
-                    const pathInput = document.getElementById('export-custom-folder-path-input');
-                    if (pathInput) {
-                        pathInput.value = savedPath || '';
-                        updatePathTooltip('export-custom-folder-path-input', savedPath || '');
-                    }
-
-                    // 更新自定义文件夹选项的tooltip
-                    updateExportCustomFolderTooltip(savedPath || '');
-
-                    if (savedPath) {
-                        console.log('已恢复保存的导出路径:', savedPath);
-                    }
-                }
-            }, 1000); // 等待1秒确保应用完全初始化
-        }
-
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeExportPathDisplay();
-        });
     </script>
 
     <!-- 拖拽提示覆盖层 -->

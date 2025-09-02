@@ -3445,41 +3445,74 @@ class AEExtension {
         }
 
         try {
-            // 获取当前设置
-            const currentSettings = this.settingsManager.getSettings();
+            // 获取用户的导出设置
+            const exportSettings = this.getExportSettingsFromUI();
+            this.log(`📋 使用导出设置: 模式=${exportSettings.mode}, 自动复制=${exportSettings.autoCopy}, 阅后即焚=${exportSettings.burnAfterReading}`, 'info');
             
-            // 固定使用项目旁复制模式的路径设置
-            const projectInfo = await this.getProjectInfo();
-            if (!projectInfo || !projectInfo.projectPath) {
-                this.log('无法获取AE项目路径，请确保项目已保存后再使用导出到Eagle功能', 'error');
-                return;
+            // 验证导出路径
+            let exportPath = '';
+            let needsProjectInfo = false;
+            
+            switch (exportSettings.mode) {
+                case 'desktop':
+                    exportPath = 'desktop'; // JSX脚本会处理桌面路径
+                    this.log('📁 使用桌面导出模式', 'info');
+                    break;
+                    
+                case 'project_adjacent':
+                    needsProjectInfo = true;
+                    const projectInfo = await this.getProjectInfo();
+                    if (!projectInfo || !projectInfo.projectPath) {
+                        this.log('❌ 无法获取AE项目路径，请确保项目已保存后再使用项目旁导出功能', 'error');
+                        return;
+                    }
+                    const projectDir = projectInfo.projectPath.replace(/[^\\]*$/, '');
+                    const folderName = exportSettings.projectAdjacentFolder || 'Eagle_Assets';
+                    exportPath = projectDir + folderName;
+                    this.log(`📁 使用项目旁导出: ${exportPath}`, 'info');
+                    break;
+                    
+                case 'custom_folder':
+                    exportPath = exportSettings.customExportPath;
+                    if (!exportPath || exportPath.trim() === '') {
+                        this.log('❌ 指定文件夹路径为空，请先在导出设置中选择目标文件夹', 'error');
+                        return;
+                    }
+                    // 验证路径格式
+                    if (exportPath.startsWith('[已选择]')) {
+                        this.log('❌ 检测到无效的路径格式，请重新选择文件夹', 'error');
+                        return;
+                    }
+                    this.log(`📁 使用指定文件夹导出: ${exportPath}`, 'info');
+                    break;
+                    
+                default:
+                    this.log('❌ 未知的导出模式，使用桌面导出作为回退', 'warning');
+                    exportPath = 'desktop';
+                    exportSettings.mode = 'desktop';
             }
-            
-            const projectDir = projectInfo.projectPath.replace(/[^\\]*$/, '');
-            const folderName = currentSettings.projectAdjacentFolder || 'Eagle_Assets';
-            const exportPath = projectDir + folderName;
-            
-            this.log(`使用项目旁复制路径设置: ${exportPath}`, 'info');
-            this.log(`文件夹名称: ${folderName}`, 'info');
 
-            // 准备导出设置
-            let exportSettings = {
+            // 准备完整的导出设置
+            const currentSettings = this.settingsManager.getSettings();
+            let completeExportSettings = {
                 exportSettings: {
-                    mode: 'custom_folder',
+                    mode: exportSettings.mode,
                     customExportPath: exportPath,
-                    autoCopy: false, // 导出到Eagle不需要自动复制
-                    burnAfterReading: false,
-                    addTimestamp: false,
-                    createSubfolders: false
+                    projectAdjacentFolder: exportSettings.projectAdjacentFolder,
+                    autoCopy: exportSettings.autoCopy,
+                    burnAfterReading: exportSettings.burnAfterReading,
+                    addTimestamp: exportSettings.addTimestamp,
+                    createSubfolders: exportSettings.createSubfolders
                 },
                 fileManagement: currentSettings.fileManagement,
                 timelineOptions: currentSettings.timelineOptions
             };
             
-            this.log(`开始导出图层到路径: ${exportPath}`, 'info');
+            this.log(`🚀 开始导出图层到路径: ${exportPath}`, 'info');
+            this.log(`⚙️ 导出选项: 时间戳前缀=${exportSettings.addTimestamp}, 合成名前缀=${exportSettings.createSubfolders}`, 'info');
 
             // 执行导出
-            const result = await this.executeExtendScript('exportSelectedLayers', exportSettings);
+            const result = await this.executeExtendScript('exportSelectedLayers', completeExportSettings);
 
             if (result.success) {
                 this.log(`🎉 导出完成: ${result.totalExported} 个图层已导出`, 'success');
@@ -3494,13 +3527,40 @@ class AEExtension {
                     // 忽略音效播放错误
                 }
 
-                // 自动导入到Eagle
+                // 处理导出后的操作
                 if (result.exportedLayers && result.exportedLayers.length > 0) {
+                    // 验证文件路径有效性
+                    const validFiles = [];
+                    for (const layer of result.exportedLayers) {
+                        if (layer.filePath && layer.filePath.trim() !== '') {
+                            validFiles.push(layer);
+                            this.log(`✅ 文件路径验证通过: ${layer.filePath}`, 'debug');
+                        } else {
+                            this.log(`❌ 文件路径无效: ${layer.layerName || '未知图层'}`, 'warning');
+                        }
+                    }
+                    
+                    if (validFiles.length === 0) {
+                        this.log('❌ 没有有效的导出文件，无法导入到Eagle', 'error');
+                        return;
+                    }
+                    
+                    // 自动复制到剪贴板（如果启用）
+                    if (exportSettings.autoCopy) {
+                        this.log('📋 自动复制功能已启用，正在复制文件到剪贴板...', 'info');
+                        try {
+                            await this.copyExportedFilesToClipboard();
+                            this.log('📋 文件已复制到剪贴板', 'success');
+                        } catch (copyError) {
+                            this.log(`📋 复制到剪贴板失败: ${copyError.message}`, 'warning');
+                        }
+                    }
+                    
+                    // 自动导入到Eagle
                     this.log('正在将导出的文件导入到Eagle...', 'info');
                     try {
                         // 发送importFiles消息到Eagle插件
-                        // 添加调试日志显示发送的文件信息
-                        const filesToImport = result.exportedLayers.map(layer => ({
+                        const filesToImport = validFiles.map(layer => ({
                             path: layer.filePath,
                             name: layer.layerName || layer.name,
                             filePath: layer.filePath
@@ -3511,11 +3571,20 @@ class AEExtension {
                             this.log(`  ${index + 1}. ${file.name} -> ${file.path}`, 'debug');
                         });
                         
+                        // 如果启用阅后即焚，标记文件需要在导入后删除
+                        const importData = {
+                            files: filesToImport
+                        };
+                        
+                        if (exportSettings.burnAfterReading) {
+                            importData.burnAfterReading = true;
+                            importData.tempFiles = filesToImport.map(f => f.path);
+                            this.log('🔥 阅后即焚模式已启用，文件将在导入Eagle后自动删除', 'info');
+                        }
+                        
                         await this.sendToEagle({
                             type: 'importFiles',
-                            data: {
-                                files: filesToImport
-                            }
+                            data: importData
                         });
 
                         this.log('📤 导入请求已发送到Eagle，等待处理结果...', 'info');
@@ -3562,6 +3631,11 @@ class AEExtension {
                 
                 if (result.failedCount > 0) {
                     this.log(`⚠️ ${result.failedCount} 个文件导入失败`, 'warning');
+                }
+                
+                // 处理阅后即焚结果
+                if (result.burnAfterReading && result.deletedTempFiles > 0) {
+                    this.log(`🔥 阅后即焚完成: 已自动删除 ${result.deletedTempFiles} 个临时文件`, 'success');
                 }
                 
                 // 播放成功音效
@@ -4663,13 +4737,6 @@ class AEExtension {
                 if (radio.checked) {
                     this.log(`导出模式已更改为: ${radio.value}`, 'info');
 
-                    // 显示相应的模态框
-                    if (radio.value === 'project_adjacent') {
-                        this.showExportProjectAdjacentModal();
-                    } else if (radio.value === 'custom_folder') {
-                        this.showExportCustomFolderModal();
-                    }
-
                     this.updateExportSettingsUI();
 
                     // 实时保存导出设置
@@ -4677,7 +4744,7 @@ class AEExtension {
                     this.settingsManager.saveExportSettings(exportSettings);
                 }
             });
-        });
+         });
 
 
 
@@ -6745,14 +6812,7 @@ class AEExtension {
             exportModeRadio.checked = true;
         }
 
-        // 同步到弹窗设置变量
-        if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
-            window.exportProjectAdjacentSettings.folderName = exportSettings.projectAdjacentFolder;
-        }
 
-        if (typeof window.exportCustomFolderSettings !== 'undefined') {
-            window.exportCustomFolderSettings.folderPath = exportSettings.customExportPath;
-        }
 
         // 导出选项
         const exportAutoCopy = document.getElementById('export-auto-copy');
@@ -6777,29 +6837,46 @@ class AEExtension {
         this.updateExportSettingsUI();
     }
 
-    // 从UI获取导出设置
+    // 从UI获取导出设置（现在直接读取导入模式的设置）
     getExportSettingsFromUI() {
-        const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'project_adjacent';
+        const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'desktop';
         const exportAutoCopy = document.getElementById('export-auto-copy');
         const exportBurnAfterReading = document.getElementById('export-burn-after-reading');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
         const exportCreateSubfolders = document.getElementById('export-create-subfolders');
 
-        // 优先从SettingsManager获取保存的设置，然后回退到全局变量
-        const savedSettings = this.settingsManager.getSettings().exportSettings;
-
-        let projectAdjacentFolder = savedSettings.projectAdjacentFolder || 'Export';
-        let customExportPath = savedSettings.customExportPath || '';
-
-        // 如果SettingsManager中没有设置，回退到全局变量
-        if (!customExportPath && typeof window.exportCustomFolderSettings !== 'undefined') {
-            customExportPath = window.exportCustomFolderSettings.folderPath || '';
+        // 直接读取导入模式的设置
+        const importSettings = this.settingsManager.getSettings();
+        
+        // 项目旁导出使用导入模式的项目旁复制设置
+        let projectAdjacentFolder = importSettings.projectAdjacentFolder || 'Eagle_Assets';
+        
+        // 指定文件夹导出路径获取逻辑修复
+        let customExportPath = '';
+        
+        // 优先从SettingsManager的customFolderPath读取
+        if (importSettings.customFolderPath && importSettings.customFolderPath.trim() !== '') {
+            customExportPath = importSettings.customFolderPath;
+            this.log(`🔍 从SettingsManager读取到指定文件夹路径: "${customExportPath}"`, 'info');
         }
-
-        if (!projectAdjacentFolder || projectAdjacentFolder === 'Export') {
-            if (typeof window.exportProjectAdjacentSettings !== 'undefined') {
-                projectAdjacentFolder = window.exportProjectAdjacentSettings.folderName || 'Export';
+        // 如果SettingsManager中没有，尝试从全局变量customFolderSettings获取
+        else if (typeof window.customFolderSettings !== 'undefined' && window.customFolderSettings.folderPath && window.customFolderSettings.folderPath.trim() !== '') {
+            customExportPath = window.customFolderSettings.folderPath;
+            this.log(`🔍 从全局变量customFolderSettings读取到指定文件夹路径: "${customExportPath}"`, 'info');
+        }
+        // 最后尝试从DOM输入框获取
+        else {
+            const pathInput = document.getElementById('custom-folder-path-input');
+            if (pathInput && pathInput.value && pathInput.value.trim() !== '') {
+                customExportPath = pathInput.value.trim();
+                this.log(`🔍 从DOM输入框读取到指定文件夹路径: "${customExportPath}"`, 'info');
+            } else {
+                this.log(`⚠️ 未找到指定文件夹路径设置，将使用默认路径`, 'warning');
             }
+        }
+        
+        if (!projectAdjacentFolder && typeof window.projectAdjacentSettings !== 'undefined') {
+            projectAdjacentFolder = window.projectAdjacentSettings.folderName || 'Eagle_Assets';
         }
 
         const result = {
@@ -6812,8 +6889,17 @@ class AEExtension {
             createSubfolders: exportCreateSubfolders ? exportCreateSubfolders.checked : false
         };
 
-        // 调试日志
-        this.log(`🔍 导出设置调试: mode=${result.mode}, customExportPath="${result.customExportPath}"`, 'info');
+        // 详细调试日志
+        this.log(`🔍 导出设置调试详情:`, 'info');
+        this.log(`  - 导出模式: ${result.mode}`, 'info');
+        this.log(`  - 项目旁文件夹: "${result.projectAdjacentFolder}"`, 'info');
+        this.log(`  - 指定文件夹路径: "${result.customExportPath}"`, 'info');
+        this.log(`  - SettingsManager.customFolderPath: "${importSettings.customFolderPath || '未设置'}"`, 'info');
+        if (typeof window.customFolderSettings !== 'undefined') {
+            this.log(`  - 全局customFolderSettings.folderPath: "${window.customFolderSettings.folderPath || '未设置'}"`, 'info');
+        } else {
+            this.log(`  - 全局customFolderSettings: 未定义`, 'info');
+        }
 
         return result;
     }
@@ -6834,18 +6920,7 @@ class AEExtension {
     }
 
     // 显示导出项目旁模态框
-    showExportProjectAdjacentModal() {
-        if (typeof window.showExportProjectAdjacentModal === 'function') {
-            window.showExportProjectAdjacentModal();
-        }
-    }
 
-    // 显示导出自定义文件夹模态框
-    showExportCustomFolderModal() {
-        if (typeof window.showExportCustomFolderModal === 'function') {
-            window.showExportCustomFolderModal();
-        }
-    }
 
     // 显示自定义文件夹模态框
     showCustomFolderModal() {
