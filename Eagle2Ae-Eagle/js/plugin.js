@@ -757,6 +757,15 @@ class Eagle2Ae {
                         websocketCompatible: !!this.eagleWebSocket,
                         clientId: clientId
                     }));
+                } else if (req.method === 'GET' && parsedUrl.pathname === '/ping') {
+                    // AE扩展连接测试端点
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({
+                        pong: true,
+                        service: 'Eagle2Ae',
+                        version: '1.0.2',
+                        timestamp: Date.now()
+                    }));
                 } else if (req.method === 'GET' && parsedUrl.pathname === '/service-status') {
                     // 服务状态查询
                     res.writeHead(200, {'Content-Type': 'application/json'});
@@ -992,7 +1001,7 @@ class Eagle2Ae {
             });
 
             console.log(`开始监听端口 ${actualPort}...`);
-            this.httpServer.listen(actualPort, 'localhost', () => {
+            this.httpServer.listen(actualPort, '127.0.0.1', () => {
                 console.log(`✅ HTTP服务器启动成功，端口: ${actualPort}`);
                 eagle.log.info(`HTTP服务器启动成功，端口: ${actualPort}`);
                 this.aeStatus.connected = true;

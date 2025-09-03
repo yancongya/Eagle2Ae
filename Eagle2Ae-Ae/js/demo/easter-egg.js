@@ -57,10 +57,11 @@ class EasterEgg {
     }
     
     bindTitleClick() {
-        // 查找顶部标题栏的"Eagle2AE"标题元素
+        // 查找顶部标题栏的"Eagle2Ae"标题元素
         const titleElement = document.querySelector('.header .title');
+        const titleText = titleElement ? titleElement.textContent.trim().replace(/\s+/g, '') : '';
 
-        if (titleElement && titleElement.textContent.trim() === 'Eagle2AE') {
+        if (titleElement && (titleText === 'Eagle2Ae' || titleText === 'Ae2Eagle')) {
             this.state.titleElement = titleElement;
             this.state.titleElement.addEventListener('click', (e) => this.handleTitleClick(e));
             this.state.titleElement.style.cursor = 'pointer';
@@ -69,10 +70,10 @@ class EasterEgg {
             // 添加视觉提示（微妙的样式变化）
             this.state.titleElement.style.transition = 'all 0.2s ease';
 
-            console.log('🎯 标题点击监听器已绑定到顶部"Eagle2AE"标题');
-            console.log('🥚 彩蛋提示: 连续快速点击顶部"Eagle2AE"标题5次可切换演示模式');
+            console.log('🎯 标题点击监听器已绑定到顶部"Eagle2Ae"标题');
+            console.log('🥚 彩蛋提示: 连续快速点击顶部"Eagle2Ae"标题5次可切换演示模式');
         } else {
-            console.warn('⚠️ 未找到顶部"Eagle2AE"标题元素，彩蛋功能无法启用');
+            console.warn('⚠️ 未找到顶部"Eagle2Ae"标题元素，彩蛋功能无法启用');
             console.log('🔍 查找的元素:', titleElement);
             console.log('🔍 元素文本内容:', titleElement?.textContent);
 

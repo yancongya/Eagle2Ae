@@ -133,8 +133,8 @@
         .content {
             flex: 1;
             overflow-y: auto;
-            padding: 12px;
-            margin-top: 72px; /* 为固定标题栏留出空间 (12px top + 48px height + 12px margin) */
+            padding: 8px;
+            margin-top: 68px; /* 为固定标题栏留出空间 (8px top + 48px height + 12px margin) */
         }
 
         .header {
@@ -156,24 +156,106 @@
         .title {
             font-size: 14px;
             font-weight: 600;
-            color: #ffffff;
+            color: #9966cc;
             margin: 0;
             display: flex;
             align-items: center;
             gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            min-width: 200px;
+            overflow: visible;
+            width: auto;
         }
 
+        .title-text {
+            display: flex;
+            position: relative;
+            min-width: 140px;
+            width: auto;
+            overflow: visible;
+            white-space: nowrap;
+        }
+
+        .char {
+            display: inline-block;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            flex-shrink: 0;
+            margin: 0 1.5px;
+            color: #9966cc;
+        }
+
+        /* 确保char-a1在正常状态下显示 - 使用更高优先级 */
+        .title .char-a1 {
+            color: #9966cc !important;
+        }
+        
+        /* 非悬浮状态下确保所有字符可见 */
+        .title .char {
+            color: #9966cc;
+        }
+        
+        /* uppercase类控制字符大小写状态 */
+        .char-a1.uppercase {
+            text-transform: uppercase !important;
+        }
+        
+        /* 禁用动画干扰 */
+        .char-a1.uppercase {
+            animation: none !important;
+        }
+
+        /* 悬浮时字符重新排列动画 - Eagle2Ae -> Ae2Eagle */
+        .title:hover .char-a2 { order: 1; } /* A -> 位置1 */
+        .title:hover .char-e3 { order: 2; } /* e -> 位置2 */
+        .title:hover .char-2 { order: 3; }  /* 2 -> 位置3 */
+        .title:hover .char-e1 { order: 4; } /* E -> 位置4 */
+        .title:hover .char-a1 { order: 5; } /* a -> 位置5 (变成A) */
+        .title:hover .char-g1 { order: 6; } /* g -> 位置6 */
+        .title:hover .char-l1 { order: 7; } /* l -> 位置7 */
+        .title:hover .char-e2 { order: 8; } /* e -> 位置8 */
+
+        /* 字符变换动画 - 小写a变成大写A */
+        .title:hover .char-a1 {
+            animation: charSwap 0.6s ease;
+        }
+
+        @keyframes charSwap {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateY(90deg);
+            }
+            50% {
+                transform: scale(1.2) rotateY(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+
+
+
+        /* 统一的悬浮交互效果 - 悬浮整个标题区域时 */
+        .title:hover {
+            color: #4a90e2;
+        }
+
+        .title:hover .title-logo {
+            content: url('pubic/logo2.png');
+            transform: scale(1.1);
+        }
+
+
+
         .title-logo {
-            width: 20px;
-            height: 20px;
+            width: 28px;
+            height: 28px;
             object-fit: contain;
             transition: all 0.3s ease;
             cursor: pointer;
-        }
-
-        .title-logo:hover {
-            content: url('pubic/logo2.png');
-            transform: scale(1.1);
         }
 
         /* 顶部图标按钮样式 */
@@ -229,8 +311,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
-            height: 24px;
-            min-height: 24px;
+            height: 20px;
+            min-height: 20px;
         }
 
         /* 项目信息面板布局 */
@@ -351,16 +433,16 @@
             color: #ecf0f1;
             border: 1px solid #34495e;
             border-radius: 3px;
-            padding: 4px 8px;
+            padding: 1px 4px;
             font-size: 9px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            min-width: 80px;
-            height: 24px;
+            gap: 2px;
+            min-width: 60px;
+            height: 18px;
             line-height: 1;
             box-sizing: border-box;
             margin: 0;
@@ -376,8 +458,8 @@
         }
 
         .connection-status-btn .status-indicator {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background: #e74c3c;
             transition: all 0.3s ease;
@@ -413,11 +495,11 @@
         }
 
         .connection-text .ping-time {
-            font-size: 7px;
+            font-size: 6px;
             color: #bdc3c7;
             font-family: 'Courier New', monospace;
             background: rgba(255, 255, 255, 0.1);
-            padding: 1px 3px;
+            padding: 1px 2px;
             border-radius: 2px;
         }
 
@@ -440,22 +522,23 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
 
         .section {
             background: #2a2a2a;
             border-radius: 6px;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #555;
         }
 
         .section-title {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
             color: #ffffff;
-            margin: 0 0 12px 0;
-            line-height: 24px;
+            margin: 0;
+            line-height: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
         }
@@ -960,7 +1043,7 @@
         }
 
         .settings-section {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             padding: 12px;
             background: #1e1e1e;
             border-radius: 6px;
@@ -971,8 +1054,8 @@
             font-size: 12px;
             font-weight: 600;
             color: #fff;
-            margin-bottom: 12px;
-            padding-bottom: 6px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #444;
         }
 
@@ -995,6 +1078,7 @@
             gap: 8px;
             flex-wrap: wrap;
             align-items: flex-start;
+            margin-top: 4px;
         }
 
         .checkbox-group-horizontal .checkbox-option {
@@ -1071,7 +1155,7 @@
             cursor: pointer;
             padding: 6px 8px;
             border-radius: 4px;
-            transition: background 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .radio-option:hover, .checkbox-option:hover {
@@ -1083,12 +1167,25 @@
             font-size: 10px;
         }
 
-        .radio-option input[type="radio"],
+        .radio-option input[type="radio"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
         .checkbox-option input[type="checkbox"] {
             margin: 0;
-            flex-shrink: 0;
-            vertical-align: middle;
+            width: 14px;
+            height: 14px;
         }
+
+        .checkbox-option input[type="checkbox"]:checked + .checkbox-label {
+            color: #ff8c00;
+            font-weight: 500;
+        }
+
+
 
         /* 项目旁复制模式的内联布局 */
         .project-adjacent-option {
@@ -1278,7 +1375,7 @@
             display: flex;
             gap: 8px;
             align-items: stretch;
-            padding: 8px 0;
+            padding: 4px 0;
             width: 100%;
         }
 
@@ -1288,31 +1385,32 @@
             justify-content: center;
             gap: 6px;
             cursor: pointer;
-            padding: 8px 6px;
-            border: 1px solid #555;
+            padding: 6px 8px;
+            border: 1px solid #444;
             border-radius: 4px;
-            background: #2a2a2a;
+            background: transparent;
             transition: all 0.2s ease;
             font-size: 10px;
             color: #e0e0e0;
             flex: 1;
             min-width: 0;
             text-align: center;
+            min-height: 28px;
         }
 
         .import-mode-option:hover {
-            background: #333;
-            border-color: #666;
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #9b59b6;
         }
 
         .import-mode-option input[type="radio"]:checked + span {
-            color: #3498db;
+            color: #ffffff;
             font-weight: 500;
         }
 
         .import-mode-option:has(input[type="radio"]:checked) {
-            background: #1e3a5f;
-            border-color: #3498db;
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            border-color: #9b59b6;
         }
 
         .import-mode-option input[type="radio"] {
@@ -1979,13 +2077,14 @@
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
+            margin-top: 4px;
         }
 
         .input-option {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
 
         .input-label {
@@ -2073,13 +2172,14 @@
 
         /* 导入模式选择样式 */
         .import-mode-selection {
-            margin-bottom: 16px;
+            margin-top: 8px;
+            margin-bottom: 8px;
         }
 
         .mode-buttons {
             display: flex;
             gap: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
 
         .mode-button {
@@ -2149,14 +2249,14 @@
 
         /* 导入行为设置样式 */
         .import-behavior {
-            margin-bottom: 16px;
-            margin-top: 16px;
+            margin-bottom: 8px;
+            margin-top: 0;
         }
 
         .import-behavior-buttons {
             display: flex;
             gap: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
 
         .import-behavior-button {
@@ -2206,7 +2306,7 @@
 
         /* 图层操作按钮样式 */
         .layer-operations {
-            margin-top: 16px;
+            margin-top: 8px;
         }
 
         .layer-operation-buttons {
@@ -2221,20 +2321,20 @@
             align-items: center;
             justify-content: center;
             padding: 6px 8px;
-            background: #2a2a2a;
-            border: 1px solid #555;
+            background: transparent;
+            border: 1px solid #9b59b6;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 10px;
-            color: #b0b0b0;
+            color: #9b59b6;
             user-select: none;
         }
 
         .layer-operation-button:hover {
-            background: #333;
-            border-color: #666;
-            color: #e0e0e0;
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #a569bd;
+            color: #a569bd;
         }
 
         .layer-operation-button:active {
@@ -2272,8 +2372,8 @@
         /* 高级设置导入行为按钮样式 */
         .import-behavior-options-horizontal {
             display: flex;
-            gap: 4px;
-            margin-top: 8px;
+            gap: 8px;
+            margin-top: 4px;
         }
 
         .import-behavior-option {
@@ -2282,18 +2382,18 @@
             align-items: center;
             justify-content: center;
             padding: 6px 8px;
-            background: #2a2a2a;
+            background: transparent;
             border: 1px solid #444;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 9px;
+            font-size: 10px;
             color: #e0e0e0;
             min-height: 28px;
         }
 
         .import-behavior-option:hover {
-            background: #3a3a3a;
+            background: rgba(255, 255, 255, 0.05);
             border-color: #666;
         }
 
@@ -2880,7 +2980,16 @@
         <div class="header">
             <div class="title">
                 <img src="pubic/logo.png" alt="Eagle2AE Logo" class="title-logo">
-                Eagle2AE
+                <div class="title-text">
+                    <span class="char char-e1">E</span>
+                    <span class="char char-a1">a</span>
+                    <span class="char char-g1">g</span>
+                    <span class="char char-l1">l</span>
+                    <span class="char char-e2">e</span>
+                    <span class="char char-2">2</span>
+                    <span class="char char-a2">A</span>
+                    <span class="char char-e3">e</span>
+                </div>
             </div>
             <div class="header-actions">
                 <button id="log-panel-toggle" class="icon-btn" title="显示/隐藏日志">
@@ -4160,6 +4269,84 @@
                     console.log('请检查manifest.xml配置和After Effects版本');
                 }
             }, 1000); // 延迟1秒执行
+        });
+
+        // 标题字符变换处理 - 避免CSS hover冲突
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleElement = document.querySelector('.title');
+            const charA1 = document.querySelector('.char-a1');
+            
+            if (titleElement && charA1) {
+                // 确保初始状态为小写a
+                charA1.textContent = 'a';
+                charA1.classList.remove('uppercase');
+                
+                let isHovered = false;
+                let hoverTimeout = null;
+                let leaveTimeout = null;
+                
+                titleElement.addEventListener('mouseenter', function(e) {
+                    clearTimeout(leaveTimeout);
+                    isHovered = true;
+                    charA1.classList.add('uppercase');
+                    
+                    hoverTimeout = setTimeout(() => {
+                        if (isHovered) {
+                            charA1.textContent = 'A';
+                        }
+                    }, 100);
+                });
+                
+                titleElement.addEventListener('mouseleave', function(e) {
+                    clearTimeout(hoverTimeout);
+                    isHovered = false;
+                    charA1.classList.remove('uppercase');
+                    
+                    leaveTimeout = setTimeout(() => {
+                        if (!isHovered) {
+                            charA1.textContent = 'a';
+                        }
+                    }, 50);
+                });
+                
+                // 监听全局鼠标移动，检测是否真正离开标题区域
+                document.addEventListener('mousemove', function(e) {
+                    const rect = titleElement.getBoundingClientRect();
+                    const isInside = e.clientX >= rect.left && e.clientX <= rect.right && 
+                                   e.clientY >= rect.top && e.clientY <= rect.bottom;
+                    
+                    if (isInside && !isHovered) {
+                        clearTimeout(leaveTimeout);
+                        isHovered = true;
+                        charA1.classList.add('uppercase');
+                        
+                        hoverTimeout = setTimeout(() => {
+                            if (isHovered) {
+                                charA1.textContent = 'A';
+                            }
+                        }, 100);
+                    } else if (!isInside && isHovered) {
+                        clearTimeout(hoverTimeout);
+                        isHovered = false;
+                        charA1.classList.remove('uppercase');
+                        
+                        leaveTimeout = setTimeout(() => {
+                            if (!isHovered) {
+                                charA1.textContent = 'a';
+                            }
+                        }, 50);
+                    }
+                });
+                
+                // 强制重置函数
+                window.resetTitleChar = function() {
+                    clearTimeout(hoverTimeout);
+                    clearTimeout(leaveTimeout);
+                    charA1.textContent = 'a';
+                    charA1.classList.remove('uppercase');
+                    isHovered = false;
+                };
+            }
         });
     </script>
 </body>

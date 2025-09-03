@@ -147,6 +147,9 @@ class AEExtension {
         };
         this.settingsPanel = null;
         this.quickSettingsInitialized = false;
+        
+        // 资源库大小更新定时器
+        this.librarySizeTimer = null;
 
         // 文件处理器
         this.fileHandler = new FileHandler(this.settingsManager, this.csInterface, this.log.bind(this));
@@ -549,6 +552,15 @@ class AEExtension {
                 // UI设置失败不影响快速设置初始化
             }
 
+            // 立即获取AE信息，不依赖连接状态
+            try {
+                this.getAEVersion();
+                this.updateAEInfoOnStartup();
+                this.log('AE信息已在启动时获取', 'info');
+            } catch (aeError) {
+                this.log(`获取AE信息失败: ${aeError.message}`, 'warning');
+            }
+
             // 初始化端口发现服务（仅在启用时）
             if (this.enablePortDiscovery) {
                 try {
@@ -856,6 +868,12 @@ class AEExtension {
 
         // 发送AE状态
         this.sendAEStatus();
+        
+        // 立即获取Eagle基本信息（不包括资源库大小）
+        this.updateEagleBasicInfo();
+        
+        // 延迟获取资源库大小
+        this.scheduleLibrarySizeUpdate();
     }
 
     // HTTP连接（兼容模式）
@@ -894,8 +912,11 @@ class AEExtension {
             // 发送AE状态
             this.sendAEStatus();
 
-            // 立即获取一次Eagle状态
-            this.updateEagleStatusFromServer();
+            // 立即获取Eagle基本信息（不包括资源库大小）
+            this.updateEagleBasicInfo();
+            
+            // 延迟获取资源库大小
+            this.scheduleLibrarySizeUpdate();
 
         } catch (error) {
             this.connectionMonitor.recordFailure();
@@ -4190,6 +4211,33 @@ class AEExtension {
         }
     }
 
+    // 在启动时更新AE信息
+    async updateAEInfoOnStartup() {
+        try {
+            // 获取并显示项目信息
+            const projectInfo = await this.getProjectInfo();
+            this.updateProjectUI(projectInfo);
+            
+            // 更新AE状态显示为已就绪
+            const aeStatusElement = document.getElementById('ae-status');
+            if (aeStatusElement) {
+                aeStatusElement.textContent = '已就绪';
+                aeStatusElement.className = 'status-ready';
+            }
+            
+            this.log('AE项目信息已更新', 'info');
+        } catch (error) {
+            this.log(`更新AE信息失败: ${error.message}`, 'warning');
+            
+            // 设置默认状态
+            const aeStatusElement = document.getElementById('ae-status');
+            if (aeStatusElement) {
+                aeStatusElement.textContent = '未知';
+                aeStatusElement.className = 'status-unknown';
+            }
+        }
+    }
+
     // 更新Eagle信息UI
     updateEagleUI(eagleStatus) {
         if (eagleStatus) {
@@ -4294,6 +4342,85 @@ class AEExtension {
     }
 
     // 从服务器获取Eagle状态信息
+    // 获取Eagle基本信息（不包括资源库大小）
+    async updateEagleBasicInfo() {
+        // 如果是演示模式，使用演示数据
+        if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
+            const eagleData = window.__DEMO_DATA__.eagle.connected;
+            this.updateEagleUI({
+                version: eagleData.version,
+                execPath: eagleData.execPath,
+                libraryPath: eagleData.libraryPath,
+                libraryName: eagleData.libraryName,
+                librarySize: -1 // 标记为计算中
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.eagleUrl}/ae-status?basic=true`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.eagleStatus) {
+                    // 设置资源库大小为计算中状态
+                    data.eagleStatus.librarySize = -1;
+                    this.updateEagleUI(data.eagleStatus);
+                    this.log('Eagle基本信息已获取', 'info');
+                }
+            }
+        } catch (error) {
+            this.log(`获取Eagle基本信息失败: ${error.message}`, 'warning');
+        }
+    }
+
+    // 延迟获取资源库大小
+    scheduleLibrarySizeUpdate() {
+        // 清除之前的定时器
+        if (this.librarySizeTimer) {
+            clearTimeout(this.librarySizeTimer);
+        }
+        
+        // 延迟3秒后获取资源库大小
+        this.librarySizeTimer = setTimeout(async () => {
+            try {
+                await this.updateLibrarySize();
+            } catch (error) {
+                this.log(`获取资源库大小失败: ${error.message}`, 'warning');
+            }
+        }, 3000);
+        
+        this.log('已安排延迟获取资源库大小', 'info');
+    }
+
+    // 获取资源库大小
+    async updateLibrarySize() {
+        // 如果是演示模式，使用演示数据
+        if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
+            const eagleData = window.__DEMO_DATA__.eagle.connected;
+            this.updateEagleUI({
+                version: eagleData.version,
+                execPath: eagleData.execPath,
+                libraryPath: eagleData.libraryPath,
+                libraryName: eagleData.libraryName,
+                librarySize: eagleData.librarySize || 0
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.eagleUrl}/ae-status?librarySize=true`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.eagleStatus) {
+                    this.updateEagleUI(data.eagleStatus);
+                    this.log('资源库大小已更新', 'info');
+                }
+            }
+        } catch (error) {
+            this.log(`获取资源库大小失败: ${error.message}`, 'warning');
+        }
+    }
+
     async updateEagleStatusFromServer() {
         // 如果是演示模式，使用演示数据
         if (window.__DEMO_MODE_ACTIVE__ && window.__DEMO_DATA__) {
