@@ -19,10 +19,10 @@ class SoundPlayer {
         try {
             // 获取扩展根目录
             const extensionPath = this.getExtensionPath();
-            return extensionPath + '/sound/';
+            return extensionPath + '/public/sound/';
         } catch (error) {
             console.warn('获取音效路径失败:', error);
-            return './sound/';
+            return './public/sound/';
         }
     }
 

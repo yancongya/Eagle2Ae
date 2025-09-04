@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Eagle2AE</title>
-    <link rel="icon" type="image/png" href="pubic/logo.png">
+    <link rel="icon" type="image/png" href="public/logo.png">
 
     <!-- Node.js 初始化脚本 -->
     <script type="text/javascript">
@@ -244,7 +244,7 @@
         }
 
         .title:hover .title-logo {
-            content: url('pubic/logo2.png');
+            content: url('public/logo2.png');
             transform: scale(1.1);
         }
 
@@ -1386,12 +1386,12 @@
             gap: 6px;
             cursor: pointer;
             padding: 6px 8px;
-            border: 1px solid #444;
+            border: 1px solid #666;
             border-radius: 4px;
             background: transparent;
             transition: all 0.2s ease;
             font-size: 10px;
-            color: #e0e0e0;
+            color: #ffffff;
             flex: 1;
             min-width: 0;
             text-align: center;
@@ -1399,18 +1399,18 @@
         }
 
         .import-mode-option:hover {
-            background: rgba(155, 89, 182, 0.1);
-            border-color: #9b59b6;
+            background: transparent;
+            border-color: #888;
         }
 
         .import-mode-option input[type="radio"]:checked + span {
             color: #ffffff;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .import-mode-option:has(input[type="radio"]:checked) {
-            background: linear-gradient(135deg, #8e44ad, #9b59b6);
-            border-color: #9b59b6;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #aaa;
         }
 
         .import-mode-option input[type="radio"] {
@@ -2188,21 +2188,21 @@
             align-items: center;
             justify-content: center;
             padding: 6px 8px;
-            background: #2a2a2a;
-            border: 1px solid #555;
+            background: transparent;
+            border: 1px solid #2196f3;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
             font-size: 10px;
-            color: #b0b0b0;
+            color: #2196f3;
             user-select: none;
         }
 
         .mode-button:hover {
-            background: #333;
-            border-color: #666;
-            color: #e0e0e0;
+            background: rgba(33, 150, 243, 0.15);
+            border-color: #42a5f5;
+            color: #42a5f5;
         }
 
         .mode-button input[type="radio"],
@@ -2216,14 +2216,15 @@
 
         .mode-button input[type="radio"]:checked + .mode-text,
         .mode-button input[type="checkbox"]:checked + .mode-text {
-            color: #007acc;
-            font-weight: 500;
+            color: #1976d2;
+            font-weight: 600;
         }
 
         .mode-button:has(input[type="radio"]:checked),
         .mode-button:has(input[type="checkbox"]:checked) {
-            background: transparent;
-            border-color: #007acc;
+            background: rgba(33, 150, 243, 0.15);
+            border-color: #2196f3;
+            box-shadow: 0 0 4px rgba(33, 150, 243, 0.2);
         }
 
         /* 导入合成按钮激活状态 */
@@ -2265,21 +2266,21 @@
             align-items: center;
             justify-content: center;
             padding: 6px 8px;
-            background: #2a2a2a;
-            border: 1px solid #555;
+            background: transparent;
+            border: 1px solid #ff9800;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
             font-size: 10px;
-            color: #b0b0b0;
+            color: #ff9800;
             user-select: none;
         }
 
         .import-behavior-button:hover {
-            background: #333;
-            border-color: #666;
-            color: #e0e0e0;
+            background: rgba(255, 152, 0, 0.15);
+            border-color: #ffb74d;
+            color: #ffb74d;
         }
 
         .import-behavior-button input[type="radio"] {
@@ -2291,13 +2292,14 @@
         }
 
         .import-behavior-button input[type="radio"]:checked + .behavior-text {
-            color: #ff8c00;
-            font-weight: 500;
+            color: #f57c00;
+            font-weight: 600;
         }
 
         .import-behavior-button:has(input[type="radio"]:checked) {
-            background: transparent;
-            border-color: #ff8c00;
+            background: rgba(255, 152, 0, 0.15);
+            border-color: #ff9800;
+            box-shadow: 0 0 4px rgba(255, 152, 0, 0.2);
         }
 
         .behavior-text {
@@ -2383,18 +2385,18 @@
             justify-content: center;
             padding: 6px 8px;
             background: transparent;
-            border: 1px solid #444;
+            border: 1px solid #666;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 10px;
-            color: #e0e0e0;
+            color: #ffffff;
             min-height: 28px;
         }
 
         .import-behavior-option:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: #666;
+            background: transparent;
+            border-color: #888;
         }
 
         .import-behavior-option input[type="radio"] {
@@ -2405,13 +2407,13 @@
         }
 
         .import-behavior-option input[type="radio"]:checked + span {
-            color: #ff8c00;
-            font-weight: 500;
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .import-behavior-option:has(input[type="radio"]:checked) {
-            background: #3d2a1a;
-            border-color: #ff8c00;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #aaa;
         }
 
         .btn-small {
@@ -2979,7 +2981,7 @@
     <div class="panel">
         <div class="header">
             <div class="title">
-                <img src="pubic/logo.png" alt="Eagle2AE Logo" class="title-logo">
+                <img src="public/logo.png" alt="Eagle2AE Logo" class="title-logo">
                 <div class="title-text">
                     <span class="char char-e1">E</span>
                     <span class="char char-a1">a</span>
