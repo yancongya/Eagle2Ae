@@ -240,24 +240,28 @@ function showPanelWarningDialog(title, message) {
         // 使用扩展名作为标题，忽略传入的title参数
         var dialog = new Window("dialog", EXTENSION_NAME);
         dialog.orientation = "column";
-        dialog.alignChildren = "center";
-        dialog.spacing = 6;  // 减少间距
-        dialog.margins = 8;  // 减少边距
-        dialog.preferredSize.width = 260;  // 减少宽度
-        dialog.preferredSize.height = 100; // 减少高度
+        dialog.alignChildren = "fill";
+        dialog.spacing = 10;
+        dialog.margins = 16;
+        dialog.preferredSize.width = 280;
+        dialog.preferredSize.height = 110;
         
-        // 消息文本 - 更紧凑，只显示简洁消息
+        // 消息文本 - 居中对齐
         var messageText = dialog.add("statictext", undefined, message, {multiline: false});
-        messageText.alignment = "center";
+        messageText.alignment = ["center", "center"];
         messageText.justify = "center";
-        messageText.preferredSize.width = 240;  // 减少宽度
-        messageText.preferredSize.height = 20;  // 单行高度
+        messageText.preferredSize.height = 24;
         
-        // 确定按钮 - 更小尺寸
-        var okButton = dialog.add("button", undefined, "确定");
-        okButton.preferredSize.width = 60;  // 减少宽度
-        okButton.preferredSize.height = 20; // 减少高度
-        okButton.alignment = "center";
+        // 按钮容器 - 确保按钮居中
+        var buttonContainer = dialog.add("group");
+        buttonContainer.orientation = "row";
+        buttonContainer.alignment = ["center", "bottom"];
+        buttonContainer.alignChildren = "center";
+        
+        // 确定按钮
+        var okButton = buttonContainer.add("button", undefined, "确定");
+        okButton.preferredSize.width = 70;
+        okButton.preferredSize.height = 24;
         okButton.onClick = function() {
             dialog.close();
         };
@@ -290,38 +294,38 @@ function showPanelConfirmDialog(title, message, buttons) {
         // 使用扩展名作为标题，忽略传入的title参数
         var dialog = new Window("dialog", EXTENSION_NAME);
         dialog.orientation = "column";
-        dialog.alignChildren = "center";
-        dialog.spacing = 6;  // 减少间距
-        dialog.margins = 8;  // 减少边距
-        dialog.preferredSize.width = 280; // 减少宽度
-        dialog.preferredSize.height = 100; // 进一步减少高度
+        dialog.alignChildren = "fill";
+        dialog.spacing = 10;
+        dialog.margins = 16;
+        dialog.preferredSize.width = 280;
+        dialog.preferredSize.height = 110;
         
-        // 消息文本 - 更紧凑，单行显示
+        // 消息文本 - 居中对齐
         var messageText = dialog.add("statictext", undefined, message, {multiline: false});
-        messageText.alignment = "center";
+        messageText.alignment = ["center", "center"];
         messageText.justify = "center";
-        messageText.preferredSize.width = 260; // 减少宽度
-        messageText.preferredSize.height = 20;  // 单行高度
+        messageText.preferredSize.height = 24;
         
-        // 按钮组 - 更紧凑
+        // 按钮组 - 居中对齐
         var buttonGroup = dialog.add("group");
         buttonGroup.orientation = "row";
-        buttonGroup.spacing = 6;  // 减少按钮间距
-        buttonGroup.alignment = "center";
+        buttonGroup.spacing = 10;
+        buttonGroup.alignment = ["center", "bottom"];
+        buttonGroup.alignChildren = "center";
         
-        // 第一个按钮（确定/继续）- 更小尺寸
+        // 第一个按钮（确定/继续）
         var firstButton = buttonGroup.add("button", undefined, buttonArray[0]);
-        firstButton.preferredSize.width = 60;  // 减少宽度
-        firstButton.preferredSize.height = 20; // 减少高度
+        firstButton.preferredSize.width = 70;
+        firstButton.preferredSize.height = 24;
         firstButton.onClick = function() {
             result = 0;
             dialog.close();
         };
         
-        // 第二个按钮（取消）- 更小尺寸
+        // 第二个按钮（取消）
         var secondButton = buttonGroup.add("button", undefined, buttonArray[1]);
-        secondButton.preferredSize.width = 60;  // 减少宽度
-        secondButton.preferredSize.height = 20; // 减少高度
+        secondButton.preferredSize.width = 70;
+        secondButton.preferredSize.height = 24;
         secondButton.onClick = function() {
             result = 1;
             dialog.close();

@@ -63,6 +63,7 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 |---------|---------|----------|
 | **拖拽导入** | [UI交互指南](development/ui-interaction-guide.md#5-文件拖拽处理) | `isEagleDrag()`, `handleFileDrop()` |
 | **对话框系统** | [对话框系统](development/dialog-system.md) | `showPanelConfirmDialog()`, `showImportConfirmDialog()` |
+| **Eagle连接检测** | [JSX脚本API](api/jsx-scripts.md#checkEagleConnection) | `checkEagleConnection()`, `exportToEagleWithConnectionCheck()` |
 | **通信协议** | [通信协议设计](architecture/communication-protocol.md) | WebSocket消息类型定义 |
 | **文件导入** | [导入逻辑文档](development/import-logic.md) | 导入流程和错误处理 |
 
@@ -87,6 +88,7 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 
 ### 最新更新 (2024-01-15)
 
+- ✅ **新增Eagle连接检测功能** - 为导出到Eagle按钮添加独立的连接检测和警告对话框
 - ✅ **整合拖拽导入文档** - 将重复的拖拽逻辑文档整合到UI交互指南中
 - ✅ **优化对话框系统文档** - 添加最新的 `showPanelConfirmDialog` 实现
 - ✅ **更新通信协议** - 补充拖拽导入和对话框确认的消息类型

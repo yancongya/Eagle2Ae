@@ -735,6 +735,93 @@ function duplicateComposition(compId, newName) {
 
 ### 渲染和导出模块
 
+#### checkEagleConnection()
+
+检查Eagle连接状态
+
+```javascript
+/**
+ * 检查Eagle连接状态
+ * 返回需要CEP层处理的连接状态标识
+ * @returns {Object} 连接状态信息
+ */
+function checkEagleConnection() {
+    // 返回需要CEP层处理的连接状态标识
+    return {
+        success: true,
+        needsCEPCheck: true,
+        message: '需要CEP层检查Eagle连接状态'
+    };
+}
+```
+
+**返回值**:
+
+```json
+{
+    "success": true,
+    "needsCEPCheck": true,
+    "message": "需要CEP层检查Eagle连接状态"
+}
+```
+
+#### exportToEagleWithConnectionCheck()
+
+带连接检测的导出到Eagle函数
+
+```javascript
+/**
+ * 带连接检测的导出到Eagle函数
+ * 如果Eagle未连接，显示警告对话框
+ * @param {Object} params - 参数对象
+ * @param {Object} params.exportSettings - 导出设置
+ * @param {Object} params.connectionStatus - 连接状态
+ * @returns {Object} 操作结果
+ */
+function exportToEagleWithConnectionCheck(params) {
+    try {
+        // 检查连接状态
+        if (!params.connectionStatus || !params.connectionStatus.connected) {
+            // 显示Eagle连接警告对话框
+            var result = showWarningDialog(
+                'Eagle连接检查',
+                'Eagle插件未连接或连接异常。\n\n请确保：\n1. Eagle应用程序已启动\n2. Eagle2Ae插件已安装并启用\n3. 网络连接正常\n\n是否要重新检查连接？',
+                ['重新检查', '取消']
+            );
+            
+            return {
+                success: false,
+                userAction: result === 0 ? 'retry' : 'cancel',
+                message: result === 0 ? '用户选择重新检查连接' : '用户取消操作'
+            };
+        }
+        
+        // 连接正常，调用原始导出函数
+        return exportToEagle(params.exportSettings);
+        
+    } catch (error) {
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+**参数说明**:
+- `params.exportSettings`: 导出设置对象
+- `params.connectionStatus.connected`: 连接状态布尔值
+
+**返回值**:
+
+```json
+{
+    "success": false,
+    "userAction": "retry",
+    "message": "用户选择重新检查连接"
+}
+```
+
 #### addToRenderQueue()
 
 添加到渲染队列

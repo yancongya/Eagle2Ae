@@ -5,6 +5,77 @@
 // 引入对话框系统
 #include "dialog-warning.jsx"
 
+// Eagle连接状态检测函数
+function checkEagleConnection() {
+    try {
+        var result = {
+            success: false,
+            connected: false,
+            message: "",
+            timestamp: new Date().toString()
+        };
+        
+        // 这里需要通过CEP接口检查Eagle连接状态
+        // 由于ExtendScript无法直接进行HTTP请求，
+        // 我们返回一个标识，让CEP层处理连接检测
+        result.success = true;
+        result.message = "需要CEP层检查Eagle连接状态";
+        
+        return JSON.stringify(result);
+    } catch (error) {
+        var errorObj = {
+            success: false,
+            connected: false,
+            error: error.toString(),
+            message: "检查Eagle连接时发生错误"
+        };
+        return JSON.stringify(errorObj);
+    }
+}
+
+// 导出到Eagle函数（带连接检测）
+function exportToEagleWithConnectionCheck(exportSettings, connectionStatus) {
+    try {
+        var result = {
+            success: false,
+            message: "",
+            needsConnectionCheck: false,
+            canProceed: false
+        };
+        
+        // 检查Eagle连接状态
+        if (!connectionStatus || !connectionStatus.connected) {
+            // Eagle未连接，显示警告对话框
+            showPanelWarningDialog("Eagle连接检查", "请先连接Eagle");
+            
+            result.message = "Eagle未连接，操作已取消";
+            result.needsConnectionCheck = true;
+            result.canProceed = false;
+            
+            return JSON.stringify(result);
+        }
+        
+        // Eagle已连接，可以继续导出
+        result.success = true;
+        result.message = "Eagle连接正常，可以继续导出";
+        result.canProceed = true;
+        
+        // 调用原有的导出函数
+        var exportResult = exportSelectedLayers(exportSettings);
+        
+        return exportResult;
+        
+    } catch (error) {
+        var errorObj = {
+            success: false,
+            error: error.toString(),
+            message: "导出到Eagle时发生错误",
+            canProceed: false
+        };
+        return JSON.stringify(errorObj);
+    }
+}
+
 // 简单的测试函数，用于验证ExtendScript连接
 function testExtendScriptConnection() {
     try {

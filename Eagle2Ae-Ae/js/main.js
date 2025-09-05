@@ -3525,8 +3525,18 @@ class AEExtension {
             return;
         }
 
+        // 独立的Eagle连接检测
         if (this.connectionState !== ConnectionState.CONNECTED) {
             this.log('未连接到Eagle，请先建立连接', 'error');
+            // 调用JSX显示警告对话框
+            try {
+                await this.executeExtendScript('exportToEagleWithConnectionCheck', {
+                    exportSettings: {},
+                    connectionStatus: { connected: false }
+                });
+            } catch (error) {
+                this.log('显示Eagle连接警告时出错: ' + error.message, 'error');
+            }
             return;
         }
 

@@ -29,6 +29,9 @@ Eagle2Ae-Ae/
 ### 2.1 全局配置对象
 
 ```javascript
+// 扩展名变量 - 统一弹窗标题
+var EXTENSION_NAME = "Eagle2Ae@烟囱鸭";
+
 // 对话框全局配置
 var dialogConfig = {
     title: "提示",
@@ -42,69 +45,138 @@ var dialogConfig = {
 };
 ```
 
-### 2.2 Panel样式确认对话框
-
-#### 2.2.1 最新实现 (showPanelConfirmDialog)
+#### 2.2.4 最新实现 (showPanelConfirmDialog)
 
 ```javascript
 /**
  * 显示Panel样式确认对话框（双按钮）
- * @param {string} title 对话框标题
- * @param {string} message 消息内容
- * @param {string} button1Text 第一个按钮文本（默认"继续导入"）
- * @param {string} button2Text 第二个按钮文本（默认"取消"）
+ * @param {string} title 对话框标题（将被扩展名覆盖）
+ * @param {string} message 消息内容（建议使用简洁单行文本）
+ * @param {Array} buttons 按钮文本数组，默认["确定", "取消"]
  * @returns {number} 0表示确认，1表示取消
  */
-function showPanelConfirmDialog(title, message, button1Text, button2Text) {
+function showPanelConfirmDialog(title, message, buttons) {
     try {
-        // 创建Panel样式对话框
-        var dialog = new Window("dialog", title || "确认");
+        var buttonArray = buttons || ["确定", "取消"];
+        var result = 1; // 默认为取消
+        
+        // 使用扩展名作为标题，忽略传入的title参数
+        var dialog = new Window("dialog", EXTENSION_NAME);
         dialog.orientation = "column";
         dialog.alignChildren = "fill";
         dialog.spacing = 10;
         dialog.margins = 16;
+        dialog.preferredSize.width = 280;
+        dialog.preferredSize.height = 110;
         
-        // 添加消息文本
-        var messageGroup = dialog.add("group");
-        messageGroup.orientation = "column";
-        messageGroup.alignChildren = "left";
+        // 消息文本 - 居中对齐
+        var messageText = dialog.add("statictext", undefined, message, {multiline: false});
+        messageText.alignment = ["center", "center"];
+        messageText.justify = "center";
+        messageText.preferredSize.height = 24;
         
-        var messageText = messageGroup.add("statictext", undefined, message || "请确认操作", {multiline: true});
-        messageText.preferredSize.width = 350;
-        
-        // 添加按钮组
+        // 按钮组 - 居中对齐
         var buttonGroup = dialog.add("group");
-        buttonGroup.alignment = "center";
+        buttonGroup.orientation = "row";
         buttonGroup.spacing = 10;
+        buttonGroup.alignment = ["center", "bottom"];
+        buttonGroup.alignChildren = "center";
         
-        var confirmBtn = buttonGroup.add("button", undefined, button1Text || "继续导入");
-        var cancelBtn = buttonGroup.add("button", undefined, button2Text || "取消");
-        
-        // 设置按钮事件
-        confirmBtn.onClick = function() {
-            dialog.close(0); // 返回0表示确认
+        // 第一个按钮（确定/继续）
+        var firstButton = buttonGroup.add("button", undefined, buttonArray[0]);
+        firstButton.preferredSize.width = 70;
+        firstButton.preferredSize.height = 24;
+        firstButton.onClick = function() {
+            result = 0;
+            dialog.close();
         };
         
-        cancelBtn.onClick = function() {
-            dialog.close(1); // 返回1表示取消
+        // 第二个按钮（取消）
+        var secondButton = buttonGroup.add("button", undefined, buttonArray[1]);
+        secondButton.preferredSize.width = 70;
+        secondButton.preferredSize.height = 24;
+        secondButton.onClick = function() {
+            result = 1;
+            dialog.close();
         };
         
         // 设置默认按钮和键盘快捷键
-        confirmBtn.active = true;
-        dialog.defaultElement = confirmBtn;
-        dialog.cancelElement = cancelBtn;
+        firstButton.active = true;
+        dialog.defaultElement = firstButton;
+        dialog.cancelElement = secondButton;
         
-        // 显示对话框并返回结果
-        return dialog.show();
+        // 居中显示对话框
+        dialog.center();
+        dialog.show();
+        
+        return result;
         
     } catch (error) {
         // 如果Panel创建失败，降级到原生confirm
-        return confirm(message || "请确认操作") ? 0 : 1;
+        return confirm((EXTENSION_NAME + "\n\n" + message) || "请确认操作") ? 0 : 1;
     }
 }
 ```
 
-#### 2.2.2 传统实现 (showConfirmDialog)
+### 2.3 Panel样式警告对话框
+
+#### 2.3.1 最新实现 (showPanelWarningDialog)
+
+```javascript
+/**
+ * 显示Panel样式警告对话框（单按钮）
+ * @param {string} title 对话框标题（将被扩展名覆盖）
+ * @param {string} message 消息内容（建议使用简洁单行文本）
+ * @returns {void}
+ */
+function showPanelWarningDialog(title, message) {
+    try {
+        // 使用扩展名作为标题，忽略传入的title参数
+        var dialog = new Window("dialog", EXTENSION_NAME);
+        dialog.orientation = "column";
+        dialog.alignChildren = "fill";
+        dialog.spacing = 10;
+        dialog.margins = 16;
+        dialog.preferredSize.width = 280;
+        dialog.preferredSize.height = 110;
+        
+        // 消息文本 - 居中对齐
+        var messageText = dialog.add("statictext", undefined, message, {multiline: false});
+        messageText.alignment = ["center", "center"];
+        messageText.justify = "center";
+        messageText.preferredSize.height = 24;
+        
+        // 按钮容器 - 确保按钮居中
+        var buttonContainer = dialog.add("group");
+        buttonContainer.orientation = "row";
+        buttonContainer.alignment = ["center", "bottom"];
+        buttonContainer.alignChildren = "center";
+        
+        // 确定按钮
+        var okButton = buttonContainer.add("button", undefined, "确定");
+        okButton.preferredSize.width = 70;
+        okButton.preferredSize.height = 24;
+        okButton.onClick = function() {
+            dialog.close();
+        };
+        
+        // 设置默认按钮和键盘快捷键
+        okButton.active = true;
+        dialog.defaultElement = okButton;
+        dialog.cancelElement = okButton;
+        
+        // 居中显示对话框
+        dialog.center();
+        dialog.show();
+        
+    } catch (error) {
+        // 如果Panel创建失败，降级到原生alert
+        alert((EXTENSION_NAME + "\n\n" + message) || "操作提示");
+    }
+}
+```
+
+#### 2.3.2 传统实现 (showConfirmDialog)
 
 ```javascript
 /**
@@ -114,7 +186,69 @@ function showPanelConfirmDialog(title, message, button1Text, button2Text) {
  * @param {Array} buttons 按钮文本数组，默认["确定", "取消"]
  * @return {number} 用户点击的按钮索引，0=第一个按钮，1=第二个按钮
  */
-function showPanelConfirmDialog(title, message, buttons)
+function showPanelConfirmDialog(title, message, buttons) {
+    try {
+        buttons = buttons || ["确定", "取消"];
+        
+        // 使用扩展名作为标题，忽略传入的title参数
+        var dialog = new Window("dialog", EXTENSION_NAME);
+        dialog.orientation = "column";
+        dialog.alignChildren = "fill";
+        dialog.spacing = 10;
+        dialog.margins = 16;
+        dialog.preferredSize.width = 280;
+        dialog.preferredSize.height = 110;
+        
+        // 消息文本 - 居中对齐
+        var messageText = dialog.add("statictext", undefined, message, {multiline: false});
+        messageText.alignment = ["center", "center"];
+        messageText.justify = "center";
+        messageText.preferredSize.height = 24;
+        
+        // 按钮容器 - 确保按钮居中
+        var buttonContainer = dialog.add("group");
+        buttonContainer.orientation = "row";
+        buttonContainer.alignment = ["center", "bottom"];
+        buttonContainer.alignChildren = "center";
+        buttonContainer.spacing = 10;
+        
+        var result = -1;
+        
+        for (var i = 0; i < buttons.length; i++) {
+            var btn = buttonContainer.add("button", undefined, buttons[i]);
+            btn.preferredSize.width = 70;
+            btn.preferredSize.height = 24;
+            
+            // 使用闭包保存索引
+            (function(index) {
+                btn.onClick = function() {
+                    result = index;
+                    dialog.close();
+                };
+            })(i);
+            
+            // 第一个按钮设为默认
+            if (i === 0) {
+                btn.active = true;
+                dialog.defaultElement = btn;
+            }
+        }
+        
+        // 设置取消按钮（通常是最后一个）
+        if (buttons.length > 1) {
+            dialog.cancelElement = buttonContainer.children[buttons.length - 1];
+        }
+        
+        dialog.center();
+        dialog.show();
+        
+        return result;
+        
+    } catch (error) {
+        // 如果Panel创建失败，降级到原生confirm
+        return confirm(message) ? 0 : 1;
+    }
+}
 ```
 
 #### 2.2.2 实现细节
@@ -453,12 +587,41 @@ function logDialogError(error, context) {
 
 ### 6.1 对话框设计原则
 
-1. **简洁明了**: 消息内容简洁，避免冗长的文本
-2. **操作明确**: 按钮文本清楚表达操作意图
-3. **默认安全**: 默认选择应该是安全的操作
-4. **键盘支持**: 支持Enter确认和Esc取消
+1. **标题统一**: 所有对话框使用 `EXTENSION_NAME` 变量作为标题，确保品牌一致性
+2. **消息简洁**: 消息文本使用简洁的单行文本，避免多行换行影响布局
+3. **布局统一**: 所有对话框使用相同的尺寸(280x110)和间距(spacing:10, margins:16)
+4. **文本居中**: 消息文本设置为居中对齐，提升视觉效果
+5. **按钮规范**: 按钮使用统一尺寸(70x24)并居中排列
+6. **响应式设计**: 使用 `alignChildren: "fill"` 确保内容填充容器宽度
+7. **键盘支持**: 支持Enter和Esc键操作
+8. **错误降级**: 当Panel创建失败时，自动降级到原生对话框
 
 ### 6.2 用户体验优化
+
+#### 6.2.1 消息文本优化
+
+```javascript
+// 标准化的消息文本 - 简洁单行显示
+const STANDARD_MESSAGES = {
+    NO_PROJECT: "请先打开项目后操作",
+    NO_COMPOSITION: "请选择合成后操作", 
+    NO_COMPOSITION_CREATE: "请先创建一个合成后重试",
+    CONNECTION_ERROR: "请确保After Effects正在运行并重试"
+};
+
+// 推荐：简洁明了的单行文本
+showPanelWarningDialog("", "请先创建一个合成后重试");
+showPanelWarningDialog("", "请确保After Effects正在运行并重试");
+
+// 不推荐：多行文本影响布局
+// showPanelWarningDialog("", "项目中没有找到任何合成。\n请先创建一个合成，然后重试。");
+// showPanelWarningDialog("", "无法检查After Effects项目状态。\n请确保After Effects正在运行并重试。");
+
+// 使用示例
+showPanelWarningDialog("", STANDARD_MESSAGES.NO_PROJECT);
+```
+
+#### 6.2.2 按钮文本优化
 
 ```javascript
 // 根据操作类型使用不同的按钮文本
@@ -473,10 +636,53 @@ function getButtonTextByAction(actionType) {
     return buttonTexts[actionType] || ['确定', '取消'];
 }
 
-// 使用示例
+// 推荐：动作明确，使用统一尺寸
+showPanelConfirmDialog("", "确定要删除这个文件吗？", ["删除", "取消"]);
+
+// 不推荐：含糊不清
+// showPanelConfirmDialog("", "确定要删除这个文件吗？", ["是", "否"]);
+
+// 使用示例 - 注意标题会被扩展名覆盖
 const buttons = getButtonTextByAction('import');
-showPanelConfirmDialog('导入确认', '是否继续导入？', buttons);
+showPanelConfirmDialog('', '是否继续导入？', buttons);
 ```
+
+#### 6.2.3 布局优化特性
+
+```javascript
+// 推荐：使用优化后的统一布局参数
+var dialog = new Window("dialog", EXTENSION_NAME);
+dialog.orientation = "column";
+dialog.alignChildren = "fill";  // 填充容器宽度
+dialog.spacing = 10;            // 统一间距
+dialog.margins = 16;            // 统一边距
+dialog.preferredSize.width = 280;   // 统一宽度
+dialog.preferredSize.height = 110;  // 统一高度
+
+// 消息文本居中对齐
+var messageText = dialog.add("statictext", undefined, message, {multiline: false});
+messageText.alignment = ["center", "center"];
+messageText.justify = "center";
+messageText.preferredSize.height = 24;
+
+// 按钮容器确保居中
+var buttonContainer = dialog.add("group");
+buttonContainer.orientation = "row";
+buttonContainer.alignment = ["center", "bottom"];
+buttonContainer.alignChildren = "center";
+buttonContainer.spacing = 10;
+
+// 按钮尺寸统一设置
+var btn = buttonContainer.add("button", undefined, buttonText);
+btn.preferredSize.width = 70;
+btn.preferredSize.height = 24;
+```
+
+**布局优化要点**:
+- **统一尺寸**: 对话框宽度280px，高度110px，保持紧凑
+- **居中对齐**: 文本和按钮都采用居中对齐，视觉统一
+- **合理间距**: 元素间距10px，边距16px，提供良好的视觉呼吸感
+- **按钮规格**: 按钮宽度70px，高度24px，确保点击区域适中
 
 ### 6.3 国际化支持
 
@@ -605,6 +811,7 @@ Adobe After Effects
 
 ---
 
-**最后更新**: 2024年1月
-**维护者**: Eagle2Ae开发团队
-**版本**: v1.0
+**最后更新**: 2024-01-16  
+**维护者**: Eagle2Ae开发团队  
+**版本**: 1.3.0  
+**更新内容**: 添加弹窗优化方案，统一标题使用扩展名变量，优化布局和文本显示
