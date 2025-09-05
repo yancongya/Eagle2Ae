@@ -13,6 +13,46 @@ class FileHandler {
         this.TimelinePlacement = constants.TimelinePlacement;
     }
 
+    // 检查合成状态
+    async checkCompositionStatus() {
+        return new Promise((resolve) => {
+            const scriptCall = `
+                (function() {
+                    try {
+                        var project = app.project;
+                        if (!project.activeItem || !(project.activeItem instanceof CompItem)) {
+                            return JSON.stringify({
+                                success: false,
+                                error: "没有活动合成，请先选择合成"
+                            });
+                        }
+                        return JSON.stringify({
+                            success: true,
+                            compName: project.activeItem.name
+                        });
+                    } catch (error) {
+                        return JSON.stringify({
+                            success: false,
+                            error: "检查合成状态时出错: " + error.toString()
+                        });
+                    }
+                })();
+            `;
+
+            this.csInterface.evalScript(scriptCall, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+                    resolve(parsedResult);
+                } catch (error) {
+                    resolve({
+                        success: false,
+                        error: `解析合成检查结果失败: ${result}`
+                    });
+                }
+            });
+        });
+    }
+
     // 设置静默模式
     setQuietMode(quiet) {
         this.quietMode = quiet;
@@ -26,8 +66,9 @@ class FileHandler {
     }
 
     // 处理文件导入请求
-    async handleImportRequest(files, projectInfo) {
-        const settings = this.settingsManager.getSettings();
+    async handleImportRequest(files, projectInfo, customSettings = null) {
+        // 使用传入的自定义设置，如果没有则使用默认设置
+        const settings = customSettings || this.settingsManager.getSettings();
 
         // 只在非静默模式下显示详细信息
         if (!this.quietMode) {
@@ -37,6 +78,25 @@ class FileHandler {
         }
 
         try {
+            // 如果需要添加到合成，先检查合成状态
+            if (settings.addToComposition) {
+                this.log('FileHandler: 检查合成状态...', 'info');
+                const compCheckResult = await this.checkCompositionStatus();
+                if (!compCheckResult.success) {
+                    this.log(`FileHandler: 合成检查失败: ${compCheckResult.error}`, 'error');
+                    
+                    // 调用ExtendScript显示警告弹窗
+                    const showDialogScript = `showPanelWarningDialog("没有检测到活动合成", "请先选择要导入的合成后重试。");`;
+                    this.csInterface.evalScript(showDialogScript);
+                    
+                    return {
+                        success: false,
+                        error: compCheckResult.error,
+                        importedCount: 0
+                    };
+                }
+            }
+
             // 根据导入模式处理文件
             this.log('FileHandler: 开始处理文件...', 'info');
             const processedFiles = await this.processFilesByMode(files, settings, projectInfo);

@@ -2,6 +2,9 @@
 // 处理After Effects的具体操作
 // 更新: 修复中文文件名显示和序列帧识别
 
+// 引入对话框系统
+#include "dialog-warning.jsx"
+
 // 简单的测试函数，用于验证ExtendScript连接
 function testExtendScriptConnection() {
     try {
@@ -229,14 +232,27 @@ function importFilesWithSettings(data) {
             return JSON.stringify(result);
         }
 
+        var project = app.project;
+        var settings = data.settings || {};
+        
+        // 在开始导入前检查合成状态（JavaScript端已经检查过，这里只是双重保险）
+        if (settings.addToComposition) {
+            if (!project.activeItem || !(project.activeItem instanceof CompItem)) {
+                debugLog.push("ExtendScript: 没有活动合成，停止导入过程");
+                
+                result.error = "没有活动合成，请先选择合成";
+                result.success = false;
+                result.debugLog = debugLog;
+                return JSON.stringify(result);
+            }
+        }
+
         debugLog.push("ExtendScript: 文件数量: " + data.files.length);
         debugLog.push("ExtendScript: 设置详情: " + JSON.stringify(data.settings));
 
         app.beginUndoGroup("Import from Eagle with Settings");
 
         var importedCount = 0;
-        var project = app.project;
-        var settings = data.settings || {};
         var projectInfo = data.projectInfo || {};
 
         // 详细的设置调试
@@ -302,40 +318,44 @@ function importFilesWithSettings(data) {
                     debugLog.push("ExtendScript: project.activeItem: " + (project.activeItem ? project.activeItem.name : "无"));
                     debugLog.push("ExtendScript: activeItem类型: " + (project.activeItem ? project.activeItem.typeName : "无"));
 
-                    if (settings.addToComposition && project.activeItem && project.activeItem instanceof CompItem) {
+                    if (settings.addToComposition) {
+                        // 使用当前活动合成（已在函数开始时验证过）
                         var comp = project.activeItem;
-                        debugLog.push("ExtendScript: 开始添加到合成: " + comp.name);
+                        debugLog.push("ExtendScript: 使用当前活动合成: " + comp.name);
+                        
+                        // 添加到合成
+                        if (comp) {
+                            debugLog.push("ExtendScript: 开始添加到合成: " + comp.name);
+                            
+                            try {
+                                var layer = comp.layers.add(footageItem);
+                                debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
 
-                        try {
-                            var layer = comp.layers.add(footageItem);
-                            debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
-
-                            // 根据时间轴设置放置层（简化版）
-                            if (settings.timelineOptions && settings.timelineOptions.enabled) {
-                                debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
-                                switch (settings.timelineOptions.placement) {
-                                    case 'current_time':
-                                        layer.startTime = comp.time;
-                                        debugLog.push("ExtendScript: 放置在当前时间: " + comp.time);
-                                        break;
-                                    case 'timeline_start':
-                                        layer.startTime = 0;
-                                        debugLog.push("ExtendScript: 放置在时间轴开始: 0");
-                                        break;
-                                    default:
-                                        debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
-                                        break;
+                                // 根据时间轴设置放置层（简化版）
+                                if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                                    debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
+                                    switch (settings.timelineOptions.placement) {
+                                        case 'current_time':
+                                            layer.startTime = comp.time;
+                                            debugLog.push("ExtendScript: 放置在当前时间: " + comp.time);
+                                            break;
+                                        case 'timeline_start':
+                                            layer.startTime = 0;
+                                            debugLog.push("ExtendScript: 放置在时间轴开始: 0");
+                                            break;
+                                        default:
+                                            debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
+                                            break;
+                                    }
+                                } else {
+                                    debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
                                 }
-                            } else {
-                                debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                            } catch (layerError) {
+                                debugLog.push("ExtendScript: 添加到合成时出错: " + layerError.toString());
                             }
-                        } catch (layerError) {
-                            debugLog.push("ExtendScript: 添加到合成时出错: " + layerError.toString());
                         }
                     } else {
-                        debugLog.push("ExtendScript: 未添加到合成 - addToComposition: " + settings.addToComposition +
-                                    ", activeItem: " + (project.activeItem ? project.activeItem.name : "无") +
-                                    ", 是否为CompItem: " + (project.activeItem instanceof CompItem));
+                        debugLog.push("ExtendScript: 未添加到合成 - addToComposition设置为false");
                     }
                 } else {
                     debugLog.push("ExtendScript: 文件导入失败，footageItem为null");
@@ -634,6 +654,81 @@ function getCompositions() {
             success: false,
             error: error.toString(),
             compositions: []
+        });
+    }
+}
+
+/**
+ * 处理合成选择对话框的CEP接口函数
+ * @param {Object} config 对话框配置
+ * @return {string} JSON格式的对话框结果
+ */
+function handleCompositionDialog(config) {
+    try {
+        var dialogConfig = config || {};
+        var title = dialogConfig.title || "选择合成";
+        var message = dialogConfig.message || "请选择一个合成：";
+        
+        var result = showCompositionSelectDialog(title, message);
+        
+        return JSON.stringify({
+            success: true,
+            dialogResult: result,
+            timestamp: new Date().toString()
+        });
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            dialogResult: null
+        });
+    }
+}
+
+/**
+ * 获取最后一次对话框的结果（CEP接口）
+ * @return {string} JSON格式的对话框结果
+ */
+function getLastDialogResultForCEP() {
+    try {
+        var result = getLastDialogResult();
+        
+        return JSON.stringify({
+            success: true,
+            dialogResult: result,
+            timestamp: new Date().toString()
+        });
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            dialogResult: null
+        });
+    }
+}
+
+/**
+ * 显示自定义对话框（CEP接口）
+ * @param {Object} config 对话框配置
+ * @return {string} JSON格式的对话框结果
+ */
+function showCustomDialog(config) {
+    try {
+        var result = showDialog(config);
+        
+        return JSON.stringify({
+            success: true,
+            dialogResult: result,
+            timestamp: new Date().toString()
+        });
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: error.toString(),
+            dialogResult: null
         });
     }
 }
@@ -1026,7 +1121,8 @@ function analyzeLayer(layer, index) {
 
     } catch (error) {
         layerInfo.exportable = false;
-        layerInfo.reason = "分析出错: " + error.toString();
+        var errorMsg = error && error.message ? error.message : "图层分析时发生未知错误";
+        layerInfo.reason = "分析出错: " + errorMsg;
         layerInfo.logMessage = "  ❌ " + index + ". " + layer.name + " - " + layerInfo.reason;
     }
 
@@ -1068,7 +1164,8 @@ function exportSelectedLayers(exportSettings) {
             }
             result.logs.push("💾 已保存当前合成和图层选择状态");
         } catch (saveError) {
-            result.logs.push("⚠️ 保存状态时出现警告: " + saveError.toString());
+            var errorMsg = saveError && saveError.message ? saveError.message : "保存状态时发生未知错误";
+            result.logs.push("⚠️ 保存状态时出现警告: " + errorMsg);
         }
         
         result.compName = comp.name;
@@ -1144,19 +1241,21 @@ function exportSelectedLayers(exportSettings) {
                 }
 
                 if (filePaths.length > 0) {
-                    // 使用C#程序复制文件到剪切板 - 使用正确的CEP扩展路径
-                    var cepExtensionsPath = "C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\Eagle2Ae";
-                    var exePath = cepExtensionsPath + "\\CopyFilesToClipboard.exe";
-                    var clipboardCmd = '"' + exePath + '" "' + exportPath + '"';
-
-                    system.callSystem(clipboardCmd);
-                    result.logs.push("📋 已将所有 " + filePaths.length + " 个文件复制到剪切板");
-                    result.logs.push("💡 现在可以在任何地方按 Ctrl+V 粘贴所有文件");
+                    // 注释掉C#程序调用，避免乱码错误 - CopyFilesToClipboard.exe不存在
+                    // var cepExtensionsPath = "C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions\\Eagle2Ae";
+                    // var exePath = cepExtensionsPath + "\\CopyFilesToClipboard.exe";
+                    // var clipboardCmd = '"' + exePath + '" "' + result.exportPath + '"';
+                    // system.callSystem(clipboardCmd);
+                    
+                    result.logs.push("📋 导出完成，文件路径: " + result.exportPath);
+                    result.logs.push("💡 可通过扩展面板的复制功能将文件复制到剪切板");
                 } else {
                     result.logs.push("⚠️ 没有找到可复制的文件");
                 }
             } catch (clipError) {
-                result.logs.push("⚠️ 无法复制到剪切板: " + clipError.toString());
+                // 避免toString()可能产生的乱码，使用更安全的错误处理
+                var errorMsg = clipError && clipError.message ? clipError.message : "未知错误";
+                result.logs.push("⚠️ 无法复制到剪切板: " + errorMsg);
             }
         }
 
@@ -1189,7 +1288,8 @@ function exportSelectedLayers(exportSettings) {
                 result.logs.push("🔄 已恢复到原始合成和图层选择状态");
             }
         } catch (restoreError) {
-            result.logs.push("⚠️ 恢复状态时出现警告: " + restoreError.toString());
+            var errorMsg = restoreError && restoreError.message ? restoreError.message : "恢复状态时发生未知错误";
+            result.logs.push("⚠️ 恢复状态时出现警告: " + errorMsg);
         }
 
         return JSON.stringify(result);
@@ -1217,10 +1317,12 @@ function exportSelectedLayers(exportSettings) {
             // 忽略恢复错误
         }
         
+        // 避免toString()可能产生的乱码，使用更安全的错误处理
+        var errorMsg = error && error.message ? error.message : "导出过程发生未知错误";
         var errorResult = {
             success: false,
-            error: error.toString(),
-            logs: ["❌ 导出过程出错: " + error.toString(), "🔄 已尝试恢复原始状态"]
+            error: errorMsg,
+            logs: ["❌ 导出过程出错: " + errorMsg, "🔄 已尝试恢复原始状态"]
         };
         return JSON.stringify(errorResult);
     }
@@ -1982,7 +2084,8 @@ function exportSingleLayer(layer, layerInfo, originalComp, exportFolder) {
 
         // 设置输出文件路径
         var fileName = sanitizeFileName(layer.name) + ".png";
-        var outputFile = new File(exportFolder.fsName + "/" + fileName);
+        var outputFilePath = exportFolder.fsName + "/" + fileName;
+        var outputFile = new File(outputFilePath);
         outputModule.file = outputFile;
 
         // 按照SVGA扩展的方式执行渲染
@@ -2001,7 +2104,8 @@ function exportSingleLayer(layer, layerInfo, originalComp, exportFolder) {
             tempComp.remove();
 
             // 按照SVGA扩展的方式处理文件重命名
-            var sequenceFile = new File(outputFile.fsName + "00000");
+            var sequenceFilePath = outputFile.fsName + "00000";
+            var sequenceFile = new File(sequenceFilePath);
             if (sequenceFile.exists) {
                 sequenceFile.rename(fileName);
             }
