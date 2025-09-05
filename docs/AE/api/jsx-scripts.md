@@ -1,0 +1,1181 @@
+# JSX 脚本 API 参考
+
+## 概述
+
+本文档描述了 Eagle2Ae 扩展中使用的 ExtendScript (JSX) API，这些脚本在 After Effects 主机环境中执行，负责实际的项目操作。
+
+**版本**: v2.1.1
+**更新时间**: 2025年9月
+**特性**: 强制中文文件名解码、序列帧识别、对话框系统
+
+## 核心函数
+
+### testExtendScriptConnection()
+
+测试 ExtendScript 连接
+
+```javascript
+/**
+ * 测试 ExtendScript 连接状态
+ * 验证 ExtendScript 环境是否正常工作
+ * @returns {string} JSON 格式的连接状态信息
+ */
+function testExtendScriptConnection()
+```
+
+**返回值**:
+
+```json
+{
+    "success": true,
+    "message": "ExtendScript连接正常",
+    "timestamp": "Fri Jan 05 2024 18:30:00 GMT+0800",
+    "aeVersion": "24.0.0",
+    "scriptVersion": "v2.1.1 - 强制中文文件名解码"
+}
+```
+
+**错误返回**:
+
+```json
+{
+    "success": false,
+    "error": "错误描述信息"
+}
+```
+
+## 核心模块
+
+### 主机脚本 (hostscript.jsx)
+
+主机脚本是 CEP 扩展与 After Effects 通信的桥梁，提供了所有核心功能的实现。
+
+#### 初始化函数
+
+##### initializeExtension()
+
+初始化扩展环境
+
+```javascript
+/**
+ * 初始化扩展环境
+ * @returns {Object} 初始化结果
+ */
+function initializeExtension() {
+    try {
+        // 设置全局变量
+        if (typeof EAGLE2AE_INITIALIZED === 'undefined') {
+            EAGLE2AE_INITIALIZED = true;
+            EAGLE2AE_VERSION = '1.0.0';
+            EAGLE2AE_DEBUG = false;
+        }
+      
+        return {
+            success: true,
+            version: EAGLE2AE_VERSION,
+            aeVersion: app.version,
+            projectName: app.project.file ? app.project.file.name : 'Untitled'
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+##### getSystemInfo()
+
+获取系统信息
+
+```javascript
+/**
+ * 获取系统和应用信息
+ * @returns {Object} 系统信息
+ */
+function getSystemInfo() {
+    return {
+        aeVersion: app.version,
+        aeBuild: app.buildNumber,
+        osVersion: system.osVersion,
+        language: app.isoLanguage,
+        projectInfo: {
+            name: app.project.file ? app.project.file.name : 'Untitled',
+            path: app.project.file ? app.project.file.fsName : null,
+            modified: app.project.dirty,
+            itemCount: app.project.items.length
+        }
+    };
+}
+```
+
+### 文件导入模块
+
+#### importFileToProject()
+
+导入单个文件到项目
+
+```javascript
+/**
+ * 导入文件到 After Effects 项目
+ * @param {string} filePath - 文件绝对路径
+ * @param {Object} options - 导入选项
+ * @param {string} options.importAs - 导入类型 ('footage'|'composition'|'project')
+ * @param {boolean} options.sequence - 是否作为序列导入
+ * @param {boolean} options.forceAlphabetical - 强制字母排序
+ * @param {string} options.folder - 目标文件夹名称
+ * @param {boolean} options.replaceExisting - 是否替换现有项目
+ * @returns {Object} 导入结果
+ */
+function importFileToProject(filePath, options) {
+    options = options || {};
+  
+    try {
+        // 验证文件路径
+        var file = new File(filePath);
+        if (!file.exists) {
+            return {
+                success: false,
+                error: '文件不存在: ' + filePath
+            };
+        }
+      
+        // 获取或创建目标文件夹
+        var targetFolder = null;
+        if (options.folder) {
+            targetFolder = getOrCreateFolder(options.folder);
+        }
+      
+        // 执行导入
+        var importOptions = new ImportOptions(file);
+      
+        // 设置导入选项
+        if (options.importAs === 'composition') {
+            importOptions.importAs = ImportAsType.COMP;
+        } else if (options.importAs === 'project') {
+            importOptions.importAs = ImportAsType.PROJECT;
+        } else {
+            importOptions.importAs = ImportAsType.FOOTAGE;
+        }
+      
+        if (options.sequence) {
+            importOptions.sequence = true;
+        }
+      
+        if (options.forceAlphabetical) {
+            importOptions.forceAlphabetical = true;
+        }
+      
+        // 导入文件
+        var importedItem = app.project.importFile(importOptions);
+      
+        // 移动到目标文件夹
+        if (targetFolder && importedItem) {
+            importedItem.parentFolder = targetFolder;
+        }
+      
+        return {
+            success: true,
+            item: {
+                id: importedItem.id,
+                name: importedItem.name,
+                typeName: importedItem.typeName,
+                folder: targetFolder ? targetFolder.name : null,
+                duration: importedItem.duration || 0,
+                width: importedItem.width || 0,
+                height: importedItem.height || 0
+            }
+        };
+      
+    } catch (error) {
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+#### importMultipleFiles()
+
+批量导入文件
+
+```javascript
+/**
+ * 批量导入文件到项目
+ * @param {Array} fileList - 文件信息数组
+ * @param {Object} globalOptions - 全局导入选项
+ * @returns {Object} 批量导入结果
+ */
+function importMultipleFiles(fileList, globalOptions) {
+    globalOptions = globalOptions || {};
+  
+    var results = {
+        success: true,
+        imported: 0,
+        failed: 0,
+        details: {
+            successItems: [],
+            failedItems: []
+        }
+    };
+  
+    // 开始撤销组
+    app.beginUndoGroup('Eagle2Ae 批量导入');
+  
+    try {
+        for (var i = 0; i < fileList.length; i++) {
+            var fileInfo = fileList[i];
+            var filePath = fileInfo.path;
+          
+            // 合并文件特定选项和全局选项
+            var options = {};
+            for (var key in globalOptions) {
+                options[key] = globalOptions[key];
+            }
+            if (fileInfo.options) {
+                for (var key in fileInfo.options) {
+                    options[key] = fileInfo.options[key];
+                }
+            }
+          
+            // 导入单个文件
+            var result = importFileToProject(filePath, options);
+          
+            if (result.success) {
+                results.imported++;
+                results.details.successItems.push({
+                    originalPath: filePath,
+                    name: fileInfo.name || result.item.name,
+                    item: result.item
+                });
+            } else {
+                results.failed++;
+                results.details.failedItems.push({
+                    originalPath: filePath,
+                    name: fileInfo.name || filePath,
+                    error: result.error
+                });
+            }
+        }
+      
+        // 如果有失败项目，标记整体结果
+        if (results.failed > 0) {
+            results.success = false;
+        }
+      
+    } catch (error) {
+        results.success = false;
+        results.error = error.toString();
+    } finally {
+        app.endUndoGroup();
+    }
+  
+    return results;
+}
+```
+
+### 项目管理模块
+
+#### getOrCreateFolder()
+
+获取或创建文件夹
+
+```javascript
+/**
+ * 获取或创建项目文件夹
+ * @param {string} folderName - 文件夹名称
+ * @param {FolderItem} parentFolder - 父文件夹 (可选)
+ * @returns {FolderItem} 文件夹对象
+ */
+function getOrCreateFolder(folderName, parentFolder) {
+    parentFolder = parentFolder || app.project.rootFolder;
+  
+    // 查找现有文件夹
+    for (var i = 1; i <= parentFolder.items.length; i++) {
+        var item = parentFolder.items[i];
+        if (item instanceof FolderItem && item.name === folderName) {
+            return item;
+        }
+    }
+  
+    // 创建新文件夹
+    return parentFolder.items.addFolder(folderName);
+}
+```
+
+#### organizeProjectItems()
+
+组织项目素材
+
+```javascript
+/**
+ * 组织项目素材到指定文件夹
+ * @param {Array} itemIds - 项目素材 ID 数组
+ * @param {string} folderName - 目标文件夹名称
+ * @param {Object} options - 组织选项
+ * @returns {Object} 组织结果
+ */
+function organizeProjectItems(itemIds, folderName, options) {
+    options = options || {};
+  
+    try {
+        var targetFolder = getOrCreateFolder(folderName);
+        var movedCount = 0;
+        var errors = [];
+      
+        app.beginUndoGroup('组织项目素材');
+      
+        for (var i = 0; i < itemIds.length; i++) {
+            try {
+                var item = app.project.itemByID(itemIds[i]);
+                if (item && item !== targetFolder) {
+                    item.parentFolder = targetFolder;
+                    movedCount++;
+                }
+            } catch (error) {
+                errors.push({
+                    itemId: itemIds[i],
+                    error: error.toString()
+                });
+            }
+        }
+      
+        app.endUndoGroup();
+      
+        return {
+            success: true,
+            moved: movedCount,
+            errors: errors,
+            targetFolder: {
+                id: targetFolder.id,
+                name: targetFolder.name
+            }
+        };
+      
+    } catch (error) {
+        app.endUndoGroup();
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+#### getProjectInfo()
+
+获取当前项目信息
+
+```javascript
+/**
+ * 获取当前 After Effects 项目的基本信息
+ * 包括项目路径、名称和活动合成信息
+ * @returns {string} JSON 格式的项目信息
+ */
+function getProjectInfo()
+```
+
+**返回值**:
+
+```json
+{
+    "projectPath": "C:\\Projects\\MyProject.aep",
+    "projectName": "MyProject",
+    "activeComp": {
+        "name": "Main Comp",
+        "id": 123,
+        "width": 1920,
+        "height": 1080,
+        "duration": 10.0,
+        "frameRate": 30
+    },
+    "isReady": true
+}
+```
+
+**无项目时返回**:
+
+```json
+{
+    "projectPath": null,
+    "projectName": null,
+    "activeComp": {
+        "name": null,
+        "id": null,
+        "width": null,
+        "height": null,
+        "duration": null,
+        "frameRate": null
+    },
+    "isReady": false
+}
+```
+
+**错误返回**:
+
+```json
+{
+    "error": "错误描述信息",
+    "projectPath": null,
+    "projectName": null,
+    "activeComp": null,
+    "isReady": false
+}
+```
+
+#### importFiles()
+
+导入文件到 After Effects
+
+```javascript
+/**
+ * 导入文件到 After Effects 项目
+ * 支持图片、视频、音频等多种文件类型
+ * @param {Object} data - 导入数据对象
+ * @returns {string} JSON 格式的导入结果
+ */
+function importFiles(data)
+```
+
+**参数格式**:
+
+```javascript
+{
+    files: [
+        {
+            path: 'string',      // 文件绝对路径
+            name: 'string',      // 文件名
+            type: 'string'       // 文件类型 ('image'|'video'|'audio')
+        }
+    ],
+    targetComp: 'string',        // 目标合成名称（可选）
+    importOptions: {
+        createLayers: 'boolean'  // 是否创建图层
+    }
+}
+```
+
+**返回值**:
+
+```json
+{
+    "success": true,
+    "importedCount": 3,
+    "targetComp": "Main Comp",
+    "importedFiles": [
+        {
+            "file": "image1.jpg",
+            "footageName": "image1.jpg"
+        }
+    ],
+    "failedFiles": []
+}
+```
+
+**失败返回**:
+
+```json
+{
+    "success": false,
+    "importedCount": 0,
+    "error": "没有打开的项目",
+    "targetComp": null
+}
+```
+
+**部分失败返回**:
+
+```json
+{
+    "success": true,
+    "importedCount": 2,
+    "error": "部分文件导入失败: 1 个",
+    "targetComp": "Main Comp",
+    "importedFiles": [
+        {
+            "file": "image1.jpg",
+            "footageName": "image1.jpg"
+        }
+    ],
+    "failedFiles": [
+        {
+            "file": "corrupted.jpg",
+            "error": "文件不存在"
+        }
+    ]
+}
+```
+
+#### getProjectInfo()
+
+获取项目详细信息
+
+```javascript
+/**
+ * 获取当前项目的详细信息
+ * @returns {Object} 项目信息
+ */
+function getProjectInfo() {
+    try {
+        var project = app.project;
+        var info = {
+            name: project.file ? project.file.name : 'Untitled',
+            path: project.file ? project.file.fsName : null,
+            modified: project.dirty,
+            itemCount: project.items.length,
+            compCount: 0,
+            footageCount: 0,
+            folderCount: 0,
+            duration: 0,
+            workAreaStart: project.workAreaStart,
+            workAreaDuration: project.workAreaDuration,
+            activeItem: null,
+            renderQueue: {
+                numItems: app.project.renderQueue.numItems,
+                rendering: app.project.renderQueue.rendering
+            }
+        };
+      
+        // 统计不同类型的项目
+        for (var i = 1; i <= project.items.length; i++) {
+            var item = project.items[i];
+          
+            if (item instanceof CompItem) {
+                info.compCount++;
+                if (item.duration > info.duration) {
+                    info.duration = item.duration;
+                }
+            } else if (item instanceof FootageItem) {
+                info.footageCount++;
+            } else if (item instanceof FolderItem) {
+                info.folderCount++;
+            }
+        }
+      
+        // 获取当前活动项目
+        if (app.project.activeItem) {
+            info.activeItem = {
+                id: app.project.activeItem.id,
+                name: app.project.activeItem.name,
+                typeName: app.project.activeItem.typeName
+            };
+        }
+      
+        return {
+            success: true,
+            data: info
+        };
+      
+    } catch (error) {
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+### 合成管理模块
+
+#### createCompositionFromItems()
+
+从素材创建合成
+
+```javascript
+/**
+ * 从项目素材创建合成
+ * @param {Array} itemIds - 素材 ID 数组
+ * @param {Object} compSettings - 合成设置
+ * @returns {Object} 创建结果
+ */
+function createCompositionFromItems(itemIds, compSettings) {
+    compSettings = compSettings || {};
+  
+    try {
+        // 默认合成设置
+        var settings = {
+            name: compSettings.name || 'Eagle Import Comp',
+            width: compSettings.width || 1920,
+            height: compSettings.height || 1080,
+            pixelAspect: compSettings.pixelAspect || 1,
+            duration: compSettings.duration || 10,
+            frameRate: compSettings.frameRate || 30
+        };
+      
+        app.beginUndoGroup('创建合成');
+      
+        // 创建合成
+        var comp = app.project.items.addComp(
+            settings.name,
+            settings.width,
+            settings.height,
+            settings.pixelAspect,
+            settings.duration,
+            settings.frameRate
+        );
+      
+        // 添加素材到合成
+        var addedLayers = [];
+        var currentTime = 0;
+        var layerDuration = compSettings.layerDuration || 3; // 每层默认3秒
+      
+        for (var i = 0; i < itemIds.length; i++) {
+            try {
+                var item = app.project.itemByID(itemIds[i]);
+                if (item && (item instanceof FootageItem)) {
+                    var layer = comp.layers.add(item, currentTime);
+                  
+                    // 设置层属性
+                    if (compSettings.arrangeMode === 'sequence') {
+                        // 序列排列
+                        layer.startTime = currentTime;
+                        layer.outPoint = currentTime + layerDuration;
+                        currentTime += layerDuration;
+                    } else {
+                        // 堆叠排列 (默认)
+                        layer.startTime = 0;
+                    }
+                  
+                    addedLayers.push({
+                        id: layer.index,
+                        name: layer.name,
+                        startTime: layer.startTime,
+                        duration: layer.outPoint - layer.inPoint
+                    });
+                }
+            } catch (error) {
+                // 忽略单个素材的错误，继续处理其他素材
+            }
+        }
+      
+        // 调整合成持续时间
+        if (compSettings.arrangeMode === 'sequence' && currentTime > 0) {
+            comp.duration = currentTime;
+        }
+      
+        app.endUndoGroup();
+      
+        return {
+            success: true,
+            composition: {
+                id: comp.id,
+                name: comp.name,
+                width: comp.width,
+                height: comp.height,
+                duration: comp.duration,
+                frameRate: comp.frameRate,
+                layerCount: addedLayers.length
+            },
+            layers: addedLayers
+        };
+      
+    } catch (error) {
+        app.endUndoGroup();
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+#### duplicateComposition()
+
+复制合成
+
+```javascript
+/**
+ * 复制现有合成
+ * @param {number} compId - 源合成 ID
+ * @param {string} newName - 新合成名称
+ * @returns {Object} 复制结果
+ */
+function duplicateComposition(compId, newName) {
+    try {
+        var sourceComp = app.project.itemByID(compId);
+        if (!sourceComp || !(sourceComp instanceof CompItem)) {
+            return {
+                success: false,
+                error: '无效的合成 ID'
+            };
+        }
+      
+        app.beginUndoGroup('复制合成');
+      
+        var newComp = sourceComp.duplicate();
+        if (newName) {
+            newComp.name = newName;
+        }
+      
+        app.endUndoGroup();
+      
+        return {
+            success: true,
+            composition: {
+                id: newComp.id,
+                name: newComp.name,
+                width: newComp.width,
+                height: newComp.height,
+                duration: newComp.duration,
+                frameRate: newComp.frameRate
+            }
+        };
+      
+    } catch (error) {
+        app.endUndoGroup();
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+### 渲染和导出模块
+
+#### addToRenderQueue()
+
+添加到渲染队列
+
+```javascript
+/**
+ * 添加合成到渲染队列
+ * @param {number} compId - 合成 ID
+ * @param {Object} renderSettings - 渲染设置
+ * @returns {Object} 添加结果
+ */
+function addToRenderQueue(compId, renderSettings) {
+    renderSettings = renderSettings || {};
+  
+    try {
+        var comp = app.project.itemByID(compId);
+        if (!comp || !(comp instanceof CompItem)) {
+            return {
+                success: false,
+                error: '无效的合成 ID'
+            };
+        }
+      
+        app.beginUndoGroup('添加到渲染队列');
+      
+        var renderQueueItem = app.project.renderQueue.items.add(comp);
+      
+        // 设置输出模块
+        if (renderSettings.outputPath) {
+            var outputModule = renderQueueItem.outputModules[1];
+            outputModule.file = new File(renderSettings.outputPath);
+        }
+      
+        // 设置渲染设置
+        if (renderSettings.quality) {
+            renderQueueItem.render = true;
+        }
+      
+        app.endUndoGroup();
+      
+        return {
+            success: true,
+            renderItem: {
+                index: renderQueueItem.index,
+                compName: comp.name,
+                status: renderQueueItem.status
+            }
+        };
+      
+    } catch (error) {
+        app.endUndoGroup();
+        return {
+            success: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+### 工具函数模块
+
+#### validateFilePath()
+
+验证文件路径
+
+```javascript
+/**
+ * 验证文件路径是否有效
+ * @param {string} filePath - 文件路径
+ * @returns {Object} 验证结果
+ */
+function validateFilePath(filePath) {
+    try {
+        if (!filePath || typeof filePath !== 'string') {
+            return {
+                valid: false,
+                error: '文件路径不能为空'
+            };
+        }
+      
+        var file = new File(filePath);
+      
+        if (!file.exists) {
+            return {
+                valid: false,
+                error: '文件不存在: ' + filePath
+            };
+        }
+      
+        // 检查文件扩展名
+        var extension = file.name.split('.').pop().toLowerCase();
+        var supportedFormats = [
+            'jpg', 'jpeg', 'png', 'tiff', 'tif', 'bmp', 'gif',
+            'psd', 'ai', 'eps', 'pdf',
+            'mov', 'mp4', 'avi', 'wmv', 'mpg', 'mpeg',
+            'wav', 'mp3', 'aiff', 'aif'
+        ];
+      
+        if (supportedFormats.indexOf(extension) === -1) {
+            return {
+                valid: false,
+                error: '不支持的文件格式: ' + extension
+            };
+        }
+      
+        return {
+            valid: true,
+            fileInfo: {
+                name: file.name,
+                path: file.fsName,
+                size: file.length,
+                extension: extension,
+                modified: file.modified
+            }
+        };
+      
+    } catch (error) {
+        return {
+            valid: false,
+            error: error.toString()
+        };
+    }
+}
+```
+
+#### logMessage()
+
+记录日志消息
+
+```javascript
+/**
+ * 记录日志消息到文件
+ * @param {string} level - 日志级别
+ * @param {string} message - 日志消息
+ * @param {Object} context - 上下文信息
+ */
+function logMessage(level, message, context) {
+    try {
+        if (!EAGLE2AE_DEBUG && level === 'debug') {
+            return;
+        }
+      
+        var timestamp = new Date().toISOString();
+        var logEntry = '[' + timestamp + '] [' + level.toUpperCase() + '] ' + message;
+      
+        if (context) {
+            logEntry += ' | Context: ' + JSON.stringify(context);
+        }
+      
+        // 输出到控制台
+        $.writeln(logEntry);
+      
+        // 可选：写入日志文件
+        // writeToLogFile(logEntry);
+      
+    } catch (error) {
+        $.writeln('[ERROR] 日志记录失败: ' + error.toString());
+    }
+}
+```
+
+#### getUniqueItemName()
+
+生成唯一项目名称
+
+```javascript
+/**
+ * 生成唯一的项目名称
+ * @param {string} baseName - 基础名称
+ * @param {FolderItem} parentFolder - 父文件夹
+ * @returns {string} 唯一名称
+ */
+function getUniqueItemName(baseName, parentFolder) {
+    parentFolder = parentFolder || app.project.rootFolder;
+  
+    var uniqueName = baseName;
+    var counter = 1;
+  
+    while (itemNameExists(uniqueName, parentFolder)) {
+        uniqueName = baseName + ' ' + counter;
+        counter++;
+    }
+  
+    return uniqueName;
+}
+
+/**
+ * 检查项目名称是否已存在
+ * @param {string} name - 项目名称
+ * @param {FolderItem} parentFolder - 父文件夹
+ * @returns {boolean} 是否存在
+ */
+function itemNameExists(name, parentFolder) {
+    for (var i = 1; i <= parentFolder.items.length; i++) {
+        if (parentFolder.items[i].name === name) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+## 错误处理
+
+### 错误类型
+
+#### 文件相关错误
+
+- `FILE_NOT_FOUND` - 文件不存在
+- `UNSUPPORTED_FORMAT` - 不支持的文件格式
+- `FILE_ACCESS_DENIED` - 文件访问被拒绝
+- `FILE_CORRUPTED` - 文件损坏
+
+#### 项目相关错误
+
+- `PROJECT_NOT_OPEN` - 项目未打开
+- `ITEM_NOT_FOUND` - 项目素材不存在
+- `INVALID_COMPOSITION` - 无效的合成
+- `FOLDER_CREATION_FAILED` - 文件夹创建失败
+
+#### 系统相关错误
+
+- `INSUFFICIENT_MEMORY` - 内存不足
+- `DISK_SPACE_LOW` - 磁盘空间不足
+- `PERMISSION_DENIED` - 权限被拒绝
+
+### 错误处理最佳实践
+
+```javascript
+/**
+ * 标准错误处理包装器
+ * @param {Function} func - 要执行的函数
+ * @param {string} operation - 操作名称
+ * @returns {Object} 执行结果
+ */
+function safeExecute(func, operation) {
+    try {
+        var result = func();
+      
+        logMessage('info', operation + ' 执行成功');
+      
+        return {
+            success: true,
+            data: result
+        };
+      
+    } catch (error) {
+        var errorMessage = operation + ' 执行失败: ' + error.toString();
+      
+        logMessage('error', errorMessage, {
+            operation: operation,
+            error: error.toString(),
+            stack: error.stack || 'No stack trace'
+        });
+      
+        return {
+            success: false,
+            error: errorMessage,
+            errorCode: getErrorCode(error)
+        };
+    }
+}
+
+/**
+ * 获取错误代码
+ * @param {Error} error - 错误对象
+ * @returns {string} 错误代码
+ */
+function getErrorCode(error) {
+    var message = error.toString().toLowerCase();
+  
+    if (message.indexOf('file') !== -1 && message.indexOf('not found') !== -1) {
+        return 'FILE_NOT_FOUND';
+    } else if (message.indexOf('permission') !== -1) {
+        return 'PERMISSION_DENIED';
+    } else if (message.indexOf('memory') !== -1) {
+        return 'INSUFFICIENT_MEMORY';
+    } else {
+        return 'UNKNOWN_ERROR';
+    }
+}
+```
+
+## 性能优化
+
+### 批处理操作
+
+```javascript
+/**
+ * 批处理操作包装器
+ * @param {Array} items - 要处理的项目数组
+ * @param {Function} processor - 处理函数
+ * @param {Object} options - 选项
+ * @returns {Object} 批处理结果
+ */
+function batchProcess(items, processor, options) {
+    options = options || {};
+    var batchSize = options.batchSize || 10;
+    var undoGroupName = options.undoGroupName || 'Batch Operation';
+  
+    var results = {
+        success: true,
+        processed: 0,
+        failed: 0,
+        errors: []
+    };
+  
+    app.beginUndoGroup(undoGroupName);
+  
+    try {
+        for (var i = 0; i < items.length; i += batchSize) {
+            var batch = items.slice(i, i + batchSize);
+          
+            for (var j = 0; j < batch.length; j++) {
+                try {
+                    processor(batch[j]);
+                    results.processed++;
+                } catch (error) {
+                    results.failed++;
+                    results.errors.push({
+                        item: batch[j],
+                        error: error.toString()
+                    });
+                }
+            }
+          
+            // 可选：在批次之间暂停以避免阻塞 UI
+            if (options.pauseBetweenBatches) {
+                app.doScript('', ScriptLanguage.JAVASCRIPT, false);
+            }
+        }
+      
+        if (results.failed > 0) {
+            results.success = false;
+        }
+      
+    } catch (error) {
+        results.success = false;
+        results.error = error.toString();
+    } finally {
+        app.endUndoGroup();
+    }
+  
+    return results;
+}
+```
+
+## 调试工具
+
+### 调试信息收集
+
+```javascript
+/**
+ * 收集调试信息
+ * @returns {Object} 调试信息
+ */
+function collectDebugInfo() {
+    return {
+        timestamp: new Date().toISOString(),
+        system: getSystemInfo(),
+        project: getProjectInfo(),
+        memory: {
+            used: app.memoryInUse,
+            available: system.totalPhysicalMemory
+        },
+        preferences: {
+            language: app.isoLanguage,
+            cacheSize: app.preferences.getPrefAsLong('Main Pref Section', 'Pref_DISK_CACHE_MAX_SIZE')
+        }
+    };
+}
+```
+
+## 更新记录
+
+
+| 日期       | 版本 | 更新内容               | 作者     |
+| ---------- | ---- | ---------------------- | -------- |
+| 2024-01-05 | 1.0  | 初始 JSX 脚本 API 文档 | 开发团队 |
+
+---
+
+## 版本更新记录
+
+### v2.1.2 - 时间轴设置修复
+
+#### 修复内容
+
+修复了时间轴设置检查逻辑错误，确保图层正确放置在指定的时间位置。
+
+#### 修复前的问题代码
+
+```javascript
+// 错误的检查逻辑 - 只检查enabled字段
+if (settings.timelineOptions.enabled) {
+    // 无法区分current_time和timeline_start模式
+    layer.startTime = targetComp.time;
+}
+```
+
+#### 修复后的正确代码
+
+```javascript
+// 正确的检查逻辑 - 检查placement字段
+if (settings.timelineOptions.placement === 'current_time') {
+    // current_time模式：放置在当前时间位置
+    layer.startTime = targetComp.time;
+    console.log('[时间轴设置] 图层放置在当前时间:', targetComp.time);
+} else if (settings.timelineOptions.placement === 'timeline_start') {
+    // timeline_start模式：放置在时间轴开始位置
+    layer.startTime = 0;
+    console.log('[时间轴设置] 图层放置在时间轴开始');
+}
+```
+
+#### 设置对象结构
+
+```javascript
+// timelineOptions设置对象的正确结构
+settings.timelineOptions = {
+    enabled: true,                    // 是否启用时间轴设置
+    placement: 'current_time'         // 放置模式：'current_time' | 'timeline_start'
+};
+```
+
+#### 调试方法
+
+```javascript
+// 添加调试日志以验证设置传递
+console.log('[调试] timelineOptions设置:', JSON.stringify(settings.timelineOptions));
+console.log('[调试] placement模式:', settings.timelineOptions.placement);
+console.log('[调试] 当前合成时间:', targetComp.time);
+console.log('[调试] 图层开始时间:', layer.startTime);
+```
+
+---
+
+**相关文档**:
+
+- [API 参考手册](./api-reference.md)
+- [通信 API](./communication-api.md)
+- [CEP 开发指南](../development/cep-development-guide.md)
+- [UI交互指南 - 时间轴设置](../development/ui-interaction-guide.md#43-时间轴设置实现细节)
+- [故障排除 - 时间轴设置问题](../troubleshooting/common-issues.md#时间轴设置问题)

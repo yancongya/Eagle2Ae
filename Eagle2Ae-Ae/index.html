@@ -2189,20 +2189,20 @@
             justify-content: center;
             padding: 6px 8px;
             background: transparent;
-            border: 1px solid #2196f3;
+            border: 1px solid #666;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             position: relative;
             font-size: 10px;
-            color: #2196f3;
+            color: #999;
             user-select: none;
         }
 
         .mode-button:hover {
-            background: rgba(33, 150, 243, 0.15);
-            border-color: #42a5f5;
-            color: #42a5f5;
+            border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
         }
 
         .mode-button input[type="radio"],
@@ -2216,15 +2216,16 @@
 
         .mode-button input[type="radio"]:checked + .mode-text,
         .mode-button input[type="checkbox"]:checked + .mode-text {
-            color: #1976d2;
-            font-weight: 600;
+            color: #2196f3;
+            transition: color 0.3s ease;
         }
 
         .mode-button:has(input[type="radio"]:checked),
         .mode-button:has(input[type="checkbox"]:checked) {
-            background: rgba(33, 150, 243, 0.15);
-            border-color: #2196f3;
-            box-shadow: 0 0 4px rgba(33, 150, 243, 0.2);
+            background: transparent;
+            border: 1px solid #2196f3;
+            color: #2196f3;
+            transition: all 0.3s ease;
         }
 
         /* 导入合成按钮激活状态 */
@@ -2245,7 +2246,7 @@
         }
 
         .mode-text {
-            transition: color 0.2s ease;
+            transition: color 0.3s ease;
         }
 
         /* 导入行为设置样式 */
@@ -2267,20 +2268,20 @@
             justify-content: center;
             padding: 6px 8px;
             background: transparent;
-            border: 1px solid #ff9800;
+            border: 1px solid #666;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             position: relative;
             font-size: 10px;
-            color: #ff9800;
+            color: #999;
             user-select: none;
         }
 
         .import-behavior-button:hover {
-            background: rgba(255, 152, 0, 0.15);
-            border-color: #ffb74d;
-            color: #ffb74d;
+            border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
         }
 
         .import-behavior-button input[type="radio"] {
@@ -2292,18 +2293,24 @@
         }
 
         .import-behavior-button input[type="radio"]:checked + .behavior-text {
-            color: #f57c00;
-            font-weight: 600;
+            color: #ff9800;
+            transition: color 0.3s ease;
         }
 
         .import-behavior-button:has(input[type="radio"]:checked) {
-            background: rgba(255, 152, 0, 0.15);
-            border-color: #ff9800;
-            box-shadow: 0 0 4px rgba(255, 152, 0, 0.2);
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
+        }
+
+        .import-behavior-button:has(input[type="radio"]:checked) .behavior-text {
+            color: #ff9800;
+            transition: color 0.3s ease;
         }
 
         .behavior-text {
-            transition: color 0.2s ease;
+            transition: color 0.3s ease;
         }
 
         /* 图层操作按钮样式 */
@@ -2388,15 +2395,16 @@
             border: 1px solid #666;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             font-size: 10px;
-            color: #ffffff;
+            color: #999;
             min-height: 28px;
         }
 
         .import-behavior-option:hover {
-            background: transparent;
             border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
         }
 
         .import-behavior-option input[type="radio"] {
@@ -2407,13 +2415,15 @@
         }
 
         .import-behavior-option input[type="radio"]:checked + span {
-            color: #ffffff;
-            font-weight: 600;
+            color: #ff9800;
+            transition: color 0.3s ease;
         }
 
         .import-behavior-option:has(input[type="radio"]:checked) {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: #aaa;
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
         }
 
         .btn-small {
@@ -3438,8 +3448,9 @@
             loadProjectAdjacentSettings();
             loadCustomFolderSettings();
             
-            // 初始化指定文件夹按钮的悬浮提示
+            // 初始化按钮的悬浮提示
             setTimeout(() => {
+                updateProjectAdjacentTooltip();
                 updateCustomFolderTooltip();
             }, 100);
         });
@@ -3513,6 +3524,9 @@
 
             // 保存到本地存储
             saveProjectAdjacentSettings();
+            
+            // 更新项目旁复制按钮的悬浮提示
+            updateProjectAdjacentTooltip();
 
             console.log('项目旁复制设置已保存:', projectAdjacentSettings);
         }
@@ -3998,16 +4012,48 @@
             updateCustomFolderTooltip();
         }
 
+        // 更新项目旁复制按钮的悬浮提示
+        function updateProjectAdjacentTooltip() {
+            // 更新快速面板的项目旁复制按钮
+            const projectAdjacentOption = document.querySelector('label[title*="复制文件到AE项目文件旁边后导入"]');
+            if (projectAdjacentOption) {
+                const baseTooltip = '复制文件到AE项目文件旁边后导入';
+                const currentFolder = projectAdjacentSettings.folderName || 'Eagle_Assets';
+                projectAdjacentOption.title = `${baseTooltip}\n当前目录: ${currentFolder}`;
+            }
+            
+            // 更新高级设置面板的项目旁复制按钮
+            const advancedProjectAdjacentOption = document.querySelector('input[name="import-mode"][value="project_adjacent"]');
+            if (advancedProjectAdjacentOption && advancedProjectAdjacentOption.parentElement) {
+                const baseTooltip = '复制到AE项目文件旁边后导入';
+                const currentFolder = projectAdjacentSettings.folderName || 'Eagle_Assets';
+                advancedProjectAdjacentOption.parentElement.title = `${baseTooltip}\n当前目录: ${currentFolder}`;
+            }
+        }
+
         // 更新指定文件夹按钮的悬浮提示
         function updateCustomFolderTooltip() {
-            const customFolderOption = document.querySelector('label[title*="复制到指定文件夹后导入"]');
+            // 更新快速面板的指定文件夹按钮
+            const customFolderOption = document.querySelector('label[title*="复制文件到指定文件夹后导入"]');
             if (customFolderOption) {
-                const baseTooltip = '复制到指定文件夹后导入';
+                const baseTooltip = '复制文件到指定文件夹后导入';
                 const currentPath = customFolderSettings.folderPath;
                 if (currentPath && currentPath.trim() !== '') {
                     customFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
                 } else {
                     customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
+            
+            // 更新高级设置面板的指定文件夹按钮
+            const advancedCustomFolderOption = document.querySelector('input[name="import-mode"][value="custom_folder"]');
+            if (advancedCustomFolderOption && advancedCustomFolderOption.parentElement) {
+                const baseTooltip = '复制到指定文件夹后导入';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                } else {
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: 未设置`;
                 }
             }
             
@@ -4060,6 +4106,7 @@
     <script src="js/constants/ImportSettings.js"></script>
     <script src="js/services/SettingsManager.js"></script>
     <script src="js/services/FileHandler.js"></script>
+    <script src="js/services/ProjectStatusChecker.js"></script>
     <script src="js/services/PortDiscovery.js"></script>
     <script src="js/utils/SoundPlayer.js"></script>
     <script src="js/utils/LogManager.js"></script>
@@ -4074,7 +4121,8 @@
     <script src="js/demo/demo-mode.js"></script>
     <!-- <script src="js/demo/demo-validation.js"></script> -->
 
-    <script src="js/main.js"></script>
+    <script src="js/test-project-status.js"></script>
+<script src="js/main.js"></script>
 
     <script>
         // 初始化 CSInterface 用于弹窗中的文件夹选择

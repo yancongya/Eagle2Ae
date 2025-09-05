@@ -158,9 +158,10 @@ class Eagle2Ae {
             librarySize: 0,
             currentFolder: null,
             currentFolderName: null,
-            folderPath: null,
-            tempPath: null
         };
+
+        // 拖拽导入标志
+        this.isDragImporting = false;
 
         // 大小计算状态管理
         this.librarySizeCalculation = {
@@ -1968,10 +1969,12 @@ class Eagle2Ae {
         this.aeStatus = { ...this.aeStatus, ...status, connected: true };
         this.lastAEMessageTime = Date.now();
 
-        // 如果是新连接，显示通知
-        if (isNewConnection) {
+        // 如果是新连接且不在拖拽导入过程中，显示通知
+        if (isNewConnection && !this.isDragImporting) {
             this.log(`🎉 检测到新连接，准备显示通知 (原因: ${!wasConnected ? '首次连接' : this.aeStatus.projectName !== status.projectName ? '项目变化' : '长时间未连接'})`, 'info');
             this.showAEConnectionNotification(status);
+        } else if (isNewConnection && this.isDragImporting) {
+            this.log(`🔄 检测到新连接但正在拖拽导入中，跳过通知显示`, 'debug');
         } else {
             this.log(`🔄 AE状态更新 (已连接状态)`, 'debug');
         }
@@ -2064,6 +2067,9 @@ class Eagle2Ae {
     // 处理导入文件到Eagle的请求
     async handleImportFilesToEagle(data) {
         try {
+            // 设置拖拽导入标志
+            this.isDragImporting = true;
+            
             this.log(`📥 收到导入文件到Eagle请求: ${data.files?.length || 0} 个文件`, 'info');
             
             if (!data.files || data.files.length === 0) {
@@ -2116,6 +2122,9 @@ class Eagle2Ae {
                     error: error.message
                 }
             });
+        } finally {
+            // 清除拖拽导入标志
+            this.isDragImporting = false;
         }
     }
 

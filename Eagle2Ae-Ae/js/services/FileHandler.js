@@ -66,7 +66,7 @@ class FileHandler {
     }
 
     // 处理文件导入请求
-    async handleImportRequest(files, projectInfo, customSettings = null) {
+    async handleImportRequest(files, projectInfo, customSettings = null, skipCompositionCheck = false) {
         // 使用传入的自定义设置，如果没有则使用默认设置
         const settings = customSettings || this.settingsManager.getSettings();
 
@@ -78,8 +78,8 @@ class FileHandler {
         }
 
         try {
-            // 如果需要添加到合成，先检查合成状态
-            if (settings.addToComposition) {
+            // 如果需要添加到合成且未跳过合成检查，先检查合成状态
+            if (settings.addToComposition && !skipCompositionCheck) {
                 this.log('FileHandler: 检查合成状态...', 'info');
                 const compCheckResult = await this.checkCompositionStatus();
                 if (!compCheckResult.success) {
@@ -95,6 +95,9 @@ class FileHandler {
                         importedCount: 0
                     };
                 }
+            } else if (settings.addToComposition && skipCompositionCheck) {
+                // 跳过合成检查时给出提示
+                this.log('FileHandler: 跳过合成状态检查（拖拽导入模式）', 'info');
             }
 
             // 根据导入模式处理文件

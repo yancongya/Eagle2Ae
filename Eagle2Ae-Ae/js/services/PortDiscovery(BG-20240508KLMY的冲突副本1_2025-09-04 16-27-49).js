@@ -58,6 +58,22 @@ class PortDiscovery {
             this.log('跳过注册文件读取，使用默认端口发现机制', 'info');
             return null;
 
+            // 打开文件读取内容
+            file.open('r');
+            const content = file.read();
+            file.close();
+
+            if (!content) {
+                this.log('注册文件为空', 'warning');
+                return null;
+            }
+
+            // 解析JSON内容
+            const serviceInfo = JSON.parse(content);
+            this.log(`读取到服务信息: ${JSON.stringify(serviceInfo)}`, 'info');
+
+            return serviceInfo;
+
         } catch (error) {
             this.log(`读取注册文件失败: ${error.message}`, 'error');
             return null;

@@ -332,7 +332,7 @@ function importFilesWithSettings(data) {
                                 debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
 
                                 // 根据时间轴设置放置层（简化版）
-                                if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                                if (settings.timelineOptions && settings.timelineOptions.placement) {
                                     debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
                                     switch (settings.timelineOptions.placement) {
                                         case 'current_time':
@@ -348,7 +348,7 @@ function importFilesWithSettings(data) {
                                             break;
                                     }
                                 } else {
-                                    debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                                    debugLog.push("ExtendScript: 时间轴选项不存在或placement未设置");
                                 }
                             } catch (layerError) {
                                 debugLog.push("ExtendScript: 添加到合成时出错: " + layerError.toString());
@@ -1614,7 +1614,7 @@ function importSequence(data) {
                             debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
                             
                             // 根据时间轴设置放置层
-                            if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                            if (settings.timelineOptions && settings.timelineOptions.placement) {
                                 debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
                                 switch (settings.timelineOptions.placement) {
                                     case 'current_time':
@@ -1630,7 +1630,7 @@ function importSequence(data) {
                                         break;
                                 }
                             } else {
-                                debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                                debugLog.push("ExtendScript: 时间轴选项不存在或placement未设置");
                             }
                         } else {
                             debugLog.push("ExtendScript: 未添加到合成 - addToComposition: " + settings.addToComposition);
@@ -1707,7 +1707,7 @@ function importSequence(data) {
                             debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
                             
                             // 根据时间轴设置放置层
-                            if (settings.timelineOptions && settings.timelineOptions.enabled) {
+                            if (settings.timelineOptions && settings.timelineOptions.placement) {
                                 debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
                                 switch (settings.timelineOptions.placement) {
                                     case 'current_time':
@@ -1723,7 +1723,7 @@ function importSequence(data) {
                                         break;
                                 }
                             } else {
-                                debugLog.push("ExtendScript: 时间轴选项未启用或不存在");
+                                debugLog.push("ExtendScript: 时间轴选项不存在或placement未设置");
                             }
                         } else {
                             debugLog.push("ExtendScript: 未添加到合成 - addToComposition: " + settings.addToComposition);

@@ -1,7 +1,9 @@
 // Eagle2Ae - After Effects CEP扩展
 // 与Eagle插件进行手动控制的HTTP通信
 
-
+// 导入项目状态检测器
+// 注意：在HTML中通过script标签加载
+// <script src="./js/services/ProjectStatusChecker.js"></script>
 
 // 连接状态枚举
 const ConnectionState = {
@@ -153,6 +155,9 @@ class AEExtension {
 
         // 文件处理器
         this.fileHandler = new FileHandler(this.settingsManager, this.csInterface, this.log.bind(this));
+
+        // 项目状态检测器
+        this.projectStatusChecker = new ProjectStatusChecker(this.csInterface, this.log.bind(this));
 
         // 音效播放器
         this.soundPlayer = new SoundPlayer();
@@ -1389,19 +1394,53 @@ class AEExtension {
             } else {
                 this.logWarning('⚠️ 未检测到活动合成，请确保已选择要导入的合成');
 
-                // 如果是非拖拽导入，给出更详细的提示
-                if (!isDragImport) {
+                // 获取当前设置以检查是否需要添加到合成
+                const currentSettings = this.settingsManager.getSettings();
+                
+                // 检查是否需要添加到合成
+                if (currentSettings.addToComposition) {
                     this.logWarning('💡 建议操作：');
                     this.logWarning('1. 在AE中选择或创建一个合成');
                     this.logWarning('2. 确保该合成处于活动状态');
                     this.logWarning('3. 然后重新尝试导入');
 
-                    // 可以选择是否继续导入
-                    const shouldContinue = confirm('未检测到活动合成，是否仍要继续导入？\n\n注意：导入可能会失败或导入到错误的位置。');
-                    if (!shouldContinue) {
-                        this.log('用户取消导入', 'info');
-                        return { success: false, error: '用户取消导入：未选择活动合成' };
+                    // 根据导入类型显示不同的提示文本
+                    const dialogTitle = isDragImport ? '请选择合成' : '导入确认';
+                    let dialogMessage;
+                    
+                    if (isDragImport) {
+                        dialogMessage = '请选择合成后操作\n\n文件将被导入到选中的合成中。';
+                    } else {
+                        dialogMessage = '未检测到活动合成，是否仍要继续导入？\n\n注意：导入可能会失败或导入到错误的位置。';
                     }
+                    
+                    // 使用ExtendScript的Panel样式确认对话框
+                    // 正确转义字符串中的特殊字符
+                    const escapedTitle = dialogTitle.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                    const escapedMessage = dialogMessage.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                    
+                    if (isDragImport) {
+                        // 拖拽导入时显示警告对话框，只有确定按钮
+                        const warningScript = `showPanelWarningDialog("${escapedTitle}", "${escapedMessage}");`;
+                        this.csInterface.evalScript(warningScript);
+                        this.log('拖拽导入被阻止：未选择活动合成', 'warning');
+                        return { success: false, error: '请选择合成后操作' };
+                    } else {
+                        // 非拖拽导入时显示确认对话框
+                        const confirmScript = `showPanelConfirmDialog("${escapedTitle}", "${escapedMessage}", ["继续导入", "取消"]);`;
+                        const dialogResult = this.csInterface.evalScript(confirmScript);
+                        
+                        // 解析对话框结果（0=继续导入，1=取消）
+                        const shouldContinue = parseInt(dialogResult) === 0;
+                        if (!shouldContinue) {
+                            this.log('用户取消导入', 'info');
+                            return { success: false, error: '用户取消导入：未选择活动合成' };
+                        }
+                    }
+                } else if (isDragImport) {
+                    // 拖拽导入时，如果不需要添加到合成，给出友好提示但继续执行
+                    this.logWarning('💡 拖拽导入提示：');
+                    this.logWarning('文件将被导入到项目中，如需添加到合成，请先选择合成后重新拖拽');
                 }
             }
 
@@ -1441,8 +1480,10 @@ class AEExtension {
                 this.fileHandler.setQuietMode(true);
             }
 
-            // 使用文件处理器处理导入
-            const result = await this.fileHandler.handleImportRequest(files, currentProjectInfo);
+            // 使用文件处理器处理导入，传递有效设置
+            // 对于拖拽导入，跳过合成检查（因为已在handleEagleDragImport中进行了项目状态检查）
+            const skipCompositionCheck = isDragImport;
+            const result = await this.fileHandler.handleImportRequest(files, currentProjectInfo, effectiveSettings, skipCompositionCheck);
 
             // 恢复正常模式
             if (isDragImport || isClipboardImport) {
@@ -3422,6 +3463,18 @@ class AEExtension {
     async detectLayers() {
         this.log('开始检测选中的图层...', 'info');
 
+        // 检查项目状态
+        const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+            requireProject: true,
+            requireActiveComposition: true,
+            showWarning: true
+        });
+
+        if (!projectStatusValid) {
+            this.log('检测操作被阻止：项目状态不满足要求', 'warning');
+            return;
+        }
+
         // 首先测试ExtendScript连接
         const connectionOk = await this.testExtendScriptConnection();
         if (!connectionOk) {
@@ -3452,6 +3505,18 @@ class AEExtension {
     // 导出到Eagle
     async exportToEagle() {
         this.log('开始导出图层到Eagle...', 'info');
+
+        // 检查项目状态
+        const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+            requireProject: true,
+            requireActiveComposition: true,
+            showWarning: true
+        });
+
+        if (!projectStatusValid) {
+            this.log('导出到Eagle操作被阻止：项目状态不满足要求', 'warning');
+            return;
+        }
 
         // 验证前置条件
         const connectionOk = await this.testExtendScriptConnection();
@@ -3696,6 +3761,18 @@ class AEExtension {
     // 导出图层
     async exportLayers() {
         this.log('开始导出选中的图层...', 'info');
+
+        // 检查项目状态
+        const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+            requireProject: true,
+            requireActiveComposition: true,
+            showWarning: true
+        });
+
+        if (!projectStatusValid) {
+            this.log('导出操作被阻止：项目状态不满足要求', 'warning');
+            return;
+        }
 
         // 首先测试ExtendScript连接
         const connectionOk = await this.testExtendScriptConnection();
@@ -5886,8 +5963,20 @@ class AEExtension {
         });
 
         // 拖拽释放
-        dropZone.addEventListener('drop', (e) => {
+        dropZone.addEventListener('drop', async (e) => {
             dropZone.classList.remove('drag-over');
+
+            // 先检查项目状态
+            const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+                requireProject: true,
+                requireActiveComposition: false,
+                showWarning: true
+            });
+
+            if (!projectStatusValid) {
+                this.log('拖拽操作被阻止：未检测到打开的After Effects项目', 'warning');
+                return;
+            }
 
             const files = e.dataTransfer.files;
             if (files.length > 0) {
@@ -7646,6 +7735,18 @@ class AEExtension {
         if (this.isEagleDrag(dataTransfer, files)) {
             await this.handleEagleDragImport(files);
         } else {
+            // 优先检查项目状态 - 确保AE项目已打开
+            const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+                requireProject: true,
+                requireActiveComposition: false, // 拖拽时不强制要求合成，后续会检查
+                showWarning: true
+            });
+            
+            if (!projectStatusValid) {
+                this.log('拖拽导入被阻止：项目状态不满足要求', 'warning');
+                return;
+            }
+            
             // 分析文件类型
             const analysis = this.analyzeDroppedFiles(files);
             
@@ -8103,7 +8204,17 @@ async handleFolderImportToAE(folder) {
     // 处理Eagle拖拽导入
     async handleEagleDragImport(files) {
         try {
-            // 移除开始导入提示，直接处理
+            // 优先检查项目状态 - 确保AE项目已打开
+            const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
+                requireProject: true,
+                requireActiveComposition: false, // 拖拽时不强制要求合成，后续会检查
+                showWarning: true
+            });
+            
+            if (!projectStatusValid) {
+                this.log('拖拽导入被阻止：项目状态不满足要求', 'warning');
+                return;
+            }
 
             // 转换文件格式以匹配现有的导入接口
             const fileData = files.map(file => {
