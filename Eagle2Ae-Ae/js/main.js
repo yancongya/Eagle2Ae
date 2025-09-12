@@ -1588,6 +1588,16 @@ class AEExtension {
     async testExtendScriptConnection() {
         this.log('测试ExtendScript连接...', 'info');
 
+        // 检查是否为demo模式，如果是则直接返回成功
+        if (window.__DEMO_MODE_ACTIVE__ || 
+            (window.demoMode && window.demoMode.state && window.demoMode.state.currentMode !== 'normal')) {
+            this.log('🎭 演示模式：ExtendScript连接测试跳过', 'info');
+            this.log('ExtendScript连接成功: 演示模式：ExtendScript连接正常', 'success');
+            this.log('AE版本: 2024 (24.0.0)', 'info');
+            this.log('JSX脚本版本: 演示版本 v1.0.0', 'info');
+            return true;
+        }
+
         try {
             const result = await this.executeExtendScript('testExtendScriptConnection', {});
 
@@ -3463,6 +3473,31 @@ class AEExtension {
     async detectLayers() {
         this.log('开始检测选中的图层...', 'info');
 
+        // 检查是否为demo模式，如果是则直接显示虚拟数据
+        if (this.isDemoMode()) {
+            this.log('🎭 演示模式：使用虚拟图层数据', 'info');
+            
+            try {
+                // 获取虚拟图层检测结果
+                const demoAPIs = window.demoMode?.demoAPIs;
+                if (demoAPIs && typeof demoAPIs.detectSelectedLayers === 'function') {
+                    const result = await demoAPIs.detectSelectedLayers();
+                    
+                    if (result.success) {
+                        // 直接显示虚拟检测总结
+                        this.displayDetectionSummary(result);
+                    } else {
+                        this.log('虚拟图层检测失败', 'error');
+                    }
+                } else {
+                    this.log('演示模式API未找到', 'error');
+                }
+            } catch (error) {
+                this.log(`演示模式检测出错: ${error.message}`, 'error');
+            }
+            return;
+        }
+
         // 检查项目状态
         const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
             requireProject: true,
@@ -3486,12 +3521,8 @@ class AEExtension {
             const result = await this.executeExtendScript('detectSelectedLayers', {});
 
             if (result.success) {
-                this.log(`检测完成: ${result.compName}`, 'success');
-
-                // 输出检测日志（分组显示）
-                if (result.logs && result.logs.length > 0) {
-                    this.logGroup('检测详情', result.logs, 'debug', true);
-                }
+                // 显示优化后的检测总结
+                this.displayDetectionSummary(result);
 
             } else {
                 this.log(`检测失败: ${result.error || '未知错误'}`, 'error');
@@ -3500,6 +3531,1184 @@ class AEExtension {
             this.log(`检测过程出错: ${error.message}`, 'error');
             this.log('建议：1. 检查是否选择了合成 2. 检查是否选中了图层', 'warning');
         }
+    }
+
+    /**
+     * 增强检测日志，添加素材类型图标和分类信息（保留用于详细模式）
+     * @param {Array} logs - 原始检测日志
+     * @returns {Array} 增强后的日志
+     */
+    enhanceDetectionLogs(logs) {
+        // 素材类型图标映射
+        const materialIcons = {
+            design: '🎨',
+            image: '🖼️',
+            video: '🎬',
+            audio: '🎵',
+            animation: '🎞️',
+            vector: '📐',
+            raw: '🔬',
+            document: '📄',
+            sequence: '🎯',
+            unknown: '❓'
+        };
+
+        return logs.map(log => {
+            // 检查是否为MaterialLayer类型的日志
+            if (log.includes('MaterialLayer')) {
+                // 替换MaterialLayer为更友好的显示
+                log = log.replace(/MaterialLayer/g, '📦素材');
+                
+                // 根据素材类型添加对应图标
+                Object.keys(materialIcons).forEach(type => {
+                    const typePattern = new RegExp(`${type}素材`, 'gi');
+                    if (typePattern.test(log)) {
+                        log = log.replace(typePattern, `${materialIcons[type]}${type}素材`);
+                    }
+                });
+            }
+            
+            // 处理其他图层类型的图标
+            log = log.replace(/ShapeLayer/g, '🔷形状图层');
+            log = log.replace(/TextLayer/g, '📝文本图层');
+            log = log.replace(/SolidLayer/g, '🟦纯色图层');
+            log = log.replace(/PrecompLayer/g, '📁预合成图层');
+            log = log.replace(/SequenceLayer/g, '🎯序列帧图层');
+            log = log.replace(/CameraLayer/g, '📷摄像机图层');
+            log = log.replace(/LightLayer/g, '💡灯光图层');
+            log = log.replace(/AdjustmentLayer/g, '⚙️调整图层');
+            
+            return log;
+        });
+    }
+
+    /**
+     * 显示优化后的检测总结
+     * @param {Object} result - 检测结果
+     */
+    displayDetectionSummary(result) {
+        const { compName, selectedLayers = [], logs = [] } = result;
+        
+        // 基本信息
+        this.log(`🔍 检测完成: ${compName}`, 'success');
+        
+        if (selectedLayers.length === 0) {
+            this.log('⚠️ 没有选中任何图层', 'warning');
+            return;
+        }
+
+        // 统计各种类型
+        const stats = this.calculateLayerStatistics(selectedLayers);
+        
+        // 先显示详细分布信息
+        // 显示素材分布（只显示存在的类型）
+        if (stats.materialTypes.length > 0) {
+            this.log(`📦 素材分布: ${stats.materialTypes.join(', ')}`, 'info');
+        }
+        
+        // 显示其他图层类型（只显示存在的类型）
+        if (stats.otherTypes.length > 0) {
+            this.log(`🔧 其他图层: ${stats.otherTypes.join(', ')}`, 'info');
+        }
+        
+        // 显示不可导出原因统计（只显示存在的类型）
+        if (stats.nonExportableReasons.length > 0) {
+            this.log(`❌ 不可导出: ${stats.nonExportableReasons.join(', ')}`, 'warning');
+        }
+        
+        // 最后显示总结信息
+        this.log(`📊 总结: 共检测 ${stats.total} 个图层，${stats.exportable} 个可导出，${stats.nonExportable} 个不可导出`, 'info');
+        
+        // 显示详细总结弹窗
+        this.showDetectionSummaryDialog(selectedLayers, stats);
+    }
+
+    /**
+     * 计算图层统计信息
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @returns {Object} 统计结果
+     */
+    calculateLayerStatistics(selectedLayers) {
+        const materialStats = {
+            design: 0, image: 0, video: 0, audio: 0, animation: 0,
+            vector: 0, raw: 0, document: 0, sequence: 0
+        };
+        
+        const otherStats = {
+            shape: 0, text: 0, solid: 0, precomp: 0, camera: 0, light: 0, adjustment: 0, other: 0
+        };
+        
+        const nonExportableStats = {
+            solid: 0, precomp: 0, camera: 0, light: 0, adjustment: 0, sequence: 0, other: 0
+        };
+
+        let exportableCount = 0;
+        let totalCount = selectedLayers.length;
+
+        selectedLayers.forEach(layer => {
+            if (layer.exportable) {
+                exportableCount++;
+            } else {
+                // 统计不可导出原因
+                switch (layer.type) {
+                    case 'SolidLayer':
+                        nonExportableStats.solid++;
+                        break;
+                    case 'PrecompLayer':
+                        nonExportableStats.precomp++;
+                        break;
+                    case 'CameraLayer':
+                        nonExportableStats.camera++;
+                        break;
+                    case 'LightLayer':
+                        nonExportableStats.light++;
+                        break;
+                    case 'AdjustmentLayer':
+                        nonExportableStats.adjustment++;
+                        break;
+                    case 'SequenceLayer':
+                        nonExportableStats.sequence++;
+                        break;
+                    default:
+                        nonExportableStats.other++;
+                }
+            }
+
+            // 统计素材类型
+            if (layer.sourceInfo && layer.sourceInfo.materialType) {
+                const materialType = layer.sourceInfo.materialType;
+                if (materialStats.hasOwnProperty(materialType)) {
+                    materialStats[materialType]++;
+                }
+            } else {
+                // 统计其他图层类型
+                switch (layer.type) {
+                    case 'ShapeLayer':
+                        otherStats.shape++;
+                        break;
+                    case 'TextLayer':
+                        otherStats.text++;
+                        break;
+                    case 'SolidLayer':
+                        otherStats.solid++;
+                        break;
+                    case 'PrecompLayer':
+                        otherStats.precomp++;
+                        break;
+                    case 'CameraLayer':
+                        otherStats.camera++;
+                        break;
+                    case 'LightLayer':
+                        otherStats.light++;
+                        break;
+                    case 'AdjustmentLayer':
+                        otherStats.adjustment++;
+                        break;
+                    default:
+                        otherStats.other++;
+                }
+            }
+        });
+
+        // 生成显示数组
+        const materialTypes = [];
+        if (materialStats.design > 0) materialTypes.push(`🎨设计:${materialStats.design}`);
+        if (materialStats.image > 0) materialTypes.push(`🖼️图片:${materialStats.image}`);
+        if (materialStats.video > 0) materialTypes.push(`🎬视频:${materialStats.video}`);
+        if (materialStats.audio > 0) materialTypes.push(`🎵音频:${materialStats.audio}`);
+        if (materialStats.animation > 0) materialTypes.push(`🎞️动图:${materialStats.animation}`);
+        if (materialStats.vector > 0) materialTypes.push(`📐矢量:${materialStats.vector}`);
+        if (materialStats.raw > 0) materialTypes.push(`🔬原始:${materialStats.raw}`);
+        if (materialStats.document > 0) materialTypes.push(`📄文档:${materialStats.document}`);
+        if (materialStats.sequence > 0) materialTypes.push(`🎯序列:${materialStats.sequence}`);
+        
+        const otherTypes = [];
+        if (otherStats.shape > 0) otherTypes.push(`🔷形状:${otherStats.shape}`);
+        if (otherStats.text > 0) otherTypes.push(`📝文本:${otherStats.text}`);
+        
+        const nonExportableReasons = [];
+        if (nonExportableStats.solid > 0) nonExportableReasons.push(`🟦纯色:${nonExportableStats.solid}`);
+        if (nonExportableStats.precomp > 0) nonExportableReasons.push(`📁预合成:${nonExportableStats.precomp}`);
+        if (nonExportableStats.camera > 0) nonExportableReasons.push(`📷摄像机:${nonExportableStats.camera}`);
+        if (nonExportableStats.light > 0) nonExportableReasons.push(`💡灯光:${nonExportableStats.light}`);
+        if (nonExportableStats.adjustment > 0) nonExportableReasons.push(`⚙️调整:${nonExportableStats.adjustment}`);
+        if (nonExportableStats.sequence > 0) nonExportableReasons.push(`🎯序列帧:${nonExportableStats.sequence}`);
+        if (nonExportableStats.other > 0) nonExportableReasons.push(`❓其他:${nonExportableStats.other}`);
+
+        return {
+            total: totalCount,
+            exportable: exportableCount,
+            nonExportable: totalCount - exportableCount,
+            materialTypes,
+            otherTypes,
+            nonExportableReasons
+        };
+    }
+
+    /**
+     * 显示图层检测总结弹窗
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @param {Object} stats - 统计信息
+     */
+    async showDetectionSummaryDialog(selectedLayers, stats) {
+        try {
+            // 检查是否为demo模式
+            if (window.__DEMO_MODE_ACTIVE__ || (window.__DEMO_OVERRIDE__ && window.__DEMO_OVERRIDE__.isActive())) {
+                this.log('🎭 演示模式：显示虚拟检测总结弹窗', 'info');
+                this.showJavaScriptSummaryDialog(selectedLayers, stats);
+                return;
+            }
+            
+            // 转换数据格式为新弹窗所需的格式
+            const detectionResults = this.convertToDetectionResults(selectedLayers);
+            
+            // 调用JSX脚本显示弹窗
+            const result = await this.executeExtendScript('showLayerDetectionSummary', {
+                detectionResults: detectionResults
+            });
+            
+            if (result.success) {
+                this.log('📋 检测总结弹窗已显示', 'info');
+            } else {
+                this.log(`显示总结弹窗失败: ${result.error || '未知错误'}`, 'warning');
+            }
+        } catch (error) {
+            this.log(`显示总结弹窗时出错: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 转换图层数据为新弹窗所需的检测结果格式
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @returns {Array} 检测结果数组
+     */
+    convertToDetectionResults(selectedLayers) {
+        return selectedLayers.map(layer => {
+            // 确保完整传递图层数据，包括tooltipInfo
+            const result = {
+                name: layer.name || '未命名图层',
+                exportable: layer.exportable || false,
+                type: layer.type || 'Unknown',
+                layerType: this.mapLayerType(layer.type),
+                materialType: layer.sourceInfo && layer.sourceInfo.materialType ? layer.sourceInfo.materialType : null,
+                sourceInfo: layer.sourceInfo || null,
+                tooltipInfo: layer.tooltipInfo || null,
+                reason: layer.reason || null,
+                // 保持向后兼容
+                canExport: layer.exportable || false,
+                source: layer.sourceInfo || null
+            };
+            
+            // 添加调试日志
+            console.log(`[数据转换调试] 图层: ${layer.name}, 有tooltipInfo: ${!!(layer.tooltipInfo)}, 有sourceInfo: ${!!(layer.sourceInfo)}`);
+            if (layer.tooltipInfo) {
+                console.log(`[数据转换调试] tooltipInfo.originalPath: ${layer.tooltipInfo.originalPath}`);
+            }
+            if (layer.sourceInfo) {
+                console.log(`[数据转换调试] sourceInfo.originalPath: ${layer.sourceInfo.originalPath}`);
+            }
+            
+            return result;
+        });
+    }
+
+    /**
+     * 映射图层类型为标准格式
+     * @param {string} layerType - 原始图层类型
+     * @returns {string} 标准图层类型
+     */
+    mapLayerType(layerType) {
+        const typeMap = {
+            'ShapeLayer': 'shape',
+            'TextLayer': 'text',
+            'SolidLayer': 'solid',
+            'PrecompLayer': 'precomp',
+            'CameraLayer': 'camera',
+            'LightLayer': 'light',
+            'AdjustmentLayer': 'adjustment',
+            'SequenceLayer': 'sequence'
+        };
+        return typeMap[layerType] || 'other';
+    }
+
+    /**
+     * 显示JavaScript版本的检测总结弹窗（用于demo模式）
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @param {Object} stats - 统计信息
+     */
+    showJavaScriptSummaryDialog(selectedLayers, stats) {
+        try {
+            // 创建弹窗HTML
+            const dialogHtml = this.createSummaryDialogHtml(selectedLayers, stats);
+            
+            // 创建弹窗容器
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = 'demo-dialog-overlay';
+            dialogOverlay.innerHTML = dialogHtml;
+            
+            // 添加样式
+            this.addDialogStyles();
+            
+            // 添加到页面
+            document.body.appendChild(dialogOverlay);
+            
+            // 绑定关闭事件
+            const closeBtn = dialogOverlay.querySelector('.demo-dialog-close');
+            const confirmBtn = dialogOverlay.querySelector('.demo-dialog-confirm');
+            const closeBtnFooter = dialogOverlay.querySelector('.demo-dialog-close-btn');
+            const exportPathsBtn = dialogOverlay.querySelector('.demo-dialog-export-paths');
+            
+            const closeDialog = () => {
+                document.body.removeChild(dialogOverlay);
+                this.log('📋 演示模式检测总结弹窗已关闭', 'info');
+            };
+            
+            if (closeBtn) closeBtn.onclick = closeDialog;
+            if (confirmBtn) confirmBtn.onclick = closeDialog;
+            if (closeBtnFooter) closeBtnFooter.onclick = closeDialog;
+            
+            // 绑定导出路径清单事件
+            if (exportPathsBtn) {
+                exportPathsBtn.onclick = () => {
+                    this.exportPathSummary(selectedLayers, stats);
+                };
+            }
+            
+            // 绑定图层操作按钮事件
+            this.bindLayerActionButtons(dialogOverlay, selectedLayers);
+            
+            dialogOverlay.onclick = (e) => {
+                if (e.target === dialogOverlay) closeDialog();
+            };
+            
+        } catch (error) {
+            this.log(`显示JavaScript弹窗时出错: ${error.message}`, 'error');
+            // 降级到简单alert
+            alert(`检测完成！\n共检测 ${selectedLayers.length} 个图层\n可导出: ${stats.exportableCount}\n不可导出: ${stats.nonExportableCount}`);
+        }
+    }
+
+    /**
+     * 创建检测总结弹窗的HTML内容（模拟JSX版本的布局和样式）
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @param {Object} stats - 统计信息
+     * @returns {string} HTML字符串
+     */
+    createSummaryDialogHtml(selectedLayers, stats) {
+        // 生成三行总结信息（模拟JSX版本）
+        const summaryLines = this.generateSummaryLines(selectedLayers, stats);
+        
+        // 生成图层详情列表
+        const layerDetailsHtml = this.generateLayerDetailsList(selectedLayers);
+        
+        // 检查是否有路径汇总数据
+        const hasPathSummary = stats.pathSummaryAvailable || (stats.materialStats && Object.keys(stats.materialStats.pathSummary || {}).length > 0);
+        
+        return `
+            <div class="demo-dialog">
+                <div class="demo-dialog-header">
+                    <h3>@Eagle2Ae（模拟）</h3>
+                    <button class="demo-dialog-close">&times;</button>
+                </div>
+                <div class="demo-dialog-content">
+                    <!-- 三行总结信息 -->
+                    <div class="summary-panel">
+                        ${summaryLines.map(line => `<div class="summary-line">${line}</div>`).join('')}
+                        ${hasPathSummary ? '<div class="summary-line">📁 路径汇总: 共 ' + Object.keys(stats.materialStats?.pathSummary || {}).length + ' 个不同路径</div>' : ''}
+                    </div>
+                    
+                    <!-- 分隔线 -->
+                    <div class="separator"></div>
+                    
+                    <!-- 图层详情 -->
+                    <div class="layer-details-panel">
+                        <div class="panel-title">图层详情</div>
+                        <div class="layer-details-scroll">
+                            ${layerDetailsHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-dialog-footer">
+                    ${hasPathSummary ? '<button class="demo-dialog-export-paths">📁 导出路径清单</button>' : ''}
+                    <button class="demo-dialog-confirm">确定</button>
+                    <button class="demo-dialog-close-btn">关闭</button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 添加弹窗样式（模拟CEP环境的JSX弹窗样式）
+     */
+    addDialogStyles() {
+        if (document.getElementById('demo-dialog-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'demo-dialog-styles';
+        style.textContent = `
+            .demo-dialog-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            .demo-dialog {
+                background: #2b2b2b;
+                border: 1px solid #404040;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+                width: 450px;
+                height: 350px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                font-size: 11px;
+                color: #cccccc;
+                border-radius: 0;
+            }
+            .demo-dialog-header {
+                padding: 6px 10px;
+                border-bottom: 1px solid #404040;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: #1e1e1e;
+                height: 28px;
+                box-sizing: border-box;
+            }
+            .demo-dialog-header h3 {
+                margin: 0;
+                color: #cccccc;
+                font-size: 11px;
+                font-weight: normal;
+            }
+            .demo-dialog-close {
+                background: #1e1e1e;
+                border: 1px solid #404040;
+                font-size: 11px;
+                cursor: pointer;
+                color: #cccccc;
+                padding: 1px 5px;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .demo-dialog-close:hover {
+                background: #333333;
+                border-color: #555555;
+            }
+            .demo-dialog-content {
+                padding: 10px;
+                overflow: hidden;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: #2b2b2b;
+            }
+            .summary-panel {
+                margin-bottom: 6px;
+            }
+            .summary-line {
+                padding: 2px 0;
+                font-size: 11px;
+                color: #cccccc;
+                line-height: 1.2;
+            }
+            .separator {
+                height: 1px;
+                background: #404040;
+                margin: 6px 0;
+            }
+            .layer-details-panel {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .panel-title {
+                font-size: 11px;
+                color: #cccccc;
+                margin-bottom: 4px;
+                font-weight: bold;
+            }
+            .layer-details-scroll {
+                flex: 1;
+                overflow-y: auto;
+                border: 1px solid #404040;
+                background: #1e1e1e;
+                padding: 2px;
+                max-height: 180px;
+            }
+            .layer-item {
+                padding: 1px 3px;
+                font-size: 10px;
+                color: #cccccc;
+                line-height: 1.1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .layer-item-row {
+                display: flex;
+                align-items: center;
+                padding: 1px 3px;
+                font-size: 10px;
+                color: #cccccc;
+                line-height: 1.1;
+                gap: 5px;
+            }
+            .layer-item-text {
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                min-width: 0;
+            }
+            .layer-item-buttons {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0;
+            }
+            .layer-action-btn {
+                background: #2b2b2b;
+                border: 1px solid #404040;
+                color: #cccccc;
+                padding: 2px 4px;
+                font-size: 10px;
+                cursor: pointer;
+                border-radius: 2px;
+                min-width: 18px;
+                height: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            .layer-action-btn:hover:not(:disabled) {
+                background: #404040;
+                border-color: #555555;
+            }
+            .layer-action-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .export-btn:hover:not(:disabled) {
+                background: #2d4a2d;
+                border-color: #4a6b4a;
+            }
+            .folder-btn:hover:not(:disabled) {
+                background: #4a4a2d;
+                border-color: #6b6b4a;
+            }
+            .demo-dialog-footer {
+                padding: 6px 10px;
+                border-top: 1px solid #404040;
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                background: #1e1e1e;
+                height: 24px;
+                box-sizing: border-box;
+                align-items: center;
+            }
+            .demo-dialog-confirm, .demo-dialog-close-btn, .demo-dialog-export-paths {
+                background: #1e1e1e;
+                color: #cccccc;
+                border: 1px solid #404040;
+                padding: 3px 14px;
+                cursor: pointer;
+                font-size: 11px;
+                height: 18px;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .demo-dialog-export-paths {
+                background: #2d4a2d;
+                border-color: #4a6b4a;
+            }
+            .demo-dialog-export-paths:hover {
+                background: #3a5a3a;
+                border-color: #5a7b5a;
+            }
+            .demo-dialog-confirm:hover, .demo-dialog-close-btn:hover {
+                background: #333333;
+                border-color: #555555;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    /**
+     * 生成三行总结信息（模拟JSX版本的格式）
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @param {Object} stats - 统计信息
+     * @returns {Array} 三行总结文本数组
+     */
+    generateSummaryLines(selectedLayers, stats) {
+        const exportableLayers = selectedLayers.filter(layer => layer.exportable);
+        const nonExportableLayers = selectedLayers.filter(layer => !layer.exportable);
+        
+        const lines = [];
+        
+        // 第一行：可导出图层（使用▶符号装饰）
+        let exportableLine = '▶ 可导出: ';
+        const exportableParts = [];
+        
+        // 统计可导出图层类型
+        const exportableStats = this.calculateLayerTypeStats(exportableLayers);
+        if (exportableStats.design > 0) exportableParts.push(`设计:${exportableStats.design}`);
+        if (exportableStats.image > 0) exportableParts.push(`图片:${exportableStats.image}`);
+        if (exportableStats.video > 0) exportableParts.push(`视频:${exportableStats.video}`);
+        if (exportableStats.text > 0) exportableParts.push(`文本:${exportableStats.text}`);
+        if (exportableStats.shape > 0) exportableParts.push(`形状:${exportableStats.shape}`);
+        
+        exportableLine += exportableParts.length > 0 ? exportableParts.join(', ') : '无';
+        lines.push(exportableLine);
+        
+        // 第二行：不可导出（使用✖符号装饰）
+        let nonExportableLine = '✖ 不可导出: ';
+        const nonExportableParts = [];
+        
+        // 统计不可导出图层类型
+        const nonExportableStats = this.calculateLayerTypeStats(nonExportableLayers);
+        if (nonExportableStats.solid > 0) nonExportableParts.push(`纯色:${nonExportableStats.solid}`);
+        if (nonExportableStats.text > 0) nonExportableParts.push(`文本:${nonExportableStats.text}`);
+        if (nonExportableStats.precomp > 0) nonExportableParts.push(`预合成:${nonExportableStats.precomp}`);
+        if (nonExportableStats.other > 0) nonExportableParts.push(`其他:${nonExportableStats.other}`);
+        
+        nonExportableLine += nonExportableParts.length > 0 ? nonExportableParts.join(', ') : '无';
+        lines.push(nonExportableLine);
+        
+        // 第三行：总结（使用●符号装饰）
+        const actualExportableCount = exportableLayers.length;
+        const actualNonExportableCount = nonExportableLayers.length;
+        const summaryLine = `● 总结: 共检测 ${selectedLayers.length} 个图层，${actualExportableCount} 个可导出，${actualNonExportableCount} 个不可导出`;
+        lines.push(summaryLine);
+        
+        return lines;
+    }
+    
+    /**
+     * 计算图层类型统计
+     * @param {Array} layers - 图层数组
+     * @returns {Object} 统计结果
+     */
+    calculateLayerTypeStats(layers) {
+        const stats = {
+            text: 0, shape: 0, solid: 0, precomp: 0,
+            design: 0, image: 0, video: 0, audio: 0, other: 0
+        };
+        
+        layers.forEach(layer => {
+            if (layer.sourceInfo && layer.sourceInfo.materialType) {
+                const materialType = layer.sourceInfo.materialType;
+                if (stats.hasOwnProperty(materialType)) {
+                    stats[materialType]++;
+                } else {
+                    stats.other++;
+                }
+            } else if (layer.type) {
+                switch (layer.type) {
+                    case 'TextLayer':
+                        stats.text++;
+                        break;
+                    case 'ShapeLayer':
+                        stats.shape++;
+                        break;
+                    case 'SolidLayer':
+                        stats.solid++;
+                        break;
+                    case 'PrecompLayer':
+                        stats.precomp++;
+                        break;
+                    default:
+                        stats.other++;
+                }
+            } else {
+                stats.other++;
+            }
+        });
+        
+        return stats;
+    }
+    
+    /**
+     * 生成图层详情列表HTML
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @returns {string} HTML字符串
+     */
+    generateLayerDetailsList(selectedLayers) {
+        const exportableLayers = selectedLayers.filter(layer => layer.exportable);
+        const nonExportableLayers = selectedLayers.filter(layer => !layer.exportable);
+        
+        let html = '';
+        
+        // 显示可导出图层
+        exportableLayers.forEach(layer => {
+            html += this.generateLayerRowWithButtons(layer, true);
+        });
+        
+        // 显示不可导出图层
+        nonExportableLayers.forEach(layer => {
+            html += this.generateLayerRowWithButtons(layer, false);
+        });
+        
+        return html;
+    }
+    
+    /**
+     * 生成带功能按钮的图层行HTML
+     * @param {Object} layer - 图层对象
+     * @param {boolean} exportable - 是否可导出
+     * @returns {string} 图层行HTML
+     */
+    generateLayerRowWithButtons(layer, exportable) {
+        const category = this.getLayerCategory(layer);
+        const categoryIcon = this.getLayerCategoryIcon(layer);
+        const fileName = this.getLayerFileName(layer);
+        const tooltipText = this.getLayerTooltipText(layer);
+        const prefix = exportable ? '[√]' : '[×]';
+        const layerId = `layer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // 判断图层类型以显示相应按钮
+        const isDesign = this.isDesignFile(layer);
+        const isMaterial = this.isMaterialFile(layer);
+        
+        let buttonsHtml = '';
+        
+        if (isDesign) {
+            // 设计文件：显示导出按钮
+            buttonsHtml += `<button class="layer-action-btn export-btn" title="导出设计文件" data-layer-id="${layerId}" data-action="export">📤</button>`;
+        } else if (isMaterial) {
+            // 素材文件：显示打开文件夹按钮
+            buttonsHtml += `<button class="layer-action-btn folder-btn" title="打开文件所在文件夹" data-layer-id="${layerId}" data-action="open-folder">📁</button>`;
+        }
+        
+        // 移除扩展功能按钮，简化界面
+        // buttonsHtml += `<button class="layer-action-btn extension-btn" title="扩展功能（预留）" data-layer-id="${layerId}" data-action="extension" disabled>⚙️</button>`;
+        
+        return `
+            <div class="layer-item-row" data-layer-id="${layerId}">
+                <div class="layer-item-text" title="${tooltipText}">${prefix}${categoryIcon}【${category}】${fileName}</div>
+                <div class="layer-item-buttons">${buttonsHtml}</div>
+            </div>
+        `;
+    }
+    
+    /**
+     * 判断是否为设计文件
+     * @param {Object} layer - 图层对象
+     * @returns {boolean} 是否为设计文件
+     */
+    isDesignFile(layer) {
+        // 检查tooltipInfo中的分类信息
+        if (layer.tooltipInfo && layer.tooltipInfo.categoryType === 'design') {
+            return true;
+        }
+        
+        // 检查sourceInfo中的分类信息
+        if (layer.sourceInfo && layer.sourceInfo.categoryType === 'design') {
+            return true;
+        }
+        
+        // 检查materialType
+        if (layer.sourceInfo && layer.sourceInfo.materialType === 'design') {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 判断是否为素材文件
+     * @param {Object} layer - 图层对象
+     * @returns {boolean} 是否为素材文件
+     */
+    isMaterialFile(layer) {
+        // 检查tooltipInfo中的分类信息
+        if (layer.tooltipInfo && layer.tooltipInfo.categoryType === 'material') {
+            return true;
+        }
+        
+        // 检查sourceInfo中的分类信息
+        if (layer.sourceInfo && layer.sourceInfo.categoryType === 'material') {
+            return true;
+        }
+        
+        // 检查materialType（除了design之外的都是素材）
+        if (layer.sourceInfo && layer.sourceInfo.materialType && layer.sourceInfo.materialType !== 'design') {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 获取图层分类名称
+     * @param {Object} layer - 图层对象
+     * @returns {string} 分类名称
+     */
+    getLayerCategory(layer) {
+        if (layer.sourceInfo && layer.sourceInfo.categoryDisplayName) {
+            return layer.sourceInfo.categoryDisplayName;
+        }
+        
+        if (layer.sourceInfo && layer.sourceInfo.materialType) {
+            switch (layer.sourceInfo.materialType) {
+                case 'design': return '设计文件';
+                case 'video': return '素材文件';
+                case 'image': return '素材文件';
+                case 'audio': return '素材文件';
+                default: return '素材文件';
+            }
+        }
+        
+        if (layer.type) {
+            switch (layer.type) {
+                case 'SolidLayer': return '纯色图层';
+                case 'PrecompLayer': return '预合成';
+                case 'TextLayer': return '文本图层';
+                case 'ShapeLayer': return '形状图层';
+                case 'AdjustmentLayer': return '调整';
+                default: return '其他';
+            }
+        }
+        
+        return '未知';
+    }
+    
+    /**
+     * 获取图层文件名（与JSX版本保持一致）
+     * @param {Object} layer - 图层对象
+     * @returns {string} 文件名
+     */
+    getLayerFileName(layer) {
+        let fileName = layer.name || '未命名图层';
+        
+        // 检查图层名称是否已经包含扩展名
+        const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
+        
+        // 如果图层名称没有扩展名，且有源文件信息，则添加扩展名
+        // 兼容JSX版本的数据结构（layer.source.file.name）和当前版本（layer.sourceInfo.fileName）
+        if (!hasExtension) {
+            let sourceName = null;
+            
+            // 优先使用JSX版本的数据结构
+            if (layer.source && layer.source.file && layer.source.file.name) {
+                sourceName = layer.source.file.name;
+            }
+            // 回退到当前版本的数据结构
+            else if (layer.sourceInfo && layer.sourceInfo.fileName) {
+                sourceName = layer.sourceInfo.fileName;
+            }
+            
+            if (sourceName) {
+                const extension = sourceName.substring(sourceName.lastIndexOf('.'));
+                if (extension && extension.length > 1) {
+                    fileName += extension;
+                }
+            }
+        }
+        
+        return fileName;
+    }
+    
+    /**
+     * 获取图层分类图标
+     * @param {Object} layer - 图层对象
+     * @returns {string} 分类图标
+     */
+    getLayerCategoryIcon(layer) {
+        if (layer.sourceInfo && layer.sourceInfo.categoryType === 'design') {
+            return '🎨';
+        }
+        
+        if (layer.sourceInfo && layer.sourceInfo.materialType) {
+            const icons = {
+                'image': '🖼️',
+                'video': '🎬',
+                'audio': '🎵',
+                'animation': '🎞️',
+                'vector': '📐',
+                'raw': '🔬',
+                'document': '📄',
+                'sequence': '🎯'
+            };
+            return icons[layer.sourceInfo.materialType] || '📦';
+        }
+        
+        // 其他图层类型的图标
+        if (layer.type) {
+            switch (layer.type) {
+                case 'TextLayer': return '📝';
+                case 'ShapeLayer': return '🔷';
+                case 'SolidLayer': return '🟦';
+                case 'PrecompLayer': return '📁';
+                case 'AdjustmentLayer': return '⚙️';
+                default: return '❓';
+            }
+        }
+        
+        return '📦';
+    }
+    
+    /**
+     * 获取图层悬浮提示文本
+     * @param {Object} layer - 图层对象
+     * @returns {string} 悬浮提示文本
+     */
+    getLayerTooltipText(layer) {
+        const tooltipLines = [];
+        
+        // 基本状态信息
+        if (layer.tooltipInfo) {
+            // 使用ExtendScript传递的悬浮提示信息
+            const info = layer.tooltipInfo;
+            if (info.categoryType === 'design') {
+                tooltipLines.push('设计文件 - 可导出');
+            } else {
+                const status = layer.exportable ? '可导出' : '不可导出';
+                tooltipLines.push(`${info.materialCategory || '素材文件'} - ${status}`);
+            }
+            
+            // 优先显示路径信息
+            if (info.originalPath) {
+                tooltipLines.push(`路径: ${info.originalPath}`);
+            }
+            
+            // 添加详细文件信息
+            if (info.fileSize) {
+                tooltipLines.push(`大小: ${info.fileSize}`);
+            }
+            if (info.fileDate) {
+                tooltipLines.push(`修改时间: ${info.fileDate}`);
+            }
+            if (info.dimensions) {
+                tooltipLines.push(`尺寸: ${info.dimensions}`);
+            }
+            if (info.duration) {
+                tooltipLines.push(`时长: ${info.duration}`);
+            }
+            
+            // 对于不可导出的图层，在最后添加原因说明
+            if (!layer.exportable && layer.reason) {
+                tooltipLines.push(`导出说明: ${layer.reason}`);
+            }
+            
+            return tooltipLines.join('\n');
+        }
+        
+        // 回退到基本信息
+        if (layer.sourceInfo && layer.sourceInfo.originalPath) {
+            const categoryName = layer.sourceInfo.categoryDisplayName || '文件';
+            const status = layer.exportable ? '可导出' : '不可导出';
+            tooltipLines.push(`${categoryName} - ${status}`);
+            tooltipLines.push(`路径: ${layer.sourceInfo.originalPath}`);
+            
+            // 对于不可导出的图层，添加原因说明
+            if (!layer.exportable && layer.reason) {
+                tooltipLines.push(`导出说明: ${layer.reason}`);
+            }
+            
+            return tooltipLines.join('\n');
+        }
+        
+        // 非文件图层的提示
+        if (layer.exportable) {
+            return '可导出图层';
+        } else {
+            return layer.reason || '不可导出图层';
+        }
+    }
+    
+    /**
+     * 导出路径汇总清单
+     * @param {Array} selectedLayers - 检测到的图层信息
+     * @param {Object} stats - 统计信息
+     */
+    async exportPathSummary(selectedLayers, stats) {
+        try {
+            this.log('📁 开始导出路径汇总清单...', 'info');
+            
+            // 检查是否为Demo模式
+            if (this.isDemoMode()) {
+                // Demo模式：显示虚拟导出结果
+                const reportContent = stats.pathSummaryReport || this.generatePathSummaryReport(stats.materialStats?.pathSummary || {});
+                this.showPathSummaryPreview(reportContent);
+                this.log('🎭 演示模式：路径汇总清单预览已显示', 'info');
+                return;
+            }
+            
+            // 真实模式：调用ExtendScript导出功能
+            const pathSummary = stats.materialStats?.pathSummary || {};
+            if (Object.keys(pathSummary).length === 0) {
+                this.log('⚠️ 没有可导出的路径信息', 'warning');
+                return;
+            }
+            
+            const result = await this.executeExtendScript('exportPathSummary', { pathSummary });
+            
+            if (result.success) {
+                this.log(`✅ 路径汇总清单导出成功: ${result.message}`, 'success');
+                this.log(`📁 文件路径: ${result.filePath}`, 'info');
+            } else {
+                this.log(`❌ 路径汇总清单导出失败: ${result.message}`, 'error');
+            }
+            
+        } catch (error) {
+            this.log(`导出路径汇总清单时出错: ${error.message}`, 'error');
+        }
+    }
+    
+    /**
+     * 生成路径汇总报告
+     * @param {Object} pathSummary - 路径汇总对象
+     * @returns {string} 格式化的路径清单
+     */
+    generatePathSummaryReport(pathSummary) {
+        let report = '\n=== 路径汇总清单 ===\n';
+        const designPaths = [];
+        const materialPaths = [];
+        
+        // 分类整理路径
+        for (const path in pathSummary) {
+            const pathInfo = pathSummary[path];
+            if (pathInfo.categoryType === 'design') {
+                designPaths.push(pathInfo);
+            } else {
+                materialPaths.push(pathInfo);
+            }
+        }
+        
+        // 设计文件路径
+        if (designPaths.length > 0) {
+            report += `\n【设计文件】(${designPaths.length}个路径):\n`;
+            designPaths.forEach(info => {
+                report += `🎨 ${info.fileName}\n`;
+                report += `   路径: ${info.path}\n`;
+                report += `   使用图层: ${info.layers.join(', ')}\n\n`;
+            });
+        }
+        
+        // 素材文件路径
+        if (materialPaths.length > 0) {
+            report += `\n【素材文件】(${materialPaths.length}个路径):\n`;
+            materialPaths.forEach(info => {
+                const typeIcon = this.getTypeIcon(info.materialType);
+                report += `${typeIcon} ${info.fileName}\n`;
+                report += `   路径: ${info.path}\n`;
+                report += `   使用图层: ${info.layers.join(', ')}\n\n`;
+            });
+        }
+        
+        return report;
+    }
+    
+    /**
+     * 获取素材类型图标
+     * @param {string} materialType - 素材类型
+     * @returns {string} 对应图标
+     */
+    getTypeIcon(materialType) {
+        const icons = {
+            'image': '🖼️',
+            'video': '🎬',
+            'audio': '🎵',
+            'animation': '🎞️',
+            'vector': '📐',
+            'raw': '🔬',
+            'document': '📄',
+            'sequence': '🎯'
+        };
+        return icons[materialType] || '📦';
+    }
+    
+    /**
+     * 显示路径汇总预览（Demo模式）
+     * @param {string} reportContent - 报告内容
+     */
+    showPathSummaryPreview(reportContent) {
+        // 创建预览弹窗
+        const previewHtml = `
+            <div class="demo-dialog" style="width: 600px; height: 400px;">
+                <div class="demo-dialog-header">
+                    <h3>📁 路径汇总清单预览</h3>
+                    <button class="demo-dialog-close">&times;</button>
+                </div>
+                <div class="demo-dialog-content">
+                    <div class="path-summary-preview">
+                        <pre>${reportContent}</pre>
+                    </div>
+                </div>
+                <div class="demo-dialog-footer">
+                    <button class="demo-dialog-confirm">确定</button>
+                </div>
+            </div>
+        `;
+        
+        // 创建弹窗容器
+        const dialogOverlay = document.createElement('div');
+        dialogOverlay.className = 'demo-dialog-overlay';
+        dialogOverlay.innerHTML = previewHtml;
+        
+        // 添加预览样式
+        this.addPathSummaryPreviewStyles();
+        
+        // 添加到页面
+        document.body.appendChild(dialogOverlay);
+        
+        // 绑定关闭事件
+        const closeBtn = dialogOverlay.querySelector('.demo-dialog-close');
+        const confirmBtn = dialogOverlay.querySelector('.demo-dialog-confirm');
+        
+        const closeDialog = () => {
+            document.body.removeChild(dialogOverlay);
+        };
+        
+        if (closeBtn) closeBtn.onclick = closeDialog;
+        if (confirmBtn) confirmBtn.onclick = closeDialog;
+        dialogOverlay.onclick = (e) => {
+            if (e.target === dialogOverlay) closeDialog();
+        };
+    }
+    
+    /**
+     * 添加路径汇总预览样式
+     */
+    addPathSummaryPreviewStyles() {
+        if (document.getElementById('path-summary-preview-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'path-summary-preview-styles';
+        style.textContent = `
+            .path-summary-preview {
+                flex: 1;
+                overflow: auto;
+                border: 1px solid #404040;
+                background: #1e1e1e;
+                padding: 10px;
+            }
+            .path-summary-preview pre {
+                margin: 0;
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 11px;
+                color: #cccccc;
+                line-height: 1.4;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     // 导出到Eagle
@@ -9196,6 +10405,202 @@ async handleFolderImportToAE(folder) {
         return Math.abs(hash).toString(36);
     }
 
+    /**
+     * 检查是否为demo模式
+     * @returns {boolean} 是否为demo模式
+     */
+    isDemoMode() {
+        // 检查多个demo模式标识
+        return (
+            window.__DEMO_MODE_ACTIVE__ === true ||
+            (window.demoMode && window.demoMode.isDemoMode && window.demoMode.isDemoMode()) ||
+            (window.demoMode && window.demoMode.state && window.demoMode.state.currentMode !== 'normal') ||
+            (window.location && window.location.search && window.location.search.includes('demo=true'))
+        );
+    }
+    
+    /**
+     * 绑定图层操作按钮事件
+     * @param {HTMLElement} dialog - 弹窗元素
+     * @param {Array} selectedLayers - 图层数据
+     */
+    bindLayerActionButtons(dialog, selectedLayers) {
+        // 绑定按钮点击事件
+        dialog.addEventListener('click', (event) => {
+            const button = event.target.closest('.layer-action-btn');
+            if (!button) return;
+            
+            const action = button.getAttribute('data-action');
+            const layerRow = button.closest('.layer-item-row');
+            if (!layerRow) return;
+            
+            // 通过按钮在DOM中的位置找到对应的图层数据
+            const allLayerRows = dialog.querySelectorAll('.layer-item-row');
+            const rowIndex = Array.from(allLayerRows).indexOf(layerRow);
+            
+            if (rowIndex < 0 || rowIndex >= selectedLayers.length) {
+                this.log('未找到对应的图层数据', 'error');
+                return;
+            }
+            
+            const layer = selectedLayers[rowIndex];
+            
+            event.preventDefault();
+            event.stopPropagation();
+            
+            switch (action) {
+                case 'export':
+                    this.handleLayerExport(layer);
+                    break;
+                case 'open-folder':
+                    this.handleLayerOpenFolder(layer);
+                    break;
+                case 'extension':
+                    this.handleLayerExtension(layer);
+                    break;
+                default:
+                    this.log(`未知的按钮操作: ${action}`, 'warning');
+            }
+        });
+    }
+    
+    /**
+     * 处理图层导出
+     * @param {Object} layer - 图层对象
+     */
+    async handleLayerExport(layer) {
+        try {
+            this.log(`开始导出图层: ${layer.name}`, 'info');
+            
+            // 检查是否为Demo模式
+            if (this.isDemoMode()) {
+                // Demo模式：显示模拟导出结果
+                this.log(`🎭 演示模式：模拟导出图层 ${layer.name}`, 'info');
+                alert(`演示模式：图层 "${layer.name}" 导出成功！\n导出路径：桌面/Eagle_Assets/`);
+                
+                // 播放成功音效
+                if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
+                    this.soundPlayer.playConnectionSuccess();
+                }
+                return;
+            }
+            
+            // 获取当前导出设置
+            const exportSettings = this.getExportSettingsFromUI();
+            
+            // 构造单个图层导出参数
+            const exportParams = {
+                exportSettings: {
+                    mode: exportSettings.mode || 'desktop',
+                    customExportPath: exportSettings.customExportPath || 'desktop',
+                    autoCopy: exportSettings.autoCopy || false,
+                    burnAfterReading: exportSettings.burnAfterReading || false,
+                    addTimestamp: exportSettings.addTimestamp || false,
+                    createSubfolders: exportSettings.createSubfolders || false
+                },
+                singleLayerMode: true,
+                targetLayerName: layer.name,
+                targetLayerIndex: layer.index || 0
+            };
+            
+            // 调用ExtendScript导出功能
+            const result = await this.executeExtendScript('exportSelectedLayers', exportParams);
+            
+            if (result && result.success) {
+                this.log(`✅ 图层导出成功: ${layer.name}`, 'success');
+                
+                // 显示成功消息
+                const exportPath = result.exportPath || '桌面';
+                alert(`导出成功！\n图层：${layer.name}\n导出路径：${exportPath}`);
+                
+                // 播放成功音效
+                if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
+                    this.soundPlayer.playConnectionSuccess();
+                }
+            } else {
+                this.log(`❌ 图层导出失败: ${result ? result.error : '未知错误'}`, 'error');
+                alert(`导出失败：${result ? result.error : '未知错误'}`);
+            }
+        } catch (error) {
+            this.log(`导出图层过程出错: ${error.message}`, 'error');
+            alert(`导出过程出错：${error.message}`);
+        }
+    }
+    
+    /**
+     * 处理打开文件夹
+     * @param {Object} layer - 图层对象
+     */
+    handleLayerOpenFolder(layer) {
+        try {
+            let filePath = null;
+            
+            // 尝试从不同位置获取文件路径
+            if (layer.tooltipInfo && layer.tooltipInfo.originalPath) {
+                filePath = layer.tooltipInfo.originalPath;
+            } else if (layer.sourceInfo && layer.sourceInfo.originalPath) {
+                filePath = layer.sourceInfo.originalPath;
+            } else if (layer.source && layer.source.file) {
+                filePath = layer.source.file.fsName || layer.source.file.fullName;
+            } else if (layer.originalPath) {
+                filePath = layer.originalPath;
+            }
+            
+            if (!filePath) {
+                this.log(`无法获取文件路径: ${layer.name}`, 'warning');
+                alert(`无法获取文件路径: ${layer.name}`);
+                return;
+            }
+            
+            // 获取文件夹路径（去掉文件名）
+            let folderPath = filePath.substring(0, Math.max(filePath.lastIndexOf('\\'), filePath.lastIndexOf('/')));
+            
+            if (!folderPath || folderPath === filePath) {
+                this.log(`无法解析文件夹路径: ${filePath}`, 'warning');
+                alert(`无法解析文件夹路径: ${filePath}`);
+                return;
+            }
+            
+            this.log(`打开文件夹: ${folderPath}`, 'info');
+            
+            // 调用ExtendScript的打开文件夹功能
+            this.executeExtendScript('openFileFolder', { folderPath: folderPath })
+                .then(result => {
+                    if (result && result.success) {
+                        this.log(`✅ 文件夹已打开: ${folderPath}`, 'success');
+                    } else {
+                        this.log(`❌ 打开文件夹失败: ${result ? result.error : '未知错误'}`, 'error');
+                        // 降级到显示路径
+                        alert(`无法自动打开文件夹，请手动打开以下路径：\n${folderPath}`);
+                    }
+                })
+                .catch(error => {
+                    this.log(`打开文件夹时出错: ${error.message}`, 'error');
+                    // 降级到显示路径
+                    alert(`无法自动打开文件夹，请手动打开以下路径：\n${folderPath}`);
+                });
+            
+        } catch (error) {
+            this.log(`打开文件夹失败: ${error.message}`, 'error');
+            alert(`打开文件夹失败: ${error.message}`);
+        }
+    }
+    
+    /**
+     * 处理扩展功能
+     * @param {Object} layer - 图层对象
+     */
+    handleLayerExtension(layer) {
+        // 预留扩展功能，暂时显示图层详情
+        this.log(`扩展功能（预留）: ${layer.name}`, 'info');
+        
+        // 可以在这里添加更多功能，比如：
+        // - 复制图层信息到剪贴板
+        // - 显示图层详细属性
+        // - 图层重命名
+        // - 等等
+    }
+
 }
 
 // 初始化扩展
@@ -9205,4 +10610,6 @@ document.addEventListener('DOMContentLoaded', () => {
     aeExtension = new AEExtension();
     // 将应用实例暴露到全局作用域，供模态框函数使用
     window.eagleToAeApp = aeExtension;
+    // 同时暴露为aeExtension，供JSX弹窗调用
+    window.aeExtension = aeExtension;
 });

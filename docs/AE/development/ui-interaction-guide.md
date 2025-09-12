@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档详细说明Eagle2Ae AE插件的用户界面交互流程、操作指南和最佳实践，帮助开发者理解用户操作逻辑和界面响应机制。
+本文档详细说明Eagle2Ae AE插件的用户界面交互流程、操作指南和最佳实践，包括最新的图层检测系统、弹窗交互机制以及Demo模式功能，帮助开发者理解用户操作逻辑和界面响应机制。
 
 ## 1. 插件启动和初始化流程
 
@@ -1371,6 +1371,306 @@ analyzeDroppedFiles(files) {
     }
     
     // 继续分析逻辑...
+}
+```
+
+## 6. 图层检测系统交互流程
+
+### 6.1 检测按钮交互设计
+
+#### 6.1.1 按钮状态管理
+
+| 状态 | 视觉表现 | 用户操作 | 系统响应 |
+|------|----------|----------|----------|
+| 就绪 | 正常按钮样式 | 可点击 | 开始检测流程 |
+| 检测中 | 加载动画 + 禁用状态 | 不可点击 | 显示检测进度 |
+| 完成 | 恢复正常状态 | 可点击 | 弹出结果总结 |
+| 错误 | 错误提示样式 | 可点击重试 | 显示错误信息 |
+
+#### 6.1.2 检测流程时序图
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant UI as 插件界面
+    participant Main as 主程序
+    participant AE as After Effects
+    participant Dialog as 弹窗系统
+    
+    User->>UI: 点击"检测图层"按钮
+    UI->>Main: 触发检测事件
+    Main->>UI: 更新按钮状态为"检测中"
+    Main->>AE: 调用ExtendScript检测脚本
+    AE->>AE: 分析所有图层
+    AE->>Main: 返回检测结果
+    Main->>Main: 处理和格式化数据
+    Main->>Dialog: 显示检测结果弹窗
+    Dialog->>User: 展示总结和详情
+    User->>Dialog: 点击确定/关闭
+    Dialog->>UI: 关闭弹窗
+    UI->>UI: 恢复按钮正常状态
+```
+
+### 6.2 检测结果弹窗交互
+
+#### 6.2.1 弹窗显示逻辑
+
+```javascript
+// 检测结果弹窗显示逻辑
+function showDetectionSummaryDialog(summaryData) {
+    // 环境检测：选择合适的弹窗实现
+    if (isDemoMode()) {
+        // Demo模式：使用JavaScript弹窗
+        console.log('[Demo模式] 使用虚拟弹窗显示检测结果');
+        showJavaScriptSummaryDialog(summaryData);
+    } else {
+        // CEP环境：使用ExtendScript弹窗
+        console.log('[CEP模式] 调用ExtendScript弹窗');
+        const script = `showLayerDetectionSummary(${JSON.stringify(summaryData)});`;
+        csInterface.evalScript(script, handleDialogResult);
+    }
+}
+```
+
+#### 6.2.2 弹窗内容结构
+
+**总结区域**:
+- 时间戳 + 可导出图层统计
+- 时间戳 + 不可导出图层统计  
+- 时间戳 + 总体检测结果
+
+**详情区域**:
+- 分类标题（"图层详情"）
+- 可导出图层列表（如有）
+- 不可导出图层列表
+- 每个图层显示：状态图标 + 类型标识 + 图层名称
+
+**操作区域**:
+- 确定按钮（主要操作）
+- 关闭按钮（次要操作）
+- 键盘快捷键支持（Enter/Esc）
+
+### 6.3 Demo模式特殊交互
+
+#### 6.3.1 Demo模式激活
+
+**自动激活**（Web环境）:
+```javascript
+// 页面加载时自动检测环境
+window.addEventListener('DOMContentLoaded', () => {
+    if (!isCEPEnvironment()) {
+        console.log('[自动检测] 非CEP环境，启用Demo模式');
+        activateDemoMode('auto');
+    }
+});
+```
+
+**手动激活**（CEP环境彩蛋）:
+```javascript
+// 连续点击标题5次激活Demo模式
+let clickCount = 0;
+let clickTimer = null;
+
+document.getElementById('app-title').addEventListener('click', () => {
+    clickCount++;
+    
+    if (clickTimer) clearTimeout(clickTimer);
+    
+    if (clickCount >= 5) {
+        console.log('[彩蛋触发] 手动启用Demo模式');
+        activateDemoMode('manual');
+        showEasterEggAnimation();
+        clickCount = 0;
+    } else {
+        clickTimer = setTimeout(() => {
+            clickCount = 0;
+        }, 3000);
+    }
+});
+```
+
+#### 6.3.2 虚拟数据展示
+
+**数据生成策略**:
+```javascript
+// 生成真实感的虚拟检测数据
+function generateDemoDetectionData() {
+    const demoLayers = [
+        {
+            name: "Snow Transitions HD 1 luma.mp4",
+            type: "VideoLayer",
+            exportable: false,
+            reason: "视频素材，将导出第一帧",
+            icon: "🎬"
+        },
+        {
+            name: "flare green screen animation in full Hd 1920x1080p -- Royalty free -- F",
+            type: "VideoLayer",
+            exportable: false, 
+            reason: "视频素材，将导出第一帧",
+            icon: "🎬"
+        }
+        // 更多虚拟图层数据...
+    ];
+    
+    // 基于实际数组长度计算统计
+    const stats = calculateLayerStats(demoLayers);
+    
+    return {
+        exportableSummary: `${getCurrentTimeString()} 可导出: 无`,
+        nonExportableSummary: `${getCurrentTimeString()} 不可导出: 视频×${stats.nonExportable}`,
+        totalSummary: `${getCurrentTimeString()} 总结: 共检测 ${stats.total} 个图层，${stats.exportable} 个可导出，${stats.nonExportable} 个不可导出`,
+        layers: demoLayers,
+        stats: stats
+    };
+}
+```
+
+### 6.4 错误处理和用户反馈
+
+#### 6.4.1 常见错误场景
+
+**无项目错误**:
+```javascript
+// 检测到无AE项目时的处理
+if (!hasActiveProject()) {
+    showErrorDialog({
+        title: "检测失败",
+        message: "请先打开一个After Effects项目",
+        type: "warning",
+        actions: ["确定"]
+    });
+    return;
+}
+```
+
+**无合成错误**:
+```javascript
+// 检测到无活动合成时的处理
+if (!hasActiveComposition()) {
+    showErrorDialog({
+        title: "检测失败", 
+        message: "请先创建或选择一个合成",
+        type: "warning",
+        actions: ["确定"]
+    });
+    return;
+}
+```
+
+**ExtendScript执行错误**:
+```javascript
+// ExtendScript执行失败时的降级处理
+csInterface.evalScript(script, (result) => {
+    if (!result || result.includes('Error')) {
+        console.error('[检测失败] ExtendScript执行错误:', result);
+        
+        // 在Demo模式下显示虚拟结果
+        if (isDemoMode()) {
+            const demoData = generateDemoDetectionData();
+            showJavaScriptSummaryDialog(demoData);
+        } else {
+            showErrorDialog({
+                title: "检测失败",
+                message: "图层检测过程中发生错误，请重试",
+                type: "error",
+                actions: ["重试", "取消"]
+            });
+        }
+    }
+});
+```
+
+#### 6.4.2 用户反馈机制
+
+**进度指示**:
+```javascript
+// 检测进度反馈
+function updateDetectionProgress(current, total) {
+    const percentage = Math.round((current / total) * 100);
+    const progressText = `正在检测图层... (${current}/${total})`;
+    
+    updateButtonText(progressText);
+    updateProgressBar(percentage);
+}
+```
+
+**成功反馈**:
+```javascript
+// 检测完成后的成功反馈
+function showDetectionSuccess(stats) {
+    showToast({
+        message: `检测完成：共 ${stats.total} 个图层`,
+        type: "success",
+        duration: 3000
+    });
+}
+```
+
+### 6.5 性能优化和用户体验
+
+#### 6.5.1 异步处理
+```javascript
+// 异步检测避免界面阻塞
+async function performLayerDetection() {
+    try {
+        showLoadingState();
+        
+        // 分批处理大量图层
+        const layers = await getLayers();
+        const batchSize = 10;
+        const results = [];
+        
+        for (let i = 0; i < layers.length; i += batchSize) {
+            const batch = layers.slice(i, i + batchSize);
+            const batchResults = await processBatch(batch);
+            results.push(...batchResults);
+            
+            // 更新进度
+            updateDetectionProgress(i + batch.length, layers.length);
+            
+            // 让出控制权，避免阻塞UI
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        // 显示结果
+        showDetectionResults(results);
+        
+    } catch (error) {
+        handleDetectionError(error);
+    } finally {
+        hideLoadingState();
+    }
+}
+```
+
+#### 6.5.2 缓存机制
+```javascript
+// 检测结果缓存，避免重复检测
+class DetectionCache {
+    constructor() {
+        this.cache = new Map();
+        this.maxAge = 5 * 60 * 1000; // 5分钟过期
+    }
+    
+    getCacheKey(projectPath, compName) {
+        return `${projectPath}:${compName}:${Date.now()}`;
+    }
+    
+    get(key) {
+        const cached = this.cache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.maxAge) {
+            return cached.data;
+        }
+        return null;
+    }
+    
+    set(key, data) {
+        this.cache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+    }
 }
 ```
 

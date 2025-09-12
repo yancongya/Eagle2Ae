@@ -1,0 +1,78 @@
+# 图层检测系统全面升级文档
+
+## 概述
+
+本文档详细记录了Eagle2Ae AE扩展中图层检测系统的全面升级，包括检测按钮功能优化、新增弹窗系统、Demo模式虚拟弹窗、拦截机制实现以及样式优化等重要改进。
+
+## 1. 检测图层按钮功能升级
+
+### 1.1 核心功能增强
+
+#### 检测逻辑优化
+- **视频文件识别**: 扩展了视频文件格式支持，包括`.mp4`, `.mov`, `.avi`, `.mkv`, `.wmv`, `.flv`, `.webm`, `.mxf`, `.r3d`等
+- **图层类型分类**: 明确区分图片素材、视频素材、序列帧等不同类型
+- **导出原因说明**: 为每种图层类型提供准确的导出状态说明
+
+#### 检测结果展示
+```javascript
+// 检测结果数据结构
+{
+  exportable: true,
+  reason: "视频素材，将导出第一帧",
+  type: "VideoLayer",
+  sourceInfo: {
+    isVideo: true,
+    fileName: "动画视频.mp4",
+    // 其他源信息...
+  }
+}
+```
+
+### 1.2 用户界面改进
+
+#### 检测按钮交互
+- **即时反馈**: 点击检测按钮后立即显示加载状态
+- **进度指示**: 显示检测进度和当前处理的图层
+- **结果预览**: 检测完成后自动弹出总结对话框
+
+#### 状态指示器
+| 状态 | 图标 | 颜色 | 说明 |
+|------|------|------|------|
+| 可导出 | ✓ | 绿色 | 图层可以正常导出 |
+| 不可导出 | ✗ | 红色 | 图层无法导出（如序列帧） |
+| 视频文件 | 🎬 | 蓝色 | 视频素材，将导出第一帧 |
+| 纯色图层 | ⬜ | 灰色 | 纯色或文本图层 |
+
+## 2. 弹窗系统架构升级
+
+### 2.1 双弹窗系统设计
+
+#### JSX弹窗（CEP环境）
+- **文件位置**: `Eagle2Ae-Ae/jsx/dialog-summary.jsx`
+- **适用环境**: After Effects CEP扩展环境
+- **特性**: 原生AE样式，完整功能支持
+- **调用方式**: 通过ExtendScript执行
+
+```javascript
+// JSX弹窗调用示例
+function showLayerDetectionSummary(summaryData) {
+    try {
+        var dialog = new Window("dialog", "@Eagle2Ae");
+        // 弹窗构建逻辑...
+        dialog.show();
+    } catch (error) {
+        // 错误处理
+    }
+}
+```
+
+#### JavaScript弹窗（Web环境）
+- **文件位置**: `Eagle2Ae-Ae/js/main.js`
+- **适用环境**: Demo模式和Web预览环境
+- **特性**: HTML/CSS实现，样式完全一致
+- **调用方式**: 直接JavaScript DOM操作
+
+```javascript
+// JavaScript弹窗实现
+function showDetectionSummaryDialog(summaryData) {
+    const dialog = 

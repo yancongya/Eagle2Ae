@@ -33,15 +33,21 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
   - 📁 文件处理流程 (`handleFileDrop`)
   - 🎬 序列帧检测和合成检查
   - 💬 导入确认弹窗系统
-- [对话框系统](./development/dialog-system.md) - **新增** Panel样式对话框完整实现
+  - 🔍 **新增** 图层检测系统交互流程
+- [对话框系统](./development/dialog-system.md) - **升级** Panel样式对话框和双弹窗架构
   - 🔧 ExtendScript对话框 (`showPanelConfirmDialog`)
   - 🌐 CEP扩展端调用 (`showImportConfirmDialog`)
   - 🛡️ 字符串转义和错误处理
+  - 📊 **新增** 图层检测总结弹窗系统
+  - 🎭 **新增** Demo模式虚拟弹窗实现
 - [导入逻辑文档](./development/import-logic.md) - **新增** 文件导入系统核心逻辑
   - 📋 导入系统架构
   - 🔍 文件类型检测和序列帧识别
   - ⚙️ 配置管理和错误处理
-- [Demo功能指南](./development/demo-guide.md) - 演示模式详细说明和使用指南
+- [Demo功能指南](./development/demo-guide.md) - **升级** 演示模式详细说明和虚拟弹窗系统
+  - 🎬 虚拟弹窗系统
+  - 🛡️ 网络拦截机制
+  - 🎨 样式一致性保证
 
 ### 📖 API 参考
 - [API参考手册](./api/api-reference.md) - 完整的API文档
@@ -49,6 +55,24 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 - [函数功能映射](./api/function-mapping.md) - UI组件与JavaScript函数的完整映射
 - [JSX脚本API](./api/jsx-scripts.md) - ExtendScript API参考
 - [通信API](./api/communication-api.md) - 通信接口文档
+
+### 🎯 功能特性
+- [文件夹打开系统升级](./features/folder-opening-system-upgrade.md) - **最新** 图层文件夹打开功能全面升级
+  - 📁 一键打开图层文件所在文件夹
+  - 🔤 URI解码处理中文路径编码问题
+  - 🖥️ JSX原生API + Windows Explorer双重保障
+  - 🎯 智能路径获取和验证机制
+  - 🛡️ 多重错误处理和用户指导
+  - 🎨 按钮图标兼容性优化（▶ 和 ◈）
+- [图层检测系统升级](./features/layer-detection-system-upgrade.md) - **升级** 图层检测功能全面升级
+  - 🔍 检测按钮功能优化
+  - 📊 双弹窗架构实现
+  - 🎭 Demo模式虚拟弹窗
+  - 🛡️ 弹窗拦截机制
+  - 🎨 样式一致性优化
+  - 📁 **新增** 文件夹打开按钮集成
+- [素材分类功能](./features/material-classification.md) - 素材智能分类和标识
+- [素材分类修复](./features/material-classification-fix.md) - 分类功能问题修复
 
 ### 📋 开发规范
 - [编码规范](./standards/coding-standards.md) - 代码风格和编程规范
@@ -61,7 +85,11 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 
 | 功能模块 | 主要文档 | 关键实现 |
 |---------|---------|----------|
+| **文件夹打开功能** | [文件夹打开系统升级](features/folder-opening-system-upgrade.md) | `openLayerFolder()`, `decodeStr()`, `openFolderWithJSX()` |
 | **拖拽导入** | [UI交互指南](development/ui-interaction-guide.md#5-文件拖拽处理) | `isEagleDrag()`, `handleFileDrop()` |
+| **图层检测系统** | [图层检测系统升级](features/layer-detection-system-upgrade.md) | `detectLayersAsync()`, `showDetectionSummaryDialog()` |
+| **双弹窗架构** | [对话框系统](development/dialog-system.md#10-图层检测总结弹窗系统) | `showLayerDetectionSummary()`, `showJavaScriptSummaryDialog()` |
+| **Demo模式** | [Demo功能指南](development/demo-guide.md#7-demoDialog-虚拟弹窗系统) | `isDemoMode()`, `generateDemoLayerData()` |
 | **对话框系统** | [对话框系统](development/dialog-system.md) | `showPanelConfirmDialog()`, `showImportConfirmDialog()` |
 | **Eagle连接检测** | [JSX脚本API](api/jsx-scripts.md#checkEagleConnection) | `checkEagleConnection()`, `exportToEagleWithConnectionCheck()` |
 | **通信协议** | [通信协议设计](architecture/communication-protocol.md) | WebSocket消息类型定义 |
@@ -139,6 +167,8 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 ### 核心功能
 - **文件接收**: 接收来自 Eagle 插件的文件信息
 - **项目导入**: 将文件导入到 After Effects 项目
+- **图层检测**: 智能检测和分析合成中的图层
+- **文件夹打开**: 一键打开图层文件所在文件夹（支持中文路径）
 - **状态监控**: 实时显示连接和操作状态
 - **设置管理**: 导入参数和偏好设置
 

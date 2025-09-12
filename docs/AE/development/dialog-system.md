@@ -2,26 +2,38 @@
 
 ## 概述
 
-本文档详细描述了Eagle2Ae CEP扩展中的对话框系统实现，包括Panel样式对话框的创建、使用方法和最佳实践。
+本文档详细描述了Eagle2Ae CEP扩展中的对话框系统实现，包括Panel样式对话框的创建、使用方法、Demo模式虚拟弹窗系统以及最佳实践。该系统支持双弹窗架构，能够在CEP环境和Web环境中提供一致的用户体验。
 
 ## 1. 对话框系统架构
 
 ### 1.1 系统组成
 
-对话框系统由以下组件构成：
+对话框系统采用双弹窗架构，由以下组件构成：
 
+#### CEP环境弹窗系统
 - **CEP扩展端 (JavaScript)**: 负责触发对话框显示和处理结果
 - **ExtendScript端 (JSX)**: 负责创建和管理Panel样式对话框
 - **通信机制**: 通过CSInterface在两端之间传递数据
+
+#### Demo模式弹窗系统
+- **JavaScript弹窗引擎**: 使用HTML/CSS/JS实现的虚拟弹窗
+- **样式模拟器**: 完全模拟CEP环境的原生弹窗样式
+- **数据拦截器**: 拦截ExtendScript调用，使用虚拟数据
+- **环境检测器**: 自动识别运行环境并选择合适的弹窗实现
 
 ### 1.2 文件结构
 
 ```
 Eagle2Ae-Ae/
 ├── js/
-│   └── main.js                 # CEP扩展主逻辑
+│   ├── main.js                 # CEP扩展主逻辑，包含弹窗调用和Demo模式检测
+│   └── demo/
+│       ├── demo-mode.js        # Demo模式主控制器
+│       ├── demo-dialog.js      # 虚拟弹窗系统实现
+│       └── demo-config.json    # Demo模式配置和虚拟数据
 └── jsx/
-    └── dialog-warning.jsx      # ExtendScript对话框实现
+    ├── dialog-warning.jsx      # ExtendScript警告对话框实现
+    └── dialog-summary.jsx      # ExtendScript图层检测总结对话框
 ```
 
 ## 2. ExtendScript对话框实现
@@ -176,7 +188,91 @@ function showPanelWarningDialog(title, message) {
 }
 ```
 
-#### 2.3.2 传统实现 (showConfirmDialog)
+### 2.4 图层详情对话框系统
+
+#### 2.4.1 图层检测总结对话框 (showDetectionSummaryDialog)
+
+显示图层检测完成后的详细统计信息和操作按钮
+
+```javascript
+/**
+ * 显示图层检测总结弹窗
+ * @param {Array} detectionResults - 原始检测结果数组
+ * @returns {boolean} 用户是否点击了确定按钮
+ */
+function showDetectionSummaryDialog(detectionResults)
+```
+
+**功能特性**:
+- 显示可导出和不可导出图层的统计信息
+- 为每个图层提供详细信息和操作按钮
+- 支持文件夹打开功能
+- 悬浮提示显示图层详细信息
+- 响应式布局和滚动支持
+
+#### 2.4.2 文件夹打开按钮 (addOpenFolderButton)
+
+为图层行添加文件夹打开功能按钮
+
+```javascript
+/**
+ * 添加打开文件夹按钮
+ * @param {Group} parent - 父容器
+ * @param {Object} layer - 图层对象
+ */
+function addOpenFolderButton(parent, layer)
+```
+
+**按钮特性**:
+- **图标**: `▶` (右箭头符号，表示"打开"或"进入"动作)
+- **尺寸**: 25x18像素
+- **提示**: "打开文件所在文件夹"
+- **功能**: 调用`openLayerFolder(layer)`打开文件夹
+
+**图标演进历史**:
+1. **v1.0**: 使用表情符号 `📁` (兼容性问题)
+2. **v1.1**: 临时修复为 `[...]` (过于简单)
+3. **v2.0**: 优化为 `▶` (兼容且美观)
+
+**交互流程**:
+```
+用户点击▶按钮
+    ↓
+调用openLayerFolder(layer)
+    ↓
+获取图层文件路径
+    ↓
+URI解码处理中文路径
+    ↓
+验证文件夹存在性
+    ↓
+使用JSX原生Folder.execute()打开
+    ↓
+失败时使用explorer.exe备用方案
+    ↓
+显示成功/失败提示
+```
+
+#### 2.4.3 扩展功能按钮 (addExtensionButton)
+
+为图层行添加扩展功能按钮（预留）
+
+```javascript
+/**
+ * 添加扩展功能按钮
+ * @param {Group} parent - 父容器
+ * @param {Object} layer - 图层对象
+ * @param {boolean} canExport - 是否可导出
+ */
+function addExtensionButton(parent, layer, canExport)
+```
+
+**按钮特性**:
+- **图标**: `◈` (菱形符号，表示扩展功能)
+- **状态**: 当前禁用，预留扩展
+- **功能**: 点击显示图层详细信息对话框
+
+#### 2.4.4 传统实现 (showConfirmDialog)
 
 ```javascript
 /**
@@ -791,27 +887,294 @@ const result = csInterface.evalScript(script);
 debugLog('对话框结果', { result, buttonIndex: parseInt(result) });
 ```
 
-## 10. 相关文件和依赖
+## 10. 图层检测总结弹窗系统
 
-### 10.1 核心文件
+### 10.1 双弹窗架构实现
 
-- `Eagle2Ae-Ae/jsx/dialog-warning.jsx`: ExtendScript对话框实现
-- `Eagle2Ae-Ae/js/main.js`: CEP扩展主逻辑
+#### JSX弹窗实现 (dialog-summary.jsx)
+```javascript
+/**
+ * 显示图层检测总结弹窗（CEP环境）
+ * @param {Object} summaryData 检测结果数据
+ */
+function showLayerDetectionSummary(summaryData) {
+    try {
+        var dialog = new Window("dialog", "@Eagle2Ae");
+        dialog.orientation = "column";
+        dialog.alignChildren = "fill";
+        dialog.spacing = 10;
+        dialog.margins = 16;
+        dialog.preferredSize.width = 400;
+        dialog.preferredSize.height = 300;
+        
+        // 添加总结信息
+        var summaryGroup = dialog.add("group");
+        summaryGroup.orientation = "column";
+        summaryGroup.alignChildren = "left";
+        
+        // 三行总结信息
+        summaryGroup.add("statictext", undefined, summaryData.exportableSummary);
+        summaryGroup.add("statictext", undefined, summaryData.nonExportableSummary);
+        summaryGroup.add("statictext", undefined, summaryData.totalSummary);
+        
+        // 添加图层详情
+        var detailsGroup = dialog.add("group");
+        detailsGroup.orientation = "column";
+        detailsGroup.alignChildren = "fill";
+        
+        var detailsTitle = detailsGroup.add("statictext", undefined, "图层详情");
+        
+        // 图层列表（滚动面板）
+        var layersList = detailsGroup.add("listbox");
+        layersList.preferredSize.height = 150;
+        
+        // 添加图层信息
+        for (var i = 0; i < summaryData.layers.length; i++) {
+            var layer = summaryData.layers[i];
+            var listItem = layersList.add("item", layer.displayText);
+        }
+        
+        // 按钮组
+        var buttonGroup = dialog.add("group");
+        buttonGroup.orientation = "row";
+        buttonGroup.alignment = "center";
+        
+        var confirmBtn = buttonGroup.add("button", undefined, "确定");
+        var cancelBtn = buttonGroup.add("button", undefined, "关闭");
+        
+        confirmBtn.onClick = function() { dialog.close(); };
+        cancelBtn.onClick = function() { dialog.close(); };
+        
+        dialog.defaultElement = confirmBtn;
+        dialog.cancelElement = cancelBtn;
+        
+        dialog.center();
+        dialog.show();
+        
+    } catch (error) {
+        alert("显示检测结果失败: " + error.message);
+    }
+}
+```
+
+#### JavaScript弹窗实现 (Demo模式)
+```javascript
+/**
+ * 显示图层检测总结弹窗（Demo模式）
+ * @param {Object} summaryData 检测结果数据
+ */
+function showDetectionSummaryDialog(summaryData) {
+    // Demo模式检测
+    if (isDemoMode()) {
+        console.log('[Demo模式] 使用JavaScript弹窗');
+        showJavaScriptSummaryDialog(summaryData);
+        return;
+    }
+    
+    // CEP模式：调用ExtendScript
+    const script = `showLayerDetectionSummary(${JSON.stringify(summaryData)});`;
+    csInterface.evalScript(script, handleDialogResult);
+}
+
+function showJavaScriptSummaryDialog(summaryData) {
+    // 创建弹窗容器
+    const dialog = document.createElement('div');
+    dialog.className = 'detection-summary-dialog';
+    dialog.innerHTML = `
+        <div class="dialog-header">
+            <span class="dialog-title">@Eagle2Ae（模拟）</span>
+            <button class="dialog-close">×</button>
+        </div>
+        
+        <div class="dialog-content">
+            <div class="summary-section">
+                <div class="summary-line">${summaryData.exportableSummary}</div>
+                <div class="summary-line">${summaryData.nonExportableSummary}</div>
+                <div class="summary-line">${summaryData.totalSummary}</div>
+            </div>
+            
+            <div class="separator"></div>
+            
+            <div class="layers-section">
+                <h4>图层详情</h4>
+                <div class="layers-list">
+                    ${generateLayerListHTML(summaryData.layers)}
+                </div>
+            </div>
+        </div>
+        
+        <div class="dialog-footer">
+            <button class="btn-confirm">确定</button>
+            <button class="btn-cancel">关闭</button>
+        </div>
+    `;
+    
+    // 添加样式
+    dialog.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px;
+        max-height: 500px;
+        background-color: #2b2b2b;
+        border: 1px solid #555555;
+        border-radius: 4px;
+        color: #cccccc;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 12px;
+        z-index: 10000;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    `;
+    
+    // 添加事件监听
+    setupDialogEvents(dialog);
+    
+    // 显示弹窗
+    document.body.appendChild(dialog);
+}
+```
+
+### 10.2 样式一致性保证
+
+#### CSS样式定义
+```css
+/* Demo模式弹窗样式 - 完全模拟CEP环境 */
+.detection-summary-dialog {
+    background-color: #2b2b2b;          /* 主背景色 */
+    border: 1px solid #555555;          /* 边框颜色 */
+    color: #cccccc;                     /* 主文字颜色 */
+    font-family: 'Segoe UI', sans-serif; /* 字体 */
+    font-size: 12px;                    /* 字体大小 */
+}
+
+.dialog-header {
+    background-color: #1e1e1e;          /* 头部背景 */
+    color: #ffffff;                     /* 头部文字 */
+    padding: 8px 12px;                  /* 内边距 */
+    border-bottom: 1px solid #555555;   /* 底部边框 */
+}
+
+.dialog-content {
+    padding: 12px;                      /* 内容区域内边距 */
+    max-height: 300px;                  /* 最大高度 */
+    overflow-y: auto;                   /* 垂直滚动 */
+}
+
+.summary-section .summary-line {
+    margin-bottom: 4px;                 /* 行间距 */
+    font-family: monospace;             /* 等宽字体 */
+}
+
+.separator {
+    height: 1px;
+    background-color: #555555;
+    margin: 12px 0;
+}
+
+.layers-section h4 {
+    margin: 0 0 8px 0;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.layers-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #555555;
+    background-color: #1e1e1e;
+    padding: 4px;
+}
+
+.layer-item {
+    padding: 2px 4px;
+    margin-bottom: 1px;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.dialog-footer {
+    background-color: #1e1e1e;          /* 底部背景 */
+    padding: 8px 12px;                  /* 内边距 */
+    text-align: center;                 /* 按钮居中 */
+    border-top: 1px solid #555555;      /* 顶部边框 */
+}
+
+.dialog-footer button {
+    background-color: #404040;
+    border: 1px solid #666666;
+    color: #cccccc;
+    padding: 4px 12px;
+    margin: 0 4px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.dialog-footer button:hover {
+    background-color: #505050;
+}
+```
+
+### 10.3 数据格式标准化
+
+#### 检测结果数据结构
+```javascript
+// 标准化的检测结果数据格式
+const summaryData = {
+    // 总结信息
+    exportableSummary: "14:28:05 可导出: 无",
+    nonExportableSummary: "14:28:05 不可导出: 视频×6",
+    totalSummary: "14:28:05 总结: 共检测 6 个图层，0 个可导出，6 个不可导出",
+    
+    // 详细图层信息
+    layers: [
+        {
+            name: "Snow Transitions HD 1 luma.mp4",
+            type: "VideoLayer",
+            exportable: false,
+            reason: "视频素材，将导出第一帧",
+            displayText: "[×] 【视频】 Snow Transitions HD 1 luma.mp4"
+        }
+        // 更多图层...
+    ],
+    
+    // 统计信息
+    stats: {
+        total: 6,
+        exportable: 0,
+        nonExportable: 6,
+        byType: {
+            video: 6,
+            image: 0,
+            text: 0,
+            solid: 0
+        }
+    }
+};
+```
+
+## 11. 相关文件和依赖
+
+### 11.1 核心文件
+
+- `Eagle2Ae-Ae/jsx/dialog-warning.jsx`: ExtendScript警告对话框实现
+- `Eagle2Ae-Ae/jsx/dialog-summary.jsx`: ExtendScript图层检测总结对话框
+- `Eagle2Ae-Ae/js/main.js`: CEP扩展主逻辑，包含弹窗调用逻辑
+- `Eagle2Ae-Ae/js/demo/demo-dialog.js`: Demo模式虚拟弹窗实现
 - `Eagle2Ae-Ae/js/CSInterface.js`: Adobe CEP通信接口
 
-### 10.2 依赖关系
+### 11.2 依赖关系
 
 ```
 CEP扩展 (main.js)
-    ↓ CSInterface.evalScript()
-ExtendScript (dialog-warning.jsx)
-    ↓ new Window()
-Adobe After Effects
+    ↓ 环境检测
+    ├── CEP环境 → CSInterface.evalScript() → ExtendScript (dialog-*.jsx) → AE原生弹窗
+    └── Demo模式 → JavaScript弹窗引擎 → HTML/CSS虚拟弹窗
 ```
 
 ---
 
 **最后更新**: 2024-01-16  
 **维护者**: Eagle2Ae开发团队  
-**版本**: 1.3.0  
-**更新内容**: 添加弹窗优化方案，统一标题使用扩展名变量，优化布局和文本显示
+**版本**: 2.2.0  
+**更新内容**: 新增图层检测总结弹窗系统，实现双弹窗架构，完善Demo模式支持

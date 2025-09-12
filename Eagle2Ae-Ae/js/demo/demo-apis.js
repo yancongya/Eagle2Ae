@@ -188,6 +188,143 @@ class DemoAPIs {
         };
     }
     
+    // 模拟图层检测
+    async detectSelectedLayers() {
+        console.log('🔍 模拟图层检测...');
+        
+        // 模拟检测延迟
+        await this.delay(800);
+        
+        // 获取虚拟图层数据
+        const layerData = this.demoData.layerDetection;
+        if (!layerData || !layerData.selectedLayers) {
+            console.error('❌ 虚拟图层数据未找到');
+            return {
+                success: false,
+                error: '虚拟图层数据未找到',
+                compName: '演示合成',
+                selectedLayers: [],
+                totalSelected: 0,
+                exportableCount: 0,
+                nonExportableCount: 0,
+                logs: ['❌ 虚拟图层数据未找到']
+            };
+        }
+        
+        const selectedLayers = layerData.selectedLayers;
+        
+        // 计算统计信息
+        const totalSelected = selectedLayers.length;
+        const exportableCount = selectedLayers.filter(layer => layer.exportable).length;
+        const nonExportableCount = totalSelected - exportableCount;
+        
+        // 生成日志信息
+        const logs = [
+            `📋 合成名称: ${layerData.compName}`,
+            `🔍 检测到 ${totalSelected} 个选中图层:`
+        ];
+        
+        // 为每个图层生成日志消息
+        selectedLayers.forEach((layer, index) => {
+            let logMessage = `${index + 1}. [${this.getLayerTypeIcon(layer.type)}] ${layer.name}`;
+            
+            if (layer.exportable) {
+                if (layer.sourceInfo && layer.sourceInfo.materialType) {
+                    const materialIcon = this.getMaterialTypeIcon(layer.sourceInfo.materialType);
+                    logMessage += ` ${materialIcon}${this.getMaterialTypeName(layer.sourceInfo.materialType)}素材`;
+                }
+                logMessage += ' ✅可导出';
+            } else {
+                logMessage += ` ❌不可导出 (${layer.reason})`;
+            }
+            
+            logs.push(logMessage);
+        });
+        
+        // 添加统计信息到日志
+        logs.push(`📊 检测结果: ${exportableCount} 个可导出，${nonExportableCount} 个不可导出`);
+        
+        // 添加素材统计
+        if (layerData.materialStats.totalMaterials > 0) {
+            logs.push(`📦 素材统计: 共 ${layerData.materialStats.totalMaterials} 个素材文件`);
+            
+            const statsDetails = [];
+            if (layerData.materialStats.design > 0) statsDetails.push(`设计:${layerData.materialStats.design}`);
+            if (layerData.materialStats.image > 0) statsDetails.push(`图片:${layerData.materialStats.image}`);
+            if (layerData.materialStats.video > 0) statsDetails.push(`视频:${layerData.materialStats.video}`);
+            if (layerData.materialStats.audio > 0) statsDetails.push(`音频:${layerData.materialStats.audio}`);
+            if (layerData.materialStats.animation > 0) statsDetails.push(`动图:${layerData.materialStats.animation}`);
+            if (layerData.materialStats.vector > 0) statsDetails.push(`矢量:${layerData.materialStats.vector}`);
+            if (layerData.materialStats.raw > 0) statsDetails.push(`原始:${layerData.materialStats.raw}`);
+            if (layerData.materialStats.document > 0) statsDetails.push(`文档:${layerData.materialStats.document}`);
+            if (layerData.materialStats.sequence > 0) statsDetails.push(`序列:${layerData.materialStats.sequence}`);
+            
+            if (statsDetails.length > 0) {
+                logs.push(`📋 类型分布: ${statsDetails.join(', ')}`);
+            }
+        }
+        
+        // 返回检测结果
+        return {
+            success: true,
+            compName: layerData.compName,
+            selectedLayers: selectedLayers,
+            totalSelected: totalSelected,
+            exportableCount: exportableCount,
+            nonExportableCount: nonExportableCount,
+            materialStats: layerData.materialStats,
+            logs: logs
+        };
+    }
+    
+    // 获取图层类型图标
+    getLayerTypeIcon(layerType) {
+        const icons = {
+            'AVLayer': '📦',
+            'SolidLayer': '🟦',
+            'TextLayer': '📝',
+            'ShapeLayer': '🔷',
+            'PrecompLayer': '📁',
+            'CameraLayer': '📷',
+            'LightLayer': '💡',
+            'AdjustmentLayer': '⚙️',
+            'SequenceLayer': '🎯'
+        };
+        return icons[layerType] || '❓';
+    }
+    
+    // 获取素材类型图标
+    getMaterialTypeIcon(materialType) {
+        const icons = {
+            'design': '🎨',
+            'image': '🖼️',
+            'video': '🎬',
+            'audio': '🎵',
+            'animation': '🎞️',
+            'vector': '📐',
+            'raw': '🔬',
+            'document': '📄',
+            'sequence': '🎯'
+        };
+        return icons[materialType] || '❓';
+    }
+    
+    // 获取素材类型名称
+    getMaterialTypeName(materialType) {
+        const names = {
+            'design': '设计',
+            'image': '图片',
+            'video': '视频',
+            'audio': '音频',
+            'animation': '动图',
+            'vector': '矢量',
+            'raw': '原始',
+            'document': '文档',
+            'sequence': '序列'
+        };
+        return names[materialType] || '未知';
+    }
+    
     // 模拟获取AE版本信息
     getAEVersion() {
         return this.demoData.ae.version;
@@ -367,6 +504,13 @@ class DemoAPIs {
                         success: true,
                         message: '端口信息已接收（演示模式）'
                     });
+                }
+                break;
+
+            case '/detect-layers':
+                if (method === 'POST') {
+                    const detectionResult = await this.detectSelectedLayers();
+                    return this.createMockResponse(detectionResult);
                 }
                 break;
 

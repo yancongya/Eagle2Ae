@@ -24,6 +24,13 @@ Eagle2Ae AE插件的Demo功能是一个完整的演示模式系统，允许在�
 - **智能识别**: 自动识别Eagle相关的API调用并拦截
 - **静默运行**: 不显示任何演示模式相关的通知提示
 
+### 🎬 虚拟弹窗系统
+- **双弹窗架构**: 支持CEP环境的JSX弹窗和Demo模式的JavaScript弹窗
+- **样式一致性**: Demo模式弹窗完全模拟CEP环境的原生样式
+- **智能拦截**: 自动检测环境并选择合适的弹窗实现方式
+- **数据模拟**: 提供真实的虚拟图层检测数据和统计信息
+- **交互完整**: 支持完整的用户交互，包括按钮点击、键盘操作等
+
 ## 文件结构
 
 ```
@@ -159,6 +166,44 @@ const observer = new MutationObserver((mutations) => {
 - 点击反馈动画
 - 模式切换通知
 - 彩虹渐变效果
+
+### 7. DemoDialog 虚拟弹窗系统 (demo-dialog.js)
+
+**职责**: 在Demo模式下提供与CEP环境一致的弹窗体验
+
+**主要功能**:
+- 图层检测结果弹窗显示
+- 完全模拟JSX弹窗的样式和布局
+- 支持虚拟数据展示和用户交互
+- 自动处理文件名后缀重复问题
+
+**弹窗特性**:
+- **标题**: "@Eagle2Ae（模拟）"标识Demo模式
+- **样式**: 暗色主题，与AE原生弹窗完全一致
+- **内容**: 三行总结信息 + 详细图层列表
+- **交互**: 支持确定/关闭按钮，键盘快捷键
+- **响应式**: 支持滚动查看大量图层数据
+
+**数据处理**:
+```javascript
+// 虚拟图层数据生成
+function generateDemoLayerData() {
+    const layers = {
+        exportableLayers: [],
+        nonExportableLayers: [
+            {
+                name: "Snow Transitions HD 1 luma.mp4",
+                type: "VideoLayer",
+                reason: "视频素材，将导出第一帧"
+            }
+            // 更多虚拟图层...
+        ]
+    };
+    
+    // 基于实际数组长度计算统计
+    return calculateLayerStats(layers);
+}
+```
 
 ## 配置说明
 

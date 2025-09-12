@@ -3,7 +3,7 @@
  * 负责检测After Effects项目状态，包括项目是否打开、合成是否可用等
  * 
  * @author Eagle2Ae Team
- * @date 2024-01-01
+ * @date 2025-09-01
  * @version 1.0.0
  */
 
@@ -238,6 +238,12 @@ class ProjectStatusChecker {
             showWarning = true
         } = options;
 
+        // 检查是否为demo模式，如果是则直接通过验证
+        if (this.isDemoMode()) {
+            console.log('[ProjectStatusChecker] Demo模式下跳过项目状态检查');
+            return true;
+        }
+
         try {
             // 优先检查项目状态 - 这是最基础的要求
             if (requireProject) {
@@ -296,6 +302,19 @@ class ProjectStatusChecker {
             
             return false;
         }
+    }
+
+    /**
+     * 检查是否为demo模式
+     * @returns {boolean} 是否为demo模式
+     */
+    isDemoMode() {
+        // 检查多个demo模式标识
+        return (
+            window.__DEMO_MODE_ACTIVE__ === true ||
+            (window.demoMode && window.demoMode.state && window.demoMode.state.currentMode !== 'normal') ||
+            (window.location && window.location.search && window.location.search.includes('demo=true'))
+        );
     }
 
     /**

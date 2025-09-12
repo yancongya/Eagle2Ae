@@ -4,9 +4,9 @@
 
 本文档描述了 Eagle2Ae 扩展中使用的 ExtendScript (JSX) API，这些脚本在 After Effects 主机环境中执行，负责实际的项目操作。
 
-**版本**: v2.1.1
+**版本**: v2.2.0
 **更新时间**: 2025年9月
-**特性**: 强制中文文件名解码、序列帧识别、对话框系统
+**特性**: 强制中文文件名解码、序列帧识别、对话框系统、文件夹打开功能
 
 ## 核心函数
 
@@ -109,6 +109,110 @@ function getSystemInfo() {
     };
 }
 ```
+
+### 文件夹打开模块
+
+#### openLayerFolder()
+
+打开图层文件所在文件夹
+
+```javascript
+/**
+ * 打开图层文件所在文件夹（使用JSX原生Folder对象和URI解码）
+ * 参考7zhnegli3.jsx脚本的编解码和文件夹打开功能
+ * @param {Object} layer - 图层对象
+ * @returns {void}
+ */
+function openLayerFolder(layer)
+```
+
+**功能特性**:
+- 支持多种路径获取策略（tooltipInfo、sourceInfo、source.file等）
+- 使用URI解码处理中文路径编码问题
+- JSX原生Folder对象和execute()方法
+- Windows Explorer备用打开方案
+- 智能错误处理和用户提示
+
+**路径获取优先级**:
+1. `layer.tooltipInfo.originalPath` - Demo模式数据
+2. `layer.sourceInfo.originalPath` - 源信息路径
+3. `layer.source.file.fsName` - 文件系统名称
+4. `layer.source.file.fullName` - 完整文件名
+5. `layer.originalPath` - 原始路径属性
+
+**使用示例**:
+```javascript
+// 基本使用
+var layer = app.project.activeItem.selectedLayers[0];
+openLayerFolder(layer);
+
+// 在图层检测结果中使用
+var detectionResults = getCompositionLayers();
+for (var i = 0; i < detectionResults.length; i++) {
+    var layer = detectionResults[i];
+    if (layer.canExport) {
+        // 为可导出图层添加文件夹打开功能
+        openLayerFolder(layer);
+    }
+}
+```
+
+#### decodeStr()
+
+URI解码函数，处理中文路径编码问题
+
+```javascript
+/**
+ * URI解码函数，参考7zhnegli3.jsx脚本实现
+ * @param {string} str - 需要解码的字符串
+ * @returns {string} 解码后的字符串
+ */
+function decodeStr(str)
+```
+
+**功能说明**:
+- 使用`decodeURIComponent`进行URI解码
+- 安全的错误处理，解码失败时返回原字符串
+- 专门解决中文文件名编码问题
+
+#### openFolderWithJSX()
+
+使用JSX原生Folder对象打开文件夹
+
+```javascript
+/**
+ * 使用JSX原生Folder对象打开文件夹
+ * 参考7zhnegli3.jsx脚本中的outputFolder.execute()方法
+ * @param {string} folderPath - 文件夹路径
+ * @returns {boolean} 是否成功打开
+ */
+function openFolderWithJSX(folderPath)
+```
+
+**实现特点**:
+- 创建JSX原生Folder对象
+- 验证文件夹存在性
+- 使用execute()方法打开文件夹
+- 失败时自动调用备用方案
+
+#### openFolderWithExplorerBackup()
+
+备用方法：使用Windows Explorer打开文件夹
+
+```javascript
+/**
+ * 备用方法：使用Windows Explorer打开文件夹
+ * 当JSX原生方法失败时使用
+ * @param {string} folderPath - 文件夹路径
+ * @returns {boolean} 是否成功打开
+ */
+function openFolderWithExplorerBackup(folderPath)
+```
+
+**技术实现**:
+- 使用双引号包围路径处理空格和中文字符
+- 调用`system.callSystem`执行explorer.exe命令
+- 返回码检查确认执行结果
 
 ### 文件导入模块
 

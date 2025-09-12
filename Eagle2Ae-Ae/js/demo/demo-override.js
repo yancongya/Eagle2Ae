@@ -272,6 +272,12 @@
 
         // 等待AEExtension加载
         const checkAEExtension = () => {
+            console.log('🔍 检查AEExtension是否已加载...', {
+                AEExtension: !!window.AEExtension,
+                prototype: !!(window.AEExtension && window.AEExtension.prototype),
+                executeExtendScript: !!(window.AEExtension && window.AEExtension.prototype && window.AEExtension.prototype.executeExtendScript)
+            });
+            
             if (window.AEExtension && window.AEExtension.prototype) {
                 const proto = window.AEExtension.prototype;
 
@@ -353,15 +359,14 @@
                 if (proto.getAEVersion) {
                     const originalGetAEVersion = proto.getAEVersion;
                     proto.getAEVersion = function() {
-                        console.log('🎭 拦截getAEVersion，使用演示数据');
-
-                        // 在演示模式下阻止真实版本获取
                         if (window.__DEMO_MODE_ACTIVE__) {
-                            console.log('🎭 演示模式激活，使用演示AE版本');
+                            console.log('🎭 拦截getAEVersion调用，返回演示数据');
+                            // 延迟返回演示数据，模拟真实调用
                             setTimeout(() => {
-                                const versionElement = document.getElementById('ae-version');
-                                if (versionElement) {
-                                    versionElement.textContent = window.__DEMO_DATA__.ae.connected.version;
+                                const aeVersionElement = document.getElementById('ae-version');
+                                if (aeVersionElement) {
+                                    aeVersionElement.textContent = window.__DEMO_DATA__.ae.connected.version;
+                                    aeVersionElement.setAttribute('data-demo-mode', 'true');
                                 }
                             }, 100);
                             return;
@@ -371,8 +376,74 @@
                         return originalGetAEVersion.call(this);
                     };
                 }
+                
+                // 覆盖executeExtendScript方法，拦截图层检测等JSX调用
+                if (proto.executeExtendScript) {
+                    const originalExecuteExtendScript = proto.executeExtendScript;
+                    proto.executeExtendScript = async function(scriptName, params) {
+                        if (window.__DEMO_MODE_ACTIVE__) {
+                            console.log(`🎭 拦截executeExtendScript调用: ${scriptName}`);
+                            
+                            // 拦截ExtendScript连接测试调用
+                            if (scriptName === 'testExtendScriptConnection') {
+                                console.log('🔗 模拟ExtendScript连接测试...');
+                                // 模拟连接测试成功
+                                return {
+                                    success: true,
+                                    message: '演示模式：ExtendScript连接正常',
+                                    aeVersion: window.__DEMO_DATA__.ae.version,
+                                    scriptVersion: '演示版本 v1.0.0'
+                                };
+                            }
+                            
+                            // 拦截图层检测调用
+                            if (scriptName === 'detectSelectedLayers') {
+                                console.log('🔍 模拟图层检测调用...');
+                                
+                                // 获取demo APIs实例
+                                const demoAPIs = window.demoMode?.demoAPIs;
+                                if (demoAPIs && typeof demoAPIs.detectSelectedLayers === 'function') {
+                                    return await demoAPIs.detectSelectedLayers();
+                                } else {
+                                    // 如果没有demo APIs，返回基本的虚拟数据
+                                    return {
+                                        success: true,
+                                        compName: '佛跳墙',
+                                        selectedLayers: [],
+                                        totalSelected: 0,
+                                        exportableCount: 0,
+                                        nonExportableCount: 0,
+                                        logs: ['🎭 演示模式：没有选中任何图层']
+                                    };
+                                }
+                            }
+                            
+                            // 拦截显示图层检测总结弹窗
+                            if (scriptName === 'showLayerDetectionSummary') {
+                                console.log('📋 模拟显示图层检测总结弹窗...');
+                                // 模拟弹窗显示成功
+                                return {
+                                    success: true,
+                                    userChoice: true,
+                                    message: '演示模式：图层检测总结弹窗已显示'
+                                };
+                            }
+                            
+                            // 其他ExtendScript调用的默认处理
+                            console.log(`🎭 模拟ExtendScript调用: ${scriptName}`);
+                            return {
+                                success: true,
+                                message: `演示模式响应: ${scriptName}`
+                            };
+                        }
+
+                        // 非演示模式下正常执行
+                        return originalExecuteExtendScript.call(this, scriptName, params);
+                    };
+                }
 
                 console.log('✅ AEExtension方法覆盖完成');
+                console.log('🔍 executeExtendScript方法已覆盖:', !!proto.executeExtendScript);
             } else {
                 // 如果AEExtension还没加载，继续等待
                 setTimeout(checkAEExtension, 500);

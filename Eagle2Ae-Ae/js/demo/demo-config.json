@@ -90,6 +90,114 @@
       "simulateErrors": false,
       "showProgress": true
     },
+    "layerDetection": {
+      "compName": "佛跳墙",
+      "selectedLayers": [
+        {
+          "index": 1,
+          "name": "背景图片.jpg",
+          "type": "AVLayer",
+          "exportable": true,
+          "reason": "",
+          "sourceInfo": {
+            "type": "File",
+            "fileName": "背景图片.jpg",
+            "filePath": "D:\\素材\\图片\\背景图片.jpg",
+            "materialType": "image",
+            "width": 1920,
+            "height": 1080,
+            "duration": null,
+            "hasAlpha": false
+          }
+        },
+        {
+          "index": 2,
+          "name": "Logo设计.psd",
+          "type": "AVLayer",
+          "exportable": true,
+          "reason": "",
+          "sourceInfo": {
+            "type": "File",
+            "fileName": "Logo设计.psd",
+            "filePath": "D:\\素材\\设计\\Logo设计.psd",
+            "materialType": "design",
+            "width": 512,
+            "height": 512,
+            "duration": null,
+            "hasAlpha": true
+          }
+        },
+        {
+          "index": 3,
+          "name": "动画视频.mp4",
+          "type": "AVLayer",
+          "exportable": true,
+          "reason": "",
+          "sourceInfo": {
+            "type": "File",
+            "fileName": "动画视频.mp4",
+            "filePath": "D:\\素材\\视频\\动画视频.mp4",
+            "materialType": "video",
+            "width": 1920,
+            "height": 1080,
+            "duration": "00:00:15:00",
+            "hasAlpha": false
+          }
+        },
+        {
+          "index": 4,
+          "name": "纯色背景",
+          "type": "SolidLayer",
+          "exportable": false,
+          "reason": "纯色图层不支持导出",
+          "sourceInfo": {
+            "type": "Solid",
+            "color": [255, 128, 0],
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "index": 5,
+          "name": "标题文字",
+          "type": "TextLayer",
+          "exportable": false,
+          "reason": "文本图层不支持导出",
+          "sourceInfo": {
+            "type": "Text",
+            "text": "佛跳墙制作教程",
+            "fontSize": 48,
+            "fontFamily": "微软雅黑"
+          }
+        },
+        {
+          "index": 6,
+          "name": "预合成-特效",
+          "type": "PrecompLayer",
+          "exportable": false,
+          "reason": "预合成图层不支持导出",
+          "sourceInfo": {
+            "type": "Composition",
+            "compName": "特效合成",
+            "width": 1920,
+            "height": 1080,
+            "duration": "00:00:10:00"
+          }
+        }
+      ],
+      "materialStats": {
+        "totalMaterials": 3,
+        "design": 1,
+        "image": 1,
+        "video": 1,
+        "audio": 0,
+        "animation": 0,
+        "vector": 0,
+        "raw": 0,
+        "document": 0,
+        "sequence": 0
+      }
+    },
     "ui": {
       "messages": {
         "connecting": "正在连接到演示环境...",
@@ -97,7 +205,9 @@
         "importing": "正在导入演示文件...",
         "imported": "✅ 演示文件导入成功",
         "modeSwitch": "🎭 演示模式已启用",
-        "modeRestore": "🔧 正常模式已恢复"
+        "modeRestore": "🔧 正常模式已恢复",
+        "layerDetecting": "正在检测图层...",
+        "layerDetected": "✅ 图层检测完成"
       },
       "notifications": {
         "showToasts": false,

@@ -4,6 +4,7 @@
 
 // 引入对话框系统
 #include "dialog-warning.jsx"
+#include "dialog-summary.jsx"
 
 // Eagle连接状态检测函数
 function checkEagleConnection() {
@@ -647,6 +648,18 @@ function isImageSequence(filename) {
 // 获取支持的文件类型
 function getSupportedFileTypes() {
     return JSON.stringify({
+        // 新增素材分类系统 - 按类型细分
+        materials: {
+            design: ['psd', 'ai', 'sketch', 'xd', 'fig'], // 设计源文件
+            image: ['jpg', 'jpeg', 'png', 'tiff', 'tga', 'bmp'], // 纯图片格式
+            video: ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mxf', 'r3d', 'cinema', 'm4v', '3gp', 'asf', 'dv', 'f4v', 'm2ts', 'mts', 'ogv', 'rm', 'rmvb', 'vob'],
+            audio: ['mp3', 'wav', 'aac', 'flac', 'm4a', 'aiff', 'ogg', 'wma'],
+            animation: ['gif', 'webp'], // 动图素材
+            vector: ['eps', 'svg'], // 矢量图形素材（AI移到design分类）
+            raw: ['exr', 'hdr', 'dpx', 'cin'], // 原始格式素材
+            document: ['pdf'] // 文档素材
+        },
+        // 保持向后兼容性 - 原有分类格式
         image: ['jpg', 'jpeg', 'png', 'tiff', 'tga', 'bmp', 'gif', 'psd', 'ai', 'eps', 'pdf', 'exr', 'hdr'],
         video: ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mxf', 'r3d', 'cinema'],
         audio: ['mp3', 'wav', 'aac', 'flac', 'm4a', 'aiff'],
@@ -925,6 +938,105 @@ function getDetailedProjectStatus() {
     }
 }
 
+/**
+ * 生成素材统计信息
+ * @param {Array} selectedLayers - 检测到的图层信息数组
+ * @returns {Object} 素材统计对象
+ */
+function generateMaterialStatistics(selectedLayers) {
+    var stats = {
+        // 素材类型统计
+        design: 0,
+        image: 0,
+        video: 0,
+        audio: 0,
+        animation: 0,
+        vector: 0,
+        raw: 0,
+        document: 0,
+        sequence: 0,
+        // 其他图层类型统计
+        shape: 0,
+        text: 0,
+        solid: 0,
+        precomp: 0,
+        other: 0,
+        // 总计
+        totalMaterials: 0,
+        totalLayers: selectedLayers.length,
+        exportableCount: 0,
+        // 新增分类统计
+        designFiles: 0,
+        materialFiles: 0,
+        pathSummary: {} // 路径汇总
+    };
+    
+    for (var i = 0; i < selectedLayers.length; i++) {
+        var layer = selectedLayers[i];
+        
+        if (layer.exportable) {
+            stats.exportableCount++;
+        }
+        
+        // 统计素材类型
+        if (layer.sourceInfo && layer.sourceInfo.materialType) {
+            var materialType = layer.sourceInfo.materialType;
+            if (stats.hasOwnProperty(materialType)) {
+                stats[materialType]++;
+                stats.totalMaterials++;
+            } else {
+                stats.other++;
+            }
+            
+            // 分类统计
+            if (layer.sourceInfo.categoryType === 'design') {
+                stats.designFiles++;
+            } else {
+                stats.materialFiles++;
+            }
+            
+            // 路径汇总（去重）
+            if (layer.sourceInfo.originalPath) {
+                var pathKey = layer.sourceInfo.originalPath;
+                if (!stats.pathSummary[pathKey]) {
+                    stats.pathSummary[pathKey] = {
+                        path: pathKey,
+                        fileName: layer.sourceInfo.fileName,
+                        categoryType: layer.sourceInfo.categoryType,
+                        materialType: materialType,
+                        layers: []
+                    };
+                }
+                stats.pathSummary[pathKey].layers.push(layer.name);
+            }
+        } else {
+            // 根据图层类型统计
+            switch (layer.type) {
+                case 'ShapeLayer':
+                    stats.shape++;
+                    break;
+                case 'TextLayer':
+                    stats.text++;
+                    break;
+                case 'SolidLayer':
+                    stats.solid++;
+                    break;
+                case 'PrecompLayer':
+                    stats.precomp++;
+                    break;
+                case 'SequenceLayer':
+                    stats.sequence++;
+                    stats.totalMaterials++;
+                    break;
+                default:
+                    stats.other++;
+            }
+        }
+    }
+    
+    return stats;
+}
+
 // 图层检测函数（完整版本）
 function detectSelectedLayers() {
     try {
@@ -974,8 +1086,46 @@ function detectSelectedLayers() {
             result.logs.push(layerInfo.logMessage);
         }
 
+        // 生成素材统计信息
+        var materialStats = generateMaterialStatistics(result.selectedLayers);
+        result.materialStats = materialStats;
+        
         result.logs.push("📊 检测结果: " + result.exportableCount + " 个可导出，" + result.nonExportableCount + " 个不可导出");
+        
+        // 添加分类统计到日志
+        if (materialStats.totalMaterials > 0) {
+            result.logs.push("📦 素材统计: 共 " + materialStats.totalMaterials + " 个素材文件");
+            result.logs.push("🎨 设计文件: " + materialStats.designFiles + " 个，📦 素材文件: " + materialStats.materialFiles + " 个");
+            
+            var statsDetails = [];
+            if (materialStats.design > 0) statsDetails.push("设计:" + materialStats.design);
+            if (materialStats.image > 0) statsDetails.push("图片:" + materialStats.image);
+            if (materialStats.video > 0) statsDetails.push("视频:" + materialStats.video);
+            if (materialStats.audio > 0) statsDetails.push("音频:" + materialStats.audio);
+            if (materialStats.animation > 0) statsDetails.push("动图:" + materialStats.animation);
+            if (materialStats.vector > 0) statsDetails.push("矢量:" + materialStats.vector);
+            if (materialStats.raw > 0) statsDetails.push("原始:" + materialStats.raw);
+            if (materialStats.document > 0) statsDetails.push("文档:" + materialStats.document);
+            if (materialStats.sequence > 0) statsDetails.push("序列:" + materialStats.sequence);
+            
+            if (statsDetails.length > 0) {
+                result.logs.push("📋 类型分布: " + statsDetails.join(", "));
+            }
+            
+            // 添加路径汇总信息
+            var pathCount = Object.keys(materialStats.pathSummary).length;
+            if (pathCount > 0) {
+                result.logs.push("📁 路径汇总: 共 " + pathCount + " 个不同路径");
+            }
+        }
+        
         result.success = true;
+        
+        // 添加路径汇总导出功能
+        result.pathSummaryAvailable = Object.keys(materialStats.pathSummary).length > 0;
+        if (result.pathSummaryAvailable) {
+            result.pathSummaryReport = generatePathSummaryReport(materialStats.pathSummary);
+        }
 
         return JSON.stringify(result);
 
@@ -1021,8 +1171,6 @@ function analyzeLayer(layer, index) {
                             height: layer.source.height
                         };
                     } else if (mainSource instanceof FileSource) {
-                        layerInfo.type = "FootageLayer";
-
                         // 获取文件信息
                         var filePath = mainSource.file ? mainSource.file.fsName : "未知文件";
                         var fileName = mainSource.file ? mainSource.file.name : "未知文件";
@@ -1062,6 +1210,52 @@ function analyzeLayer(layer, index) {
                             }
                         }
 
+                        // 获取文件扩展名用于素材类型识别
+                        var fileExt = fileName.toLowerCase().split('.').pop() || '';
+                        
+                        // 定义素材类型分类 - 新增素材分类系统
+                        var materialTypes = {
+                            design: ['psd', 'ai', 'sketch', 'xd', 'fig'], // 设计源文件
+                            image: ['jpg', 'jpeg', 'png', 'tiff', 'tga', 'bmp'], // 纯图片格式
+                            video: ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'mxf', 'r3d', 'cinema', 'm4v', '3gp', 'asf', 'dv', 'f4v', 'm2ts', 'mts', 'ogv', 'rm', 'rmvb', 'vob'],
+                            audio: ['mp3', 'wav', 'aac', 'flac', 'm4a', 'aiff', 'ogg', 'wma'],
+                            animation: ['gif', 'webp'], // 动图单独分类
+                            vector: ['eps', 'svg'], // 矢量图形（AI移到design分类）
+                            raw: ['exr', 'hdr', 'dpx', 'cin'], // 原始格式
+                            document: ['pdf'] // 文档类型
+                        };
+                        
+                        // 确定素材类型
+                        var materialType = 'unknown';
+                        var materialCategory = 'unknown';
+                        
+                        // 按优先级检查素材类型（设计文件优先级最高）
+                        if (materialTypes.design.indexOf(fileExt) !== -1) {
+                            materialType = 'design';
+                            materialCategory = '设计文件';
+                        } else if (materialTypes.animation.indexOf(fileExt) !== -1) {
+                            materialType = 'animation';
+                            materialCategory = '动图素材';
+                        } else if (materialTypes.vector.indexOf(fileExt) !== -1) {
+                            materialType = 'vector';
+                            materialCategory = '矢量素材';
+                        } else if (materialTypes.raw.indexOf(fileExt) !== -1) {
+                            materialType = 'raw';
+                            materialCategory = '原始格式素材';
+                        } else if (materialTypes.video.indexOf(fileExt) !== -1) {
+                            materialType = 'video';
+                            materialCategory = '视频素材';
+                        } else if (materialTypes.audio.indexOf(fileExt) !== -1) {
+                            materialType = 'audio';
+                            materialCategory = '音频素材';
+                        } else if (materialTypes.image.indexOf(fileExt) !== -1) {
+                            materialType = 'image';
+                            materialCategory = '图片素材';
+                        } else if (materialTypes.document.indexOf(fileExt) !== -1) {
+                            materialType = 'document';
+                            materialCategory = '文档素材';
+                        }
+
                         // 检测是否为序列帧
                         var isSequence = false;
 
@@ -1085,36 +1279,69 @@ function analyzeLayer(layer, index) {
                         }
 
                         // 检查持续时间 - 如果持续时间大于1帧且不是视频格式，可能是序列帧
-                        var videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv'];
-                        var isVideoFile = false;
-                        for (var v = 0; v < videoExtensions.length; v++) {
-                            if (fileName.toLowerCase().indexOf(videoExtensions[v]) !== -1) {
-                                isVideoFile = true;
-                                break;
-                            }
-                        }
-
+                        var isVideoFile = (materialType === 'video');
                         if (!isVideoFile && layer.source.duration > 1/24) {
                             isSequence = true;
                         }
 
+                        // 设置图层类型和导出状态
                         if (isSequence) {
                             layerInfo.exportable = false;
                             layerInfo.reason = "序列帧暂不支持导出";
                             layerInfo.type = "SequenceLayer";
+                            materialType = 'sequence';
+                            materialCategory = '序列帧素材';
                         } else {
-                            layerInfo.exportable = true;
-                            layerInfo.reason = "图片素材，可以导出";
+                            // 统一标记为素材图层
+                            layerInfo.type = "MaterialLayer";
+                            
+                            // 根据新的分类体系，区分设计文件和普通素材
+                            if (materialType === 'design') {
+                                // 设计文件可以导出
+                                layerInfo.exportable = true;
+                                layerInfo.reason = "设计文件，可以导出";
+                            } else {
+                                // 其他素材文件不可导出
+                                layerInfo.exportable = false;
+                                switch (materialType) {
+                                    case 'video':
+                                        layerInfo.reason = materialCategory + "，将导出第一帧";
+                                        break;
+                                    case 'audio':
+                                        layerInfo.reason = materialCategory + "，素材文件不支持导出";
+                                        break;
+                                    case 'image':
+                                    case 'animation':
+                                    case 'vector':
+                                    case 'raw':
+                                    case 'document':
+                                        layerInfo.reason = materialCategory + "，素材文件不支持导出";
+                                        break;
+                                    default:
+                                        layerInfo.reason = "未知格式素材，不支持导出";
+                                        materialCategory = '未知素材';
+                                }
+                            }
                         }
 
+                        // 扩展sourceInfo，增加素材分类信息和原始路径
                         layerInfo.sourceInfo = {
                             type: "File",
                             file: filePath,
                             fileName: fileName,
+                            originalPath: filePath, // 原始文件路径
                             width: layer.source.width,
                             height: layer.source.height,
                             duration: layer.source.duration,
-                            isSequence: isSequence
+                            isSequence: isSequence,
+                            isVideo: isVideoFile,
+                            // 新增素材分类信息
+                            materialType: materialType,
+                            materialCategory: materialCategory,
+                            fileExtension: fileExt,
+                            // 新增分类标识：区分素材和设计文件
+                            categoryType: materialType === 'design' ? 'design' : 'material',
+                            categoryDisplayName: materialType === 'design' ? '设计文件' : '素材文件'
                         };
                     } else {
                         layerInfo.exportable = false;
@@ -1166,6 +1393,18 @@ function analyzeLayer(layer, index) {
                 layerInfo.reason = "未知图层类型";
             }
         }
+        
+        // 检查图层是否有蒙版，如果有蒙版则标记为不可导出
+        // 蒙版图层会影响导出效果，因此不支持导出
+        try {
+            if (layer.mask && layer.mask.numProperties > 0) {
+                layerInfo.exportable = false;
+                layerInfo.reason = "包含蒙版的图层不支持导出";
+                layerInfo.type = layerInfo.type + "WithMask";
+            }
+        } catch (maskError) {
+            // 忽略蒙版检查错误，继续处理
+        }
 
         // 生成日志消息
         var statusIcon = layerInfo.exportable ? "✅" : "❌";
@@ -1174,12 +1413,22 @@ function analyzeLayer(layer, index) {
             if (layerInfo.sourceInfo.type === "File") {
                 var fileName = layerInfo.sourceInfo.fileName || "未知文件";
                 var dimensions = layerInfo.sourceInfo.width + "x" + layerInfo.sourceInfo.height;
-                sourceText = " [" + fileName + " " + dimensions + "]";
+                var categoryIcon = layerInfo.sourceInfo.categoryType === 'design' ? '🎨' : '📦';
+                sourceText = " [" + categoryIcon + fileName + " " + dimensions + "]";
 
                 // 如果是序列帧，添加标识
                 if (layerInfo.sourceInfo.isSequence) {
                     sourceText += " (序列帧)";
                 }
+                
+                // 添加路径信息（用于悬浮提示）
+                layerInfo.tooltipInfo = {
+                    categoryType: layerInfo.sourceInfo.categoryType,
+                    categoryDisplayName: layerInfo.sourceInfo.categoryDisplayName,
+                    originalPath: layerInfo.sourceInfo.originalPath,
+                    materialType: layerInfo.sourceInfo.materialType,
+                    materialCategory: layerInfo.sourceInfo.materialCategory
+                };
             } else if (layerInfo.sourceInfo.type === "Solid") {
                 sourceText = " [纯色:" + layerInfo.sourceInfo.width + "x" + layerInfo.sourceInfo.height + "]";
             } else if (layerInfo.sourceInfo.type === "Composition") {
@@ -1437,6 +1686,202 @@ function sanitizeFileName(name) {
     }
 
     return result;
+}
+
+/**
+ * 新增函数：生成路径汇总清单
+ * @param {Object} pathSummary - 路径汇总对象
+ * @returns {String} 格式化的路径清单
+ */
+function generatePathSummaryReport(pathSummary) {
+    var report = "\n=== 路径汇总清单 ===\n";
+    var designPaths = [];
+    var materialPaths = [];
+    
+    // 分类整理路径
+    for (var path in pathSummary) {
+        var pathInfo = pathSummary[path];
+        if (pathInfo.categoryType === 'design') {
+            designPaths.push(pathInfo);
+        } else {
+            materialPaths.push(pathInfo);
+        }
+    }
+    
+    // 设计文件路径
+    if (designPaths.length > 0) {
+        report += "\n【设计文件】(" + designPaths.length + "个路径):\n";
+        for (var i = 0; i < designPaths.length; i++) {
+            var info = designPaths[i];
+            report += "🎨 " + info.fileName + "\n";
+            report += "   路径: " + info.path + "\n";
+            report += "   使用图层: " + info.layers.join(", ") + "\n\n";
+        }
+    }
+    
+    // 素材文件路径
+    if (materialPaths.length > 0) {
+        report += "\n【素材文件】(" + materialPaths.length + "个路径):\n";
+        for (var j = 0; j < materialPaths.length; j++) {
+            var info = materialPaths[j];
+            var typeIcon = getTypeIcon(info.materialType);
+            report += typeIcon + " " + info.fileName + "\n";
+            report += "   路径: " + info.path + "\n";
+            report += "   使用图层: " + info.layers.join(", ") + "\n\n";
+        }
+    }
+    
+    return report;
+}
+
+/**
+ * 获取素材类型图标
+ * @param {String} materialType - 素材类型
+ * @returns {String} 对应图标
+ */
+function getTypeIcon(materialType) {
+    var icons = {
+        'image': '🖼️',
+        'video': '🎬',
+        'audio': '🎵',
+        'animation': '🎞️',
+        'vector': '📐',
+        'raw': '🔬',
+        'document': '📄',
+        'sequence': '🎯'
+    };
+    return icons[materialType] || '📦';
+}
+
+/**
+ * 新增函数：导出路径汇总到文件
+ * @param {Object} pathSummary - 路径汇总对象
+ * @returns {Object} 导出结果
+ */
+function exportPathSummary(pathSummary) {
+    try {
+        var result = {
+            success: false,
+            filePath: null,
+            message: ""
+        };
+        
+        // 生成报告内容
+        var reportContent = generatePathSummaryReport(pathSummary);
+        
+        // 获取项目路径作为导出位置
+        var projectPath = app.project.file ? app.project.file.parent.fsName : null;
+        if (!projectPath) {
+            result.message = "请先保存项目后再导出路径清单";
+            return result;
+        }
+        
+        // 生成文件名
+        var timestamp = new Date();
+        var fileName = "Eagle2Ae_路径汇总_" + 
+                      timestamp.getFullYear() + 
+                      String(timestamp.getMonth() + 1).padStart(2, '0') + 
+                      String(timestamp.getDate()).padStart(2, '0') + "_" +
+                      String(timestamp.getHours()).padStart(2, '0') + 
+                      String(timestamp.getMinutes()).padStart(2, '0') + ".txt";
+        
+        var outputFile = new File(projectPath + "/" + fileName);
+        
+        // 写入文件
+        outputFile.open("w");
+        outputFile.encoding = "UTF-8";
+        outputFile.write(reportContent);
+        outputFile.close();
+        
+        result.success = true;
+        result.filePath = outputFile.fsName;
+        result.message = "路径汇总已导出到: " + fileName;
+        
+        return result;
+        
+    } catch (error) {
+        return {
+            success: false,
+            filePath: null,
+            message: "导出失败: " + error.toString()
+        };
+    }
+}
+
+/**
+ * 显示图层检测总结弹窗（主机脚本接口）
+ * @param {Object} params - 参数对象
+ * @param {Array} params.detectionResults - 检测结果数组
+ * @param {Object} params.summaryData - 总结数据（向后兼容）
+ * @returns {string} JSON格式的结果
+ */
+function showLayerDetectionSummary(params) {
+    try {
+        var result = {
+            success: false,
+            userChoice: false,
+            error: null
+        };
+        
+        // 参数验证
+        if (!params) {
+            result.error = "缺少参数";
+            return JSON.stringify(result);
+        }
+        
+        // 兼容新旧参数格式
+        var detectionResults;
+        if (params.detectionResults) {
+            // 新格式：直接传递检测结果数组
+            detectionResults = params.detectionResults;
+        } else if (params.summaryData) {
+            // 旧格式：传递总结数据，需要转换
+            detectionResults = convertSummaryDataToResults(params.summaryData);
+        } else {
+            result.error = "缺少检测结果数据";
+            return JSON.stringify(result);
+        }
+        
+        // 调用dialog-summary.jsx中的新弹窗函数
+        var userChoice = showDetectionSummaryDialog(detectionResults);
+        
+        result.success = true;
+        result.userChoice = userChoice;
+        
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        var errorResult = {
+            success: false,
+            userChoice: false,
+            error: error.toString()
+        };
+        return JSON.stringify(errorResult);
+    }
+}
+
+/**
+ * 将旧格式的总结数据转换为检测结果数组（向后兼容）
+ * @param {Object} summaryData - 旧格式的总结数据
+ * @returns {Array} 检测结果数组
+ */
+function convertSummaryDataToResults(summaryData) {
+    var results = [];
+    
+    // 这是一个简化的转换，实际使用中应该传递完整的检测结果
+    // 这里只是为了保持向后兼容性
+    if (summaryData.overall) {
+        for (var i = 0; i < summaryData.overall.totalLayers; i++) {
+            results.push({
+                name: '图层 ' + (i + 1),
+                canExport: i < summaryData.overall.exportableLayers,
+                layerType: 'unknown',
+                materialType: null
+            });
+        }
+    }
+    
+    return results;
 }
 
 // 导入序列帧
@@ -2135,12 +2580,30 @@ function exportSingleLayer(layer, layerInfo, originalComp, exportFolder) {
 
         // 按照SVGA扩展的方式添加源素材
         if (layer.source) {
-            tempComp.layers.add(layer.source, 0);
+            var newLayer = tempComp.layers.add(layer.source, 0);
             tempComp.layers.add(layer.source, 1);
             tempComp.layers[2].remove();
+            
+            // 如果是视频文件，确保导出第一帧
+            if (layerInfo.sourceInfo && layerInfo.sourceInfo.isVideo) {
+                // 设置图层时间为0，确保显示第一帧
+                newLayer.startTime = 0;
+                newLayer.inPoint = 0;
+                newLayer.outPoint = 1/24; // 设置为一帧的持续时间
+                // 设置合成时间为0，确保渲染第一帧
+                tempComp.time = 0;
+            }
         } else {
             // 如果没有源素材，尝试复制图层
-            layer.copyToComp(tempComp);
+            var copiedLayer = layer.copyToComp(tempComp);
+            
+            // 如果是视频文件，确保导出第一帧
+            if (layerInfo.sourceInfo && layerInfo.sourceInfo.isVideo && copiedLayer) {
+                copiedLayer.startTime = 0;
+                copiedLayer.inPoint = 0;
+                copiedLayer.outPoint = 1/24;
+                tempComp.time = 0;
+            }
         }
 
         // 按照SVGA扩展的方式添加到渲染队列
@@ -2563,4 +3026,225 @@ function decodeBase64Fallback(base64) {
     }
 
     return result;
+}
+
+/**
+ * 打开文件所在文件夹（旧版本，使用app.system方法）
+ * @param {Object} params - 参数对象
+ * @param {string} params.folderPath - 文件夹路径
+ * @returns {string} JSON格式的结果
+ */
+function openFileFolder(params) {
+    try {
+        var folderPath = params.folderPath;
+        
+        if (!folderPath) {
+            return JSON.stringify({
+                success: false,
+                error: '文件夹路径不能为空'
+            });
+        }
+        
+        // 验证文件夹是否存在
+        var folder = new Folder(folderPath);
+        if (!folder.exists) {
+            return JSON.stringify({
+                success: false,
+                error: '文件夹不存在: ' + folderPath
+            });
+        }
+        
+        // 构造系统命令
+        var openCommand = '';
+        var osName = $.os.toLowerCase();
+        
+        if (osName.indexOf('windows') !== -1) {
+            // Windows系统
+            openCommand = 'explorer "' + folderPath + '"';
+        } else if (osName.indexOf('mac') !== -1) {
+            // Mac系统
+            openCommand = 'open "' + folderPath + '"';
+        } else {
+            // Linux系统
+            openCommand = 'xdg-open "' + folderPath + '"';
+        }
+        
+        if (openCommand) {
+            try {
+                // 使用app.system执行系统命令
+                var result = app.system(openCommand);
+                
+                if (result === 0) {
+                    return JSON.stringify({
+                        success: true,
+                        message: '文件夹已打开: ' + folderPath
+                    });
+                } else {
+                    throw new Error('系统命令执行失败，返回码: ' + result);
+                }
+            } catch (sysError) {
+                // 如果系统命令失败，尝试其他方法
+                try {
+                    // 尝试使用File对象的execute方法
+                    if (osName.indexOf('windows') !== -1) {
+                        var explorerFile = new File('C:\\Windows\\explorer.exe');
+                        if (explorerFile.exists) {
+                            explorerFile.execute(folderPath);
+                            return JSON.stringify({
+                                success: true,
+                                message: '文件夹已打开: ' + folderPath
+                            });
+                        }
+                    }
+                    
+                    // 如果都失败了，返回错误
+                    throw new Error('无法执行打开文件夹命令');
+                    
+                } catch (altError) {
+                    return JSON.stringify({
+                        success: false,
+                        error: '无法打开文件夹: ' + altError.toString(),
+                        folderPath: folderPath
+                    });
+                }
+            }
+        } else {
+            return JSON.stringify({
+                success: false,
+                error: '不支持的操作系统: ' + osName,
+                folderPath: folderPath
+            });
+        }
+        
+    } catch (error) {
+        return JSON.stringify({
+            success: false,
+            error: '打开文件夹时发生错误: ' + error.toString()
+        });
+    }
+}
+
+/**
+ * 通过CEP API打开文件所在文件夹（新版本，更可靠）
+ * @param {Object} params - 参数对象
+ * @param {string} params.folderPath - 文件夹路径
+ * @returns {string} JSON格式的结果
+ */
+function openFolderViaCEP(params) {
+    try {
+        var folderPath = params.folderPath;
+        
+        // 调试日志：记录输入参数
+        $.writeln('[DEBUG] openFolderViaCEP 调用，参数: ' + JSON.stringify(params));
+        
+        if (!folderPath) {
+            $.writeln('[ERROR] 文件夹路径为空');
+            return JSON.stringify({
+                success: false,
+                error: '文件夹路径不能为空'
+            });
+        }
+        
+        $.writeln('[DEBUG] 检查文件夹是否存在: ' + folderPath);
+        
+        // 验证文件夹是否存在
+        var folder = new Folder(folderPath);
+        if (!folder.exists) {
+            $.writeln('[ERROR] 文件夹不存在: ' + folderPath);
+            return JSON.stringify({
+                success: false,
+                error: '文件夹不存在: ' + folderPath
+            });
+        }
+        
+        $.writeln('[DEBUG] 文件夹存在，准备通过CEP调用JavaScript端');
+        
+        // 通过CSInterface调用JavaScript端的openFolder函数
+        try {
+            // 检查CSInterface是否可用
+            if (typeof CSInterface === 'undefined') {
+                $.writeln('[ERROR] CSInterface未定义');
+                return JSON.stringify({
+                    success: false,
+                    error: 'CSInterface不可用',
+                    folderPath: folderPath
+                });
+            }
+            
+            $.writeln('[DEBUG] CSInterface可用，创建实例');
+            var csInterface = new CSInterface();
+            
+            // 构造JavaScript代码，调用main.js中的openFolder函数
+            var escapedPath = folderPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            var jsCode = 'try {' +
+                         '    console.log("[DEBUG] 检查 window.aeExtension:", typeof window.aeExtension);' +
+                         '    if (window.aeExtension) {' +
+                         '        console.log("[DEBUG] aeExtension.openFolder 类型:", typeof window.aeExtension.openFolder);' +
+                         '    }' +
+                         '    if (window.aeExtension && typeof window.aeExtension.openFolder === "function") {' +
+                         '        console.log("[DEBUG] 调用 aeExtension.openFolder，路径: ' + escapedPath + '");' +
+                         '        window.aeExtension.openFolder("' + escapedPath + '");' +
+                         '        "success";' +
+                         '    } else {' +
+                         '        console.log("[ERROR] window.aeExtension.openFolder 不可用");' +
+                         '        console.log("[DEBUG] window.aeExtension:", window.aeExtension);' +
+                         '        "function_not_available";' +
+                         '    }' +
+                         '} catch (e) {' +
+                         '    console.error("[ERROR] JavaScript执行出错:", e);' +
+                         '    "javascript_error: " + e.message;' +
+                         '}';
+            
+            $.writeln('[DEBUG] 准备执行JavaScript代码');
+            
+            // 使用CSInterface执行JavaScript代码
+            var result = csInterface.evalScript(jsCode);
+            
+            $.writeln('[DEBUG] JavaScript执行结果: ' + result);
+            
+            if (result === 'success') {
+                $.writeln('[SUCCESS] 文件夹打开成功');
+                return JSON.stringify({
+                    success: true,
+                    message: '文件夹已通过CEP打开: ' + folderPath
+                });
+            } else if (result === 'function_not_available') {
+                $.writeln('[ERROR] JavaScript端openFolder函数不可用');
+                return JSON.stringify({
+                    success: false,
+                    error: 'JavaScript端openFolder函数不可用',
+                    folderPath: folderPath,
+                    debug: 'window.aeExtension.openFolder 函数未找到'
+                });
+            } else if (result && result.indexOf('javascript_error:') === 0) {
+                $.writeln('[ERROR] JavaScript执行出错: ' + result);
+                return JSON.stringify({
+                    success: false,
+                    error: result,
+                    folderPath: folderPath
+                });
+            } else {
+                $.writeln('[ERROR] 未知的JavaScript执行结果: ' + result);
+                return JSON.stringify({
+                    success: false,
+                    error: '未知的执行结果: ' + result,
+                    folderPath: folderPath
+                });
+            }
+        } catch (cepError) {
+            $.writeln('[ERROR] CEP调用异常: ' + cepError.toString());
+            return JSON.stringify({
+                success: false,
+                error: 'CEP调用失败: ' + cepError.toString(),
+                folderPath: folderPath
+            });
+        }
+        
+    } catch (error) {
+        $.writeln('[ERROR] openFolderViaCEP 总体异常: ' + error.toString());
+        return JSON.stringify({
+            success: false,
+            error: '打开文件夹时发生错误: ' + error.toString()
+        });
+    }
 }
