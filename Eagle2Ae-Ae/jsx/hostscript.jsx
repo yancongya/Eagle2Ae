@@ -5,6 +5,8 @@
 // 引入对话框系统
 #include "dialog-warning.jsx"
 #include "dialog-summary.jsx"
+// 引入文件夹打开工具（供CEP层调用 openFolderByFilePath 等）
+#include "utils/folder-opener.js"
 
 // Eagle连接状态检测函数
 function checkEagleConnection() {

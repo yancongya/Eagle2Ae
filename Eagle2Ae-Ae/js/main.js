@@ -3752,25 +3752,42 @@ class AEExtension {
      */
     async showDetectionSummaryDialog(selectedLayers, stats) {
         try {
-            // 检查是否为demo模式
-            if (window.__DEMO_MODE_ACTIVE__ || (window.__DEMO_OVERRIDE__ && window.__DEMO_OVERRIDE__.isActive())) {
-                this.log('🎭 演示模式：显示虚拟检测总结弹窗', 'info');
-                this.showJavaScriptSummaryDialog(selectedLayers, stats);
-                return;
-            }
-            
-            // 转换数据格式为新弹窗所需的格式
+            // 统一使用Web拟态面板（CEP与演示模式共用），失败时回退到JSX
             const detectionResults = this.convertToDetectionResults(selectedLayers);
-            
-            // 调用JSX脚本显示弹窗
-            const result = await this.executeExtendScript('showLayerDetectionSummary', {
-                detectionResults: detectionResults
-            });
-            
-            if (result.success) {
-                this.log('📋 检测总结弹窗已显示', 'info');
+
+            // 确保对话模块已加载
+            if (!window.SummaryDialog) {
+                try {
+                    // 动态加载模块（相对扩展根路径）
+                    const script = document.createElement('script');
+                    script.src = './js/ui/summary-dialog.js';
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                } catch (loadErr) {
+                    this.log(`拟态面板脚本加载失败，回退到JSX: ${loadErr && loadErr.message ? loadErr.message : loadErr}`, 'warning');
+                }
+            }
+
+            if (window.SummaryDialog) {
+                try {
+                    const dlg = new window.SummaryDialog();
+                    const userChoice = await dlg.show(detectionResults);
+                    this.log(`📋 检测总结面板已显示（Web），用户选择: ${userChoice ? '确定' : '关闭'}`, 'info');
+                    return;
+                } catch (webErr) {
+                    this.log(`Web面板显示失败，回退到JSX: ${webErr && webErr.message ? webErr.message : webErr}`, 'warning');
+                }
+            }
+
+            // 回退路径：调用JSX脚本（保留兼容性）
+            const jsxResult = await this.executeExtendScript('showLayerDetectionSummary', { detectionResults });
+            if (jsxResult.success) {
+                this.log('📋 检测总结弹窗已显示（JSX回退）', 'info');
             } else {
-                this.log(`显示总结弹窗失败: ${result.error || '未知错误'}`, 'warning');
+                this.log(`显示总结弹窗失败: ${jsxResult.error || '未知错误'}`, 'warning');
             }
         } catch (error) {
             this.log(`显示总结弹窗时出错: ${error.message}`, 'error');
@@ -10474,11 +10491,7 @@ async handleFolderImportToAE(folder) {
             
             // 检查是否为Demo模式
             if (this.isDemoMode()) {
-                // Demo模式：显示模拟导出结果
                 this.log(`🎭 演示模式：模拟导出图层 ${layer.name}`, 'info');
-                alert(`演示模式：图层 "${layer.name}" 导出成功！\n导出路径：桌面/Eagle_Assets/`);
-                
-                // 播放成功音效
                 if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
                     this.soundPlayer.playConnectionSuccess();
                 }
@@ -10491,8 +10504,8 @@ async handleFolderImportToAE(folder) {
             // 构造单个图层导出参数
             const exportParams = {
                 exportSettings: {
-                    mode: exportSettings.mode || 'desktop',
-                    customExportPath: exportSettings.customExportPath || 'desktop',
+                    mode: exportSettings.mode, // 保持与UI一致，不强制desktop
+                    customExportPath: exportSettings.customExportPath || '', // 交由JSX层处理默认桌面
                     autoCopy: exportSettings.autoCopy || false,
                     burnAfterReading: exportSettings.burnAfterReading || false,
                     addTimestamp: exportSettings.addTimestamp || false,
@@ -10508,22 +10521,19 @@ async handleFolderImportToAE(folder) {
             
             if (result && result.success) {
                 this.log(`✅ 图层导出成功: ${layer.name}`, 'success');
-                
-                // 显示成功消息
-                const exportPath = result.exportPath || '桌面';
-                alert(`导出成功！\n图层：${layer.name}\n导出路径：${exportPath}`);
-                
-                // 播放成功音效
+                const exportPath = result.exportPath || '';
+                if (exportPath) {
+                    this.log(`📁 导出路径: ${exportPath}`, 'info');
+                }
+                // 播放成功音效（静默）
                 if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
                     this.soundPlayer.playConnectionSuccess();
                 }
             } else {
                 this.log(`❌ 图层导出失败: ${result ? result.error : '未知错误'}`, 'error');
-                alert(`导出失败：${result ? result.error : '未知错误'}`);
             }
         } catch (error) {
             this.log(`导出图层过程出错: ${error.message}`, 'error');
-            alert(`导出过程出错：${error.message}`);
         }
     }
     
