@@ -44,6 +44,35 @@ function testExtendScriptConnection()
 }
 ```
 
+### 图层分析模块
+
+#### detectSelectedLayers()
+- **描述**: 核心图层分析函数。遍历当前活动合成中所有选中的图层，并为每个图层生成详细的分析数据，包括图层类型、素材类型、导出状态、文件路径等。
+- **返回**: `String` - 一个包含分析结果数组的JSON字符串。
+- **调用方式**: 由 `main.js` 中的 `detectLayers` 函数调用。
+- **数据流**: **此函数返回的JSON数据现在由前端的 `js/ui/summary-dialog.js` 组件负责接收和渲染**，而不是由JSX脚本直接生成UI。
+
+#### analyzeLayer(layer, index)
+- **描述**: `detectSelectedLayers` 的内部辅助函数，负责分析单个图层。它包含了识别图像序列、处理图层蒙版等复杂逻辑。
+- **返回**: `Object` - 包含单个图层所有分析信息的对象。
+
+#### showLayerDetectionSummary(params)
+- **文件**: `jsx/dialog-summary.jsx`
+- **描述**: (旧版) 调用一个AE原生的 `Window('dialog')` 来显示图层检测结果。
+- **状态**: **[已废弃]**。此函数及其所在的 `dialog-summary.jsx` 文件已被新的HTML对话框 `js/ui/summary-dialog.js` 取代。前端不再调用此函数来显示结果。
+
+### 图层导出模块
+
+#### exportSingleLayer(layer, layerInfo, comp, exportFolder)
+- **描述**: 核心的单图层/单帧导出函数。根据传入的图层信息，将其渲染并导出一个PNG文件。
+- **调用方式**: 通常由前端的 `handleLayerExport` 逻辑间接触发。
+- **实现细节**:
+    1.  在AE中创建一个临时的、不可见的合成 (Temporary Composition)。
+    2.  将被选中的图层（或合成的当前帧）添加到这个临时合成中，以实现隔离渲染。
+    3.  将该临时合成添加到渲染队列，并设置为导出单帧PNG格式的图片。
+    4.  执行渲染，操作完成后清理临时合成并返回结果。
+- **返回**: `Object` - 包含导出是否成功、文件名、路径等信息。
+
 ## 核心模块
 
 ### 主机脚本 (hostscript.jsx)

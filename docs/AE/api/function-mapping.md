@@ -177,87 +177,72 @@ function updateConnectionStatus(status, data) {
 
 #### 导入模式选择处理
 ```javascript
-// 元素名称: input[name="quick-import-mode"]
+// 元素选择器: input[name="import-mode"] (位于高级设置面板中)
 // 事件: change
-// 处理函数:
-function handleImportModeChange(event) {
-    const selectedMode = event.target.value;
-    
-    // 更新UI状态
-    this.updateImportModeUI(selectedMode);
-    
-    // 保存设置
-    this.settingsManager.updateSetting('importMode', selectedMode);
-    
-    // 同步到高级设置
-    this.syncQuickToAdvanced();
-    
-    // 根据模式显示配置对话框
-    switch(selectedMode) {
-        case 'project_adjacent':
-            this.showProjectAdjacentModal();
-            break;
-        case 'custom_folder':
-            this.showCustomFolderModal();
-            break;
-    }
-    
-    this.logManager.info(`导入模式已切换为: ${selectedMode}`);
-}
+// 处理函数: 在 main.js 的 setupSettingsPanel 方法中定义的匿名箭头函数
 
-// 模式UI更新函数
-function updateImportModeUI(mode) {
-    const modeButtons = document.querySelectorAll('.mode-button');
-    
-    modeButtons.forEach(button => {
-        const input = button.querySelector('input');
-        if (input.value === mode) {
-            button.classList.add('checked');
-        } else {
-            button.classList.remove('checked');
+// 逻辑概述:
+const importModeRadios = document.querySelectorAll('input[name="import-mode"]');
+importModeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (radio.checked) {
+            // 1. 日志记录
+            this.log(`高级导入模式已更改为: ${radio.value}`, 'info');
+
+            // 2. 根据模式决定是否弹出配置窗口
+            if (radio.value === 'project_adjacent') {
+                this.showProjectAdjacentModal();
+            } else if (radio.value === 'custom_folder') {
+                this.showCustomFolderModal();
+            }
+
+            // 3. 实时保存设置
+            // 调用 SettingsManager.js 的 updateField 方法，立即持久化设置
+            this.settingsManager.updateField('mode', radio.value, false);
+
+            // 4. 同步到快速设置面板
+            // 确保主界面上的快速设置选项也反映出此变更
+            const quickRadio = document.querySelector(`input[name="quick-import-mode"][value="${radio.value}"]`);
+            if (quickRadio) {
+                quickRadio.checked = true;
+            }
         }
     });
-}
-
-// 事件绑定
-document.querySelectorAll('input[name="quick-import-mode"]').forEach(input => {
-    input.addEventListener('change', handleImportModeChange.bind(this));
 });
 ```
 
 #### 导入行为选择处理
 ```javascript
-// 元素名称: input[name="import-behavior"]
+// 元素选择器: input[name="import-behavior"] (主面板)
+//           input[name="advanced-import-behavior"] (高级设置面板)
 // 事件: change
-// 处理函数:
-function handleImportBehaviorChange(event) {
-    const selectedBehavior = event.target.value;
-    
-    // 更新UI状态
-    this.updateImportBehaviorUI(selectedBehavior);
-    
-    // 保存设置
-    this.settingsManager.updateSetting('importBehavior', selectedBehavior);
-    
-    // 同步到高级设置
-    this.syncQuickToAdvanced();
-    
-    this.logManager.info(`导入行为已设置为: ${selectedBehavior}`);
-}
+// 处理函数: 在 main.js 的 setupQuickSettings 和 setupSettingsPanel 方法中定义的匿名箭头函数
 
-// 行为UI更新函数
-function updateImportBehaviorUI(behavior) {
-    const behaviorButtons = document.querySelectorAll('.import-behavior-button');
-    
-    behaviorButtons.forEach(button => {
-        const input = button.querySelector('input');
-        if (input.value === behavior) {
-            button.classList.add('checked');
-        } else {
-            button.classList.remove('checked');
+// 逻辑概述 (以快速设置为例):
+const importBehaviorRadios = document.querySelectorAll('input[name="import-behavior"]');
+importBehaviorRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            // 1. 根据选项值，更新一个或两个设置项
+            if (e.target.value === 'no_import') {
+                // 选项 "不导入合成" -> 更新 addToComposition 为 false
+                this.updateQuickSetting('addToComposition', false);
+            } else {
+                // 选项 "当前时间" 或 "时间轴开始"
+                // -> 确保 addToComposition 为 true
+                this.updateQuickSetting('addToComposition', true);
+                // -> 更新 timelineOptions.placement
+                this.updateQuickSetting('timelineOptions.placement', e.target.value);
+            }
+
+            // 2. 同步到高级设置面板的UI
+            const advancedRadio = document.querySelector(`input[name="advanced-import-behavior"][value="${e.target.value}"]`);
+            if (advancedRadio) {
+                advancedRadio.checked = true;
+            }
         }
     });
-}
+});
 ```
 
 ### 2.4 图层操作组件

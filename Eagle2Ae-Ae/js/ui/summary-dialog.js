@@ -14,8 +14,9 @@
         var lines = [];
 
         // 直接基于数据统计导出/不可导出分类，避免策略差异导致“无”
-        var exportableCounts = { 设计:0, 文本:0, 形状:0, 其他:0 };
-        var nonExportableCounts = { 设计:0, 视频:0, 图片:0, 音频:0, 矢量:0, 纯色:0, 预合成:0, 调整:0, 其他:0 };
+        // 将“合成”归类为可导出
+        var exportableCounts = { 设计:0, 文本:0, 形状:0, 合成:0, 其他:0 };
+        var nonExportableCounts = { 设计:0, 视频:0, 图片:0, 音频:0, 矢量:0, 纯色:0, 调整:0, 其他:0 };
 
         for (var i = 0; i < detectionResults.length; i++) {
             var layer = detectionResults[i];
@@ -26,6 +27,8 @@
                     exportableCounts['文本']++;
                 } else if (layer.layerType === 'shape') {
                     exportableCounts['形状']++;
+                } else if (layer.layerType === 'precomp') {
+                    exportableCounts['合成']++;
                 } else {
                     exportableCounts['其他']++;
                 }
@@ -39,7 +42,6 @@
                     default:
                         switch (layer.layerType) {
                             case 'solid': nonExportableCounts['纯色']++; break;
-                            case 'precomp': nonExportableCounts['预合成']++; break;
                             case 'adjustment': nonExportableCounts['调整']++; break;
                             default: nonExportableCounts['其他']++; break;
                         }
@@ -51,6 +53,7 @@
         if (exportableCounts['设计'] > 0) exportableParts.push('设计:' + exportableCounts['设计']);
         if (exportableCounts['文本'] > 0) exportableParts.push('文本:' + exportableCounts['文本']);
         if (exportableCounts['形状'] > 0) exportableParts.push('形状:' + exportableCounts['形状']);
+        if (exportableCounts['合成'] > 0) exportableParts.push('合成:' + exportableCounts['合成']);
         if (exportableCounts['其他'] > 0) exportableParts.push('其他:' + exportableCounts['其他']);
         var exportableLine = '▶ 可导出: ' + (exportableParts.length > 0 ? exportableParts.join(', ') : '无');
         lines.push(exportableLine);
@@ -62,7 +65,6 @@
         if (nonExportableCounts['音频'] > 0) nonExportableParts.push('音频:' + nonExportableCounts['音频']);
         if (nonExportableCounts['矢量'] > 0) nonExportableParts.push('矢量:' + nonExportableCounts['矢量']);
         if (nonExportableCounts['纯色'] > 0) nonExportableParts.push('纯色:' + nonExportableCounts['纯色']);
-        if (nonExportableCounts['预合成'] > 0) nonExportableParts.push('预合成:' + nonExportableCounts['预合成']);
         if (nonExportableCounts['调整'] > 0) nonExportableParts.push('调整:' + nonExportableCounts['调整']);
         if (nonExportableCounts['其他'] > 0) nonExportableParts.push('其他:' + nonExportableCounts['其他']);
         var nonExportableLine = '✖ 不可导出: ' + (nonExportableParts.length > 0 ? nonExportableParts.join(', ') : '无');
@@ -186,8 +188,11 @@
             layer.materialType === 'animation' || layer.materialType === 'raw' || layer.materialType === 'document'
         ));
         var isDesign = !!(layer && layer.materialType === 'design');
+        var isComposition = !!(layer && layer.layerType === 'precomp');
         if (isMaterialLike) {
             lines.push(category + (isDesign ? ' - 点击导出该图层' : ' - 点击打开所在文件夹'));
+        } else if (isComposition) {
+            lines.push(category + ' - 点击导出当前时间帧');
         } else {
             lines.push(category + (layer.canExport ? ' - 可导出' : ' - 不可导出'));
         }
@@ -270,14 +275,21 @@
                 '</div>';
             overlay.appendChild(dialog);
 
-            // Summary lines
+            // Summary lines（只显示前两行；总计行移动到悬浮提示节省空间）
             var summaryBox = dialog.querySelector('.e2a-summary');
-            generateSummaryLines(detectionResults).forEach(function(line){
+            var allLines = generateSummaryLines(detectionResults);
+            var totalLine = allLines.length > 0 ? allLines[allLines.length - 1] : '';
+            var visibleLines = allLines.slice(0, Math.max(0, allLines.length - 1));
+            visibleLines.forEach(function(line){
                 var p = document.createElement('div');
                 p.className = 'e2a-summary-line';
                 p.textContent = line;
                 summaryBox.appendChild(p);
             });
+            if (totalLine) {
+                var tip = totalLine.replace(/^●\s*/, '');
+                summaryBox.setAttribute('title', tip);
+            }
 
             // List
             var listBox = dialog.querySelector('.e2a-list');
@@ -289,14 +301,15 @@
                 label.className = 'e2a-row-text';
                 label.textContent = formatLayerText(layer);
                 label.title = generateTooltip(layer);
-                // 超链接交互：素材/设计类显示下划线蓝色，支持键盘回车
+                // 超链接交互：素材/设计/合成类显示下划线蓝色，支持键盘回车
                 var isMaterialLike = (layer && (
                     layer.materialType === 'design' || layer.materialType === 'image' || layer.materialType === 'video' ||
                     layer.materialType === 'audio' || layer.materialType === 'vector' || layer.materialType === 'sequence' ||
                     layer.materialType === 'animation' || layer.materialType === 'raw' || layer.materialType === 'document'
                 ));
                 var isDesign = !!(layer && layer.materialType === 'design');
-                if (isMaterialLike) {
+                var isComposition = !!(layer && layer.layerType === 'precomp');
+                if (isMaterialLike || isComposition) {
                     label.classList.add('link');
                     label.setAttribute('role', 'link');
                     label.setAttribute('tabindex', '0');
@@ -319,6 +332,11 @@
                                 alert('文件夹路径: \n' + path);
                                 return;
                             }
+                        } else if (isComposition) {
+                            // 合成：导出当前时间帧（复用现有导出通道）
+                            if (tryExportDesignLayer(layer)) return;
+                            showDetailDialog("无法导出合成帧，请检查扩展状态\n" + label.title);
+                            return;
                         }
                         // 其他类型或没有路径：显示详情
                         showDetailDialog(label.title);
@@ -326,7 +344,7 @@
                         showDetailDialog(label.title);
                     }
                 };
-                label.onkeydown = function(e){ if ((e.key === 'Enter' || e.keyCode === 13) && isMaterialLike) { label.click(); } };
+                label.onkeydown = function(e){ if ((e.key === 'Enter' || e.keyCode === 13) && (isMaterialLike || isComposition)) { label.click(); } };
 
                 row.appendChild(label);
                 listBox.appendChild(row);

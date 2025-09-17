@@ -57,10 +57,10 @@ const DEFAULT_IMPORT_SETTINGS = {
     // 导出路径设置
     exportSettings: {
         mode: ExportModes.PROJECT_ADJACENT,
-        projectAdjacentFolder: 'Export',
+        projectAdjacentFolder: 'Eagle_Assets',
         customExportPath: '',
         autoCopy: true,
-        addTimestamp: true,
+        addTimestamp: false,
         createSubfolders: false
     }
 };

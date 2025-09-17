@@ -1351,8 +1351,8 @@ function analyzeLayer(layer, index) {
                     }
                 } else if (layer.source instanceof CompItem) {
                     layerInfo.type = "PrecompLayer";
-                    layerInfo.exportable = false;
-                    layerInfo.reason = "预合成图层不支持导出";
+                    layerInfo.exportable = true;
+                    layerInfo.reason = "预合成图层，可导出当前时间帧";
                     layerInfo.sourceInfo = {
                         type: "Composition",
                         compName: layer.source.name,
@@ -1396,13 +1396,23 @@ function analyzeLayer(layer, index) {
             }
         }
         
-        // 检查图层是否有蒙版，如果有蒙版则标记为不可导出
-        // 蒙版图层会影响导出效果，因此不支持导出
+        // 检查图层是否有蒙版，对于某些类型的图层允许有蒙版
         try {
             if (layer.mask && layer.mask.numProperties > 0) {
-                layerInfo.exportable = false;
-                layerInfo.reason = "包含蒙版的图层不支持导出";
-                layerInfo.type = layerInfo.type + "WithMask";
+                var maskCount = layer.mask.numProperties;
+                
+                // 对于素材图层（有源文件的图层），允许有蒙版导出
+                // 因为蒙版通常不会严重影响素材的导出效果
+                if (layerInfo.sourceInfo && layerInfo.sourceInfo.type === "File") {
+                    // 素材图层有蒙版时仍然可以导出，但添加警告信息
+                    layerInfo.type = layerInfo.type + "WithMask";
+                    layerInfo.reason = layerInfo.reason + " (包含 " + maskCount + " 个蒙版，将尝试导出)";
+                } else {
+                    // 其他类型图层有蒙版时标记为不可导出
+                    layerInfo.exportable = false;
+                    layerInfo.reason = "包含蒙版的图层不支持导出 (蒙版数量: " + maskCount + ")";
+                    layerInfo.type = layerInfo.type + "WithMask";
+                }
             }
         } catch (maskError) {
             // 忽略蒙版检查错误，继续处理
@@ -1491,7 +1501,7 @@ function exportSelectedLayers(exportSettings) {
         }
         
         result.compName = comp.name;
-        result.logs.push("📋 开始导出合成: " + comp.name);
+        result.logs.push("📋 开始导出: " + comp.name);
 
         // 获取选中的图层
         var selectedLayers = comp.selectedLayers;
@@ -1510,6 +1520,17 @@ function exportSelectedLayers(exportSettings) {
 
         result.exportPath = exportFolder.fsName;
         result.logs.push("📁 导出路径: " + result.exportPath);
+        
+        // 调试信息：记录路径选择详情
+        if (exportSettings && exportSettings.exportSettings) {
+            var settings = exportSettings.exportSettings;
+            result.logs.push("🔍 路径选择详情:");
+            result.logs.push("  - 导出模式: " + (settings.mode || '未设置'));
+            result.logs.push("  - 自定义路径: " + (settings.customExportPath || '未设置'));
+            result.logs.push("  - 项目旁文件夹: " + (settings.projectAdjacentFolder || '未设置'));
+            result.logs.push("  - 时间戳: " + (settings.addTimestamp ? '是' : '否'));
+            result.logs.push("  - 子文件夹: " + (settings.createSubfolders ? '是' : '否'));
+        }
 
         // 分析并导出每个图层
         var exportableLayersInfo = [];
@@ -1538,6 +1559,9 @@ function exportSelectedLayers(exportSettings) {
         // 导出每个可导出的图层
         for (var j = 0; j < exportableLayersInfo.length; j++) {
             var layerData = exportableLayersInfo[j];
+            if (exportSettings && exportSettings.exportType === 'composition_frame' && (layerData.layer.source instanceof CompItem)) {
+                result.logs.push("🧭 合成源：按当前时间帧导出");
+            }
             var exportResult = exportSingleLayer(layerData.layer, layerData.info, comp, exportFolder);
 
             if (exportResult.success) {
@@ -2439,8 +2463,14 @@ function createExportFolder(exportSettings) {
         // 获取导出设置，如果没有传入则使用默认设置
         var settings = exportSettings && exportSettings.exportSettings ? exportSettings.exportSettings : null;
         var mode = settings ? settings.mode : 'project_adjacent';
-        var addTimestamp = settings ? settings.addTimestamp : true;
+        var addTimestamp = settings ? settings.addTimestamp : false; // 默认不添加时间戳
         var addCompPrefix = settings ? settings.createSubfolders : false; // 重命名为更准确的变量名
+        
+        // 调试日志：记录导出设置
+        if (settings) {
+            // 这里可以添加调试信息，但ExtendScript的console.log可能不可用
+            // 所以我们将信息添加到返回的日志中
+        }
 
         // 构建文件夹名称前缀
         var folderPrefix = '';
@@ -2495,9 +2525,15 @@ function createExportFolder(exportSettings) {
                 break;
 
             case 'desktop':
-                // 桌面导出
+                // 桌面导出 - 优先使用自定义路径，如果没有则使用桌面
+                var customPath = settings && settings.customExportPath && settings.customExportPath.trim() !== '' ?
+                    settings.customExportPath : Folder.desktop.fsName;
                 var folderName = folderPrefix + 'AE_Export';
-                exportFolder = new Folder(Folder.desktop.fsName + "/" + folderName);
+                exportFolder = new Folder(customPath + "/" + folderName);
+                // 调试信息：记录路径选择
+                if (settings && settings.customExportPath && settings.customExportPath.trim() !== '') {
+                    // 将在调用处记录这个信息
+                }
                 break;
 
             default:
@@ -2594,6 +2630,15 @@ function exportSingleLayer(layer, layerInfo, originalComp, exportFolder) {
                 newLayer.outPoint = 1/24; // 设置为一帧的持续时间
                 // 设置合成时间为0，确保渲染第一帧
                 tempComp.time = 0;
+            } else if (layer.source instanceof CompItem) {
+                // 如果源是合成，则使用原始合成当前时间进行导出当前时间帧
+                try {
+                    var currentTime = originalComp && originalComp.time ? originalComp.time : 0;
+                    tempComp.time = currentTime;
+                } catch (timeErr) {
+                    // 回退到0帧
+                    tempComp.time = 0;
+                }
             }
         } else {
             // 如果没有源素材，尝试复制图层

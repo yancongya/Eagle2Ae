@@ -106,106 +106,39 @@ async function testConnection() {
 - **配置要求**: 必须设置有效的目标文件夹路径
 - **路径验证**: 检查路径存在性和写入权限
 
-### 3.2 模式配置对话框
 
-#### 项目旁复制设置
-```html
-<!-- 文件夹名称选择 -->
-<select id="project-folder-preset-select">
-    <option value="Eagle_Assets">Eagle_Assets</option>
-    <option value="Eagle_Import">Eagle_Import</option>
-    <option value="Source_Files">Source_Files</option>
-    <option value="Assets">Assets</option>
-    <option value="Import">Import</option>
-    <option value="custom">自定义...</option>
-</select>
-
-<!-- 自定义输入框 -->
-<input type="text" id="project-custom-folder-input" 
-       placeholder="或输入自定义文件夹名">
-```
-
-#### 指定文件夹设置
-- **路径输入**: 支持手动输入或浏览选择
-- **最近路径**: 显示最近使用的文件夹列表
-- **路径验证**: 实时验证路径有效性
-- **权限检查**: 确保目标文件夹可写
 
 ## 4. 导入行为配置
 
+> **核心文档**: 关于此功能的完整技术实现、数据流和代码示例，请参阅 [“导入行为”设置功能逻辑](../../panel-functions/import-behavior-settings.md)。
+
 ### 4.1 行为选项说明
+
+此设置决定了素材在导入项目后，是否以及如何被添加到当前合成的时间轴中。
 
 | 选项 | 值 | 功能描述 | 使用场景 |
 |------|----|---------|---------|
-| 不导入合成 | `no_import` | 仅导入到项目面板 | 批量导入，稍后手动添加 |
-| 当前时间 | `current_time` | 放置在时间指针位置 | 在特定时间点添加素材 |
-| 时间轴开始 | `timeline_start` | 放置在0秒位置 | 背景或基础层素材 |
+| 不导入合成 | `no_import` | 仅将素材导入到项目面板，不执行任何时间轴操作。 | 批量导入大量素材，以便稍后手动整理和使用。 |
+| 当前时间 | `current_time` | 将素材作为一个新图层，添加到当前合成中，其入点与时间轴的当前时间指示器对齐。 | 在视频的特定时间点精确插入视觉元素。 |
+| 时间轴开始 | `timeline_start` | 将素材作为一个新图层，添加到当前合成中，其入点设置为 `0`。 | 适用于添加背景、水印或作为项目起始的基础图层。 |
 
 ### 4.2 行为选择逻辑
 
-```javascript
-// 导入行为处理
-function handleImportBehavior(behavior, files) {
-    switch(behavior) {
-        case 'no_import':
-            // 仅导入到项目，不添加到合成
-            return importToProjectOnly(files);
-            
-        case 'current_time':
-            // 在当前时间添加到合成
-            const currentTime = getCurrentTime();
-            return importToComposition(files, currentTime);
-            
-        case 'timeline_start':
-            // 在时间轴开始处添加
-            return importToComposition(files, 0);
-    }
-}
-```
+用户的选择会实时更新 `SettingsManager` 中的两个关键设置项：`addToComposition` (布尔值) 和 `timelineOptions.placement` (字符串)。
 
-### 4.3 时间轴设置实现细节
+- 选择 **“不导入合成”** 会将 `addToComposition` 设置为 `false`。
+- 选择 **“当前时间”** 或 **“时间轴开始”** 会将 `addToComposition` 设置为 `true`，并将 `timelineOptions.placement` 设置为对应的值 (`current_time` 或 `timeline_start`)。
 
-#### 4.3.1 设置检查逻辑
+### 4.3 设置传递与执行流程
 
-在v2.1.2版本中修复了时间轴设置的检查逻辑错误：
+时间轴设置从UI传递到ExtendScript的完整流程如下：
 
-```javascript
-// 修复前（错误的检查逻辑）
-if (settings.timelineOptions.enabled) {
-    // 这里只检查enabled字段，无法区分具体的placement模式
-}
-
-// 修复后（正确的检查逻辑）
-if (settings.timelineOptions.placement === 'current_time') {
-    // 正确检查placement字段，确保在current_time模式下执行
-    layer.startTime = targetComp.time;
-    console.log('[时间轴设置] 图层放置在当前时间:', targetComp.time);
-} else if (settings.timelineOptions.placement === 'timeline_start') {
-    // timeline_start模式下放置在0秒位置
-    layer.startTime = 0;
-    console.log('[时间轴设置] 图层放置在时间轴开始');
-}
-```
-
-#### 4.3.2 设置传递流程
-
-时间轴设置从UI传递到ExtendScript的完整流程：
-
-1. **UI设置获取**: 从SettingsManager获取timelineOptions配置
-2. **设置合并**: 在main.js中合并本地设置和消息设置
-3. **参数传递**: 通过FileHandler将设置传递给ExtendScript
-4. **ExtendScript处理**: 在hostscript.jsx中根据placement值执行相应逻辑
-
-#### 4.3.3 调试和验证
-
-为确保时间轴设置正确工作，可以通过以下方式验证：
-
-```javascript
-// 在ExtendScript中添加调试日志
-console.log('[调试] timelineOptions设置:', JSON.stringify(settings.timelineOptions));
-console.log('[调试] placement模式:', settings.timelineOptions.placement);
-console.log('[调试] 当前合成时间:', targetComp.time);
-```
+1.  **UI设置更新**: 用户在UI上选择后，`main.js` 中的监听器立即调用 `SettingsManager` 的 `updateField` 方法，将 `addToComposition` 和 `timelineOptions.placement` 的值实时保存到 `localStorage`。
+2.  **参数构建**: 当导入开始时，`FileHandler.js` 从 `SettingsManager` 获取包含这两个设置的完整 `settings` 对象。
+3.  **参数传递**: `FileHandler.js` 将整个 `settings` 对象序列化为JSON，并作为参数传递给 `hostscript.jsx` 中的 `importFilesWithSettings` 函数。
+4.  **ExtendScript处理**: 在 `hostscript.jsx` 中：
+    - 首先检查 `settings.addToComposition` 的值。如果为 `false`，则导入流程在将素材添加到项目面板后即告结束。
+    - 如果为 `true`，脚本会继续将素材添加到当前合成，然后读取 `settings.timelineOptions.placement` 的值，并据此将新图层的 `startTime` 设置为 `comp.time` 或 `0`。
 
 ## 5. 文件拖拽交互系统
 
@@ -1374,305 +1307,45 @@ analyzeDroppedFiles(files) {
 }
 ```
 
-## 6. 图层检测系统交互流程
+## 6. 图层检测与交互
 
-### 6.1 检测按钮交互设计
+### 6.1 检测流程概述
 
-#### 6.1.1 按钮状态管理
+当用户点击主面板上的“检测图层”按钮后，系统会执行以下流程：
+1.  调用 `hostscript.jsx` 对AE中当前选中的图层进行分析。
+2.  分析完成后，调用 `js/ui/summary-dialog.js` 渲染出一个HTML模态对话框，展示分析结果。
 
-| 状态 | 视觉表现 | 用户操作 | 系统响应 |
-|------|----------|----------|----------|
-| 就绪 | 正常按钮样式 | 可点击 | 开始检测流程 |
-| 检测中 | 加载动画 + 禁用状态 | 不可点击 | 显示检测进度 |
-| 完成 | 恢复正常状态 | 可点击 | 弹出结果总结 |
-| 错误 | 错误提示样式 | 可点击重试 | 显示错误信息 |
+### 6.2 总结对话框中的核心交互
 
-#### 6.1.2 检测流程时序图
+在新版的总结弹窗中，为了界面简洁，移除了原有的行内操作按钮。所有交互都通过**直接点击图层名称文本**来完成。
 
-```mermaid
-sequenceDiagram
-    participant User as 用户
-    participant UI as 插件界面
-    participant Main as 主程序
-    participant AE as After Effects
-    participant Dialog as 弹窗系统
-    
-    User->>UI: 点击"检测图层"按钮
-    UI->>Main: 触发检测事件
-    Main->>UI: 更新按钮状态为"检测中"
-    Main->>AE: 调用ExtendScript检测脚本
-    AE->>AE: 分析所有图层
-    AE->>Main: 返回检测结果
-    Main->>Main: 处理和格式化数据
-    Main->>Dialog: 显示检测结果弹窗
-    Dialog->>User: 展示总结和详情
-    User->>Dialog: 点击确定/关闭
-    Dialog->>UI: 关闭弹窗
-    UI->>UI: 恢复按钮正常状态
-```
+#### 1. 打开文件夹
+- **适用类型**: 普通素材文件（如图片、视频、音频等）。
+- **操作**: 点击这些图层的名称，会调用 `jsx/utils/folder-opener.js` 模块的功能，直接在你的操作系统中打开该素材文件所在的文件夹。
 
-### 6.2 检测结果弹窗交互
+#### 2. 导出图层/合成
+- **适用类型**:
+    - 设计文件 (如 `.psd`)
+    - **预合成 (Pre-comp)**
+    - **普通合成 (Composition)**
+- **操作**: 点击这些图层的名称，会触发**单帧导出**逻辑：
+    - 对于**设计文件**或**预合成图层**，会将其渲染并导出为一张图片。
+    - 对于**普通合成**，会导出该合成**当前时间指示器所在的那一帧**的画面。
 
-#### 6.2.1 弹窗显示逻辑
+#### 3. 显示详细信息
+- **适用类型**: 无法执行上述操作的图层（如纯色、形状图层）或操作失败时。
+- **操作**: 点击后会弹出一个小窗口，展示该图层的详细信息。
 
-```javascript
-// 检测结果弹窗显示逻辑
-function showDetectionSummaryDialog(summaryData) {
-    // 环境检测：选择合适的弹窗实现
-    if (isDemoMode()) {
-        // Demo模式：使用JavaScript弹窗
-        console.log('[Demo模式] 使用虚拟弹窗显示检测结果');
-        showJavaScriptSummaryDialog(summaryData);
-    } else {
-        // CEP环境：使用ExtendScript弹窗
-        console.log('[CEP模式] 调用ExtendScript弹窗');
-        const script = `showLayerDetectionSummary(${JSON.stringify(summaryData)});`;
-        csInterface.evalScript(script, handleDialogResult);
-    }
-}
-```
+#### 4. 悬浮提示 (Tooltip)
+- **操作**: 鼠标悬停在任何图层名称上，都会显示一个包含该图层详细信息（如路径、尺寸、导出原因等）的悬浮提示框。这是获取图层完整信息的快速方式。
 
-#### 6.2.2 弹窗内容结构
+#### 视觉与交互提示 (Visual Cues)
 
-**总结区域**:
-- 时间戳 + 可导出图层统计
-- 时间戳 + 不可导出图层统计  
-- 时间戳 + 总体检测结果
+为了引导用户进行交互，对话框提供了清晰的视觉提示：
 
-**详情区域**:
-- 分类标题（"图层详情"）
-- 可导出图层列表（如有）
-- 不可导出图层列表
-- 每个图层显示：状态图标 + 类型标识 + 图层名称
+- **超链接样式**: 对于可点击的图层（如素材文件、设计文件、合成），其名称文本会显示为**蓝色并带有下划线**，外观类似网页超链接，明确示意此处可以点击。
 
-**操作区域**:
-- 确定按钮（主要操作）
-- 关闭按钮（次要操作）
-- 键盘快捷键支持（Enter/Esc）
-
-### 6.3 Demo模式特殊交互
-
-#### 6.3.1 Demo模式激活
-
-**自动激活**（Web环境）:
-```javascript
-// 页面加载时自动检测环境
-window.addEventListener('DOMContentLoaded', () => {
-    if (!isCEPEnvironment()) {
-        console.log('[自动检测] 非CEP环境，启用Demo模式');
-        activateDemoMode('auto');
-    }
-});
-```
-
-**手动激活**（CEP环境彩蛋）:
-```javascript
-// 连续点击标题5次激活Demo模式
-let clickCount = 0;
-let clickTimer = null;
-
-document.getElementById('app-title').addEventListener('click', () => {
-    clickCount++;
-    
-    if (clickTimer) clearTimeout(clickTimer);
-    
-    if (clickCount >= 5) {
-        console.log('[彩蛋触发] 手动启用Demo模式');
-        activateDemoMode('manual');
-        showEasterEggAnimation();
-        clickCount = 0;
-    } else {
-        clickTimer = setTimeout(() => {
-            clickCount = 0;
-        }, 3000);
-    }
-});
-```
-
-#### 6.3.2 虚拟数据展示
-
-**数据生成策略**:
-```javascript
-// 生成真实感的虚拟检测数据
-function generateDemoDetectionData() {
-    const demoLayers = [
-        {
-            name: "Snow Transitions HD 1 luma.mp4",
-            type: "VideoLayer",
-            exportable: false,
-            reason: "视频素材，将导出第一帧",
-            icon: "🎬"
-        },
-        {
-            name: "flare green screen animation in full Hd 1920x1080p -- Royalty free -- F",
-            type: "VideoLayer",
-            exportable: false, 
-            reason: "视频素材，将导出第一帧",
-            icon: "🎬"
-        }
-        // 更多虚拟图层数据...
-    ];
-    
-    // 基于实际数组长度计算统计
-    const stats = calculateLayerStats(demoLayers);
-    
-    return {
-        exportableSummary: `${getCurrentTimeString()} 可导出: 无`,
-        nonExportableSummary: `${getCurrentTimeString()} 不可导出: 视频×${stats.nonExportable}`,
-        totalSummary: `${getCurrentTimeString()} 总结: 共检测 ${stats.total} 个图层，${stats.exportable} 个可导出，${stats.nonExportable} 个不可导出`,
-        layers: demoLayers,
-        stats: stats
-    };
-}
-```
-
-### 6.4 错误处理和用户反馈
-
-#### 6.4.1 常见错误场景
-
-**无项目错误**:
-```javascript
-// 检测到无AE项目时的处理
-if (!hasActiveProject()) {
-    showErrorDialog({
-        title: "检测失败",
-        message: "请先打开一个After Effects项目",
-        type: "warning",
-        actions: ["确定"]
-    });
-    return;
-}
-```
-
-**无合成错误**:
-```javascript
-// 检测到无活动合成时的处理
-if (!hasActiveComposition()) {
-    showErrorDialog({
-        title: "检测失败", 
-        message: "请先创建或选择一个合成",
-        type: "warning",
-        actions: ["确定"]
-    });
-    return;
-}
-```
-
-**ExtendScript执行错误**:
-```javascript
-// ExtendScript执行失败时的降级处理
-csInterface.evalScript(script, (result) => {
-    if (!result || result.includes('Error')) {
-        console.error('[检测失败] ExtendScript执行错误:', result);
-        
-        // 在Demo模式下显示虚拟结果
-        if (isDemoMode()) {
-            const demoData = generateDemoDetectionData();
-            showJavaScriptSummaryDialog(demoData);
-        } else {
-            showErrorDialog({
-                title: "检测失败",
-                message: "图层检测过程中发生错误，请重试",
-                type: "error",
-                actions: ["重试", "取消"]
-            });
-        }
-    }
-});
-```
-
-#### 6.4.2 用户反馈机制
-
-**进度指示**:
-```javascript
-// 检测进度反馈
-function updateDetectionProgress(current, total) {
-    const percentage = Math.round((current / total) * 100);
-    const progressText = `正在检测图层... (${current}/${total})`;
-    
-    updateButtonText(progressText);
-    updateProgressBar(percentage);
-}
-```
-
-**成功反馈**:
-```javascript
-// 检测完成后的成功反馈
-function showDetectionSuccess(stats) {
-    showToast({
-        message: `检测完成：共 ${stats.total} 个图层`,
-        type: "success",
-        duration: 3000
-    });
-}
-```
-
-### 6.5 性能优化和用户体验
-
-#### 6.5.1 异步处理
-```javascript
-// 异步检测避免界面阻塞
-async function performLayerDetection() {
-    try {
-        showLoadingState();
-        
-        // 分批处理大量图层
-        const layers = await getLayers();
-        const batchSize = 10;
-        const results = [];
-        
-        for (let i = 0; i < layers.length; i += batchSize) {
-            const batch = layers.slice(i, i + batchSize);
-            const batchResults = await processBatch(batch);
-            results.push(...batchResults);
-            
-            // 更新进度
-            updateDetectionProgress(i + batch.length, layers.length);
-            
-            // 让出控制权，避免阻塞UI
-            await new Promise(resolve => setTimeout(resolve, 10));
-        }
-        
-        // 显示结果
-        showDetectionResults(results);
-        
-    } catch (error) {
-        handleDetectionError(error);
-    } finally {
-        hideLoadingState();
-    }
-}
-```
-
-#### 6.5.2 缓存机制
-```javascript
-// 检测结果缓存，避免重复检测
-class DetectionCache {
-    constructor() {
-        this.cache = new Map();
-        this.maxAge = 5 * 60 * 1000; // 5分钟过期
-    }
-    
-    getCacheKey(projectPath, compName) {
-        return `${projectPath}:${compName}:${Date.now()}`;
-    }
-    
-    get(key) {
-        const cached = this.cache.get(key);
-        if (cached && Date.now() - cached.timestamp < this.maxAge) {
-            return cached.data;
-        }
-        return null;
-    }
-    
-    set(key, data) {
-        this.cache.set(key, {
-            data: data,
-            timestamp: Date.now()
-        });
-    }
-}
-```
+- **悬浮提示 (Tooltip)**: 无论图层是否可点击，只要将鼠标悬停在其名称上，都会立即弹出一个包含该图层所有详细信息（路径、尺寸、导出原因等）的提示框。这是快速获取图层信息的首选方式。
 
 ## 13. 测试和调试
 

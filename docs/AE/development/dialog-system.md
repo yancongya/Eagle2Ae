@@ -1,42 +1,63 @@
-# 对话框系统技术文档
+# 对话框系统技术文档 (v2.3.0)
 
 ## 概述
 
-本文档详细描述了Eagle2Ae CEP扩展中的对话框系统实现，包括Panel样式对话框的创建、使用方法、Demo模式虚拟弹窗系统以及最佳实践。该系统支持双弹窗架构，能够在CEP环境和Web环境中提供一致的用户体验。
+本文档详细描述了Eagle2Ae CEP扩展中的对话框系统。目前系统采用混合架构：
+1.  **HTML/CSS 模态对话框**: 用于“图层检测总结”等复杂的、信息丰富的场景，确保了UI风格的现代化和统一性。
+2.  **JSX 原生对话框**: 用于“警告”、“确认”等简单的、需要阻塞主进程的系统级提示。
 
-## 1. 对话框系统架构
+## 1. HTML/CSS 模态对话框系统 (主要)
 
-### 1.1 系统组成
+这是当前项目推荐使用的主要对话框系统，尤其适用于需要展示复杂数据和自定义交互的场景。
 
-对话框系统采用双弹窗架构，由以下组件构成：
+### 1.1. 架构与实现
+- **核心文件**: `Eagle2Ae-Ae/js/ui/summary-dialog.js`
+- **实现原理**: 该系统不依赖AE原生的`Window`对象，而是通过JavaScript在CEP扩展的HTML页面内动态创建DOM元素（`div`, `button`等），并使用预设的CSS样式来构建一个模态对话框。
+- **调用流程**:
+    1.  `main.js`中的业务逻辑（如`detectLayers`）完成数据处理。
+    2.  实例化`SummaryDialog`类：`const dialog = new SummaryDialog();`
+    3.  调用`.show(data)`方法，将数据传入，触发对话框的创建和显示。
+- **优点**:
+    - **UI统一**: 实现了与Demo模式完全一致的视觉风格。
+    - **高可控性**: 样式和交互完全由Web技术栈控制，易于定制和扩展。
+    - **现代感**: 外观比JSX原生窗口更现代化。
 
-#### CEP环境弹窗系统
-- **CEP扩展端 (JavaScript)**: 负责触发对话框显示和处理结果
-- **ExtendScript端 (JSX)**: 负责创建和管理Panel样式对话框
-- **通信机制**: 通过CSInterface在两端之间传递数据
+### 1.2. 交互逻辑示例 (图层总结对话框)
+- **点击图层名称**:
+    - 如果是素材类图层，则调用`tryOpenFolderInCEP(filePath)`，最终执行`jsx/utils/folder-opener.js`中的逻辑打开文件所在文件夹。
+    - 如果是其他图层，则弹出包含详细信息的子对话框。
+- **悬浮提示**: 鼠标悬停在图层上会显示包含完整信息的Tooltip。
 
-#### Demo模式弹窗系统
-- **JavaScript弹窗引擎**: 使用HTML/CSS/JS实现的虚拟弹窗
-- **样式模拟器**: 完全模拟CEP环境的原生弹窗样式
-- **数据拦截器**: 拦截ExtendScript调用，使用虚拟数据
-- **环境检测器**: 自动识别运行环境并选择合适的弹窗实现
-
-### 1.2 文件结构
-
+### 1.3. 文件结构
 ```
 Eagle2Ae-Ae/
 ├── js/
-│   ├── main.js                 # CEP扩展主逻辑，包含弹窗调用和Demo模式检测
-│   └── demo/
-│       ├── demo-mode.js        # Demo模式主控制器
-│       ├── demo-dialog.js      # 虚拟弹窗系统实现
-│       └── demo-config.json    # Demo模式配置和虚拟数据
-└── jsx/
-    ├── dialog-warning.jsx      # ExtendScript警告对话框实现
-    └── dialog-summary.jsx      # ExtendScript图层检测总结对话框
+│   ├── main.js                 # 业务逻辑，调用SummaryDialog
+│   └── ui/
+│       └── summary-dialog.js   # HTML对话框的核心实现
+└── index.html                  # CEP扩展的主页面，对话框在此渲染
 ```
 
-## 2. ExtendScript对话框实现
+---
+
+## 2. 旧版/通用 JSX 原生对话框 (辅助)
+
+> **注意**: 此原生窗口系统目前主要用于简单的、需要强阻塞的**警告**(`dialog-warning.jsx`)和**确认**对话框。复杂的“图层检测总结”对话框已由新的HTML系统取代。
+
+### 2.1 系统组成
+- **CEP扩展端 (JavaScript)**: 通过`csInterface.evalScript()`调用JSX函数。
+- **ExtendScript端 (JSX)**: 包含创建和管理`Window('dialog')`的代码，如`dialog-warning.jsx`。
+- **通信机制**: 通过`CSInterface`在两端之间传递简单的字符串或JSON数据。
+
+### 2.2 文件结构
+```
+Eagle2Ae-Ae/
+└── jsx/
+    └── dialog-warning.jsx      # ExtendScript警告对话框实现
+    # dialog-summary.jsx 已经废弃，其功能由 summary-dialog.js 代替
+```
+
+### 2.3 ExtendScript对话框实现
 
 ### 2.1 全局配置对象
 

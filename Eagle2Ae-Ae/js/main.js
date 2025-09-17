@@ -8291,7 +8291,16 @@ class AEExtension {
 
     // 从UI获取导出设置（现在直接读取导入模式的设置）
     getExportSettingsFromUI() {
-        const exportMode = document.querySelector('input[name="export-mode"]:checked')?.value || 'desktop';
+        const checkedRadio = document.querySelector('input[name="export-mode"]:checked');
+        const exportMode = checkedRadio?.value || 'project_adjacent';
+        
+        // 调试日志：记录导出模式选择过程
+        this.log(`🔍 导出模式选择调试:`, 'debug');
+        this.log(`  - 找到选中的单选按钮: ${checkedRadio ? '是' : '否'}`, 'debug');
+        if (checkedRadio) {
+            this.log(`  - 选中值: ${checkedRadio.value}`, 'debug');
+        }
+        this.log(`  - 最终导出模式: ${exportMode}`, 'debug');
         const exportAutoCopy = document.getElementById('export-auto-copy');
         const exportBurnAfterReading = document.getElementById('export-burn-after-reading');
         const exportAddTimestamp = document.getElementById('export-add-timestamp');
@@ -10487,7 +10496,7 @@ async handleFolderImportToAE(folder) {
      */
     async handleLayerExport(layer) {
         try {
-            this.log(`开始导出图层: ${layer.name}`, 'info');
+            this.log(`开始导出: ${layer.name} (${layer.layerType || 'unknown'})`, 'info');
             
             // 检查是否为Demo模式
             if (this.isDemoMode()) {
@@ -10506,6 +10515,7 @@ async handleFolderImportToAE(folder) {
                 exportSettings: {
                     mode: exportSettings.mode, // 保持与UI一致，不强制desktop
                     customExportPath: exportSettings.customExportPath || '', // 交由JSX层处理默认桌面
+                    projectAdjacentFolder: exportSettings.projectAdjacentFolder || 'Eagle_Assets', // 传递项目旁文件夹名称
                     autoCopy: exportSettings.autoCopy || false,
                     burnAfterReading: exportSettings.burnAfterReading || false,
                     addTimestamp: exportSettings.addTimestamp || false,
@@ -10515,9 +10525,17 @@ async handleFolderImportToAE(folder) {
                 targetLayerName: layer.name,
                 targetLayerIndex: layer.index || 0
             };
+
+            // 若为合成图层，记录提示并标记导出类型
+            if (layer && layer.layerType === 'precomp') {
+                this.log('检测到合成图层，准备导出当前时间帧（JSX端将使用 activeItem.time）', 'info');
+                exportParams.exportType = 'composition_frame';
+            }
             
             // 调用ExtendScript导出功能
+            this.log(`调用 JSX exportSelectedLayers，参数: ${JSON.stringify(exportParams)}`, 'debug');
             const result = await this.executeExtendScript('exportSelectedLayers', exportParams);
+            this.log(`JSX 返回: ${JSON.stringify(result)}`, 'debug');
             
             if (result && result.success) {
                 this.log(`✅ 图层导出成功: ${layer.name}`, 'success');

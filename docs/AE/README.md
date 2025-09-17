@@ -56,6 +56,9 @@ Eagle2Ae-Ae 是一个 Adobe CEP (Common Extensibility Platform) 扩展，运行�
 - [JSX脚本API](./api/jsx-scripts.md) - ExtendScript API参考
 - [通信API](./api/communication-api.md) - 通信接口文档
 
+### 🎛️ 面板功能
+- [主面板按钮逻辑](./panel-functions/README.md) - 详细解释主面板上每个按钮的完整工作流程。
+
 ### 🎯 功能特性
 - [文件夹打开模块化](./features/folder-opener-module.md) - **最新 v2.3.0** 文件夹功能独立模块
   - 📦 完整的独立工具模块 (176行)
