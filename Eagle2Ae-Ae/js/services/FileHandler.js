@@ -112,7 +112,8 @@ class FileHandler {
                 success: true,
                 importedCount: importResult.importedCount,
                 processedFiles: processedFiles,
-                targetComp: importResult.targetComp
+                targetComp: importResult.targetComp,
+                debug: importResult.debug
             };
 
         } catch (error) {

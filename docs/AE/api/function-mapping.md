@@ -54,48 +54,59 @@ class EagleToAeApp {
 ```javascript
 // 元素ID: log-panel-toggle
 // 事件: click
-// 处理函数:
-function toggleLogPanel() {
-    const logSection = document.querySelector('.section.log');
-    const isVisible = logSection.style.display !== 'none';
-    
-    logSection.style.display = isVisible ? 'none' : 'block';
-    
-    // 更新按钮状态
-    const toggleBtn = document.getElementById('log-panel-toggle');
-    toggleBtn.classList.toggle('active', !isVisible);
-    
-    // 保存状态到设置
-    this.settingsManager.updateSetting('logPanelVisible', !isVisible);
-}
+// 处理函数: AEExtension.toggleLogPanel() in main.js
 
-// 事件绑定
-document.getElementById('log-panel-toggle').addEventListener('click', toggleLogPanel);
+// 逻辑概述:
+// 该函数在 AEExtension 类的 setupUI 方法中被绑定到按钮的 click 事件。
+toggleLogPanel() {
+    const logSection = document.querySelector('.section.log');
+    const logPanelToggle = document.getElementById('log-panel-toggle');
+
+    if (logSection) {
+        // 切换 .visible 类来控制显示状态
+        const isVisible = logSection.classList.toggle('visible');
+        // 直接修改 display 样式以确保显示/隐藏
+        logSection.style.display = isVisible ? 'flex' : 'none';
+
+        if (logPanelToggle) {
+            // 根据可见性动态更新按钮文本
+            logPanelToggle.textContent = isVisible ? '隐藏日志' : '显示日志';
+            logPanelToggle.classList.toggle('active', isVisible);
+        }
+
+        // 如果面板变得可见，则滚动到底部
+        if (isVisible) {
+            this.scrollToLogBottom();
+        }
+    }
+}
 ```
 
 #### 高级设置按钮
 ```javascript
 // 元素ID: settings-btn
 // 事件: click
-// 处理函数:
-function openSettingsPanel() {
-    const settingsPanel = document.getElementById('settings-panel');
-    
-    // 显示设置面板
-    settingsPanel.style.display = 'block';
-    
-    // 加载当前设置到UI
-    this.loadSettingsToUI();
-    
-    // 同步快速面板设置
-    this.syncQuickToAdvanced();
-    
-    // 添加ESC键关闭功能
-    document.addEventListener('keydown', this.handleSettingsEscape);
-}
+// 处理函数: AEExtension.showSettingsPanel() in main.js
 
-// 事件绑定
-document.getElementById('settings-btn').addEventListener('click', openSettingsPanel.bind(this));
+// 逻辑概述:
+// 该函数在 AEExtension 类的 setupUI 方法中被绑定到按钮的 click 事件。
+showSettingsPanel() {
+    // 检查并实例化 SettingsPanel（如果尚未创建）
+    // SettingsPanel 类负责自身的UI渲染和逻辑
+    if (!this.settingsPanel) {
+        if (typeof SettingsPanel === 'undefined') {
+            this.log('❌ SettingsPanel类未定义', 'error');
+            return;
+        }
+        this.settingsPanel = new SettingsPanel(this.settingsManager, this);
+    }
+
+    // 在显示之前，将主界面的快速设置同步到高级设置面板
+    this.syncQuickToAdvanced();
+
+    // 调用实例的 show 方法来显示面板
+    this.settingsPanel.show();
+}
 ```
 
 ### 2.2 连接状态组件
@@ -243,6 +254,30 @@ importBehaviorRadios.forEach(radio => {
         }
     });
 });
+```
+
+#### 导出路径设置处理
+```javascript
+// 元素选择器: input[name="export-mode"], input[type="checkbox"][id^="export-"]
+// 事件: change
+// 处理函数: 在 main.js 的 setupSettingsPanel 方法中定义的多个匿名箭头函数
+
+// 逻辑概述:
+// 1. 为所有导出设置控件（单选按钮和复选框）添加 'change' 事件监听器。
+const exportControls = document.querySelectorAll('input[name="export-mode"], input[id^="export-"]');
+
+exportControls.forEach(control => {
+    control.addEventListener('change', () => {
+        // 2. 任何控件变化时，立即从UI收集完整的导出设置
+        const exportSettings = this.getExportSettingsFromUI();
+
+        // 3. 调用 SettingsManager 将整个 exportSettings 对象实时保存
+        this.settingsManager.saveExportSettings(exportSettings);
+    });
+});
+
+// getExportSettingsFromUI 函数负责读取所有相关控件的值，
+// 并从导入设置中复用路径信息，然后组装成一个对象。
 ```
 
 ### 2.4 图层操作组件
@@ -591,57 +626,49 @@ document.addEventListener('drop', handleDrop.bind(this));
 
 #### 日志源切换
 ```javascript
-// 元素ID: log-title
+// 元素ID: log-title 和 log-switch-btn
 // 事件: click
-// 处理函数:
-function switchLogSource() {
-    const currentSource = this.logManager.getCurrentSource();
-    const newSource = currentSource === 'ae' ? 'eagle' : 'ae';
-    
-    // 切换日志源
-    this.logManager.setCurrentSource(newSource);
-    
-    // 更新标题显示
-    this.updateLogTitle(newSource);
-    
-    // 重新加载日志
-    this.loadCurrentLogs();
-    
-    this.logManager.info(`日志源已切换为: ${newSource}`);
-}
+// 处理函数: AEExtension.switchLogView() in main.js
 
-// 日志标题更新函数
-function updateLogTitle(source) {
-    const logTitle = document.getElementById('log-title');
-    const sourceText = source === 'ae' ? 'AE扩展' : 'Eagle插件';
-    logTitle.textContent = `日志 (${sourceText})`;
+// 逻辑概述:
+// 点击日志标题或切换按钮时触发
+switchLogView() {
+    // 在 'ae' 和 'eagle' 之间切换视图状态
+    this.currentLogView = this.currentLogView === 'ae' ? 'eagle' : 'ae';
+    // 更新UI控件（如标题）以反映新状态
+    this.updateLogControls();
+    // 使用新视图对应的日志数组重新渲染日志区域
+    this.updateLogDisplay();
 }
-
-// 事件绑定
-document.getElementById('log-title').addEventListener('click', switchLogSource.bind(this));
 ```
 
 #### 清空日志按钮
 ```javascript
 // 元素ID: clear-log-btn
 // 事件: click
-// 处理函数:
-function clearLogs() {
-    // 清空当前显示的日志
-    const logOutput = document.getElementById('log-output');
-    logOutput.innerHTML = '';
-    
-    // 清空日志管理器中的数据
-    this.logManager.clearCurrentLogs();
-    
-    // 重置状态消息
-    this.updateLatestMessage('日志已清空');
-    
-    this.logManager.info('日志已清空');
-}
+// 处理函数: AEExtension.clearLog() in main.js
 
-// 事件绑定
-document.getElementById('clear-log-btn').addEventListener('click', clearLogs.bind(this));
+// 逻辑概述:
+// 函数行为取决于当前日志视图 (this.currentLogView)
+clearLog() {
+    if (this.currentLogView === 'ae') {
+        // AE视图下：清空本地AE日志数组和LogManager
+        this.aeLogs = [];
+        this.logManager.clear();
+        this.log('AE日志已清理', 'info');
+    } else {
+        // Eagle视图下：清空本地Eagle日志数组
+        this.eagleLogs = [];
+        // 立即更新UI
+        this.updateLogDisplay();
+        // **发送网络请求到Eagle插件，通知其清空日志**
+        this.requestEagleClearLogs();
+        console.log('Eagle日志已清理');
+        return; // 提前返回
+    }
+
+    this.updateLogDisplay();
+}
 ```
 
 ## 3. 设置管理函数映射

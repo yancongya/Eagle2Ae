@@ -438,15 +438,100 @@ function checkCompositionStatus(settings) {
 }
 ```
 
-#### 5.5.3 Panel样式确认对话框实现
+## 5. 文件拖拽交互系统
 
-系统使用ExtendScript的Panel样式对话框来显示确认信息，提供更专业的用户体验：
+插件的拖拽导入功能是一个核心交互，它支持两种主要的拖拽来源：**从Eagle客户端拖拽**和**从操作系统直接拖拽文件/文件夹**。两者共享一套处理流水线，但入口和预处理步骤有所不同。
+
+### 5.1 统一事件入口: `handleFileDrop`
+
+所有拖拽操作的起点是 `main.js` 中的 `setupDragAndDrop()` 方法，它为整个插件面板注册了 `drop` 事件监听器，并统一由 `handleFileDrop()` 函数处理。
+
+`handleFileDrop()` 的核心职责是作为**拖拽来源的路由器**。
 
 ```javascript
-// CEP扩展端调用 (main.js)
-function showImportConfirmDialog(title, message) {
-    // 对字符串进行转义处理
-    const escapedTitle = title.replace(/"/g, '\\"');
+// 真实实现: AEExtension.handleFileDrop() in main.js
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.remove('drag-over');
+
+    // 关键：检查拖拽事件是否来自Eagle
+    if (this.isEagleDrag(e.dataTransfer)) {
+        // 路径A: Eagle客户端拖拽
+        this.handleEagleDragImport(e.dataTransfer);
+    } else {
+        // 路径B: 操作系统拖拽
+        // 注意：此处的逻辑在真实代码中更为复杂，涉及文件夹读取
+        // 此处为简化示意，实际会调用 handleDirectoryDrop 等
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            // 构造一个标准消息体，并进入通用处理流程
+            const message = { files: files, isDragImport: true, source: 'os_drag' };
+            this.handleImportFiles(message);
+        }
+    }
+});
+```
+
+### 5.2 拖拽源识别: `isEagleDrag`
+
+`handleFileDrop` 函数依赖 `isEagleDrag` 的返回值来区分来源。文档中旧的复杂实现已被废弃，当前代码中的实现非常简洁高效：
+
+```javascript
+// 真实实现: AEExtension.isEagleDrag() in main.js
+isEagleDrag(dataTransfer) {
+    if (!dataTransfer) return false;
+
+    const types = dataTransfer.types;
+    if (types.includes('text/uri-list')) {
+        const url = dataTransfer.getData('text/uri-list');
+        // 核心检查：只验证拖拽数据是否为 eagle:// 协议
+        if (url.startsWith('eagle://')) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+### 5.3 路径A: Eagle客户端拖拽流程
+
+此路径用于处理从Eagle客户端拖拽素材的场景，流程相对直接：
+
+1.  **触发**: `isEagleDrag` 返回 `true`。
+2.  **执行**: `handleEagleDragImport()` 函数被调用。
+3.  **解析**: 该函数从 `dataTransfer` 中获取 `eagle://` 协议的URL，并调用 `parseEagleUrl()` 将URL中的数据解析成一个包含文件完整信息（路径、元数据等）的数组。
+4.  **汇合**: 将解析出的文件数组打包成一个标准消息对象，然后直接调用 `handleImportFiles()`，进入通用的导入处理流水线。
+
+### 5.4 路径B: 操作系统拖拽流程
+
+此路径用于处理用户从桌面或文件管理器直接拖拽文件或文件夹的场景，流程更为复杂：
+
+1.  **触发**: `isEagleDrag` 返回 `false`。
+2.  **执行**: `handleDirectoryDrop()` (或类似的) 函数被调用。
+3.  **文件读取**: 使用 `item.webkitGetAsEntry()` API 遍历所有拖入的项目，如果是文件夹，则**递归读取**其中所有的文件。
+4.  **分析与检测**: 所有文件被收集后，传递给 `analyzeDroppedFiles()` 函数。此函数会：
+    *   对文件进行分类（图像、视频等）。
+    *   **调用 `detectImageSequence()` 对图像文件进行序列帧检测**。
+5.  **用户确认**: 分析结果会通过 `showFileImportDialog()` 以一个自定义的HTML对话框呈现给用户，让用户选择导入方式（例如“作为序列导入”或“作为独立文件导入”）。
+6.  **汇合**: 根据用户的选择，将相应的文件列表打包成一个标准消息对象，然后调用 `handleImportFiles()`，进入通用的导入处理流水线。
+
+### 5.5 流程汇合与委托: `handleImportFiles`
+
+`handleImportFiles` 是所有拖拽导入方式的最终汇合点。它的核心职责是：
+
+1.  执行导入前的预检，例如检查当前AE中是否有活动的合成。
+2.  从 `SettingsManager` 中获取最新的导入设置。
+3.  将文件列表和设置参数，统一委托给 `FileHandler.js` 服务模块进行下一步的重度操作。
+
+### 5.6 核心处理器: `FileHandler.js`
+
+`FileHandler` 是实际执行文件操作的“工人”。在收到 `handleImportFiles` 的任务后，它会：
+
+1.  **模式路由**: 调用 `processFilesByMode()`，根据用户的导入模式（`direct`, `project_adjacent`, `custom_folder`）选择不同的处理路径。
+2.  **文件操作**: 如果导入模式需要，`FileHandler` 会负责将源文件复制到目标位置（例如项目文件旁的 `Eagle_Assets` 文件夹）。
+3.  **调用JSX**: 当所有文件在物理磁盘上准备就绪后，`FileHandler` 会调用 `importFilesToAE()`，将**最终有效的文件路径列表**和相关设置打包成一个大型JSON对象，通过 `evalScript` 传递给 `hostscript.jsx` 中的 `importFilesWithSettings` 函数，完成在AE项目中的最终导入。
+"/g, '\\"');
     const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
     
     // 构建ExtendScript调用

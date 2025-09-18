@@ -1525,8 +1525,8 @@ class AEExtension {
                 }
                 this.updateImportStatus(`已导入 ${result.importedCount} 个文件`);
 
-                // 拖拽导入时不显示详细调试信息
-                if (!isDragImport && !isClipboardImport && result.debug && result.debug.length > 0) {
+                // 显示来自ExtendScript的详细调试信息
+                if (result.debug && result.debug.length > 0) {
                     this.logGroup('导入调试信息', result.debug, 'debug', true);
                 }
             } else {
@@ -1539,8 +1539,8 @@ class AEExtension {
                 }
                 this.updateImportStatus(`导入失败: ${result.error}`);
 
-                // 拖拽导入和剪贴板导入时不显示详细调试信息
-                if (!isDragImport && !isClipboardImport && result.debug && result.debug.length > 0) {
+                // 显示来自ExtendScript的详细调试信息
+                if (result.debug && result.debug.length > 0) {
                     this.logGroup('导入错误详情', result.debug, 'debug', true);
                 }
             }

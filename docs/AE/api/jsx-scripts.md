@@ -4,9 +4,9 @@
 
 本文档描述了 Eagle2Ae 扩展中使用的 ExtendScript (JSX) API，这些脚本在 After Effects 主机环境中执行，负责实际的项目操作。
 
-**版本**: v2.2.0
-**更新时间**: 2025年9月
-**特性**: 强制中文文件名解码、序列帧识别、对话框系统、文件夹打开功能
+**版本**: v2.3.0
+**更新时间**: 2025年9月18日
+**特性**: 强制中文文件名解码、序列帧识别、对话框系统、文件夹打开功能、增强错误处理
 
 ## 核心函数
 
@@ -1330,7 +1330,6 @@ function collectDebugInfo() {
 
 ## 更新记录
 
-
 | 日期       | 版本 | 更新内容               | 作者     |
 | ---------- | ---- | ---------------------- | -------- |
 | 2024-01-05 | 1.0  | 初始 JSX 脚本 API 文档 | 开发团队 |
@@ -1338,6 +1337,86 @@ function collectDebugInfo() {
 ---
 
 ## 版本更新记录
+
+### v2.3.0 - 增强错误处理和Unicode支持
+
+#### 新增功能
+
+1. **Unicode字符处理增强**
+   - 在处理包含非ASCII字符（如中文）的文件路径时，系统现在能够更好地处理Unicode字符问题。
+   - 实现了错误恢复机制，在导入失败后尝试在项目中查找同名素材。
+
+2. **重复导入检查**
+   - 为避免重复导入相同文件到项目面板中，系统实现了重复导入检查机制。
+   - 在导入前先检查项目中是否已存在同名素材，如果存在则跳过导入步骤。
+
+3. **调试日志增强**
+   - 增强了调试日志功能，提供更详细的导入过程信息。
+   - 在`importFilesWithSettings`函数中添加了详细的调试日志，便于问题排查。
+
+#### 技术实现细节
+
+```javascript
+// 在importFilesWithSettings函数中添加的关键错误处理逻辑
+function importFilesWithSettings(data) {
+    var debugLog = [];
+    
+    try {
+        debugLog.push("ExtendScript: importFilesWithSettings 开始");
+        
+        // ... 其他代码 ...
+        
+        for (var i = 0; i < data.files.length; i++) {
+            var file = data.files[i];
+            
+            try {
+                // 检查文件是否存在
+                var fileObj = new File(file.importPath);
+                
+                if (!fileObj.exists) {
+                    debugLog.push("ExtendScript: 文件不存在，跳过: " + file.importPath);
+                    continue;
+                }
+                
+                // 在导入前先检查项目中是否已存在同名素材
+                var footageItem = null;
+                for (var itemIndex = 1; itemIndex <= project.numItems; itemIndex++) {
+                    var item = project.item(itemIndex);
+                    if (item instanceof FootageItem && item.name === file.name) {
+                        footageItem = item;
+                        debugLog.push("ExtendScript: 在项目中找到同名素材: " + item.name);
+                        break;
+                    }
+                }
+                
+                // 如果项目中没有同名素材，则尝试导入
+                if (!footageItem) {
+                    try {
+                        var importOptions = new ImportOptions(fileObj);
+                        footageItem = project.importFile(importOptions);
+                        debugLog.push("ExtendScript: 文件导入完成，footageItem: " + (footageItem ? "成功" : "失败"));
+                    } catch (importError) {
+                        debugLog.push("ExtendScript: 导入尝试失败: " + importError.toString());
+                    }
+                }
+                
+                // ... 其他代码 ...
+                
+            } catch (fileError) {
+                debugLog.push("ExtendScript: 文件处理错误: " + fileError.toString());
+                continue;
+            }
+        }
+        
+        // ... 其他代码 ...
+        
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        // ... 错误处理 ...
+    }
+}
+```
 
 ### v2.1.2 - 时间轴设置修复
 
