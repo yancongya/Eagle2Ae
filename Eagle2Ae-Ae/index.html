@@ -2552,6 +2552,83 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
         }
 
+        /* ==================== 拖拽状态样式 ==================== */
+
+        /* 项目内文件拖拽警告状态 */
+        body.drag-project-files::after {
+            border-color: #e74c3c !important;
+            animation: dragWarningPulse 1s ease-in-out infinite alternate;
+        }
+
+        body.drag-project-files::before {
+            background: rgba(231, 76, 60, 0.3) !important;
+        }
+
+        /* 拖拽文本状态样式 */
+        .drag-text-warning {
+            color: #e74c3c !important;
+            font-weight: 600;
+        }
+
+        .drag-text-success {
+            color: #27ae60 !important;
+            font-weight: 600;
+        }
+
+        .drag-text-default {
+            color: #3498db;
+            font-weight: 400;
+        }
+
+        /* 拖拽提示文本状态样式 */
+        .drag-hint-text.drag-hint-warning {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .drag-hint-text.drag-hint-success {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .drag-hint-text.drag-hint-default {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        /* 警告状态的脉冲动画 */
+        @keyframes dragWarningPulse {
+            from { 
+                opacity: 0.4; 
+                border-color: #e74c3c;
+            }
+            to { 
+                opacity: 0.8; 
+                border-color: #c0392b;
+            }
+        }
+
+        /* 成功状态的边框效果 */
+        body.drag-success::after {
+            border-color: #27ae60 !important;
+            animation: dragSuccessPulse 1.2s ease-in-out infinite alternate;
+        }
+
+        body.drag-success::before {
+            background: rgba(39, 174, 96, 0.2) !important;
+        }
+
+        @keyframes dragSuccessPulse {
+            from { 
+                opacity: 0.5; 
+                border-color: #27ae60;
+            }
+            to { 
+                opacity: 0.9; 
+                border-color: #2ecc71;
+            }
+        }
+
         /* 导入状态增强 */
         .import-status.processing {
             border-left-color: #3498db;

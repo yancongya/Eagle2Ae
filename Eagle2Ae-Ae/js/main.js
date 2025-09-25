@@ -1572,13 +1572,55 @@ class AEExtension {
     executeExtendScript(functionName, params) {
         return new Promise((resolve, reject) => {
             const script = `${functionName}(${JSON.stringify(params)})`;
+            
+            console.log(`🚀 [ExtendScript] 准备执行: ${functionName}`);
+            console.log(`📝 [ExtendScript] 脚本内容: ${script}`);
+            console.log(`📥 [ExtendScript] 参数: ${JSON.stringify(params)}`);
 
             this.csInterface.evalScript(script, (result) => {
+                console.log(`📤 [ExtendScript] 原始返回结果: "${result}"`);
+                console.log(`📊 [ExtendScript] 返回结果类型: ${typeof result}`);
+                console.log(`📏 [ExtendScript] 返回结果长度: ${result ? result.length : 'null'}`);
+                
+                // 检查返回结果是否为空或undefined
+                if (result === undefined || result === null) {
+                    console.error(`❌ [ExtendScript] 返回结果为空`);
+                    reject(new Error(`ExtendScript执行错误: 返回结果为空`));
+                    return;
+                }
+                
+                // 检查返回结果是否为字符串
+                if (typeof result !== 'string') {
+                    console.error(`❌ [ExtendScript] 返回结果不是字符串: ${typeof result}`);
+                    reject(new Error(`ExtendScript执行错误: 返回结果类型错误 (${typeof result})`));
+                    return;
+                }
+                
+                // 检查是否为空字符串
+                if (result.trim() === '') {
+                    console.error(`❌ [ExtendScript] 返回空字符串`);
+                    reject(new Error(`ExtendScript执行错误: 返回空字符串`));
+                    return;
+                }
+
                 try {
+                    console.log(`🔄 [ExtendScript] 尝试解析JSON...`);
                     const parsedResult = JSON.parse(result);
+                    console.log(`✅ [ExtendScript] JSON解析成功:`, parsedResult);
                     resolve(parsedResult);
                 } catch (error) {
-                    reject(new Error(`ExtendScript执行错误: ${result}`));
+                    console.error(`❌ [ExtendScript] JSON解析失败:`, error);
+                    console.error(`❌ [ExtendScript] 原始结果: "${result}"`);
+                    console.error(`❌ [ExtendScript] 解析错误详情: ${error.message}`);
+                    
+                    // 尝试分析返回结果的内容
+                    if (result.includes('Error:') || result.includes('error:')) {
+                        reject(new Error(`ExtendScript执行错误: ${result}`));
+                    } else if (result.includes('undefined')) {
+                        reject(new Error(`ExtendScript执行错误: 函数返回undefined - ${result}`));
+                    } else {
+                        reject(new Error(`ExtendScript执行错误: JSON解析失败 - ${result}`));
+                    }
                 }
             });
         });
@@ -7234,14 +7276,26 @@ class AEExtension {
 
         // 拖拽进入
         ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
+            dropZone.addEventListener(eventName, async (e) => {
                 dropZone.classList.add('drag-over');
+                
+                // 文件夹选择器的拖拽区域不需要预检查，避免与全局拖拽系统冲突
+                // 只显示简单的拖拽提示
+                if (eventName === 'dragover') {
+                    const dragHintElement = document.querySelector('.drag-hint-text');
+                    if (dragHintElement) {
+                        dragHintElement.textContent = '拖拽文件夹到此处';
+                        dragHintElement.className = 'drag-hint-text drag-hint-default';
+                    }
+                }
             });
         });
 
         // 拖拽离开
         dropZone.addEventListener('dragleave', () => {
             dropZone.classList.remove('drag-over');
+            // 重置拖拽预览状态
+            this.resetDragPreviewState();
         });
 
         // 拖拽释放
@@ -8668,12 +8722,16 @@ class AEExtension {
     // 设置拖拽监听
     setupDragAndDrop() {
         try {
-            // 防止默认拖拽行为
-            document.addEventListener('dragover', (e) => {
+            // 防止默认拖拽行为并进行预检查
+            document.addEventListener('dragover', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // 添加视觉反馈
+                
+                // 添加基础视觉反馈
                 document.body.classList.add('drag-over');
+                
+                // 进行项目内文件预检查
+                await this.handleDragPreview(e);
             });
 
             document.addEventListener('dragenter', (e) => {
@@ -8685,6 +8743,8 @@ class AEExtension {
                 // 只有当拖拽完全离开窗口时才移除样式
                 if (e.clientX === 0 && e.clientY === 0) {
                     document.body.classList.remove('drag-over');
+                    // 重置拖拽提示状态
+                    this.resetDragPreviewState();
                 }
             });
 
@@ -8694,6 +8754,132 @@ class AEExtension {
             // 拖拽事件监听器已设置
         } catch (error) {
             this.log(`设置拖拽监听失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 拖拽预检查处理
+    async handleDragPreview(event) {
+        try {
+            // 防抖处理，避免频繁检查
+            if (this.dragPreviewTimeout) {
+                clearTimeout(this.dragPreviewTimeout);
+            }
+            
+            this.dragPreviewTimeout = setTimeout(async () => {
+                await this.performDragPreviewCheck(event);
+            }, 200); // 200ms 防抖延迟
+            
+        } catch (error) {
+            this.log(`拖拽预检查失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 执行拖拽预检查
+    async performDragPreviewCheck(event) {
+        try {
+            this.log('🔍 开始拖拽预检查...', 'debug');
+            
+            // 尝试获取拖拽的文件信息
+            let files = Array.from(event.dataTransfer.files);
+            this.log(`📁 从dataTransfer.files获取到 ${files.length} 个文件`, 'debug');
+            
+            // 检查文件路径信息
+            if (files.length > 0) {
+                files.forEach((file, index) => {
+                    this.log(`📄 文件 ${index + 1}: ${file.name}, 路径: ${file.path || '无路径信息'}`, 'debug');
+                });
+            }
+            
+            // 如果files为空，尝试从items获取文件信息
+            if (files.length === 0 && event.dataTransfer.items) {
+                const items = Array.from(event.dataTransfer.items);
+                const fileItems = items.filter(item => item.kind === 'file');
+                
+                if (fileItems.length > 0) {
+                    // 显示检测中的提示
+                    this.updateDragHint(`🔍 正在检测 ${fileItems.length} 个文件...`, 'default');
+                    
+                    // 尝试获取文件对象（这在某些浏览器中可能不可用）
+                    try {
+                        files = fileItems.map(item => item.getAsFile()).filter(file => file !== null);
+                    } catch (e) {
+                        // 如果无法获取文件对象，显示通用提示
+                        this.updateDragHint(`📁 准备检测拖拽的文件`, 'default');
+                        return;
+                    }
+                }
+            }
+            
+            if (files.length === 0) {
+                // 如果仍然无法获取文件信息，显示默认提示
+                this.updateDragHint('拖拽文件到此处');
+                return;
+            }
+
+            // 检查是否为项目内文件
+            const projectFileCheck = await this.isProjectInternalFile(files);
+            
+            if (projectFileCheck.hasProjectFiles) {
+                // 项目内文件，显示警告提示
+                const projectFileCount = projectFileCheck.projectFiles.length;
+                const externalFileCount = projectFileCheck.externalFiles.length;
+                
+                let hintText = `⚠️ 检测到 ${projectFileCount} 个项目内文件`;
+                if (externalFileCount > 0) {
+                    hintText += `，${externalFileCount} 个外部文件`;
+                }
+                hintText += '\n项目内文件无法导入';
+                
+                this.updateDragHint(hintText, 'warning');
+                document.body.classList.add('drag-project-files');
+            } else {
+                 // 外部文件，显示正常提示
+                 const fileCount = files.length;
+                 this.updateDragHint(`✅ 准备导入 ${fileCount} 个文件`, 'success');
+                 document.body.classList.remove('drag-project-files');
+                 document.body.classList.add('drag-success');
+             }
+            
+        } catch (error) {
+            this.log(`拖拽预检查执行失败: ${error.message}`, 'error');
+            this.updateDragHint('拖拽文件到此处');
+        }
+    }
+
+    // 更新拖拽提示文本
+    updateDragHint(text, type = 'default') {
+        const dragHintElement = document.querySelector('.drag-hint-text');
+        if (dragHintElement) {
+            dragHintElement.textContent = text;
+            dragHintElement.className = `drag-hint-text drag-hint-${type}`;
+        }
+        
+        // 同时更新主拖拽区域的文本
+        const dragTextElement = document.querySelector('.drag-text');
+        if (dragTextElement) {
+            dragTextElement.textContent = text.split('\n')[0]; // 只显示第一行
+            dragTextElement.className = `drag-text drag-text-${type}`;
+        }
+    }
+
+    // 重置拖拽预检查状态
+    resetDragPreviewState() {
+        try {
+            // 清除防抖定时器
+            if (this.dragPreviewTimeout) {
+                clearTimeout(this.dragPreviewTimeout);
+                this.dragPreviewTimeout = null;
+            }
+            
+            // 重置提示文本
+            this.updateDragHint('拖拽文件到此处');
+            
+            // 移除特殊样式
+             document.body.classList.remove('drag-project-files');
+             document.body.classList.remove('drag-success');
+            
+        } catch (error) {
+            this.log(`重置拖拽状态失败: ${error.message}`, 'error');
         }
     }
 
@@ -8758,11 +8944,20 @@ class AEExtension {
         
         this.log(`文件夹中找到 ${allFiles.length} 个文件`, 'info');
         
+        // 首先检查是否包含项目文件
+        const projectFileCheck = await this.isProjectInternalFile(allFiles);
+        
+        if (projectFileCheck.hasProjectFiles) {
+            // 显示项目内文件警告
+            this.showProjectInternalFileWarning(projectFileCheck);
+            return;
+        }
+        
         // 分析文件类型和序列帧
         const analysis = this.analyzeDroppedFiles(allFiles);
         
-        // 显示导入选项对话框
-        this.showFileImportDialog(allFiles, analysis);
+        // 显示导入选项对话框（跳过项目文件检查，因为上面已经检查过了）
+        await this.showFileImportDialog(allFiles, analysis, true);
     }
     
     // 递归读取文件夹内容
@@ -9022,6 +9217,15 @@ class AEExtension {
     
     // 处理普通文件拖拽
     async handleFilesDrop(files, dataTransfer) {
+        // 首先检查是否为项目内文件
+        const projectFileCheck = await this.isProjectInternalFile(files);
+        
+        if (projectFileCheck.hasProjectFiles) {
+            // 显示项目内文件警告
+            this.showProjectInternalFileWarning(projectFileCheck);
+            return;
+        }
+
         // 检测是否为Eagle拖拽
         if (this.isEagleDrag(dataTransfer, files)) {
             await this.handleEagleDragImport(files);
@@ -9041,17 +9245,36 @@ class AEExtension {
             // 分析文件类型
             const analysis = this.analyzeDroppedFiles(files);
             
-            // 显示导入选项对话框
-            this.showFileImportDialog(files, analysis);
+            // 显示导入选项对话框（跳过项目文件检查，因为上面已经检查过了）
+            await this.showFileImportDialog(files, analysis, true);
         }
     }
     
     // 显示文件导入对话框
-    showFileImportDialog(files, analysis) {
+    async showFileImportDialog(files, analysis, skipProjectCheck = false) {
         // 移除现有对话框
         const existingDialog = document.querySelector('.eagle-confirm-dialog');
         if (existingDialog) {
             existingDialog.remove();
+        }
+        
+        // 检查是否包含项目文件或AE项目文件（仅在未跳过检查时执行）
+        if (!skipProjectCheck) {
+            try {
+                this.log('🔍 检查文件类型和项目状态...', 'info');
+                const projectFileCheck = await this.isProjectInternalFile(files);
+                
+                if (projectFileCheck.hasProjectFiles) {
+                    this.log('⚠️ 检测到项目文件，显示警告并阻止导入', 'warning');
+                    this.showProjectInternalFileWarning(projectFileCheck);
+                    return; // 阻止继续显示导入对话框
+                }
+                
+                this.log('✅ 文件检查通过，继续显示导入对话框', 'info');
+            } catch (error) {
+                this.log(`⚠️ 项目文件检查失败: ${error.message}，继续显示导入对话框`, 'warning');
+                // 检查失败时继续显示对话框，避免阻止正常功能
+            }
         }
         
         // 检测是否包含序列帧文件夹
@@ -9189,13 +9412,19 @@ class AEExtension {
         // 绑定事件
         document.getElementById('drag-confirm-yes').onclick = async () => {
             dialog.remove();
-            // 根据检测结果选择导入方式
-            if (hasSequences) {
-                await this.handleImportAction(files, analysis, 'sequences');
-            } else if (folderCount > 0) {
-                await this.handleImportAction(files, analysis, 'folders');
-            } else {
-                await this.handleImportAction(files, analysis, 'all');
+            try {
+                // 根据检测结果选择导入方式
+                if (hasSequences) {
+                    await this.handleImportAction(files, analysis, 'sequences');
+                } else if (folderCount > 0) {
+                    await this.handleImportAction(files, analysis, 'folders');
+                } else {
+                    await this.handleImportAction(files, analysis, 'all');
+                }
+            } catch (error) {
+                this.log(`导入操作失败: ${error.message}`, 'error');
+                // 显示错误弹窗
+                this.showErrorDialog('导入失败', error.message);
             }
         };
         
@@ -9284,11 +9513,20 @@ class AEExtension {
                     successCount++;
                     this.log(`✅ 序列帧文件夹导入成功: ${sequence.folder}`, 'success');
                 } else {
+                    const errorMessage = result ? result.error : '序列帧导入失败';
                     this.log(`❌ 序列帧文件夹导入失败: ${sequence.folder}`, 'error');
+                    // 如果只有一个序列帧且失败，抛出异常以触发弹窗
+                    if (sequences.length === 1) {
+                        throw new Error(errorMessage);
+                    }
                 }
                 
             } catch (error) {
                 this.log(`❌ 序列帧导入失败: ${sequence.folder} - ${error.message}`, 'error');
+                // 如果只有一个序列帧且失败，重新抛出异常以触发弹窗
+                if (sequences.length === 1) {
+                    throw error;
+                }
             }
         }
         
@@ -9348,7 +9586,12 @@ class AEExtension {
                     successCount++;
                     this.log(`✅ 文件夹导入成功: ${folderPath}`, 'success');
                 } else {
+                    const errorMessage = result ? result.error : '文件夹导入失败';
                     this.log(`❌ 文件夹导入失败: ${folderPath}`, 'error');
+                    // 如果只有一个文件夹且失败，抛出异常以触发弹窗
+                    if (totalFolders === 1) {
+                        throw new Error(errorMessage);
+                    }
                 }
                 
             } catch (error) {
@@ -9373,8 +9616,25 @@ async handleSequenceImportToAE(sequence, settings = null) {
         await this.refreshProjectInfo();
         const projectInfo = await this.getProjectInfo();
         
-        if (!projectInfo.activeComp) {
-            throw new Error('没有活动合成，请先选择或创建一个合成');
+        // 智能合成选择逻辑
+        if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
+            if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
+                // 多个合成可用，弹出选择对话框
+                const selectedComp = await this.showCompositionSelectionDialog(projectInfo.availableComps);
+                if (!selectedComp) {
+                    throw new Error('用户取消了合成选择');
+                }
+                // 设置选择的合成为活动合成
+                await this.executeExtendScript('setActiveComposition', { compName: selectedComp.name });
+                // 重新获取项目信息
+                await this.refreshProjectInfo();
+                const updatedProjectInfo = await this.getProjectInfo();
+                if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
+                    throw new Error('设置活动合成失败');
+                }
+            } else {
+                throw new Error('没有活动合成，请先选择或创建一个合成');
+            }
         }
         
         // 使用传入的设置或默认设置
@@ -9420,8 +9680,30 @@ async handleFolderImportToAE(folder) {
         await this.refreshProjectInfo();
         const projectInfo = await this.getProjectInfo();
         
-        if (!projectInfo.activeComp) {
-            throw new Error('没有活动合成，请先选择或创建一个合成');
+        if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
+            // 检查是否需要用户选择合成
+            if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
+                // 弹出合成选择对话框
+                const selectedComp = await this.showCompositionSelectionDialog(projectInfo.activeComp.availableComps);
+                if (!selectedComp) {
+                    throw new Error('用户取消了合成选择');
+                }
+                
+                // 设置选中的合成为活动合成
+                const setResult = await this.executeExtendScript(`setActiveComposition('${selectedComp}')`);
+                if (!setResult || !setResult.success) {
+                    throw new Error('设置活动合成失败: ' + (setResult ? setResult.error : '未知错误'));
+                }
+                
+                // 重新获取项目信息
+                await this.refreshProjectInfo();
+                const updatedProjectInfo = await this.getProjectInfo();
+                if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
+                    throw new Error('设置活动合成后仍无法获取合成信息');
+                }
+            } else {
+                throw new Error('没有活动合成，请先选择或创建一个合成');
+            }
         }
         
         // 构造文件夹导入参数
@@ -9448,6 +9730,235 @@ async handleFolderImportToAE(folder) {
     }
 }
     
+    // 检查文件是否已在当前AE项目中导入或是否为AE项目文件
+    async isProjectInternalFile(files) {
+        try {
+            this.log(`🔍 开始检查 ${files.length} 个文件的项目状态`, 'info');
+            
+            // 快速提取文件路径数组
+            const filePaths = [];
+            for (const file of files) {
+                const filePath = file.path || file.webkitRelativePath || file.name;
+                if (filePath) {
+                    filePaths.push(filePath);
+                }
+            }
+            
+            if (filePaths.length === 0) {
+                this.log('❌ 无法获取任何文件路径，允许导入', 'warning');
+                return {
+                    hasProjectFiles: false,
+                    projectFiles: [],
+                    externalFiles: files
+                };
+            }
+            
+            // 首先快速检查是否有AE项目文件（这个检查很快）
+            const aeProjectCheck = await this.executeExtendScript('checkAEProjectFiles', filePaths);
+            
+            if (aeProjectCheck && aeProjectCheck.success && aeProjectCheck.aeProjectFiles.length > 0) {
+                this.log(`⚠️ 检测到 ${aeProjectCheck.aeProjectFiles.length} 个AE项目文件，禁止导入`, 'warning');
+                
+                // 使用哈希表快速匹配AE项目文件
+                const aeProjectPathsSet = new Set();
+                aeProjectCheck.aeProjectFiles.forEach(path => {
+                    aeProjectPathsSet.add(path.toLowerCase().replace(/\\/g, '/'));
+                });
+                
+                const projectFiles = [];
+                const externalFiles = [];
+                
+                for (const file of files) {
+                    const currentPath = file.path || file.webkitRelativePath || file.name;
+                    const normalizedCurrent = currentPath.toLowerCase().replace(/\\/g, '/');
+                    
+                    // 检查是否为AE项目文件
+                    const isAEProject = aeProjectPathsSet.has(normalizedCurrent) || 
+                        Array.from(aeProjectPathsSet).some(projectPath => 
+                            normalizedCurrent.includes(projectPath) || projectPath.includes(normalizedCurrent)
+                        );
+                    
+                    if (isAEProject) {
+                        projectFiles.push({
+                            name: file.name,
+                            path: currentPath,
+                            type: 'ae_project'
+                        });
+                    } else {
+                        externalFiles.push(file);
+                    }
+                }
+                
+                return {
+                    hasProjectFiles: true,
+                    projectFiles: projectFiles,
+                    externalFiles: externalFiles
+                };
+            }
+            
+            // 如果没有AE项目文件，检查是否已在项目中导入
+            this.log('📡 检查文件是否已在项目中...', 'info');
+            
+            // 对于大量文件，进行分批处理以提高性能
+            let checkResult;
+            if (filePaths.length > 100) {
+                this.log(`📦 文件数量较多(${filePaths.length})，使用分批处理`, 'info');
+                const batchSize = 50;
+                const allImportedFiles = [];
+                const allExternalFiles = [];
+                
+                for (let i = 0; i < filePaths.length; i += batchSize) {
+                    const batch = filePaths.slice(i, i + batchSize);
+                    const batchResult = await this.executeExtendScript('checkProjectImportedFiles', batch);
+                    
+                    if (batchResult && batchResult.success) {
+                        allImportedFiles.push(...(batchResult.importedFiles || []));
+                        allExternalFiles.push(...(batchResult.externalFiles || []));
+                    }
+                }
+                
+                checkResult = {
+                    success: true,
+                    importedFiles: allImportedFiles,
+                    externalFiles: allExternalFiles
+                };
+            } else {
+                checkResult = await this.executeExtendScript('checkProjectImportedFiles', filePaths);
+            }
+            
+            if (!checkResult || !checkResult.success) {
+                const errorMsg = checkResult?.error || '未知错误';
+                this.log(`💥 项目文件检查失败: ${errorMsg}`, 'error');
+                // 检测失败时允许导入，避免阻止正常功能
+                return {
+                    hasProjectFiles: false,
+                    projectFiles: [],
+                    externalFiles: files
+                };
+            }
+            
+            const importedFiles = checkResult.importedFiles || [];
+            
+            if (importedFiles.length > 0) {
+                this.log(`检测到 ${importedFiles.length} 个已在项目中的文件`, 'warning');
+                
+                // 使用哈希表快速匹配已导入文件
+                const importedPathsSet = new Set();
+                importedFiles.forEach(path => {
+                    importedPathsSet.add(path.toLowerCase().replace(/\\/g, '/'));
+                });
+                
+                const projectFiles = [];
+                const externalFiles = [];
+                
+                for (const file of files) {
+                    const currentPath = file.path || file.webkitRelativePath || file.name;
+                    const normalizedCurrent = currentPath.toLowerCase().replace(/\\/g, '/');
+                    
+                    if (importedPathsSet.has(normalizedCurrent)) {
+                        projectFiles.push({
+                            name: file.name,
+                            path: currentPath
+                        });
+                    } else {
+                        externalFiles.push(file);
+                    }
+                }
+                
+                return {
+                    hasProjectFiles: true,
+                    projectFiles: projectFiles,
+                    externalFiles: externalFiles
+                };
+            }
+            
+            this.log('✅ 所有文件都不在项目中，允许导入', 'info');
+            return {
+                hasProjectFiles: false,
+                projectFiles: [],
+                externalFiles: files
+            };
+
+        } catch (error) {
+            this.log(`项目内文件检测失败: ${error.message}`, 'error');
+            // 检测失败时允许导入，避免阻止正常功能
+            return {
+                hasProjectFiles: false,
+                projectFiles: [],
+                externalFiles: files
+            };
+        }
+    }
+
+    /**
+     * 显示项目内文件警告提示
+     * @param {Object} projectFileCheck - 项目文件检测结果
+     */
+    showProjectInternalFileWarning(projectFileCheck) {
+        const { projectFiles, externalFiles } = projectFileCheck;
+        
+        // 检查是否有AE项目文件
+        const aeProjectFiles = projectFiles.filter(file => file.type === 'ae_project');
+        const normalProjectFiles = projectFiles.filter(file => file.type !== 'ae_project');
+        
+        let message = '';
+        let title = '';
+        
+        if (aeProjectFiles.length > 0) {
+            // 如果有AE项目文件，显示专门的警告
+            title = 'AE项目文件导入限制';
+            message = '检测到After Effects项目文件，无法导入：\n\n';
+            
+            message += 'AE项目文件：\n';
+            aeProjectFiles.forEach(file => {
+                message += `• ${file.name}\n`;
+            });
+            
+            message += '\n⚠️ AE项目文件(.aep/.aet/.aepx)不能作为素材导入到当前项目中。\n';
+            message += '如需使用其他项目的内容，请：\n';
+            message += '1. 打开该项目文件\n';
+            message += '2. 导出所需的素材\n';
+            message += '3. 将导出的素材导入到当前项目';
+        } else {
+            // 普通项目内文件警告
+            title = '项目内文件导入限制';
+            message = '检测到项目内文件，无法导入：\n\n';
+            
+            message += '项目内文件：\n';
+            normalProjectFiles.forEach(file => {
+                message += `• ${file.name}\n`;
+            });
+            
+            message += '\n\n提示：请从项目外部拖拽文件进行导入。';
+        }
+        
+        // 如果还有其他外部文件，显示它们
+        if (externalFiles.length > 0) {
+            message += '\n\n外部文件：\n';
+            externalFiles.forEach(file => {
+                message += `• ${file.name}\n`;
+            });
+            message += '\n只有外部文件可以导入到项目中。';
+        }
+        
+        // 显示警告对话框
+        try {
+            const escapedTitle = title.replace(/"/g, '\\"');
+            const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            const showDialogScript = `showPanelWarningDialog("${escapedTitle}", "${escapedMessage}");`;
+            this.csInterface.evalScript(showDialogScript);
+        } catch (error) {
+            // 降级到简单alert
+            alert(`${title}\n\n${message}`);
+        }
+        
+        // 记录日志
+        this.log(`阻止导入项目内文件: ${projectFiles.map(f => f.name).join(', ')}`, 'info');
+        
+        // 重置拖拽状态
+        this.resetDragPreviewState();
+    }
+
     // 识别Eagle拖拽
     isEagleDrag(dataTransfer, files) {
         try {
@@ -9604,6 +10115,8 @@ async handleFolderImportToAE(folder) {
         } catch (error) {
             this.log(`❌ 文件拖拽导入失败: ${error.message}`, 'error');
             this.showDropMessage('❌ 导入失败', 'error');
+            // 显示详细错误弹窗
+            this.showErrorDialog('文件导入失败', error.message);
         }
     }
 
@@ -9719,6 +10232,24 @@ async handleFolderImportToAE(folder) {
             'warning': '⚠️'
         };
         return icons[type] || '📋';
+    }
+
+    /**
+     * 显示错误对话框
+     * @param {string} title - 错误标题
+     * @param {string} message - 错误消息
+     */
+    showErrorDialog(title, message) {
+        try {
+            // 尝试使用JSX脚本显示对话框
+            const escapedTitle = title.replace(/"/g, '\\"');
+            const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            const showDialogScript = `showPanelWarningDialog("${escapedTitle}", "${escapedMessage}");`;
+            this.csInterface.evalScript(showDialogScript);
+        } catch (error) {
+            // 降级到简单alert
+            alert(`${title}\n\n${message}`);
+        }
     }
 
     // 获取文件图标
@@ -10660,6 +11191,238 @@ async handleFolderImportToAE(folder) {
         }
     }
     
+    /**
+     * 显示合成选择对话框
+     * @param {Array} availableComps - 可用合成列表
+     * @returns {Promise<Object|null>} 选择的合成对象，如果取消则返回null
+     */
+    showCompositionSelectionDialog(availableComps) {
+        return new Promise((resolve) => {
+            // 移除现有对话框
+            const existingDialog = document.querySelector('.eagle-confirm-dialog');
+            if (existingDialog) {
+                existingDialog.remove();
+            }
+            
+            // 创建对话框HTML
+            const dialog = document.createElement('div');
+            dialog.className = 'eagle-confirm-dialog';
+            
+            // 生成合成列表HTML
+            let compsHtml = '';
+            availableComps.forEach((comp, index) => {
+                const sizeText = `${comp.width}×${comp.height}`;
+                const durationText = `${Math.round(comp.duration)}s`;
+                const frameRateText = `${comp.frameRate}fps`;
+                
+                compsHtml += `
+                    <div class="comp-item" data-index="${index}">
+                        <div class="comp-info">
+                            <div class="comp-name">${comp.name}</div>
+                            <div class="comp-details">${sizeText} | ${durationText} | ${frameRateText}</div>
+                        </div>
+                        <div class="comp-layers">${comp.numLayers} 图层</div>
+                    </div>
+                `;
+            });
+            
+            dialog.innerHTML = `
+                <div class="dialog-content">
+                    <div class="dialog-header">
+                        <h3>选择合成</h3>
+                        <button class="dialog-close">&times;</button>
+                    </div>
+                    <div class="dialog-body">
+                        <p class="dialog-message">检测到多个合成，请选择要导入文件的目标合成：</p>
+                        <div class="comp-list">
+                            ${compsHtml}
+                        </div>
+                    </div>
+                    <div class="dialog-footer">
+                        <button class="dialog-btn dialog-cancel">取消</button>
+                        <button class="dialog-btn dialog-confirm" disabled>确定</button>
+                    </div>
+                </div>
+                <style>
+                    .eagle-confirm-dialog {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 10000;
+                    }
+                    .dialog-content {
+                        background: #2b2b2b;
+                        border-radius: 8px;
+                        width: 480px;
+                        max-width: 90vw;
+                        max-height: 80vh;
+                        display: flex;
+                        flex-direction: column;
+                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    }
+                    .dialog-header {
+                        padding: 16px 20px;
+                        border-bottom: 1px solid #404040;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    .dialog-header h3 {
+                        margin: 0;
+                        color: #ffffff;
+                        font-size: 16px;
+                    }
+                    .dialog-close {
+                        background: none;
+                        border: none;
+                        color: #999;
+                        font-size: 20px;
+                        cursor: pointer;
+                        padding: 0;
+                        width: 24px;
+                        height: 24px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .dialog-close:hover {
+                        color: #fff;
+                    }
+                    .dialog-body {
+                        padding: 20px;
+                        flex: 1;
+                        overflow-y: auto;
+                    }
+                    .dialog-message {
+                        margin: 0 0 16px 0;
+                        color: #cccccc;
+                        font-size: 14px;
+                        line-height: 1.4;
+                    }
+                    .comp-list {
+                        border: 1px solid #404040;
+                        border-radius: 6px;
+                        max-height: 300px;
+                        overflow-y: auto;
+                    }
+                    .comp-item {
+                        padding: 12px 16px;
+                        border-bottom: 1px solid #404040;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        transition: background-color 0.2s;
+                    }
+                    .comp-item:last-child {
+                        border-bottom: none;
+                    }
+                    .comp-item:hover {
+                        background: #363636;
+                    }
+                    .comp-item.selected {
+                        background: #0078d4;
+                    }
+                    .comp-info {
+                        flex: 1;
+                    }
+                    .comp-name {
+                        color: #ffffff;
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-bottom: 4px;
+                    }
+                    .comp-details {
+                        color: #999999;
+                        font-size: 12px;
+                    }
+                    .comp-layers {
+                        color: #999999;
+                        font-size: 12px;
+                    }
+                    .dialog-footer {
+                        padding: 16px 20px;
+                        border-top: 1px solid #404040;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 12px;
+                    }
+                    .dialog-btn {
+                        padding: 8px 16px;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        transition: background-color 0.2s;
+                    }
+                    .dialog-cancel {
+                        background: #404040;
+                        color: #ffffff;
+                    }
+                    .dialog-cancel:hover {
+                        background: #4a4a4a;
+                    }
+                    .dialog-confirm {
+                        background: #0078d4;
+                        color: #ffffff;
+                    }
+                    .dialog-confirm:hover:not(:disabled) {
+                        background: #106ebe;
+                    }
+                    .dialog-confirm:disabled {
+                        background: #404040;
+                        color: #666666;
+                        cursor: not-allowed;
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            let selectedIndex = -1;
+            const confirmBtn = dialog.querySelector('.dialog-confirm');
+            
+            // 处理合成选择
+            dialog.querySelectorAll('.comp-item').forEach((item, index) => {
+                item.addEventListener('click', () => {
+                    // 移除之前的选择
+                    dialog.querySelectorAll('.comp-item').forEach(i => i.classList.remove('selected'));
+                    // 选择当前项
+                    item.classList.add('selected');
+                    selectedIndex = index;
+                    confirmBtn.disabled = false;
+                });
+            });
+            
+            // 处理按钮点击
+            const closeDialog = (result = null) => {
+                dialog.remove();
+                resolve(result);
+            };
+            
+            dialog.querySelector('.dialog-close').addEventListener('click', () => closeDialog());
+            dialog.querySelector('.dialog-cancel').addEventListener('click', () => closeDialog());
+            dialog.querySelector('.dialog-confirm').addEventListener('click', () => {
+                if (selectedIndex >= 0) {
+                    closeDialog(availableComps[selectedIndex]);
+                }
+            });
+            
+            // 点击背景关闭
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) {
+                    closeDialog();
+                }
+            });
+        });
+    }
+
     /**
      * 处理扩展功能
      * @param {Object} layer - 图层对象

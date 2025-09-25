@@ -446,7 +446,8 @@ function getProjectInfo() {
             projectPath: null,
             projectName: null,
             activeComp: null,
-            isReady: false
+            isReady: false,
+            availableComps: []
         };
         
         // 检查是否有打开的项目
@@ -454,6 +455,23 @@ function getProjectInfo() {
             result.projectPath = app.project.file.fsName;
             result.projectName = app.project.file.name.replace(/\.aep$/, '');
             result.isReady = true;
+            
+            // 获取所有合成
+            var compositions = [];
+            for (var i = 1; i <= app.project.numItems; i++) {
+                var item = app.project.item(i);
+                if (item instanceof CompItem) {
+                    compositions.push({
+                        name: item.name,
+                        id: item.id,
+                        width: item.width,
+                        height: item.height,
+                        duration: item.duration,
+                        frameRate: item.frameRate
+                    });
+                }
+            }
+            result.availableComps = compositions;
             
             // 获取当前激活的合成
             if (app.project.activeItem && app.project.activeItem instanceof CompItem) {
@@ -466,15 +484,33 @@ function getProjectInfo() {
                     frameRate: app.project.activeItem.frameRate
                 };
             } else {
-                // 确保activeComp有默认值，避免undefined
-                result.activeComp = {
-                    name: null,
-                    id: null,
-                    width: null,
-                    height: null,
-                    duration: null,
-                    frameRate: null
-                };
+                // 如果没有活动合成，但有合成可用，智能选择
+                if (compositions.length === 1) {
+                    // 只有一个合成，自动选择它
+                    result.activeComp = compositions[0];
+                    writeLog('自动选择唯一的合成: ' + compositions[0].name, 'info');
+                } else if (compositions.length > 1) {
+                    // 多个合成，标记需要用户选择
+                    result.activeComp = {
+                        name: null,
+                        id: null,
+                        width: null,
+                        height: null,
+                        duration: null,
+                        frameRate: null,
+                        needsSelection: true
+                    };
+                } else {
+                    // 没有合成
+                    result.activeComp = {
+                        name: null,
+                        id: null,
+                        width: null,
+                        height: null,
+                        duration: null,
+                        frameRate: null
+                    };
+                }
             }
         }
         
@@ -488,6 +524,178 @@ function getProjectInfo() {
             activeComp: null,
             isReady: false
         });
+    }
+}
+
+/**
+ * 检查文件是否已在项目中导入
+ * 使用官方API遍历app.project.items来检查文件路径
+ * @param {Array} filePaths - 要检查的文件路径数组
+ * @returns {string} JSON字符串，包含检查结果
+ */
+// 检查文件是否为AE项目文件
+function checkAEProjectFiles(filePaths) {
+    try {
+        writeLog("🔍 开始检查AE项目文件", "INFO");
+        writeLog("📥 接收到的参数: " + JSON.stringify(filePaths), "DEBUG");
+        
+        var result = {
+            success: true,
+            aeProjectFiles: [],
+            nonProjectFiles: [],
+            error: null
+        };
+        
+        // 检查参数有效性
+        if (!filePaths || !(filePaths instanceof Array)) {
+            result.success = false;
+            result.error = "filePaths参数无效";
+            return JSON.stringify(result);
+        }
+        
+        // 使用哈希表存储AE项目文件扩展名，提高查找效率
+        var aeProjectExtensions = {
+            '.aep': true,
+            '.aet': true,
+            '.aepx': true
+        };
+        
+        for (var i = 0; i < filePaths.length; i++) {
+            var filePath = filePaths[i];
+            var fileName = filePath.toLowerCase();
+            
+            // 获取文件扩展名
+            var lastDotIndex = fileName.lastIndexOf('.');
+            var extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : '';
+            
+            // 使用哈希表快速检查是否为AE项目文件
+            if (aeProjectExtensions[extension]) {
+                result.aeProjectFiles.push(filePath);
+                writeLog("⚠️ 检测到AE项目文件: " + filePath, "WARN");
+            } else {
+                result.nonProjectFiles.push(filePath);
+            }
+        }
+        
+        writeLog("📊 检查完成: " + result.aeProjectFiles.length + " 个AE项目文件，" + result.nonProjectFiles.length + " 个普通文件", "INFO");
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        writeLog("❌ 检查AE项目文件时发生错误: " + error.toString(), "ERROR");
+        var errorResult = {
+            success: false,
+            aeProjectFiles: [],
+            nonProjectFiles: filePaths || [],
+            error: error.toString()
+        };
+        return JSON.stringify(errorResult);
+    }
+}
+
+function checkProjectImportedFiles(filePaths) {
+    try {
+        writeLog("🔍 开始检查项目中已导入的文件", "INFO");
+        writeLog("📥 接收到的参数类型: " + typeof filePaths, "DEBUG");
+        writeLog("📥 接收到的参数内容: " + JSON.stringify(filePaths), "DEBUG");
+        
+        var result = {
+            success: true,
+            importedFiles: [],
+            externalFiles: [],
+            error: null
+        };
+        
+        // 检查参数有效性
+        if (!filePaths) {
+            writeLog("❌ filePaths参数为null或undefined", "ERROR");
+            result.success = false;
+            result.error = "filePaths参数无效";
+            return JSON.stringify(result);
+        }
+        
+        if (!(filePaths instanceof Array)) {
+            writeLog("❌ filePaths不是数组类型: " + typeof filePaths, "ERROR");
+            result.success = false;
+            result.error = "filePaths必须是数组";
+            return JSON.stringify(result);
+        }
+        
+        writeLog("📊 待检查文件数量: " + filePaths.length, "INFO");
+        
+        // 检查是否有打开的项目
+        writeLog("🎬 检查After Effects项目状态...", "DEBUG");
+        if (!app.project) {
+            writeLog("❌ 没有打开的项目", "ERROR");
+            result.success = false;
+            result.error = "没有打开的项目";
+            return JSON.stringify(result);
+        }
+        
+        writeLog("✅ 项目已打开: " + (app.project.file ? app.project.file.name : "未保存的项目"), "INFO");
+        
+        // 获取项目中所有已导入的文件路径，使用哈希表优化查找性能
+        writeLog("📂 开始扫描项目中的已导入文件...", "DEBUG");
+        var projectFilePathsMap = {}; // 使用对象作为哈希表，O(1)查找时间
+        var projectFileCount = 0;
+        
+        writeLog("📊 项目中总项目数: " + app.project.numItems, "DEBUG");
+        
+        for (var i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            
+            // 检查是否为FootageItem且有文件源
+            if (item instanceof FootageItem && item.mainSource && item.mainSource.file) {
+                var filePath = item.mainSource.file.fsName;
+                if (filePath) {
+                    // 标准化路径格式（转换为小写，统一分隔符）
+                    var normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
+                    projectFilePathsMap[normalizedPath] = true; // 使用哈希表存储
+                    projectFileCount++;
+                }
+            }
+        }
+        
+        writeLog("📊 项目中共有 " + projectFileCount + " 个已导入文件", "INFO");
+        
+        // 检查每个待导入文件是否已在项目中，使用哈希表O(1)查找
+        writeLog("🔍 开始批量检查待导入文件...", "DEBUG");
+        
+        for (var j = 0; j < filePaths.length; j++) {
+            var checkPath = filePaths[j];
+            
+            // 标准化待检查的文件路径
+            var normalizedCheckPath = checkPath.toLowerCase().replace(/\\/g, '/');
+            
+            // 使用哈希表进行O(1)查找
+            if (projectFilePathsMap[normalizedCheckPath]) {
+                result.importedFiles.push(checkPath);
+                writeLog("  ✅ 文件已在项目中: " + checkPath, "WARN");
+            } else {
+                result.externalFiles.push(checkPath);
+            }
+        }
+        
+        writeLog("🎯 检查完成: " + result.importedFiles.length + " 个已导入，" + result.externalFiles.length + " 个外部文件", "INFO");
+        writeLog("📋 已导入文件列表: " + JSON.stringify(result.importedFiles), "DEBUG");
+        writeLog("📋 外部文件列表: " + JSON.stringify(result.externalFiles), "DEBUG");
+        
+        return JSON.stringify(result);
+        
+    } catch (error) {
+        writeLog("❌ 检查项目文件时发生错误: " + error.toString(), "ERROR");
+        writeLog("❌ 错误堆栈: " + (error.stack || "无堆栈信息"), "ERROR");
+        writeLog("❌ 错误行号: " + (error.line || "未知"), "ERROR");
+        writeLog("❌ 错误源: " + (error.source || "未知"), "ERROR");
+        
+        var errorResult = {
+            success: false,
+            importedFiles: [],
+            externalFiles: filePaths || [], // 出错时允许所有文件导入
+            error: error.toString()
+        };
+        
+        writeLog("🔄 返回错误结果: " + JSON.stringify(errorResult), "DEBUG");
+        return JSON.stringify(errorResult);
     }
 }
 
