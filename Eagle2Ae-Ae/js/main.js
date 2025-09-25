@@ -3502,6 +3502,7 @@ class AEExtension {
         const projectStatusValid = await this.projectStatusChecker.validateProjectStatus({
             requireProject: true,
             requireActiveComposition: true,
+            requireSelectedLayers: true,
             showWarning: true
         });
 
@@ -3520,16 +3521,61 @@ class AEExtension {
         try {
             const result = await this.executeExtendScript('detectSelectedLayers', {});
 
-            if (result.success) {
+            if (result && result.success) {
                 // 显示优化后的检测总结
                 this.displayDetectionSummary(result);
 
+            } else if (result && result.success === false) {
+                // ExtendScript端返回了明确的失败结果
+                // 这种情况下，ExtendScript端的checkSystemStateAndHandle已经显示了弹窗
+                // 我们只需要记录日志，不再重复显示弹窗
+                this.log(`检测失败: ${result.error || '系统状态检测失败'}`, 'error');
+                
+                // 如果错误信息表明是状态检测失败，说明ExtendScript端已经处理了弹窗
+                if (result.error && (
+                    result.error.includes('状态检测失败') || 
+                    result.error.includes('NO_COMPOSITION') || 
+                    result.error.includes('NO_LAYERS_SELECTED')
+                )) {
+                    this.log('ExtendScript端已显示相应的错误提示弹窗', 'info');
+                } else {
+                    // 其他类型的错误，可能需要CEP端补充提示
+                    this.log('检测过程中发生其他错误，建议检查项目和图层状态', 'warning');
+                }
             } else {
-                this.log(`检测失败: ${result.error || '未知错误'}`, 'error');
+                // result为空或格式不正确，可能是ExtendScript连接问题
+                this.log('检测失败: ExtendScript返回结果异常', 'error');
+                
+                // 显示CEP端的错误提示
+                const showDialogScript = `
+                    showPanelWarningDialog(
+                        "检测连接异常", 
+                        "与After Effects的连接出现问题。\\n\\n💡 建议操作：\\n1. 确保已选择合成和图层\\n2. 重启扩展面板\\n3. 如问题持续，请重启After Effects"
+                    );
+                `;
+                try {
+                    await this.executeExtendScript('eval', { script: showDialogScript });
+                } catch (dialogError) {
+                    this.log('无法显示错误弹窗，ExtendScript连接严重异常', 'error');
+                }
             }
         } catch (error) {
             this.log(`检测过程出错: ${error.message}`, 'error');
             this.log('建议：1. 检查是否选择了合成 2. 检查是否选中了图层', 'warning');
+            
+            // 显示通用错误弹窗
+            const showDialogScript = `
+                showPanelWarningDialog(
+                    "检测过程出错", 
+                    "图层检测过程中发生错误。\\n\\n💡 请检查：\\n1. 是否已打开项目\\n2. 是否已选择合成\\n3. 是否已选中图层\\n\\n如问题持续，请重启After Effects后重试。"
+                );
+            `;
+            try {
+                await this.executeExtendScript('eval', { script: showDialogScript });
+            } catch (dialogError) {
+                // 如果连弹窗都无法显示，说明ExtendScript连接有问题
+                this.log('无法显示错误弹窗，ExtendScript连接可能有问题', 'error');
+            }
         }
     }
 

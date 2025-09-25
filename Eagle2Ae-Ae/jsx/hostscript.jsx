@@ -8,6 +8,333 @@
 // 引入文件夹打开工具（供CEP层调用 openFolderByFilePath 等）
 #include "utils/folder-opener.js"
 
+// ========================================
+// 统一错误管理系统 - 核心架构
+// ========================================
+
+/**
+ * ExtendScript兼容的日志函数
+ * 在ExtendScript环境中，console对象可能不存在，使用此函数代替console.log
+ * @param {string} message - 日志消息
+ * @param {string} level - 日志级别（INFO, WARN, ERROR, DEBUG）
+ */
+function writeLog(message, level) {
+    level = level || "INFO";
+    
+    // 尝试使用$.writeln输出到ExtendScript控制台
+    try {
+        $.writeln("[" + level + "] " + message);
+    } catch(e) {
+        // 如果$.writeln失败，则静默失败
+        // ExtendScript环境下不应该抛出错误
+    }
+    
+    // 如果在支持console的环境中，也输出到console
+    try {
+        if (typeof console !== 'undefined' && console.log) {
+            switch(level) {
+                case "ERROR":
+                    console.error(message);
+                    break;
+                case "WARN":
+                    console.warn(message);
+                    break;
+                case "DEBUG":
+                    console.debug(message);
+                    break;
+                default:
+                    console.log(message);
+            }
+        }
+    } catch(e) {
+        // 如果console.log失败，则静默失败
+    }
+}
+
+/**
+ * 错误类型定义
+ * 定义系统中可能出现的各种错误类型
+ */
+var ERROR_TYPES = {
+    // 项目状态相关错误
+    PROJECT_NOT_OPEN: 'PROJECT_NOT_OPEN',
+    PROJECT_NOT_SAVED: 'PROJECT_NOT_SAVED',
+    
+    // 合成状态相关错误
+    NO_COMPOSITION: 'NO_COMPOSITION',
+    COMPOSITION_LOCKED: 'COMPOSITION_LOCKED',
+    
+    // 图层选择相关错误
+    NO_LAYERS_SELECTED: 'NO_LAYERS_SELECTED',
+    INVALID_LAYER_TYPE: 'INVALID_LAYER_TYPE',
+    
+    // 系统权限相关错误
+    FILE_ACCESS_DENIED: 'FILE_ACCESS_DENIED',
+    FOLDER_CREATE_FAILED: 'FOLDER_CREATE_FAILED',
+    
+    // 通信相关错误
+    WEBSOCKET_DISCONNECTED: 'WEBSOCKET_DISCONNECTED',
+    EAGLE_NOT_CONNECTED: 'EAGLE_NOT_CONNECTED'
+};
+
+/**
+ * 错误信息映射
+ * 为每种错误类型提供用户友好的提示信息
+ */
+var ERROR_MESSAGES = {
+    PROJECT_NOT_OPEN: {
+        title: '项目未打开',
+        message: '请先在After Effects中打开一个项目',
+        suggestion: '创建新项目或打开现有项目后再试'
+    },
+    PROJECT_NOT_SAVED: {
+        title: '项目未保存',
+        message: '当前项目尚未保存，某些功能可能受限',
+        suggestion: '建议先保存项目（Ctrl+S）后再继续'
+    },
+    NO_COMPOSITION: {
+        title: '未选择合成',
+        message: '请先选择或创建一个合成',
+        suggestion: '在项目面板中双击合成，或创建新合成'
+    },
+    COMPOSITION_LOCKED: {
+        title: '合成已锁定',
+        message: '当前合成处于锁定状态，无法进行编辑',
+        suggestion: '请解锁合成后再试'
+    },
+    NO_LAYERS_SELECTED: {
+        title: '未选择图层',
+        message: '请先在时间轴中选择要操作的图层',
+        suggestion: '选择一个或多个图层后再执行操作'
+    },
+    INVALID_LAYER_TYPE: {
+        title: '图层类型不支持',
+        message: '选择的图层类型不支持当前操作',
+        suggestion: '请选择支持的图层类型（如素材图层、形状图层等）'
+    },
+    FILE_ACCESS_DENIED: {
+        title: '文件访问被拒绝',
+        message: '无法访问指定的文件或文件夹',
+        suggestion: '请检查文件权限或选择其他位置'
+    },
+    FOLDER_CREATE_FAILED: {
+        title: '文件夹创建失败',
+        message: '无法在指定位置创建文件夹',
+        suggestion: '请检查磁盘空间和写入权限'
+    },
+    WEBSOCKET_DISCONNECTED: {
+        title: 'WebSocket连接断开',
+        message: '与Eagle的连接已断开',
+        suggestion: '请检查Eagle是否正在运行，然后重新连接'
+    },
+    EAGLE_NOT_CONNECTED: {
+        title: 'Eagle未连接',
+        message: '无法连接到Eagle应用程序',
+        suggestion: '请确保Eagle正在运行并重新尝试连接'
+    }
+};
+
+/**
+ * 统一状态检测函数
+ * 根据指定的检测选项验证系统状态
+ * @param {Object} options - 检测选项配置
+ * @param {boolean} options.requireProject - 是否需要项目已打开
+ * @param {boolean} options.requireSavedProject - 是否需要项目已保存
+ * @param {boolean} options.requireComposition - 是否需要活动合成
+ * @param {boolean} options.requireSelectedLayers - 是否需要选中图层
+ * @param {boolean} options.requireWebSocket - 是否需要WebSocket连接
+ * @param {boolean} options.requireEagleConnection - 是否需要Eagle连接
+ * @returns {Object} 检测结果 {isValid: boolean, errorType: string, errorMessage: Object}
+ */
+function validateSystemState(options) {
+    try {
+        // 默认检测选项
+        var defaultOptions = {
+            requireProject: true,
+            requireSavedProject: false,
+            requireComposition: false,
+            requireSelectedLayers: false,
+            requireWebSocket: false,
+            requireEagleConnection: false
+        };
+        
+        // 合并用户选项和默认选项
+        var checkOptions = {};
+        for (var key in defaultOptions) {
+            checkOptions[key] = options && options.hasOwnProperty(key) ? options[key] : defaultOptions[key];
+        }
+        
+        // 1. 检查项目状态
+        if (checkOptions.requireProject) {
+            if (!app.project) {
+                return {
+                    isValid: false,
+                    errorType: ERROR_TYPES.PROJECT_NOT_OPEN,
+                    errorMessage: ERROR_MESSAGES.PROJECT_NOT_OPEN
+                };
+            }
+        }
+        
+        // 2. 检查项目是否已保存
+        if (checkOptions.requireSavedProject) {
+            if (!app.project || !app.project.file) {
+                return {
+                    isValid: false,
+                    errorType: ERROR_TYPES.PROJECT_NOT_SAVED,
+                    errorMessage: ERROR_MESSAGES.PROJECT_NOT_SAVED
+                };
+            }
+        }
+        
+        // 3. 检查活动合成
+        if (checkOptions.requireComposition) {
+            if (!app.project || !app.project.activeItem || !(app.project.activeItem instanceof CompItem)) {
+                return {
+                    isValid: false,
+                    errorType: ERROR_TYPES.NO_COMPOSITION,
+                    errorMessage: ERROR_MESSAGES.NO_COMPOSITION
+                };
+            }
+        }
+        
+        // 4. 检查选中图层
+        if (checkOptions.requireSelectedLayers) {
+            if (!app.project || !app.project.activeItem || !(app.project.activeItem instanceof CompItem)) {
+                return {
+                    isValid: false,
+                    errorType: ERROR_TYPES.NO_COMPOSITION,
+                    errorMessage: ERROR_MESSAGES.NO_COMPOSITION
+                };
+            }
+            
+            var activeComp = app.project.activeItem;
+            if (!activeComp.selectedLayers || activeComp.selectedLayers.length === 0) {
+                return {
+                    isValid: false,
+                    errorType: ERROR_TYPES.NO_LAYERS_SELECTED,
+                    errorMessage: ERROR_MESSAGES.NO_LAYERS_SELECTED
+                };
+            }
+        }
+        
+        // 5. WebSocket连接检测（由CEP层处理，这里只是占位）
+        if (checkOptions.requireWebSocket) {
+            // 注意：ExtendScript无法直接检测WebSocket状态
+            // 这个检测需要由CEP层传递状态信息
+            // 这里返回需要外部检测的标识
+        }
+        
+        // 6. Eagle连接检测（由CEP层处理，这里只是占位）
+        if (checkOptions.requireEagleConnection) {
+            // 注意：ExtendScript无法直接检测Eagle连接状态
+            // 这个检测需要由CEP层传递状态信息
+            // 这里返回需要外部检测的标识
+        }
+        
+        // 所有检测通过
+        return {
+            isValid: true,
+            errorType: null,
+            errorMessage: null
+        };
+        
+    } catch (error) {
+        // 检测过程中出现异常
+        return {
+            isValid: false,
+            errorType: 'SYSTEM_ERROR',
+            errorMessage: {
+                title: '系统检测错误',
+                message: '状态检测过程中发生错误: ' + error.toString(),
+                suggestion: '请重试或联系技术支持'
+            }
+        };
+    }
+}
+
+/**
+ * 统一错误处理函数
+ * 根据错误类型显示相应的用户提示
+ * @param {string} errorType - 错误类型
+ * @param {Object} errorMessage - 错误信息对象
+ * @param {Object} context - 可选的上下文信息
+ */
+function handleSystemError(errorType, errorMessage, context) {
+    try {
+        // 记录错误日志（用于调试）
+        var logMessage = errorType + ': ' + errorMessage.message;
+        if (context) {
+            logMessage += ' | Context: ' + JSON.stringify(context);
+        }
+        writeLog(logMessage, "ERROR");
+        
+        // 显示用户友好的错误对话框
+        showPanelWarningDialog(
+            errorMessage.title,
+            errorMessage.message + '\n\n💡 ' + errorMessage.suggestion
+        );
+        
+    } catch (error) {
+        // 错误处理过程中出现异常，显示基本错误信息
+        writeLog('错误处理函数异常: ' + error.toString(), "ERROR");
+        showPanelWarningDialog(
+            '系统错误',
+            '处理错误信息时发生异常，请重试或联系技术支持'
+        );
+    }
+}
+
+/**
+ * 便捷的状态检测和错误处理函数
+ * 集成了状态检测和错误处理，简化调用
+ * @param {Object} options - 检测选项配置
+ * @param {Object} context - 可选的上下文信息
+ * @returns {boolean} 是否通过所有检测
+ */
+function checkSystemStateAndHandle(options, context) {
+    try {
+        var result = validateSystemState(options);
+        
+        if (!result.isValid) {
+            // 检测失败，显示错误提示
+            handleSystemError(result.errorType, result.errorMessage, context);
+            return {
+                isValid: false,
+                errorType: result.errorType,
+                errorInfo: result.errorMessage
+            };
+        }
+        
+        // 检测通过
+        return {
+            isValid: true,
+            errorType: null,
+            errorInfo: null
+        };
+        
+    } catch (error) {
+        // 检测过程异常
+        writeLog('checkSystemStateAndHandle异常: ' + error.toString(), "ERROR");
+        showPanelWarningDialog(
+            '系统检测错误',
+            '状态检测过程中发生错误，请重试'
+        );
+        return {
+            isValid: false,
+            errorType: 'SYSTEM_ERROR',
+            errorInfo: {
+                title: '系统检测错误',
+                message: '状态检测过程中发生错误，请重试',
+                suggestion: '请重试或联系技术支持'
+            }
+        };
+    }
+}
+
+// ========================================
+// 统一错误管理系统 - 核心架构结束
+// ========================================
+
 // Eagle连接状态检测函数
 function checkEagleConnection() {
     try {
@@ -45,6 +372,19 @@ function exportToEagleWithConnectionCheck(exportSettings, connectionStatus) {
             needsConnectionCheck: false,
             canProceed: false
         };
+        
+        // 使用统一错误管理系统进行状态检测
+        var stateCheck = checkSystemStateAndHandle({
+            requireProject: true,
+            requireComposition: true,
+            requireSelectedLayers: true
+        }, 'exportToEagleWithConnectionCheck');
+
+        if (!stateCheck.isValid) {
+            result.error = stateCheck.errorInfo.title + ": " + stateCheck.errorInfo.message;
+            result.message = "系统状态检查失败，操作已取消";
+            return JSON.stringify(result);
+        }
         
         // 检查Eagle连接状态
         if (!connectionStatus || !connectionStatus.connected) {
@@ -161,9 +501,14 @@ function importFiles(data) {
             targetComp: data.targetComp
         };
         
-        // 检查是否有项目和合成
-        if (!app.project) {
-            result.error = "没有打开的项目";
+        // 使用统一错误管理系统进行状态检测
+        var stateCheck = checkSystemStateAndHandle({
+            requireProject: true,
+            requireComposition: false  // 可选，因为函数会自动创建合成
+        }, 'importFiles');
+
+        if (!stateCheck.isValid) {
+            result.error = stateCheck.errorInfo.title + ": " + stateCheck.errorInfo.message;
             return JSON.stringify(result);
         }
         
@@ -334,16 +679,19 @@ function importFilesWithSettings(data) {
         var project = app.project;
         var settings = data.settings || {};
         
-        // 在开始导入前检查合成状态（JavaScript端已经检查过，这里只是双重保险）
-        if (settings.addToComposition) {
-            if (!project.activeItem || !(project.activeItem instanceof CompItem)) {
-                debugLog.push("ExtendScript: 没有活动合成，停止导入过程");
-                
-                result.error = "没有活动合成，请先选择合成";
-                result.success = false;
-                result.debugLog = debugLog;
-                return JSON.stringify(result);
-            }
+        // 使用统一错误管理系统进行状态检测
+        var stateCheckPassed = checkSystemStateAndHandle({
+            requireProject: true,
+            requireComposition: settings.addToComposition  // 只有在需要添加到合成时才检查
+        }, 'importFilesWithSettings');
+
+        if (!stateCheckPassed) {
+            // 状态检测失败，checkSystemStateAndHandle已经显示了错误对话框
+            debugLog.push("ExtendScript: 系统状态检测失败");
+            result.error = "系统状态检测失败";
+            result.success = false;
+            result.debugLog = debugLog;
+            return JSON.stringify(result);
         }
 
         debugLog.push("ExtendScript: 文件数量: " + data.files.length);
@@ -1140,9 +1488,19 @@ function detectSelectedLayers() {
             logs: []
         };
 
-        // 检查是否有激活的合成
-        if (!app.project.activeItem || !(app.project.activeItem instanceof CompItem)) {
-            result.logs.push("❌ 没有激活的合成，请先选择一个合成");
+        // 使用统一错误管理系统进行状态检测
+        var stateCheckPassed = checkSystemStateAndHandle({
+            requireProject: true,
+            requireComposition: true,
+            requireSelectedLayers: true
+        }, 'detectSelectedLayers');
+
+        if (!stateCheckPassed) {
+            // 状态检测失败，checkSystemStateAndHandle已经显示了错误对话框
+            // 返回更具体的错误信息，让CEP层知道这是状态检测失败
+            result.error = "状态检测失败";
+            result.logs.push("❌ 系统状态检测失败");
+            result.logs.push("💡 请确保已打开项目、选择合成并选中图层");
             return JSON.stringify(result);
         }
 
@@ -1153,11 +1511,6 @@ function detectSelectedLayers() {
         // 获取选中的图层
         var selectedLayers = comp.selectedLayers;
         result.totalSelected = selectedLayers.length;
-
-        if (selectedLayers.length === 0) {
-            result.logs.push("⚠️ 没有选中任何图层，请先选择要检测的图层");
-            return JSON.stringify(result);
-        }
 
         result.logs.push("🔍 检测到 " + selectedLayers.length + " 个选中图层:");
 
@@ -1566,9 +1919,16 @@ function exportSelectedLayers(exportSettings) {
             logs: []
         };
 
-        // 检查是否有激活的合成
-        if (!app.project.activeItem || !(app.project.activeItem instanceof CompItem)) {
-            result.logs.push("❌ 没有激活的合成，请先选择一个合成");
+        // 使用统一错误管理系统进行状态检测
+        var stateCheck = checkSystemStateAndHandle({
+            requireProject: true,
+            requireComposition: true,
+            requireSelectedLayers: true
+        }, 'exportSelectedLayers');
+
+        if (!stateCheck.isValid) {
+            result.logs.push("❌ " + stateCheck.errorInfo.title + ": " + stateCheck.errorInfo.message);
+            result.logs.push("💡 " + stateCheck.errorInfo.suggestion);
             return JSON.stringify(result);
         }
 
@@ -1593,11 +1953,6 @@ function exportSelectedLayers(exportSettings) {
 
         // 获取选中的图层
         var selectedLayers = comp.selectedLayers;
-
-        if (selectedLayers.length === 0) {
-            result.logs.push("⚠️ 没有选中任何图层，请先选择要导出的图层");
-            return JSON.stringify(result);
-        }
 
         // 创建导出文件夹
         var exportFolder = createExportFolder(exportSettings);

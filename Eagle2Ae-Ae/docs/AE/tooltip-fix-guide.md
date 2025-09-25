@@ -34,6 +34,7 @@ element.onClick = function() {
 #### 2.1 修改的文件
 - `jsx/dialog-summary.jsx` - 主要修复文件
 - `jsx/test-tooltip.jsx` - 测试脚本（新增）
+- `jsx/test-tooltip.jsx` - 测试脚本（新增）
 
 #### 2.2 新增功能
 
@@ -60,8 +61,12 @@ element.onClick = function() {
 2. 将鼠标悬浮在图层列表项上
 3. 查看显示的悬浮提示信息
 4. 点击图层项查看详细信息对话框
-
 #### 3.2 测试验证
+运行测试脚本验证功能：
+```javascript
+// 在ExtendScript Toolkit或AE脚本面板中运行
+#include "jsx/test-tooltip.jsx"
+```
 运行测试脚本验证功能：
 ```javascript
 // 在ExtendScript Toolkit或AE脚本面板中运行

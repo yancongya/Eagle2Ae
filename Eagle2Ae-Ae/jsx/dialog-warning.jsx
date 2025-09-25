@@ -3,7 +3,7 @@
 // 可通过变量配置内容和获取用户选择结果
 
 // 扩展名变量
-var EXTENSION_NAME = "Eagle2Ae@烟囱鸭";
+var EXTENSION_NAME = "@Eagle2Ae";
 
 // 全局变量，用于存储对话框配置
 var dialogConfig = {

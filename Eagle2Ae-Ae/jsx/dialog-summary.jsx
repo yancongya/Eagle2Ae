@@ -16,7 +16,7 @@
  */
 
 // AE原生弹窗系统扩展名变量
-var EXTENSION_NAME = 'com.eagle2ae.extension';
+var EXTENSION_NAME = '@Eagle2Ae';
 
 /**
  * 全局配置对象
