@@ -209,9 +209,130 @@ function showPanelWarningDialog(title, message) {
 }
 ```
 
-### 2.4 图层详情对话框系统
+### 2.4 项目文件安全警告对话框系统 *(v2.3.1新增)*
 
-#### 2.4.1 图层检测总结对话框 (showDetectionSummaryDialog)
+#### 2.4.1 AE项目文件警告对话框 (showAEProjectWarningDialog)
+
+当检测到用户拖拽的文件中包含AE项目文件时，显示安全警告对话框
+
+```javascript
+/**
+ * 显示AE项目文件警告对话框
+ * @param {Array<string>} aeProjectFiles - 检测到的AE项目文件路径数组
+ * @returns {number} 0表示继续导入，1表示取消操作
+ */
+function showAEProjectWarningDialog(aeProjectFiles)
+```
+
+**功能特性**:
+- **安全提醒**: 警告用户AE项目文件导入的潜在风险
+- **文件列表**: 显示检测到的所有AE项目文件路径
+- **操作选择**: 提供"继续导入"和"取消"两个选项
+- **智能截断**: 超过3个文件时显示省略号
+
+**支持的文件格式**:
+- `.aep` - After Effects 项目文件
+- `.aet` - After Effects 项目模板
+- `.aepx` - After Effects XML 项目文件
+
+**对话框示例**:
+```
+标题: Eagle2Ae@烟囱鸭
+消息: 检测到AE项目文件，不建议直接导入：
+      C:\Projects\MyProject.aep
+      C:\Templates\template.aet
+      建议使用"导入项目"功能
+按钮: [继续导入] [取消]
+```
+
+**调用示例**:
+```javascript
+// 在main.js中调用
+var aeFiles = ['C:\\Projects\\test.aep', 'C:\\Templates\\demo.aet'];
+var userChoice = await executeHostScript('showAEProjectWarningDialog', aeFiles);
+if (userChoice === 1) {
+    console.log('用户取消了导入操作');
+    return;
+}
+```
+
+#### 2.4.2 已导入文件警告对话框 (showImportedFilesWarningDialog)
+
+当检测到用户拖拽的文件中包含已导入到项目的文件时，显示重复导入警告
+
+```javascript
+/**
+ * 显示已导入文件警告对话框
+ * @param {Array<string>} importedFiles - 已导入的文件路径数组
+ * @returns {number} 0表示继续导入，1表示取消操作
+ */
+function showImportedFilesWarningDialog(importedFiles)
+```
+
+**功能特性**:
+- **重复检测**: 提醒用户文件已存在于项目中
+- **文件列表**: 显示所有已导入的文件路径
+- **操作选择**: 提供"继续导入"和"取消"两个选项
+- **性能优化**: 使用哈希表算法快速检测重复文件
+
+**对话框示例**:
+```
+标题: Eagle2Ae@烟囱鸭
+消息: 以下文件已在项目中：
+      image1.jpg
+      video.mp4
+      继续导入将创建重复素材
+按钮: [继续导入] [取消]
+```
+
+**调用示例**:
+```javascript
+// 在main.js中调用
+var duplicateFiles = ['image1.jpg', 'video.mp4'];
+var userChoice = await executeHostScript('showImportedFilesWarningDialog', duplicateFiles);
+if (userChoice === 1) {
+    console.log('用户取消了重复导入');
+    return;
+}
+```
+
+#### 2.4.3 项目文件检测集成流程
+
+项目文件检测与警告对话框的完整集成流程：
+
+```javascript
+// 1. 文件拖拽触发检测
+function handleFileDrop(files) {
+    // 2. 检测AE项目文件
+    var aeProjectCheck = await executeHostScript('checkAEProjectFiles', files);
+    if (aeProjectCheck.aeProjectFiles.length > 0) {
+        var userChoice = await executeHostScript('showAEProjectWarningDialog', 
+                                                aeProjectCheck.aeProjectFiles);
+        if (userChoice === 1) return; // 用户取消
+    }
+    
+    // 3. 检测已导入文件
+    var importedCheck = await executeHostScript('checkProjectImportedFiles', files);
+    if (importedCheck.importedFiles.length > 0) {
+        var userChoice = await executeHostScript('showImportedFilesWarningDialog', 
+                                                importedCheck.importedFiles);
+        if (userChoice === 1) return; // 用户取消
+    }
+    
+    // 4. 继续正常导入流程
+    proceedWithImport(files);
+}
+```
+
+**性能优化特性**:
+- **批量检测**: 一次性检测所有文件，避免重复遍历
+- **哈希表算法**: O(n+m) 时间复杂度，显著提升检测速度
+- **智能分批**: 超过100个文件时自动分批处理
+- **内存优化**: 及时清理临时数据结构
+
+### 2.5 图层详情对话框系统
+
+#### 2.5.1 图层检测总结对话框 (showDetectionSummaryDialog)
 
 显示图层检测完成后的详细统计信息和操作按钮
 
@@ -908,294 +1029,566 @@ const result = csInterface.evalScript(script);
 debugLog('对话框结果', { result, buttonIndex: parseInt(result) });
 ```
 
-## 10. 图层检测总结弹窗系统
+## 1. Eagle2Ae 对话框系统
 
-### 10.1 双弹窗架构实现
+## 1. 系统概述
 
-#### JSX弹窗实现 (dialog-summary.jsx)
+Eagle2Ae 采用混合对话框架构，结合了 HTML/CSS 模态对话框和 JSX 原生对话框的优势，为用户提供一致的交互体验。
+
+### 1.1 架构特点
+
+- **双重架构**: HTML/CSS模态对话框 + JSX原生对话框
+- **环境适配**: 自动检测CEP环境和Demo模式
+- **统一接口**: 提供统一的调用接口，屏蔽底层实现差异
+- **智能降级**: 当一种方式失败时，自动切换到备用方案
+
+### 1.2 项目状态检测集成
+
+对话框系统与项目状态检测深度集成，提供智能化的用户交互：
+
+- **预检查机制**: 在显示对话框前进行项目状态检测
+- **分层错误提示**: 根据错误类型显示不同的对话框
+- **智能错误处理**: 自动选择最合适的对话框类型
+- **演示模式支持**: Demo模式下使用虚拟对话框系统
+
+### 1.3 弹窗优化功能
+
+#### 智能项目状态检测
+- **双重连接检测**: 同时检测AE连接和Eagle连接状态
+- **分层错误提示**: 根据错误类型显示不同级别的提示
+- **统一错误处理**: 标准化的错误处理流程
+
+#### 演示模式支持
+- **虚拟弹窗系统**: Demo模式下使用JavaScript模拟原生弹窗
+- **样式一致性**: 确保Demo模式与CEP模式视觉效果一致
+- **功能完整性**: Demo模式支持所有弹窗功能
+
+#### 用户体验优化
+- **响应速度**: 优化弹窗显示速度，减少等待时间
+- **视觉统一**: 统一的弹窗样式和布局
+- **操作便捷**: 支持键盘快捷键和鼠标操作
+
+### 2. 项目状态检测与对话框集成
+
+### 2.1 检测流程
+
 ```javascript
 /**
- * 显示图层检测总结弹窗（CEP环境）
- * @param {Object} summaryData 检测结果数据
+ * 项目状态检测与对话框显示流程
  */
-function showLayerDetectionSummary(summaryData) {
+async function checkProjectStatusAndShowDialog(actionType) {
     try {
-        var dialog = new Window("dialog", "@Eagle2Ae");
-        dialog.orientation = "column";
-        dialog.alignChildren = "fill";
-        dialog.spacing = 10;
-        dialog.margins = 16;
-        dialog.preferredSize.width = 400;
-        dialog.preferredSize.height = 300;
+        // 1. 执行项目状态检测
+        const statusResult = await ProjectStatusChecker.checkProjectStatus();
         
-        // 添加总结信息
-        var summaryGroup = dialog.add("group");
-        summaryGroup.orientation = "column";
-        summaryGroup.alignChildren = "left";
-        
-        // 三行总结信息
-        summaryGroup.add("statictext", undefined, summaryData.exportableSummary);
-        summaryGroup.add("statictext", undefined, summaryData.nonExportableSummary);
-        summaryGroup.add("statictext", undefined, summaryData.totalSummary);
-        
-        // 添加图层详情
-        var detailsGroup = dialog.add("group");
-        detailsGroup.orientation = "column";
-        detailsGroup.alignChildren = "fill";
-        
-        var detailsTitle = detailsGroup.add("statictext", undefined, "图层详情");
-        
-        // 图层列表（滚动面板）
-        var layersList = detailsGroup.add("listbox");
-        layersList.preferredSize.height = 150;
-        
-        // 添加图层信息
-        for (var i = 0; i < summaryData.layers.length; i++) {
-            var layer = summaryData.layers[i];
-            var listItem = layersList.add("item", layer.displayText);
+        // 2. 根据检测结果决定对话框类型
+        if (statusResult.hasErrors) {
+            // 显示错误对话框
+            await showStatusErrorDialog(statusResult);
+            return false;
         }
         
-        // 按钮组
-        var buttonGroup = dialog.add("group");
-        buttonGroup.orientation = "row";
-        buttonGroup.alignment = "center";
-        
-        var confirmBtn = buttonGroup.add("button", undefined, "确定");
-        var cancelBtn = buttonGroup.add("button", undefined, "关闭");
-        
-        confirmBtn.onClick = function() { dialog.close(); };
-        cancelBtn.onClick = function() { dialog.close(); };
-        
-        dialog.defaultElement = confirmBtn;
-        dialog.cancelElement = cancelBtn;
-        
-        dialog.center();
-        dialog.show();
+        // 3. 显示确认对话框
+        const confirmed = await showActionConfirmDialog(actionType);
+        return confirmed;
         
     } catch (error) {
-        alert("显示检测结果失败: " + error.message);
+        // 4. 显示系统错误对话框
+        await showSystemErrorDialog(error);
+        return false;
     }
 }
 ```
 
-#### JavaScript弹窗实现 (Demo模式)
+### 2.2 错误类型与对话框映射
+
 ```javascript
 /**
- * 显示图层检测总结弹窗（Demo模式）
- * @param {Object} summaryData 检测结果数据
+ * 错误类型定义
  */
-function showDetectionSummaryDialog(summaryData) {
-    // Demo模式检测
-    if (isDemoMode()) {
-        console.log('[Demo模式] 使用JavaScript弹窗');
-        showJavaScriptSummaryDialog(summaryData);
-        return;
-    }
-    
-    // CEP模式：调用ExtendScript
-    const script = `showLayerDetectionSummary(${JSON.stringify(summaryData)});`;
-    csInterface.evalScript(script, handleDialogResult);
-}
+const ERROR_TYPES = {
+    NO_PROJECT: 'no_project',           // 无项目
+    NO_COMPOSITION: 'no_composition',   // 无合成
+    CONNECTION_ERROR: 'connection_error', // 连接错误
+    EAGLE_OFFLINE: 'eagle_offline',     // Eagle离线
+    SYSTEM_ERROR: 'system_error'        // 系统错误
+};
 
-function showJavaScriptSummaryDialog(summaryData) {
-    // 创建弹窗容器
-    const dialog = document.createElement('div');
-    dialog.className = 'detection-summary-dialog';
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <span class="dialog-title">@Eagle2Ae（模拟）</span>
-            <button class="dialog-close">×</button>
-        </div>
-        
-        <div class="dialog-content">
-            <div class="summary-section">
-                <div class="summary-line">${summaryData.exportableSummary}</div>
-                <div class="summary-line">${summaryData.nonExportableSummary}</div>
-                <div class="summary-line">${summaryData.totalSummary}</div>
-            </div>
-            
-            <div class="separator"></div>
-            
-            <div class="layers-section">
-                <h4>图层详情</h4>
-                <div class="layers-list">
-                    ${generateLayerListHTML(summaryData.layers)}
-                </div>
-            </div>
-        </div>
-        
-        <div class="dialog-footer">
-            <button class="btn-confirm">确定</button>
-            <button class="btn-cancel">关闭</button>
-        </div>
-    `;
-    
-    // 添加样式
-    dialog.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 400px;
-        max-height: 500px;
-        background-color: #2b2b2b;
-        border: 1px solid #555555;
-        border-radius: 4px;
-        color: #cccccc;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 12px;
-        z-index: 10000;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    `;
-    
-    // 添加事件监听
-    setupDialogEvents(dialog);
-    
-    // 显示弹窗
-    document.body.appendChild(dialog);
-}
-```
-
-### 10.2 样式一致性保证
-
-#### CSS样式定义
-```css
-/* Demo模式弹窗样式 - 完全模拟CEP环境 */
-.detection-summary-dialog {
-    background-color: #2b2b2b;          /* 主背景色 */
-    border: 1px solid #555555;          /* 边框颜色 */
-    color: #cccccc;                     /* 主文字颜色 */
-    font-family: 'Segoe UI', sans-serif; /* 字体 */
-    font-size: 12px;                    /* 字体大小 */
-}
-
-.dialog-header {
-    background-color: #1e1e1e;          /* 头部背景 */
-    color: #ffffff;                     /* 头部文字 */
-    padding: 8px 12px;                  /* 内边距 */
-    border-bottom: 1px solid #555555;   /* 底部边框 */
-}
-
-.dialog-content {
-    padding: 12px;                      /* 内容区域内边距 */
-    max-height: 300px;                  /* 最大高度 */
-    overflow-y: auto;                   /* 垂直滚动 */
-}
-
-.summary-section .summary-line {
-    margin-bottom: 4px;                 /* 行间距 */
-    font-family: monospace;             /* 等宽字体 */
-}
-
-.separator {
-    height: 1px;
-    background-color: #555555;
-    margin: 12px 0;
-}
-
-.layers-section h4 {
-    margin: 0 0 8px 0;
-    color: #ffffff;
-    font-size: 13px;
-}
-
-.layers-list {
-    max-height: 150px;
-    overflow-y: auto;
-    border: 1px solid #555555;
-    background-color: #1e1e1e;
-    padding: 4px;
-}
-
-.layer-item {
-    padding: 2px 4px;
-    margin-bottom: 1px;
-    font-family: monospace;
-    font-size: 11px;
-}
-
-.dialog-footer {
-    background-color: #1e1e1e;          /* 底部背景 */
-    padding: 8px 12px;                  /* 内边距 */
-    text-align: center;                 /* 按钮居中 */
-    border-top: 1px solid #555555;      /* 顶部边框 */
-}
-
-.dialog-footer button {
-    background-color: #404040;
-    border: 1px solid #666666;
-    color: #cccccc;
-    padding: 4px 12px;
-    margin: 0 4px;
-    cursor: pointer;
-    border-radius: 2px;
-}
-
-.dialog-footer button:hover {
-    background-color: #505050;
-}
-```
-
-### 10.3 数据格式标准化
-
-#### 检测结果数据结构
-```javascript
-// 标准化的检测结果数据格式
-const summaryData = {
-    // 总结信息
-    exportableSummary: "14:28:05 可导出: 无",
-    nonExportableSummary: "14:28:05 不可导出: 视频×6",
-    totalSummary: "14:28:05 总结: 共检测 6 个图层，0 个可导出，6 个不可导出",
-    
-    // 详细图层信息
-    layers: [
-        {
-            name: "Snow Transitions HD 1 luma.mp4",
-            type: "VideoLayer",
-            exportable: false,
-            reason: "视频素材，将导出第一帧",
-            displayText: "[×] 【视频】 Snow Transitions HD 1 luma.mp4"
-        }
-        // 更多图层...
-    ],
-    
-    // 统计信息
-    stats: {
-        total: 6,
-        exportable: 0,
-        nonExportable: 6,
-        byType: {
-            video: 6,
-            image: 0,
-            text: 0,
-            solid: 0
-        }
+/**
+ * 错误对话框映射
+ */
+const ERROR_DIALOG_MAP = {
+    [ERROR_TYPES.NO_PROJECT]: {
+        type: 'warning',
+        title: '项目检查',
+        message: '请先打开一个After Effects项目',
+        buttons: ['确定']
+    },
+    [ERROR_TYPES.NO_COMPOSITION]: {
+        type: 'warning', 
+        title: '合成检查',
+        message: '请先创建一个合成后重试',
+        buttons: ['确定']
+    },
+    [ERROR_TYPES.CONNECTION_ERROR]: {
+        type: 'error',
+        title: '连接错误',
+        message: '请确保After Effects正在运行并重试',
+        buttons: ['重试', '取消']
+    },
+    [ERROR_TYPES.EAGLE_OFFLINE]: {
+        type: 'warning',
+        title: 'Eagle连接',
+        message: '请确保Eagle应用正在运行',
+        buttons: ['重试', '取消']
     }
 };
 ```
 
-## 11. 相关文件和依赖
+### 2.3 智能对话框选择
 
-### 11.1 核心文件
-
-- `Eagle2Ae-Ae/jsx/dialog-warning.jsx`: ExtendScript警告对话框实现
-- `Eagle2Ae-Ae/jsx/dialog-summary.jsx`: ExtendScript图层检测总结对话框
-- `Eagle2Ae-Ae/js/main.js`: CEP扩展主逻辑，包含弹窗调用逻辑
-- `Eagle2Ae-Ae/js/demo/demo-dialog.js`: Demo模式虚拟弹窗实现
-- `Eagle2Ae-Ae/js/CSInterface.js`: Adobe CEP通信接口
-
-### 11.2 依赖关系
-
+```javascript
+/**
+ * 智能选择对话框类型
+ */
+function selectDialogType(errorType, context) {
+    // Demo模式强制使用JavaScript对话框
+    if (isDemoMode()) {
+        return 'javascript';
+    }
+    
+    // 根据错误严重程度选择
+    const severityMap = {
+        [ERROR_TYPES.SYSTEM_ERROR]: 'jsx',      // 系统错误用原生弹窗
+        [ERROR_TYPES.CONNECTION_ERROR]: 'jsx',   // 连接错误用原生弹窗
+        [ERROR_TYPES.NO_PROJECT]: 'javascript', // 项目检查用轻量弹窗
+        [ERROR_TYPES.NO_COMPOSITION]: 'javascript' // 合成检查用轻量弹窗
+    };
+    
+    return severityMap[errorType] || 'javascript';
+}
 ```
-CEP扩展 (main.js)
-    ↓ 环境检测
-    ├── CEP环境 → CSInterface.evalScript() → ExtendScript (dialog-*.jsx) → AE原生弹窗
-    └── Demo模式 → JavaScript弹窗引擎 → HTML/CSS虚拟弹窗
+
+### 2.4 演示模式虚拟弹窗系统
+
+### 3.1 虚拟弹窗引擎
+
+```javascript
+/**
+ * 虚拟弹窗引擎 - Demo模式专用
+ */
+class VirtualDialogEngine {
+    constructor() {
+        this.activeDialogs = new Map();
+        this.dialogCounter = 0;
+        this.initializeStyles();
+    }
+    
+    /**
+     * 显示虚拟警告对话框
+     */
+    async showWarningDialog(title, message, buttons = ['确定']) {
+        return this.createVirtualDialog({
+            type: 'warning',
+            title: title || '警告',
+            message,
+            buttons,
+            icon: '⚠️'
+        });
+    }
+    
+    /**
+     * 显示虚拟确认对话框
+     */
+    async showConfirmDialog(title, message, buttons = ['确定', '取消']) {
+        return this.createVirtualDialog({
+            type: 'confirm',
+            title: title || '确认',
+            message,
+            buttons,
+            icon: '❓'
+        });
+    }
+    
+    /**
+     * 创建虚拟对话框
+     */
+    createVirtualDialog(config) {
+        return new Promise((resolve) => {
+            const dialogId = `virtual-dialog-${++this.dialogCounter}`;
+            
+            // 创建对话框元素
+            const dialog = this.buildDialogElement(dialogId, config);
+            
+            // 添加事件监听
+            this.attachDialogEvents(dialog, config.buttons, resolve);
+            
+            // 显示对话框
+            document.body.appendChild(dialog);
+            this.activeDialogs.set(dialogId, dialog);
+            
+            // 添加显示动画
+            requestAnimationFrame(() => {
+                dialog.classList.add('show');
+            });
+        });
+    }
+    
+    /**
+     * 构建对话框元素
+     */
+    buildDialogElement(dialogId, config) {
+        const dialog = document.createElement('div');
+        dialog.id = dialogId;
+        dialog.className = 'virtual-dialog-overlay';
+        
+        dialog.innerHTML = `
+            <div class="virtual-dialog">
+                <div class="virtual-dialog-header">
+                    <span class="virtual-dialog-icon">${config.icon}</span>
+                    <span class="virtual-dialog-title">${config.title}</span>
+                </div>
+                <div class="virtual-dialog-content">
+                    <p class="virtual-dialog-message">${config.message}</p>
+                </div>
+                <div class="virtual-dialog-footer">
+                    ${config.buttons.map((btn, index) => 
+                        `<button class="virtual-dialog-btn" data-index="${index}">${btn}</button>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+        
+        return dialog;
+    }
+    
+    /**
+     * 初始化样式
+     */
+    initializeStyles() {
+        if (document.getElementById('virtual-dialog-styles')) return;
+        
+        const styles = document.createElement('style');
+        styles.id = 'virtual-dialog-styles';
+        styles.textContent = `
+            .virtual-dialog-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            
+            .virtual-dialog-overlay.show {
+                opacity: 1;
+            }
+            
+            .virtual-dialog {
+                background-color: #2b2b2b;
+                border: 1px solid #555555;
+                border-radius: 4px;
+                min-width: 280px;
+                max-width: 400px;
+                color: #cccccc;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                transform: scale(0.9);
+                transition: transform 0.2s ease;
+            }
+            
+            .virtual-dialog-overlay.show .virtual-dialog {
+                transform: scale(1);
+            }
+            
+            .virtual-dialog-header {
+                background-color: #1e1e1e;
+                padding: 8px 12px;
+                border-bottom: 1px solid #555555;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .virtual-dialog-icon {
+                font-size: 16px;
+            }
+            
+            .virtual-dialog-title {
+                color: #ffffff;
+                font-weight: 500;
+            }
+            
+            .virtual-dialog-content {
+                padding: 16px;
+            }
+            
+            .virtual-dialog-message {
+                margin: 0;
+                line-height: 1.4;
+                color: #cccccc;
+            }
+            
+            .virtual-dialog-footer {
+                background-color: #1e1e1e;
+                padding: 8px 12px;
+                border-top: 1px solid #555555;
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+            }
+            
+            .virtual-dialog-btn {
+                background-color: #404040;
+                border: 1px solid #666666;
+                color: #cccccc;
+                padding: 4px 12px;
+                border-radius: 2px;
+                cursor: pointer;
+                font-size: 11px;
+                min-width: 60px;
+                transition: background-color 0.2s ease;
+            }
+            
+            .virtual-dialog-btn:hover {
+                background-color: #505050;
+            }
+            
+            .virtual-dialog-btn:active {
+                background-color: #353535;
+            }
+        `;
+        
+        document.head.appendChild(styles);
+    }
+}
+
+// 全局虚拟弹窗引擎实例
+const virtualDialogEngine = new VirtualDialogEngine();
 ```
 
----
+### 3.2 Demo模式检测与切换
 
-**最后更新**: 2024-01-16  
-**维护者**: Eagle2Ae开发团队  
-**版本**: 2.2.0  
-**更新内容**: 新增图层检测总结弹窗系统，实现双弹窗架构，完善Demo模式支持
+```javascript
+/**
+ * Demo模式检测
+ */
+function isDemoMode() {
+    // 检测是否在CEP环境中
+    if (typeof CSInterface === 'undefined' || !window.cep) {
+        return true;
+    }
+    
+    // 检测是否有ExtendScript连接
+    try {
+        const testResult = csInterface.evalScript('1+1');
+        return testResult === 'EvalScript error.';
+    } catch (error) {
+        return true;
+    }
+}
+
+/**
+ * 智能对话框调用
+ */
+async function showSmartDialog(type, title, message, buttons) {
+    if (isDemoMode()) {
+        // Demo模式：使用虚拟弹窗
+        console.log('[Demo模式] 使用虚拟弹窗系统');
+        
+        if (type === 'warning') {
+            return await virtualDialogEngine.showWarningDialog(title, message, buttons);
+        } else if (type === 'confirm') {
+            return await virtualDialogEngine.showConfirmDialog(title, message, buttons);
+        }
+    } else {
+        // CEP模式：使用ExtendScript弹窗
+        console.log('[CEP模式] 使用ExtendScript弹窗');
+        
+        if (type === 'warning') {
+            return await showPanelWarningDialog(title, message);
+        } else if (type === 'confirm') {
+            return await showPanelConfirmDialog(title, message, buttons);
+        }
+    }
+}
+```
+
+### 4. 性能优化与安全机制
+
+### 4.1 弹窗性能优化
+
+```javascript
+/**
+ * 弹窗缓存管理
+ */
+class DialogCache {
+    constructor() {
+        this.cache = new Map();
+        this.maxCacheSize = 10;
+    }
+    
+    /**
+     * 缓存弹窗配置
+     */
+    cacheDialog(key, config) {
+        if (this.cache.size >= this.maxCacheSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+        
+        this.cache.set(key, {
+            config,
+            timestamp: Date.now()
+        });
+    }
+    
+    /**
+     * 获取缓存的弹窗配置
+     */
+    getCachedDialog(key) {
+        const cached = this.cache.get(key);
+        if (cached && (Date.now() - cached.timestamp) < 300000) { // 5分钟有效期
+            return cached.config;
+        }
+        return null;
+    }
+}
+
+const dialogCache = new DialogCache();
+```
+
+### 4.2 内存管理
+
+```javascript
+/**
+ * 弹窗内存管理
+ */
+class DialogMemoryManager {
+    constructor() {
+        this.activeDialogs = new Set();
+        this.cleanupInterval = setInterval(() => {
+            this.cleanup();
+        }, 60000); // 每分钟清理一次
+    }
+    
+    /**
+     * 注册活动弹窗
+     */
+    registerDialog(dialogElement) {
+        this.activeDialogs.add(dialogElement);
+    }
+    
+    /**
+     * 注销弹窗
+     */
+    unregisterDialog(dialogElement) {
+        this.activeDialogs.delete(dialogElement);
+        
+        // 清理DOM元素
+        if (dialogElement.parentNode) {
+            dialogElement.parentNode.removeChild(dialogElement);
+        }
+    }
+    
+    /**
+     * 清理无效弹窗
+     */
+    cleanup() {
+        this.activeDialogs.forEach(dialog => {
+            if (!document.contains(dialog)) {
+                this.activeDialogs.delete(dialog);
+            }
+        });
+    }
+    
+    /**
+     * 销毁管理器
+     */
+    destroy() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+        }
+        
+        this.activeDialogs.forEach(dialog => {
+            this.unregisterDialog(dialog);
+        });
+    }
+}
+
+const dialogMemoryManager = new DialogMemoryManager();
+```
+
+### 4.3 安全机制
+
+```javascript
+/**
+ * 弹窗安全验证
+ */
+class DialogSecurity {
+    /**
+     * 验证弹窗内容安全性
+     */
+    static validateContent(title, message) {
+        // 防止XSS攻击
+        const sanitizedTitle = this.sanitizeHTML(title);
+        const sanitizedMessage = this.sanitizeHTML(message);
+        
+        // 长度限制
+        if (sanitizedTitle.length > 100) {
+            throw new Error('弹窗标题过长');
+        }
+        
+        if (sanitizedMessage.length > 500) {
+            throw new Error('弹窗消息过长');
+        }
+        
+        return {
+            title: sanitizedTitle,
+            message: sanitizedMessage
+        };
+    }
+    
+    /**
+     * HTML内容清理
+     */
+    static sanitizeHTML(input) {
+        if (typeof input !== 'string') {
+            return String(input);
+        }
+        
+        return input
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+    
+    /**
+     * 验证按钮配置
+     */
+    static validateButtons(buttons) {
+        if (!Array.isArray(buttons)) {
+            return ['确定'];
+        }
+        
+        if (buttons.length === 0) {
+            return ['确定'];
+        }
+        
+        if (buttons.length > 3) {
+            return buttons.slice(0, 3);
+        }
+        
+        return buttons.map(btn => this.sanitizeHTML(btn));
+    }
+}
+```
