@@ -112,7 +112,7 @@ class AEExtension {
         this.connectionMonitor = new ConnectionMonitor();
 
         // 临时禁用连接时的文件夹检查，以解决性能问题
-        this.disableConnectionTimeChecks = true;
+        this.disableConnectionTimeChecks = false;
 
         this.currentProject = {
             path: null,
@@ -6299,29 +6299,28 @@ class AEExtension {
 
             // 添加特殊点击事件处理
             exportBurnAfterReading.addEventListener('click', async (event) => {
+                // 首先检查连接状态
+                if (this.connectionState !== ConnectionState.CONNECTED) {
+                    this.log('请先连接到Eagle以使用此功能', 'warning');
+                    event.preventDefault(); // 阻止复选框状态改变
+                    return;
+                }
+
                 if (event.altKey) {
                     // Alt+点击：清空临时文件夹
                     event.preventDefault();
+                    this.log('请求清理临时文件夹...', 'info');
                     try {
                         await this.cleanupTempFolder();
-                        this.log('🗑️ 临时文件夹已清空', 'success');
-                        // 清空后更新tooltip
-                        setTimeout(() => {
-                            this.updateBurnAfterReadingTooltip();
-                        }, 500);
                     } catch (error) {
-                        this.log(`❌ 清空临时文件夹失败: ${error.message}`, 'error');
+                        this.log(`❌ 清理临时文件夹失败: ${error.message}`, 'error');
                     }
                 } else if (event.ctrlKey) {
                     // Ctrl+点击：打开临时文件夹
                     event.preventDefault();
+                    this.log('请求打开临时文件夹...', 'info');
                     try {
                         await this.openTempFolder();
-                        this.log('📁 临时文件夹已打开', 'info');
-                        // 打开后更新tooltip（可能有新文件）
-                        setTimeout(() => {
-                            this.updateBurnAfterReadingTooltip();
-                        }, 1000);
                     } catch (error) {
                         this.log(`❌ 打开临时文件夹失败: ${error.message}`, 'error');
                     }
@@ -6545,6 +6544,8 @@ class AEExtension {
         const settingsPanel = document.getElementById('settings-panel');
         settingsPanel.style.display = 'flex';
         this.loadSettingsToUI();
+        // 立即更新阅后即焚的tooltip
+        this.updateBurnAfterReadingTooltip();
         this.log('打开导入设置面板', 'info');
     }
 
