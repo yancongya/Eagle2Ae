@@ -37,6 +37,7 @@ const DEFAULT_IMPORT_SETTINGS = {
     
     // 导入行为设置
     addToComposition: true,
+    noImportSubMode: 'normal', // 'normal' or 'pre_comp'
     timelineOptions: {
         enabled: true,
         placement: TimelinePlacement.CURRENT_TIME

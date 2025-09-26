@@ -2309,8 +2309,28 @@
             transition: color 0.3s ease;
         }
 
-        .behavior-text {
-            transition: color 0.3s ease;
+        /* “不导入合成”按钮的特殊状态样式 (辉光效果) */
+        .import-behavior-button.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        .import-behavior-button.filled .behavior-text {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        /* “不导入合成”按钮的特殊状态样式 (辉光效果) */
+        .import-behavior-button.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        .import-behavior-button.filled .behavior-text {
+            color: #ffaf40 !important;
+            font-weight: bold;
         }
 
         /* 图层操作按钮样式 */
@@ -3145,7 +3165,7 @@
                 <!-- 导入行为设置 -->
                 <div class="import-behavior">
                     <div class="import-behavior-buttons">
-                        <label class="import-behavior-button" title="不将导入的素材添加到合成中">
+                        <label class="import-behavior-button" id="no-import-comp-btn" title="不将导入的素材添加到合成中">
                             <input type="radio" name="import-behavior" value="no_import">
                             <span class="behavior-text">不导入合成</span>
                         </label>
@@ -3262,7 +3282,7 @@
                 <div class="settings-section">
                     <div class="settings-section-title">导入行为</div>
                     <div class="import-behavior-options-horizontal">
-                        <label class="import-behavior-option" title="不将导入的素材添加到合成中">
+                        <label class="import-behavior-option" id="advanced-no-import-comp-btn" title="不将导入的素材添加到合成中">
                             <input type="radio" name="advanced-import-behavior" value="no_import">
                             <span>不导入合成</span>
                         </label>

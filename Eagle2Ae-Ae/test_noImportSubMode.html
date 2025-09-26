@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>noImportSubMode 持久化存储测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2b2b2b;
+            color: #ffffff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            background-color: #363636;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff9800;
+        }
+        .test-step {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #2b2b2b;
+            border-left: 3px solid #0078d4;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .warning {
+            color: #ff9800;
+        }
+        button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #106ebe;
+        }
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>noImportSubMode 持久化存储测试</h1>
+    
+    <div class="test-section">
+        <div class="test-title">测试说明</div>
+        <p>此测试页面用于验证 Eagle2Ae 扩展项目中 "不导入合成" 模式下 "创建预合成" 设置的持久化存储功能是否正常工作。</p>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">修复内容</div>
+        <div class="test-step">
+            <strong>1. 按钮点击处理逻辑修复</strong>
+            <p>✅ 在 main.js 文件末尾的按钮点击事件中，确保 updateField 调用包含正确的参数 (autoSave=true, fullValidation=false)</p>
+        </div>
+        <div class="test-step">
+            <strong>2. 状态恢复逻辑修复</strong>
+            <p>✅ 在 loadQuickSettings() 方法中，添加了 noImportSubMode 的视觉状态恢复逻辑</p>
+        </div>
+        <div class="test-step">
+            <strong>3. 状态重置逻辑修复</strong>
+            <p>✅ 在导入行为变化监听器中，当切换到其他模式时重置 noImportSubMode 为 'normal'</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">测试步骤</div>
+        <div class="test-step">
+            <strong>步骤 1：</strong> 在 Eagle2Ae 扩展中，选择 "不导入合成" 模式
+        </div>
+        <div class="test-step">
+            <strong>步骤 2：</strong> 点击 "不导入合成" 按钮，切换到 "创建预合成" 模式
+        </div>
+        <div class="test-step">
+            <strong>步骤 3：</strong> 刷新页面或重新加载扩展
+        </div>
+        <div class="test-step">
+            <strong>步骤 4：</strong> 验证 "创建预合成" 状态是否保持
+        </div>
+        <div class="test-step">
+            <strong>步骤 5：</strong> 切换到其他导入行为，再切换回来，验证状态是否正确重置
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">localStorage 检查工具</div>
+        <button onclick="checkLocalStorage()">检查 localStorage</button>
+        <button onclick="clearTestData()">清除测试数据</button>
+        <button onclick="simulateSettings()">模拟设置数据</button>
+        <div id="localStorage-result" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">预期结果</div>
+        <div class="test-step success">
+            <strong>✅ 成功标准：</strong>
+            <ul>
+                <li>点击切换到 "创建预合成" 模式后，localStorage 中应包含 noImportSubMode: 'pre_comp'</li>
+                <li>页面刷新后，"创建预合成" 状态应该保持</li>
+                <li>切换到其他导入行为后，noImportSubMode 应重置为 'normal'</li>
+                <li>控制台中不应出现保存失败的错误信息</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('localStorage-result');
+            try {
+                const settings = localStorage.getItem('eagle2ae_importSettings');
+                if (settings) {
+                    const parsed = JSON.parse(settings);
+                    const noImportSubMode = parsed.noImportSubMode;
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 找到设置数据</div>
+                        <div>noImportSubMode: <strong>${noImportSubMode || 'undefined'}</strong></div>
+                        <div>完整设置: <pre>${JSON.stringify(parsed, null, 2)}</pre></div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="warning">⚠️ 未找到设置数据</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 读取失败: ${error.message}</div>`;
+            }
+        }
+
+        function clearTestData() {
+            localStorage.removeItem('eagle2ae_importSettings');
+            localStorage.removeItem('eagle2ae_userPreferences');
+            document.getElementById('localStorage-result').innerHTML = '<div class="success">✅ 测试数据已清除</div>';
+        }
+
+        function simulateSettings() {
+            const testSettings = {
+                mode: 'project_adjacent',
+                addToComposition: false,
+                noImportSubMode: 'pre_comp',
+                timelineOptions: {
+                    placement: 'current_time'
+                },
+                fileManagement: {
+                    keepOriginalName: true,
+                    addTimestamp: false,
+                    createTagFolders: false,
+                    deleteFromEagle: false
+                }
+            };
+            
+            localStorage.setItem('eagle2ae_importSettings', JSON.stringify(testSettings));
+            document.getElementById('localStorage-result').innerHTML = '<div class="success">✅ 模拟设置数据已创建</div>';
+        }
+
+        // 页面加载时自动检查
+        window.addEventListener('load', checkLocalStorage);
+    </script>
+</body>
+</html>
