@@ -31,12 +31,12 @@ class SettingsManager {
     }
 
     // 加载导入设置
-    loadSettings() { console.log('DEBUG: SettingsManager.loadSettings() called.');
+    loadSettings() {
         try {
-            const stored = localStorage.getItem(this.STORAGE_KEYS.IMPORT_SETTINGS); console.log('DEBUG: Stored settings from localStorage:', stored);
+            const stored = localStorage.getItem(this.STORAGE_KEYS.IMPORT_SETTINGS);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                this.settings = this.mergeWithDefaults(parsed, this.DEFAULT_IMPORT_SETTINGS); console.log('DEBUG: Settings after merge:', this.settings);
+                this.settings = this.mergeWithDefaults(parsed, this.DEFAULT_IMPORT_SETTINGS);
             } else {
                 this.settings = { ...this.DEFAULT_IMPORT_SETTINGS };
             }
@@ -441,7 +441,7 @@ class SettingsManager {
     }
 
     // 更新单个字段
-    updateField(fieldPath, value, autoSave = true, fullValidation = true) { console.log(`DEBUG: SettingsManager.updateField() - Path: ${fieldPath}, Value: ${value}`);
+    updateField(fieldPath, value, autoSave = true, fullValidation = true) {
         if (this.isUpdating) return { success: false, error: '正在更新中' };
 
         try {

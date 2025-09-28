@@ -6393,6 +6393,57 @@ class AEExtension {
             });
         });
 
+        // 高级设置"不导入合成"按钮的子模式切换功能
+        const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
+        if (advancedNoImportBtn) {
+            let wasCheckedOnMousedown = false;
+            const radio = advancedNoImportBtn.querySelector('input[type="radio"]');
+            const textSpan = advancedNoImportBtn.querySelector('span');
+
+            advancedNoImportBtn.addEventListener('mousedown', () => {
+                wasCheckedOnMousedown = radio.checked;
+            });
+
+            advancedNoImportBtn.addEventListener('click', (event) => {
+                if (wasCheckedOnMousedown) {
+                    event.preventDefault();
+                    const isFilled = advancedNoImportBtn.classList.toggle('filled');
+                    if (isFilled) {
+                        textSpan.textContent = '创建预合成';
+                        // 确保设置能够正确保存到localStorage
+                        const result = this.settingsManager.updateField('noImportSubMode', 'pre_comp', true, false);
+                        if (!result.success) {
+                            console.error('保存noImportSubMode设置失败:', result.error);
+                        }
+                        this.log('高级设置已切换到创建预合成模式', 'info');
+                    } else {
+                        textSpan.textContent = '不导入合成';
+                        // 确保设置能够正确保存到localStorage
+                        const result = this.settingsManager.updateField('noImportSubMode', 'normal', true, false);
+                        if (!result.success) {
+                            console.error('保存noImportSubMode设置失败:', result.error);
+                        }
+                        this.log('高级设置已切换到不导入合成模式', 'info');
+                    }
+                    
+                    // 同步到快速设置面板
+                    if (this.quickSettingsInitialized) {
+                        const quickNoImportBtn = document.getElementById('no-import-comp-btn');
+                        const quickTextSpan = quickNoImportBtn ? quickNoImportBtn.querySelector('.behavior-text') : null;
+                        if (quickNoImportBtn && quickTextSpan) {
+                            if (isFilled) {
+                                quickNoImportBtn.classList.add('filled');
+                                quickTextSpan.textContent = '创建预合成';
+                            } else {
+                                quickNoImportBtn.classList.remove('filled');
+                                quickTextSpan.textContent = '不导入合成';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // 合成导入选项
         const addToCompositionCheckbox = document.getElementById('add-to-composition');
         if (addToCompositionCheckbox) {
@@ -6604,6 +6655,22 @@ class AEExtension {
         const advancedImportBehaviorRadio = document.querySelector(`input[name="advanced-import-behavior"][value="${advancedImportBehaviorValue}"]`);
         if (advancedImportBehaviorRadio) {
             advancedImportBehaviorRadio.checked = true;
+        }
+
+        // 恢复高级设置面板noImportSubMode的视觉状态
+        if (advancedImportBehaviorValue === 'no_import') {
+            const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
+            const advancedTextSpan = advancedNoImportBtn ? advancedNoImportBtn.querySelector('span') : null;
+            if (advancedNoImportBtn && advancedTextSpan) {
+                const subMode = settings.noImportSubMode || 'normal';
+                if (subMode === 'pre_comp') {
+                    advancedNoImportBtn.classList.add('filled');
+                    advancedTextSpan.textContent = '创建预合成';
+                } else {
+                    advancedNoImportBtn.classList.remove('filled');
+                    advancedTextSpan.textContent = '不导入合成';
+                }
+            }
         }
 
         // 时间轴选项
@@ -11473,12 +11540,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!result.success) {
                         console.error('保存noImportSubMode设置失败:', result.error);
                     }
+                    aeExtension.log('快速设置已切换到创建预合成模式', 'info');
                 } else {
                     textSpan.textContent = '不导入合成';
                     // 确保设置能够正确保存到localStorage
                     const result = aeExtension.settingsManager.updateField('noImportSubMode', 'normal', true, false);
                     if (!result.success) {
                         console.error('保存noImportSubMode设置失败:', result.error);
+                    }
+                    aeExtension.log('快速设置已切换到不导入合成模式', 'info');
+                }
+                
+                // 同步到高级设置面板
+                const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
+                const advancedTextSpan = advancedNoImportBtn ? advancedNoImportBtn.querySelector('span') : null;
+                if (advancedNoImportBtn && advancedTextSpan) {
+                    if (isFilled) {
+                        advancedNoImportBtn.classList.add('filled');
+                        advancedTextSpan.textContent = '创建预合成';
+                    } else {
+                        advancedNoImportBtn.classList.remove('filled');
+                        advancedTextSpan.textContent = '不导入合成';
                     }
                 }
             }

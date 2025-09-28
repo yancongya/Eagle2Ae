@@ -862,14 +862,7 @@ function sanitizeUnicodePath(filePath) {
 // 导入文件到AE项目（增强版，支持设置）
 function importFilesWithSettings(data) {
     var debugLog = [];
-
     try {
-        debugLog.push("ExtendScript: importFilesWithSettings 开始");
-        debugLog.push("ExtendScript: 接收到的数据: " + JSON.stringify(data));
-        debugLog.push("ExtendScript: 数据对象结构检查 - data: " + (data ? "存在" : "不存在") + 
-                      ", files: " + (data && data.files ? "存在" : "不存在") + 
-                      ", settings: " + (data && data.settings ? "存在" : "不存在"));
-
         var result = {
             success: false,
             importedCount: 0,
@@ -880,229 +873,101 @@ function importFilesWithSettings(data) {
 
         if (!data || !data.files || data.files.length === 0) {
             result.error = "没有文件需要导入";
-            debugLog.push("ExtendScript: 没有文件需要导入");
             return JSON.stringify(result);
         }
 
         var project = app.project;
         var settings = data.settings || {};
         
-        // 使用统一错误管理系统进行状态检测
         var stateCheckPassed = checkSystemStateAndHandle({
             requireProject: true,
-            requireComposition: settings.addToComposition  // 只有在需要添加到合成时才检查
+            requireComposition: settings.addToComposition
         }, 'importFilesWithSettings');
 
         if (!stateCheckPassed) {
-            // 状态检测失败，checkSystemStateAndHandle已经显示了错误对话框
-            debugLog.push("ExtendScript: 系统状态检测失败");
             result.error = "系统状态检测失败";
-            result.success = false;
-            result.debugLog = debugLog;
             return JSON.stringify(result);
         }
-
-        debugLog.push("ExtendScript: 文件数量: " + data.files.length);
-        debugLog.push("ExtendScript: 设置详情: " + JSON.stringify(data.settings));
 
         app.beginUndoGroup("Import from Eagle with Settings");
 
         var importedCount = 0;
-        var projectInfo = data.projectInfo || {};
+        var itemsToPrecompose = [];
 
-        // 详细的设置调试
-        debugLog.push("ExtendScript: addToComposition = " + settings.addToComposition);
-        debugLog.push("ExtendScript: timelineOptions = " + JSON.stringify(settings.timelineOptions));
-
-        try {
-            debugLog.push("ExtendScript: 项目: " + (project && project.file ? project.file.name : "未保存项目"));
-            debugLog.push("ExtendScript: 活动项: " + (project && project.activeItem ? project.activeItem.name : "无"));
-        } catch (debugError) {
-            debugLog.push("ExtendScript: 获取项目信息时出错: " + debugError.toString());
-        }
-
-        // 创建文件夹结构（如果需要）
-        var importFolder = null;
-        try {
-            if (settings.fileManagement && settings.fileManagement.createTagFolders) {
-                importFolder = project.items.addFolder("Eagle Import - " + new Date().toLocaleString());
-                debugLog.push("ExtendScript: 创建了导入文件夹");
-            }
-        } catch (folderError) {
-            debugLog.push("ExtendScript: 创建文件夹时出错: " + folderError.toString());
-        }
-
-        debugLog.push("ExtendScript: 开始处理文件循环，总文件数: " + data.files.length);
         for (var i = 0; i < data.files.length; i++) {
             var file = data.files[i];
-            debugLog.push("ExtendScript: 处理文件 " + (i + 1) + ": " + file.name);
-            debugLog.push("ExtendScript: 文件路径: " + file.importPath);
-            debugLog.push("ExtendScript: 文件对象详情 - name: " + file.name + ", importPath: " + file.importPath + ", processed: " + file.processed);
-
             try {
-                // 检查文件是否存在
                 var fileObj = new File(file.importPath);
-                debugLog.push("ExtendScript: 文件存在检查: " + fileObj.exists);
+                if (!fileObj.exists) continue;
 
-                if (!fileObj.exists) {
-                    debugLog.push("ExtendScript: 文件不存在，跳过: " + file.importPath);
-                    continue;
-                }
-
-                // 在导入前先检查项目中是否已存在同名素材
                 var footageItem = null;
-                try {
-                    debugLog.push("ExtendScript: 检查项目中是否已存在同名素材: " + file.name);
-                    for (var itemIndex = 1; itemIndex <= project.numItems; itemIndex++) {
-                        var item = project.item(itemIndex);
-                        if (item instanceof FootageItem && item.name === file.name) {
-                            footageItem = item;
-                            debugLog.push("ExtendScript: 在项目中找到同名素材: " + item.name);
-                            break;
-                        }
+                // Reuse existing item if possible
+                for (var itemIndex = 1; itemIndex <= project.numItems; itemIndex++) {
+                    var item = project.item(itemIndex);
+                    if (item instanceof FootageItem && item.name === file.name) {
+                        footageItem = item;
+                        break;
                     }
-                } catch (searchError) {
-                    debugLog.push("ExtendScript: 搜索项目素材时出错: " + searchError.toString());
                 }
 
-                // 如果项目中没有同名素材，则尝试导入
                 if (!footageItem) {
-                    debugLog.push("ExtendScript: 开始导入文件...");
-                    debugLog.push("ExtendScript: 文件对象路径: " + fileObj.fsName);
-                    debugLog.push("ExtendScript: 文件对象存在性: " + fileObj.exists);
-                    
-                    try {
-                        var importOptions = new ImportOptions(fileObj);
-                        debugLog.push("ExtendScript: 创建导入选项成功");
-                        
-                        // 尝试不同的导入方法
-                        try {
-                            footageItem = project.importFile(importOptions);
-                            debugLog.push("ExtendScript: 文件导入完成，footageItem: " + (footageItem ? "成功" : "失败"));
-                        } catch (importError) {
-                            debugLog.push("ExtendScript: 第一次导入尝试失败: " + importError.toString());
-                            
-                            // 尝试设置不同的导入选项
-                            try {
-                                importOptions.importAs = ImportAsType.FOOTAGE;
-                                footageItem = project.importFile(importOptions);
-                                debugLog.push("ExtendScript: 第二次导入尝试成功");
-                            } catch (secondImportError) {
-                                debugLog.push("ExtendScript: 第二次导入尝试也失败: " + secondImportError.toString());
-                                debugLog.push("ExtendScript: 尽管导入失败，但仍将继续尝试处理已存在的素材");
-                            }
-                        }
-                    } catch (importError) {
-                        debugLog.push("ExtendScript: 文件导入异常: " + importError.toString());
-                        debugLog.push("ExtendScript: 错误类型: " + importError.name);
-                        debugLog.push("ExtendScript: 错误堆栈: " + importError.stack);
-                        debugLog.push("ExtendScript: 尽管出现异常，但仍将继续处理");
-                    }
-                } else {
-                    debugLog.push("ExtendScript: 使用项目中已存在的素材，跳过导入步骤");
+                    var importOptions = new ImportOptions(fileObj);
+                    footageItem = project.importFile(importOptions);
                 }
 
                 if (footageItem) {
                     importedCount++;
-                    debugLog.push("ExtendScript: 文件导入成功: " + footageItem.name);
-
-                    // 重命名项目项（如果需要）
+                    if (settings.noImportSubMode === 'pre_comp') {
+                        itemsToPrecompose.push(footageItem);
+                    }
                     if (file.name && file.name !== footageItem.name) {
                         footageItem.name = file.name;
-                        debugLog.push("ExtendScript: 重命名为: " + file.name);
                     }
-
-                    // 移动到文件夹（如果创建了文件夹）
-                    if (importFolder) {
-                        footageItem.parentFolder = importFolder;
-                        debugLog.push("ExtendScript: 移动到导入文件夹");
-                    }
-
-                    // 添加到合成（如果设置了）
-                    debugLog.push("ExtendScript: 检查合成添加条件 - addToComposition: " + settings.addToComposition);
-                    debugLog.push("ExtendScript: project.activeItem: " + (project.activeItem ? project.activeItem.name : "无"));
-                    debugLog.push("ExtendScript: activeItem类型: " + (project.activeItem ? project.activeItem.typeName : "无"));
-                    debugLog.push("ExtendScript: activeItem是否为CompItem: " + (project.activeItem instanceof CompItem));
 
                     if (settings.addToComposition) {
-                        // 使用当前活动合成（已在函数开始时验证过）
                         var comp = project.activeItem;
-                        debugLog.push("ExtendScript: 使用当前活动合成: " + comp.name);
-                        debugLog.push("ExtendScript: 合成对象有效性检查: " + (comp && comp instanceof CompItem));
-                        debugLog.push("ExtendScript: 合成图层数量: " + (comp ? comp.numLayers : "N/A"));
-                        
-                        // 添加到合成
                         if (comp) {
-                            debugLog.push("ExtendScript: 开始添加到合成: " + comp.name);
-                            debugLog.push("ExtendScript: 素材对象有效性检查: " + (footageItem && footageItem.name));
-                            
-                            try {
-                                var layer = comp.layers.add(footageItem);
-                                debugLog.push("ExtendScript: 成功添加到合成，层名: " + layer.name);
-                                debugLog.push("ExtendScript: 新图层索引: " + layer.index);
-
-                                // 根据时间轴设置放置层（简化版）
-                                if (settings.timelineOptions && settings.timelineOptions.placement) {
-                                    debugLog.push("ExtendScript: 应用时间轴设置，placement: " + settings.timelineOptions.placement);
-                                    debugLog.push("ExtendScript: 合成当前时间: " + comp.time);
-                                    debugLog.push("ExtendScript: 合成持续时间: " + comp.duration);
-                                    switch (settings.timelineOptions.placement) {
-                                        case 'current_time':
-                                            var currentTime = comp.time;
-                                            layer.startTime = currentTime;
-                                            debugLog.push("ExtendScript: 放置在当前时间: " + currentTime);
-                                            break;
-                                        case 'timeline_start':
-                                            layer.startTime = 0;
-                                            debugLog.push("ExtendScript: 放置在时间轴开始: 0");
-                                            break;
-                                        default:
-                                            debugLog.push("ExtendScript: 未知的placement设置: " + settings.timelineOptions.placement);
-                                            break;
-                                    }
-                                    debugLog.push("ExtendScript: 图层起始时间设置后: " + layer.startTime);
-                                } else {
-                                    debugLog.push("ExtendScript: 时间轴选项不存在或placement未设置");
+                            var layer = comp.layers.add(footageItem);
+                            if (settings.timelineOptions && settings.timelineOptions.placement) {
+                                switch (settings.timelineOptions.placement) {
+                                    case 'current_time':
+                                        layer.startTime = comp.time;
+                                        break;
+                                    case 'timeline_start':
+                                        layer.startTime = 0;
+                                        break;
                                 }
-                            } catch (layerError) {
-                                debugLog.push("ExtendScript: 添加到合成时出错: " + layerError.toString());
-                                debugLog.push("ExtendScript: 错误堆栈: " + layerError.stack);
                             }
-                        } else {
-                            debugLog.push("ExtendScript: 合成对象为空，无法添加图层");
                         }
-                    } else {
-                        debugLog.push("ExtendScript: 未添加到合成 - addToComposition设置为false");
                     }
-                } else {
-                    debugLog.push("ExtendScript: 文件导入失败，footageItem为null");
                 }
             } catch (fileError) {
-                debugLog.push("ExtendScript: 文件处理错误: " + fileError.toString());
+                // Silently ignore file import errors and continue
                 continue;
             }
+        }
+
+        if (settings.noImportSubMode === 'pre_comp' && itemsToPrecompose.length > 0) {
+            debugLog.push("ExtendScript: 预合成模式已激活...");
+            precomposeItems(itemsToPrecompose, debugLog);
         }
 
         app.endUndoGroup();
 
         result.success = true;
         result.importedCount = importedCount;
-        result.debug = debugLog;
         
-        // 设置目标合成名称
         if (settings.addToComposition && project.activeItem && project.activeItem instanceof CompItem) {
             result.targetComp = project.activeItem.name;
-        } else {
-            result.targetComp = "未知合成";
         }
 
-        debugLog.push("ExtendScript: 导入完成，成功导入: " + importedCount + " 个文件");
-        debugLog.push("ExtendScript: 最终结果 - success: " + result.success + ", importedCount: " + result.importedCount);
+        debugLog.push("ExtendScript: 导入流程结束，处理 " + importedCount + " 个文件。");
+        result.debug = debugLog;
         return JSON.stringify(result);
 
     } catch (error) {
         app.endUndoGroup();
-        debugLog.push("ExtendScript: 全局错误: " + error.toString());
+        debugLog.push("ExtendScript: 导入时发生全局错误: " + error.toString());
         return JSON.stringify({
             success: false,
             importedCount: 0,
@@ -3544,6 +3409,29 @@ function validateFolderPath(folderPath) {
             exists: false,
             error: error.toString()
         });
+    }
+}
+
+// 新增：根据传入的素材数组创建预合成
+function precomposeItems(items, debugLog) {
+    if (!items || items.length === 0) {
+        return;
+    }
+    var createdCount = 0;
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!(item instanceof FootageItem) || item.mainSource instanceof SolidSource || item.mainSource instanceof PlaceholderSource) {
+            continue;
+        }
+        try {
+            app.project.items.addComp(item.name, item.width, item.height, item.pixelAspect, item.duration, item.frameRate).layers.add(item);
+            createdCount++;
+        } catch (e) {
+            // silent fail
+        }
+    }
+    if (createdCount > 0) {
+        debugLog.push("ExtendScript: 成功创建 " + createdCount + " 个预合成。");
     }
 }
 
