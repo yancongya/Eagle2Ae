@@ -171,6 +171,15 @@ class AEExtension {
         // 先执行同步初始化
         this.init();
 
+        // 确保预设目录已创建
+        await this.ensurePresetsFolderReady();
+
+        // 启动时自动读取预设并设置自动同步
+        await this.loadPresetsFromDisk();
+        this.setupAutoPresetSync();
+        // 更新打开预设目录按钮的悬浮提示
+        this.updateOpenPresetsBtnTooltip();
+
         // 然后执行异步的端口初始化
         await this.initializePort();
 
@@ -6196,7 +6205,6 @@ class AEExtension {
 
         const settingsPanel = document.getElementById('settings-panel');
         const closeBtn = document.getElementById('settings-close-btn');
-        const saveBtn = document.getElementById('save-settings-btn');
         const resetBtn = document.getElementById('reset-settings-btn');
 
         // 检查元素是否存在
@@ -6210,21 +6218,41 @@ class AEExtension {
             this.hideSettingsPanel();
         });
 
-        if (!saveBtn) {
-            this.log('⚠️ 找不到设置面板保存按钮', 'warning');
-        } else {
-            // 保存按钮
-            saveBtn.addEventListener('click', () => {
-                this.saveSettings();
-            });
-        }
+        // 移除“保存设置”按钮逻辑，改为自动保存
 
         if (!resetBtn) {
             this.log('⚠️ 找不到设置面板重置按钮', 'warning');
         } else {
-            // 重置按钮
-            resetBtn.addEventListener('click', () => {
-                this.resetSettings();
+            // 重置按钮：重置为默认并立即写入预设JSON
+            resetBtn.addEventListener('click', async () => {
+                try {
+                    this.resetSettings();
+                    await this.savePresetsSilently();
+                    this.log('🧹 已重置为默认并同步到预设JSON', 'info');
+                } catch (e) {
+                    this.log(`⚠️ 重置并保存预设失败：${e.message}`, 'warning');
+                }
+            });
+        }
+
+        // 导出预设按钮
+        const exportPresetsBtn = document.getElementById('export-presets-btn');
+        if (exportPresetsBtn) {
+            // 打开预设目录按钮
+            exportPresetsBtn.addEventListener('click', () => {
+                this.handleOpenPresetsFolder();
+            });
+            // 设置悬浮提示为当前目录
+            this.updateOpenPresetsBtnTooltip();
+        } else {
+            this.log('⚠️ 找不到打开预设目录按钮', 'warning');
+        }
+
+        // 齿轮按钮：自定义预设目录
+        const chooseDirBtn = document.getElementById('choose-presets-dir-btn');
+        if (chooseDirBtn) {
+            chooseDirBtn.addEventListener('click', async () => {
+                await this.handleChoosePresetsDirectory();
             });
         }
 
@@ -8540,6 +8568,275 @@ class AEExtension {
         // 具体的显示/隐藏逻辑由弹窗处理
     }
 
+
+    /**
+     * 导出当前预设为JSON到文档目录的指定子目录
+     * 将导入设置与用户偏好组合导出，便于备份与复用
+     * @returns {Promise<void>} 无返回值
+     */
+    async handleExportPresets() {
+        try {
+            this.log('📦 正在导出预设为JSON...', 'info');
+
+            // 收集当前设置与用户偏好
+            const settings = this.settingsManager.getSettings();
+            const preferences = this.settingsManager.getPreferences();
+
+            const exportPayload = {
+                importSettings: settings, // 当前导入设置（包含导出设置）
+                userPreferences: preferences, // 用户偏好
+                exportedAt: new Date().toISOString() // 导出时间
+            };
+            // 使用固定文件名（移除时间戳）
+            const fileName = 'Eagle2Ae-Presets.json';
+
+            // 目标子目录（在用户文档目录下）
+            const targetSubFolder = 'Eagle2Ae-Ae\\presets';
+
+            // 调用ExtendScript写入JSON
+            const params = {
+                fileName: fileName,
+                targetSubFolder: targetSubFolder,
+                overwrite: true,
+                jsonData: JSON.stringify(exportPayload)
+            };
+
+            const result = await this.executeExtendScript('exportImportSettingsToJSON', params);
+
+            if (result && result.success) {
+                this.log(`✅ 预设导出成功: ${result.savedPath}`, 'success');
+                // 打开目标文件夹
+                if (result.folderPath) {
+                    this.openFolder(result.folderPath);
+                }
+            } else {
+                const msg = result && result.error ? result.error : '未知错误';
+                this.log(`❌ 预设导出失败: ${msg}`, 'error');
+                alert(`预设导出失败：${msg}`);
+            }
+        } catch (error) {
+            this.log(`❌ 导出预设过程出错: ${error.message}`, 'error');
+            alert(`导出预设出错：${error.message}`);
+        }
+    }
+
+    /**
+     * 静默保存预设到JSON（无弹窗与打开文件夹）
+     * @returns {Promise<boolean>} 是否保存成功
+     */
+    async savePresetsSilently() {
+        try {
+            const settings = this.settingsManager.getSettings();
+            const preferences = this.settingsManager.getPreferences();
+
+            const exportPayload = {
+                importSettings: settings,
+                userPreferences: preferences,
+                exportedAt: new Date().toISOString()
+            };
+
+            const params = {
+                fileName: 'Eagle2Ae-Presets.json',
+                overwrite: true,
+                jsonData: JSON.stringify(exportPayload)
+            };
+            const baseFolder = this.getPresetsBaseFolderPath();
+            if (baseFolder) {
+                params.baseFolderFsPath = baseFolder;
+            } else {
+                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+            }
+
+            const result = await this.executeExtendScript('exportImportSettingsToJSON', params);
+            if (result && result.success) {
+                this.log('💾 预设已自动保存到文档目录', 'info');
+                return true;
+            } else {
+                const msg = result && result.error ? result.error : '未知错误';
+                this.log(`⚠️ 自动保存预设失败: ${msg}`, 'warning');
+                return false;
+            }
+        } catch (error) {
+            this.log(`⚠️ 自动保存预设异常: ${error.message}`, 'warning');
+            return false;
+        }
+    }
+
+    /**
+     * 从JSON自动读取预设并应用到UI
+     * @returns {Promise<void>}
+     */
+    async loadPresetsFromDisk() {
+        try {
+            this.log('🔎 正在尝试加载本地预设...', 'info');
+            const params = { fileName: 'Eagle2Ae-Presets.json' };
+            const baseFolder = this.getPresetsBaseFolderPath();
+            if (baseFolder) {
+                params.baseFolderFsPath = baseFolder;
+            } else {
+                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+            }
+            const result = await this.executeExtendScript('readImportSettingsFromJSON', params);
+
+            if (!result || !result.success) {
+                const msg = result && result.error ? result.error : '未找到预设文件';
+                this.log(`ℹ️ 本地预设不可用：${msg}`, 'info');
+                return;
+            }
+
+            // 解析JSON并合并到设置管理器
+            const parsed = typeof result.jsonData === 'string' ? JSON.parse(result.jsonData) : result.jsonData;
+            if (parsed && parsed.importSettings) {
+                this.settingsManager.saveSettings(parsed.importSettings);
+            }
+            if (parsed && parsed.userPreferences) {
+                this.settingsManager.savePreferences(parsed.userPreferences);
+            }
+
+            // 应用到UI
+            this.updateSettingsUI();
+            this.loadQuickSettings();
+            this.log('✅ 已加载并应用本地预设', 'success');
+        } catch (error) {
+            this.log(`⚠️ 加载本地预设失败：${error.message}`, 'warning');
+        }
+    }
+
+    /**
+     * 设置自动预设同步（监听变更并防抖保存）
+     */
+    setupAutoPresetSync() {
+        // 防抖计时器
+        this._presetSaveTimer = null;
+        const triggerSave = () => {
+            if (this._presetSaveTimer) clearTimeout(this._presetSaveTimer);
+            this._presetSaveTimer = setTimeout(() => {
+                this.savePresetsSilently();
+            }, 600);
+        };
+
+        // 监听设置、导出设置、偏好与自动保存事件
+        this.settingsManager.addListener((type) => {
+            if (['settings', 'exportSettings', 'preferences', 'autoSave'].includes(type)) {
+                triggerSave();
+            }
+        });
+    }
+
+    /**
+     * 获取当前预设目录（用户自定义的绝对路径），如果未设置则返回null
+     * @returns {string|null}
+     */
+    getPresetsBaseFolderPath() {
+        try {
+            if (this.settingsManager && typeof this.settingsManager.getPreference === 'function') {
+                const p = this.settingsManager.getPreference('presetsDirectory');
+                if (p && typeof p === 'string' && p.trim() !== '') return p;
+            }
+        } catch (e) {
+            this.log(`⚠️ 获取预设目录失败：${e.message}`, 'warning');
+        }
+        return null;
+    }
+
+    /**
+     * 更新“打开预设目录”按钮的悬浮提示为当前目录
+     */
+    updateOpenPresetsBtnTooltip() {
+        const btn = document.getElementById('export-presets-btn');
+        if (!btn) return;
+        const base = this.getPresetsBaseFolderPath();
+        const display = base || '我的文档\\Eagle2Ae-Ae\\presets';
+        btn.title = `打开当前预设目录：${display}`;
+    }
+
+    /**
+     * 打开当前预设目录（如果不存在则创建）
+     */
+    async handleOpenPresetsFolder() {
+        try {
+            const params = {};
+            const base = this.getPresetsBaseFolderPath();
+            if (base) {
+                params.baseFolderFsPath = base;
+            } else {
+                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+            }
+            const result = await this.executeExtendScript('openPresetsFolder', params);
+            if (result && result.success) {
+                this.log(`📂 已打开预设目录：${result.folderPath}`, 'info');
+            } else {
+                const msg = result && result.error ? result.error : '未知错误';
+                this.log(`⚠️ 打开预设目录失败：${msg}`, 'warning');
+                alert(`打开预设目录失败：${msg}`);
+            }
+        } catch (e) {
+            this.log(`⚠️ 打开预设目录异常：${e.message}`, 'warning');
+        }
+    }
+
+    /**
+     * 确保预设目录存在（启动时调用）
+     * @returns {Promise<void>}
+     */
+    async ensurePresetsFolderReady() {
+        try {
+            const params = {};
+            const base = this.getPresetsBaseFolderPath();
+            if (base) {
+                params.baseFolderFsPath = base;
+            } else {
+                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+            }
+            const result = await this.executeExtendScript('ensurePresetsFolder', params);
+            if (result && result.success) {
+                this.log(`📁 预设目录就绪：${result.folderPath}`, 'info');
+            } else {
+                const msg = result && result.error ? result.error : '未知错误';
+                this.log(`⚠️ 创建预设目录失败：${msg}`, 'warning');
+            }
+        } catch (e) {
+            this.log(`⚠️ 确保预设目录异常：${e.message}`, 'warning');
+        }
+    }
+
+    /**
+     * 选择自定义预设目录并保存到偏好中
+     */
+    async handleChoosePresetsDirectory() {
+        try {
+            const result = await this.executeExtendScript('choosePresetsDirectory', {});
+            if (result && result.success && result.folderPath) {
+                this.settingsManager.updatePreference('presetsDirectory', result.folderPath);
+                this.updateOpenPresetsBtnTooltip();
+                await this.savePresetsSilently();
+                this.log(`✅ 预设目录已设置为：${result.folderPath}`, 'success');
+            } else {
+                const msg = result && result.error ? result.error : '未选择目录';
+                if (msg !== '未选择目录') {
+                    this.log(`⚠️ 设置预设目录失败：${msg}`, 'warning');
+                }
+            }
+        } catch (e) {
+            this.log(`⚠️ 选择预设目录异常：${e.message}`, 'warning');
+        }
+    }
+
+    /**
+     * 生成时间戳字符串（YYYYMMDD-HHMMSS），用于文件名
+     * @param {Date} date - 时间对象
+     * @returns {string} 时间戳
+     */
+    formatTimestamp(date) {
+        const pad = (n) => (n < 10 ? '0' + n : '' + n);
+        const yyyy = date.getFullYear();
+        const mm = pad(date.getMonth() + 1);
+        const dd = pad(date.getDate());
+        const HH = pad(date.getHours());
+        const MM = pad(date.getMinutes());
+        const SS = pad(date.getSeconds());
+        return `${yyyy}${mm}${dd}-${HH}${MM}${SS}`;
+    }
 
 
     // 显示项目旁复制模态框

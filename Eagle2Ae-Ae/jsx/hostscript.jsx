@@ -1008,6 +1008,253 @@ function ensureDirectoryExists(dirPath) {
     }
 }
 
+/**
+ * 导出导入设置与用户偏好为JSON文件到“我的文档”目录下的指定子目录
+ * @param {Object} params - 参数对象
+ * @param {string} params.fileName - 文件名，例如 "Eagle2Ae-Presets-20240101-120000.json"
+ * @param {string} params.targetSubFolder - 目标子目录（相对于我的文档），如 "Eagle2Ae-Ae\\presets"
+ * @param {boolean} params.overwrite - 是否覆盖已有文件
+ * @param {string} params.jsonData - 要写入的JSON字符串内容
+ * @returns {string} JSON字符串，包含success、savedPath、folderPath或error
+ */
+function exportImportSettingsToJSON(params) {
+    try {
+        // 参数校验
+        if (!params || !params.jsonData) {
+            return JSON.stringify({
+                success: false,
+                error: '缺少jsonData参数'
+            });
+        }
+        
+        // 计算目标目录：优先使用用户自定义的绝对路径，其次使用我的文档子目录
+        var currentFolder = null;
+        if (params.baseFolderFsPath && params.baseFolderFsPath !== '') {
+            currentFolder = new Folder(params.baseFolderFsPath);
+            if (!currentFolder.exists) {
+                var createdBase = currentFolder.create();
+                if (!createdBase) {
+                    return JSON.stringify({ success: false, error: '创建目录失败: ' + currentFolder.fsName });
+                }
+            }
+        } else {
+            var myDocs = Folder.myDocuments; // AE ExtendScript内置
+            if (!myDocs || !myDocs.exists) {
+                return JSON.stringify({ success: false, error: '无法获取我的文档路径' });
+            }
+            var subFolder = params.targetSubFolder && params.targetSubFolder !== ''
+                ? params.targetSubFolder
+                : 'Eagle2Ae-Ae\\presets';
+            var normalizedSub = subFolder.replace(/\\/g, '/');
+            var pathParts = normalizedSub.split('/');
+            currentFolder = myDocs;
+            for (var i = 0; i < pathParts.length; i++) {
+                var part = pathParts[i];
+                if (!part || part === '.') continue;
+                currentFolder = new Folder(currentFolder.fsName + '/' + part);
+                if (!currentFolder.exists) {
+                    var created = currentFolder.create();
+                    if (!created) {
+                        return JSON.stringify({ success: false, error: '创建目录失败: ' + currentFolder.fsName });
+                    }
+                }
+            }
+        }
+
+        // 文件名与目标文件
+        var fileName = params.fileName && params.fileName !== ''
+            ? params.fileName
+            : ('Eagle2Ae-Presets-' + new Date().getFullYear() + '.json');
+
+        var targetFile = new File(currentFolder.fsName + '/' + fileName);
+
+        // 处理覆盖逻辑
+        if (targetFile.exists && !params.overwrite) {
+            return JSON.stringify({
+                success: false,
+                error: '目标文件已存在，且未允许覆盖',
+                savedPath: targetFile.fsName,
+                folderPath: currentFolder.fsName
+            });
+        }
+
+        // 写入JSON内容
+        targetFile.encoding = 'UTF-8';
+        targetFile.open('w');
+        targetFile.write(params.jsonData);
+        targetFile.close();
+
+        // 返回成功结果
+        return JSON.stringify({
+            success: true,
+            savedPath: targetFile.fsName,
+            folderPath: currentFolder.fsName
+        });
+
+    } catch (e) {
+        return JSON.stringify({
+            success: false,
+            error: '导出预设失败: ' + e.message
+        });
+    }
+}
+
+/**
+ * 从“我的文档”目录指定子目录读取预设JSON
+ * @param {Object} params - 参数对象
+ * @param {string} params.fileName - 预设文件名，例如 "Eagle2Ae-Presets.json"
+ * @param {string} params.targetSubFolder - 目标子目录（相对于我的文档），如 "Eagle2Ae-Ae\\presets"
+ * @returns {string} JSON字符串，包含success、jsonData或error
+ */
+function readImportSettingsFromJSON(params) {
+    try {
+        // 校验参数
+        if (!params || !params.fileName) {
+            return JSON.stringify({ success: false, error: '缺少fileName参数' });
+        }
+        
+        var currentFolder = null;
+        if (params.baseFolderFsPath && params.baseFolderFsPath !== '') {
+            currentFolder = new Folder(params.baseFolderFsPath);
+            if (!currentFolder.exists) {
+                return JSON.stringify({ success: false, error: '预设目录不存在' });
+            }
+        } else {
+            var myDocs = Folder.myDocuments;
+            if (!myDocs || !myDocs.exists) {
+                return JSON.stringify({ success: false, error: '无法获取我的文档路径' });
+            }
+            var subFolder = params.targetSubFolder && params.targetSubFolder !== ''
+                ? params.targetSubFolder
+                : 'Eagle2Ae-Ae\\presets';
+            var normalizedSub = subFolder.replace(/\\/g, '/');
+            var pathParts = normalizedSub.split('/');
+            currentFolder = myDocs;
+            for (var i = 0; i < pathParts.length; i++) {
+                var part = pathParts[i];
+                if (!part || part === '.') continue;
+                currentFolder = new Folder(currentFolder.fsName + '/' + part);
+                if (!currentFolder.exists) {
+                    return JSON.stringify({ success: false, error: '预设目录不存在' });
+                }
+            }
+        }
+
+        var targetFile = new File(currentFolder.fsName + '/' + params.fileName);
+        if (!targetFile.exists) {
+            return JSON.stringify({ success: false, error: '预设文件不存在' });
+        }
+
+        // 读取文件内容
+        targetFile.encoding = 'UTF-8';
+        if (!targetFile.open('r')) {
+            return JSON.stringify({ success: false, error: '无法打开预设文件' });
+        }
+        var content = targetFile.read();
+        targetFile.close();
+
+        return JSON.stringify({ success: true, jsonData: content, filePath: targetFile.fsName });
+    } catch (e) {
+        return JSON.stringify({ success: false, error: '读取预设失败: ' + e.message });
+    }
+}
+
+/**
+ * 打开预设目录（不存在则创建）
+ * @param {Object} params
+ * @param {string} [params.baseFolderFsPath] - 用户自定义的绝对路径
+ * @param {string} [params.targetSubFolder] - 相对我的文档的子目录
+ */
+function openPresetsFolder(params) {
+    try {
+        var folder;
+        if (params && params.baseFolderFsPath && params.baseFolderFsPath !== '') {
+            folder = new Folder(params.baseFolderFsPath);
+            if (!folder.exists) folder.create();
+        } else {
+            var myDocs = Folder.myDocuments;
+            if (!myDocs || !myDocs.exists) {
+                return JSON.stringify({ success: false, error: '无法获取我的文档路径' });
+            }
+            var subFolder = params && params.targetSubFolder && params.targetSubFolder !== ''
+                ? params.targetSubFolder
+                : 'Eagle2Ae-Ae\\presets';
+            var normalizedSub = subFolder.replace(/\\/g, '/');
+            var parts = normalizedSub.split('/');
+            folder = myDocs;
+            for (var i = 0; i < parts.length; i++) {
+                var part = parts[i];
+                if (!part || part === '.') continue;
+                folder = new Folder(folder.fsName + '/' + part);
+                if (!folder.exists) folder.create();
+            }
+        }
+        if (!folder.exists) {
+            return JSON.stringify({ success: false, error: '预设目录不存在' });
+        }
+        var ok = folder.execute();
+        return JSON.stringify({ success: !!ok, folderPath: folder.fsName, error: ok ? null : '无法打开目录' });
+    } catch (e) {
+        return JSON.stringify({ success: false, error: '打开预设目录失败: ' + e.message });
+    }
+}
+
+/**
+ * 选择自定义预设目录
+ * @returns {string} JSON字符串，包含success与folderPath或error
+ */
+function choosePresetsDirectory() {
+    try {
+        var f = Folder.selectDialog('选择预设目录');
+        if (f) {
+            return JSON.stringify({ success: true, folderPath: f.fsName });
+        }
+        return JSON.stringify({ success: false, error: '未选择目录' });
+    } catch (e) {
+        return JSON.stringify({ success: false, error: '选择目录失败: ' + e.message });
+    }
+}
+
+/**
+ * 确保预设目录存在（仅创建，不打开）
+ * @param {Object} params
+ * @param {string} [params.baseFolderFsPath] - 用户自定义的绝对路径
+ * @param {string} [params.targetSubFolder] - 相对我的文档的子目录
+ * @returns {string} JSON字符串，包含success、folderPath或error
+ */
+function ensurePresetsFolder(params) {
+    try {
+        var folder;
+        if (params && params.baseFolderFsPath && params.baseFolderFsPath !== '') {
+            folder = new Folder(params.baseFolderFsPath);
+            if (!folder.exists) folder.create();
+        } else {
+            var myDocs = Folder.myDocuments;
+            if (!myDocs || !myDocs.exists) {
+                return JSON.stringify({ success: false, error: '无法获取我的文档路径' });
+            }
+            var subFolder = params && params.targetSubFolder && params.targetSubFolder !== ''
+                ? params.targetSubFolder
+                : 'Eagle2Ae-Ae\\presets';
+            var normalizedSub = subFolder.replace(/\\/g, '/');
+            var parts = normalizedSub.split('/');
+            folder = myDocs;
+            for (var i = 0; i < parts.length; i++) {
+                var part = parts[i];
+                if (!part || part === '.') continue;
+                folder = new Folder(folder.fsName + '/' + part);
+                if (!folder.exists) folder.create();
+            }
+        }
+        if (!folder.exists) {
+            return JSON.stringify({ success: false, error: '预设目录不存在' });
+        }
+        return JSON.stringify({ success: true, folderPath: folder.fsName });
+    } catch (e) {
+        return JSON.stringify({ success: false, error: '确保预设目录失败: ' + e.message });
+    }
+}
+
 // 复制文件
 function copyFile(sourcePath, targetPath) {
     try {
