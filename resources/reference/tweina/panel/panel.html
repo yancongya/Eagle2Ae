@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="panel.css" id="hostStyle" />
+</head>
+
+<body onload="initPanel()">
+
+  <!--
+    The StatusBar requires the body's margin to be 0 pixels. This is harcoded
+    in the StatusBar module of the framework. Therefore we set the margin on
+    the main div. So make sure you keep your UI within this div.
+    -->
+  <div id="main">
+
+    <span id="loading"
+      style="display: block;color:whitesmoke;font-size: large;font-family: Arial, Helvetica, sans-serif;margin: 0.5rem;">Loading
+      TweiNa...</span>
+
+    <div id="content">
+      <div id="PS_container" class="hidden">
+        <div class="btn-container">
+          <img src="../imgs/pushNormal.png" id="btn_PS_push" data-tooltip="Push selected layers to AE" class="btn-push">
+
+          <div class="sm-btn-container">
+            <img src="../imgs/C.png" id="btn_PS_crop" data-tooltip="Crop comps to fit content"
+              class="btn-big ccstyle hostFontSize btn-toggle">
+            <img src="../imgs/linkDisabled.png" id="btn_PS_smart" data-tooltip="Link smart objects' original transform"
+              class="btn-big ccstyle hostFontSize btn-toggle">
+          </div>
+        </div>
+      </div>
+
+      <div id="AI_container" class="hidden">
+        <div class="btn-container">
+          <img src="../imgs/pushNormal.png" id="btn_AI_push" data-tooltip="Push selected layers to AE" class="btn-push">
+        </div>
+      </div>
+
+      <div id="AE_container" class="hidden">
+        <!-- PS in AE -->
+        <div class="btn-container">
+          <img src="../imgs/pullNormal.png" id="btn_PS_pull" class="btn-push">
+
+          <div class="sm-btn-container">
+            <img src="../imgs/C.png" id="btn_AE_PS_crop" data-tooltip="Crop comps to fit content"
+              class="btn-big ccstyle hostFontSize btn-toggle">
+            <img src="../imgs/linkDisabled.png" id="btn_AE_PS_smart"
+              data-tooltip="Link smart objects' original transform" class="btn-big ccstyle hostFontSize btn-toggle">
+          </div>
+        </div>
+        <!-- AI in AE -->
+        <div class="btn-container">
+          <img src="../imgs/pullNormal.png" id="btn_AI_pull" class="btn-push">
+        </div>
+
+      </div>
+
+    </div>
+
+    <span id="remind"
+      style="display: none;color:whitesmoke;font-size: large;font-family: Arial, Helvetica, sans-serif;margin: 0.5rem;">License
+      not
+      activated</span>
+
+  </div>
+
+</body>
+
+</html>
+
+<!-- DO NOT REMOVE -->
+<script src="js/panel.js"></script>

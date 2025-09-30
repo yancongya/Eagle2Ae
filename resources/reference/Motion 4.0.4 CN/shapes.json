@@ -1,0 +1,20 @@
+[
+	"shapes",
+	[
+		"Circle",
+		"Decagon",
+		"Equilateral-Triangle",
+		"Heptagon",
+		"Hexagon",
+		"Isoceles-Triangle",
+		"Nonagon",
+		"Octagon",
+		"Parallelogram",
+		"Pentagon",
+		"Rectangle-16-9",
+		"Rectangle-5-3",
+		"Right-Triangle",
+		"Scalene-Triangle",
+		"Square"
+	]
+]

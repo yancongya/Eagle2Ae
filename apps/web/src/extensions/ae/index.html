@@ -1,0 +1,4512 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Eagle2AE</title>
+    <link rel="icon" type="image/png" href="public/logo.png">
+
+    <!-- Node.js 初始化脚本 -->
+    <script type="text/javascript">
+        // Node.js环境检测和初始化 (基于CEP官方文档)
+        (function() {
+            console.log('🔍 开始检测Node.js环境...');
+            console.log('CEP环境信息:', {
+                cep: typeof cep,
+                __adobe_cep__: typeof __adobe_cep__,
+                cep_node: typeof cep_node,
+                require: typeof require,
+                process: typeof process
+            });
+
+            // 初始化标志
+            window.__NODE_JS_AVAILABLE__ = false;
+
+            // 方法1: 检查cep_node对象 (CEP 8+官方推荐方式)
+            if (typeof cep_node !== 'undefined') {
+                console.log('✅ 检测到 cep_node 对象 (CEP 8+)');
+                try {
+                    // 根据官方文档，cep_node包含: Buffer, global, process, require
+                    window.require = cep_node.require;
+                    window.Buffer = cep_node.Buffer;
+                    window.process = cep_node.process;
+                    window.global = cep_node.global;
+
+                    // 测试require是否工作
+                    const os = window.require('os');
+                    if (os) {
+                        console.log('✅ Node.js环境已通过cep_node初始化');
+                        console.log('Node.js版本:', window.process.version);
+                        console.log('平台:', os.platform());
+                        window.__NODE_JS_AVAILABLE__ = true;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ cep_node初始化失败:', error.message);
+                }
+            }
+
+            // 方法2: 检查CEP对象的process属性 (CEP提供的原生API)
+            if (typeof cep !== 'undefined' && cep.process) {
+                console.log('✅ 检测到 cep.process (CEP原生API)');
+                try {
+                    window.process = cep.process;
+
+                    // CEP可能提供fs等API
+                    if (cep.fs) {
+                        window.cepfs = cep.fs;
+                        console.log('✅ cep.fs可用');
+                    }
+
+                    console.log('✅ Node.js环境已通过cep对象初始化');
+                    console.log('平台:', window.process.platform || 'unknown');
+                    window.__NODE_JS_AVAILABLE__ = true;
+                    return;
+                } catch (error) {
+                    console.warn('⚠️ cep对象初始化失败:', error.message);
+                }
+            }
+
+            // 方法3: 检查全局require (传统方式)
+            if (typeof require !== 'undefined') {
+                console.log('✅ 检测到全局require函数');
+                try {
+                    window.require = require;
+                    const testModule = require('os');
+                    if (testModule) {
+                        console.log('✅ Node.js环境已通过全局require初始化');
+                        window.__NODE_JS_AVAILABLE__ = true;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ 全局require测试失败:', error.message);
+                }
+            }
+
+            // 方法4: 检查全局process对象
+            if (typeof process !== 'undefined' && process.versions) {
+                console.log('✅ 检测到全局process对象');
+                try {
+                    window.process = process;
+                    console.log('✅ Node.js环境已通过全局process初始化');
+                    console.log('Node.js版本:', process.version);
+                    window.__NODE_JS_AVAILABLE__ = true;
+                    return;
+                } catch (error) {
+                    console.warn('⚠️ 全局process初始化失败:', error.message);
+                }
+            }
+
+            // 所有方法都失败
+            console.error('❌ Node.js环境不可用');
+            console.log('🔍 可能的原因:');
+            console.log('1. manifest.xml中缺少--enable-nodejs参数');
+            console.log('2. CEP版本不支持Node.js');
+            console.log('3. 需要启用CEP调试模式');
+            console.log('4. After Effects版本过新，Node.js集成方式已改变');
+
+            window.__NODE_JS_AVAILABLE__ = false;
+        })();
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #383838;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+        }
+
+        .panel {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            margin-top: 68px; /* 为固定标题栏留出空间 (8px top + 48px height + 12px margin) */
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #9966cc;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            min-width: 200px;
+            overflow: visible;
+            width: auto;
+        }
+
+        .title-text {
+            display: flex;
+            position: relative;
+            min-width: 140px;
+            width: auto;
+            overflow: visible;
+            white-space: nowrap;
+        }
+
+        .char {
+            display: inline-block;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            flex-shrink: 0;
+            margin: 0 1.5px;
+            color: #9966cc;
+        }
+
+        /* 确保char-a1在正常状态下显示 - 使用更高优先级 */
+        .title .char-a1 {
+            color: #9966cc !important;
+        }
+        
+        /* 非悬浮状态下确保所有字符可见 */
+        .title .char {
+            color: #9966cc;
+        }
+        
+        /* uppercase类控制字符大小写状态 */
+        .char-a1.uppercase {
+            text-transform: uppercase !important;
+        }
+        
+        /* 禁用动画干扰 */
+        .char-a1.uppercase {
+            animation: none !important;
+        }
+
+        /* 悬浮时字符重新排列动画 - Eagle2Ae -> Ae2Eagle */
+        .title:hover .char-a2 { order: 1; } /* A -> 位置1 */
+        .title:hover .char-e3 { order: 2; } /* e -> 位置2 */
+        .title:hover .char-2 { order: 3; }  /* 2 -> 位置3 */
+        .title:hover .char-e1 { order: 4; } /* E -> 位置4 */
+        .title:hover .char-a1 { order: 5; } /* a -> 位置5 (变成A) */
+        .title:hover .char-g1 { order: 6; } /* g -> 位置6 */
+        .title:hover .char-l1 { order: 7; } /* l -> 位置7 */
+        .title:hover .char-e2 { order: 8; } /* e -> 位置8 */
+
+        /* 字符变换动画 - 小写a变成大写A */
+        .title:hover .char-a1 {
+            animation: charSwap 0.6s ease;
+        }
+
+        @keyframes charSwap {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateY(90deg);
+            }
+            50% {
+                transform: scale(1.2) rotateY(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+
+
+
+        /* 统一的悬浮交互效果 - 悬浮整个标题区域时 */
+        .title:hover {
+            color: #4a90e2;
+        }
+
+        .title:hover .title-logo {
+            content: url('public/logo2.png');
+            transform: scale(1.1);
+        }
+
+
+
+        .title-logo {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        /* 顶部图标按钮样式 */
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 6px 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 28px;
+        }
+
+        .icon-btn:hover {
+            background: #4a4a4a;
+            border-color: #666;
+        }
+
+        .icon-btn:active {
+            background: #2a2a2a;
+        }
+
+        .icon-btn .icon {
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        /* 调试测试按钮特殊样式 */
+        #debug-test-btn {
+            background: #3d4a2d;
+            border-color: #6a7c4a;
+        }
+
+        #debug-test-btn:hover {
+            background: #4d5a3d;
+            border-color: #7a8c5a;
+        }
+
+        /* 项目信息面板头部样式 */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            height: 20px;
+            min-height: 20px;
+        }
+
+        /* 项目信息面板布局 */
+        .project-info-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 0; /* 允许flex子项收缩 */
+        }
+
+        .project-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            min-width: 0; /* 允许收缩 */
+            max-width: 50%; /* 确保不超过一半 */
+        }
+
+        .project-info .ae-title {
+            color: #9966cc;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-info .ae-title::before {
+            content: "●";
+            color: #9966cc;
+            font-size: 8px;
+        }
+
+        .eagle-info {
+            flex: 1;
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.7;
+            border-left: 1px solid rgba(74, 144, 226, 0.3);
+            padding-left: 15px;
+            position: relative;
+            min-width: 0; /* 允许收缩 */
+            max-width: 50%; /* 确保不超过一半 */
+        }
+
+        .eagle-info::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #4a90e2, rgba(74, 144, 226, 0.3));
+            border-radius: 1px;
+        }
+
+        .eagle-info .eagle-title {
+            color: #4a90e2;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .eagle-info .eagle-title::before {
+            content: "●";
+            color: #4a90e2;
+            font-size: 8px;
+        }
+
+        .project-action-btn {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #34495e;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .project-action-btn:hover {
+            background: #34495e;
+            border-color: #3c5a78;
+        }
+
+        .project-action-btn:active {
+            background: #1a252f;
+        }
+
+        .project-action-btn .btn-icon {
+            font-size: 10px;
+        }
+
+        .project-action-btn .btn-text {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        /* 连接状态按钮样式 */
+        .connection-status-btn {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #34495e;
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            min-width: 60px;
+            height: 18px;
+            line-height: 1;
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        .connection-status-btn:hover {
+            background: #34495e;
+            border-color: #3c5a78;
+        }
+
+        .connection-status-btn:active {
+            background: #1a252f;
+        }
+
+        .connection-status-btn .status-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #e74c3c;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .connection-status-btn .status-indicator.connected {
+            background: #27ae60;
+            box-shadow: 0 0 6px rgba(39, 174, 96, 0.4);
+        }
+
+        .connection-status-btn .status-indicator.connecting {
+            background: #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+
+        .connection-status-btn .status-indicator.error {
+            background: #e74c3c;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .connection-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+        }
+
+        .connection-text .status-main {
+            font-size: 8px;
+            color: #ecf0f1;
+            font-weight: 500;
+        }
+
+        .connection-text .ping-time {
+            font-size: 6px;
+            color: #bdc3c7;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        /* 原来的连接状态样式已移除，使用新的紧凑样式 */
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        /* 旧的连接状态样式已移除，使用紧凑样式 */
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section {
+            background: #2a2a2a;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #555;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+            line-height: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+
+
+        .project-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        .eagle-info .label {
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        /* 信息项的值样式 */
+        .project-info span:not(.label):not(.ae-title) {
+            color: #e0e0e0;
+        }
+
+        .eagle-info span:not(.label):not(.eagle-title) {
+            color: #e0e0e0;
+        }
+
+        /* 路径不换行样式 - 优化省略显示 */
+        .eagle-info #eagle-path,
+        .project-info #project-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px; /* 增加最大宽度，让路径显示更多内容 */
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* Eagle路径特殊处理 - 更小的最大宽度 */
+        .eagle-info #eagle-path {
+            max-width: 80px;
+        }
+
+        /* 路径悬浮效果 */
+        .eagle-info #eagle-path:hover,
+        .project-info #project-path:hover {
+            color: #fff;
+            transition: color 0.2s ease;
+        }
+
+        /* 可点击路径样式 */
+        .eagle-info #eagle-path.clickable,
+        .eagle-info #eagle-library.clickable,
+        .project-info #project-path.clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #4a90e2;
+        }
+
+        .eagle-info #eagle-path.clickable:hover,
+        .eagle-info #eagle-library.clickable:hover,
+        .project-info #project-path.clickable:hover {
+            color: #66a3ff;
+            text-decoration: underline;
+        }
+
+        /* 确保包含路径的div不会超出容器 */
+        .eagle-info > div,
+        .project-info > div {
+            max-width: 100%;
+            overflow: hidden;
+            word-break: break-all;
+        }
+
+        /* 标签和值的布局优化 */
+        .eagle-info .label,
+        .project-info .label {
+            min-width: 42px;
+            width: 42px;
+            flex-shrink: 0;
+        }
+
+        /* 信息行布局 */
+        .eagle-info > div,
+        .project-info > div {
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        /* 值部分允许收缩 */
+        .eagle-info span:not(.label):not(.eagle-title),
+        .project-info span:not(.label):not(.ae-title) {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Eagle路径不换行 - 与上面统一样式 */
+        .eagle-info #eagle-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px; /* 与上面保持一致 */
+            display: inline-block;
+            vertical-align: top;
+            cursor: help;
+        }
+
+        /* 项目信息和Eagle信息的每一行 */
+        .project-info > div, .eagle-info > div {
+            margin: 3px 0;
+            word-break: keep-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        /* 紧凑的操作按钮网格 - 只有两个按钮时使用 */
+        .actions-grid-compact {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 8px 6px;
+            border: none;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-icon {
+            font-size: 10px;
+            line-height: 1;
+        }
+
+        .btn-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1;
+            font-size: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #229954;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover:not(:disabled) {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #7f8c8d;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .log {
+            display: flex;
+            flex-direction: column;
+            min-height: 100px;
+            max-height: 60vh;
+        }
+
+        .log-output {
+            background: #1e1e1e;
+            border-radius: 4px;
+            padding: 8px;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            border: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 1px 0;
+        }
+
+        .log-entry.info {
+            color: #e0e0e0;
+        }
+
+        .log-entry.success {
+            color: #27ae60;
+        }
+
+        .log-entry.warning {
+            color: #f39c12;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .log-entry.debug {
+            color: #9e9e9e;
+            font-size: 11px;
+        }
+
+        .log-time {
+            color: #888;
+            margin-right: 6px;
+            font-size: 11px;
+        }
+
+        /* 日志计数样式 */
+        .log-count {
+            color: #888;
+            font-size: 11px;
+            margin-left: 5px;
+            font-weight: normal;
+        }
+
+        /* 分组日志样式 */
+        .log-group {
+            margin: 2px 0;
+            border-left: 3px solid #555;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .log-group-header {
+            padding: 4px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            user-select: none;
+        }
+
+        .log-group-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .log-group-content {
+            padding-left: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-group.collapsed .log-group-content {
+            display: none;
+        }
+
+        .log-group .log-toggle {
+            margin-left: auto;
+            font-size: 10px;
+            color: #888;
+        }
+
+        .log-group.collapsed .log-toggle::before {
+            content: '▶';
+        }
+
+        .log-group.expanded .log-toggle::before {
+            content: '▼';
+        }
+
+        .log-group-item {
+            padding: 2px 8px;
+            font-size: 12px;
+            color: #ccc;
+            border-left: 1px solid #444;
+            margin-left: 10px;
+        }
+
+        .log-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-output::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+
+        .log-output::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+
+        .log-output::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        .import-status {
+            background: #1e1e1e;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #3498db;
+            font-size: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .import-status.success {
+            border-left-color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .import-status.error {
+            border-left-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .import-status.idle {
+            border-left-color: #95a5a6;
+            opacity: 0.7;
+        }
+
+        .status-message {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .clickable {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .clickable:hover {
+            color: #3498db;
+        }
+
+        .log-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .section.log {
+            display: none;
+        }
+
+        .section.log.visible {
+            display: block;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-small.btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-small.btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-small.btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-small.btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .log-entry.eagle {
+            border-left: 2px solid #f39c12;
+            padding-left: 6px;
+            background: rgba(243, 156, 18, 0.1);
+        }
+
+        .log-entry.ae {
+            border-left: 2px solid #3498db;
+            padding-left: 6px;
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        /* 设置面板样式 */
+        .settings-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #2b2b2b;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #1e1e1e;
+            border-bottom: 1px solid #444;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-close:hover {
+            background: #444;
+            color: #fff;
+        }
+
+        .settings-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .settings-section {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #444;
+        }
+
+        .settings-subsection-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 8px;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-group-horizontal {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-top: 4px;
+        }
+
+        .checkbox-group-horizontal .checkbox-option {
+            flex: 1;
+            min-width: 0;
+            justify-content: flex-start;
+            white-space: nowrap;
+        }
+
+        .checkbox-group-horizontal .checkbox-option .checkbox-label {
+            font-size: 11px;
+            line-height: 1.3;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 响应式设计：中等屏幕优化 */
+        @media (max-width: 768px) {
+            .checkbox-group-horizontal {
+                gap: 4px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                flex: 1;
+                min-width: 0;
+                padding: 4px 6px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 10px;
+            }
+        }
+
+        /* 小屏幕：进一步压缩 */
+        @media (max-width: 600px) {
+            .checkbox-group-horizontal {
+                gap: 2px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                padding: 4px;
+                gap: 4px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 9px;
+            }
+        }
+
+        /* 超小屏幕：垂直排列 */
+        @media (max-width: 400px) {
+            .checkbox-group-horizontal {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option {
+                flex: none;
+                min-width: 0;
+                white-space: normal;
+                padding: 6px 8px;
+                gap: 6px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                font-size: 11px;
+            }
+        }
+
+        .radio-option, .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .radio-option:hover, .checkbox-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .radio-option.small {
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+
+        .radio-option input[type="radio"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            margin: 0;
+            width: 14px;
+            height: 14px;
+        }
+
+        .checkbox-option input[type="checkbox"]:checked + .checkbox-label {
+            color: #ff8c00;
+            font-weight: 500;
+        }
+
+
+
+        /* 项目旁复制模式的内联布局 */
+        .project-adjacent-option {
+            align-items: center;
+        }
+
+        .project-folder-inline {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-folder-inline select {
+            min-width: 120px;
+            padding: 4px 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 10px;
+        }
+
+        .project-folder-inline input[type="text"] {
+            min-width: 120px;
+            padding: 4px 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 10px;
+        }
+
+        /* 横向排列的单选按钮组 */
+        .radio-group.horizontal {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .radio-group.horizontal .radio-option {
+            flex: 1;
+            margin-bottom: 0;
+            min-width: 0;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .radio-group.horizontal .radio-option .radio-label {
+            flex: none;
+            white-space: nowrap;
+        }
+
+        /* 时间轴选项横向布局 */
+        .timeline-options-horizontal {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+            padding: 8px 0;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .timeline-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 4px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #2a2a2a;
+            transition: all 0.2s ease;
+            font-size: 9px;
+            color: #e0e0e0;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .timeline-option:hover {
+            background: #333;
+            border-color: #666;
+        }
+
+        .timeline-option input[type="radio"]:checked + span {
+            color: #3498db;
+            font-weight: 500;
+        }
+
+        .timeline-option:has(input[type="radio"]:checked) {
+            background: #1e3a5f;
+            border-color: #3498db;
+        }
+
+        /* 导入合成按钮独特样式 */
+        .composition-toggle {
+            padding: 6px 12px;
+            background: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 9px;
+            color: #e0e0e0;
+            margin-right: 8px;
+            min-width: 70px;
+        }
+
+        .composition-toggle:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .composition-toggle.active {
+            background: #27ae60;
+            border-color: #27ae60;
+            color: white;
+        }
+
+        .composition-toggle.active:hover {
+            background: #229954;
+            border-color: #229954;
+        }
+
+        /* 时间轴选项禁用状态 */
+        .timeline-options-horizontal.disabled .timeline-option {
+            opacity: 0.4;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        /* 导入合成按钮在禁用状态下不受影响 */
+        .timeline-options-horizontal.disabled .composition-toggle {
+            opacity: 1;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .timeline-option input[type="radio"] {
+            margin: 0;
+        }
+
+        .timeline-option span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 导出模式选项样式 */
+        .export-mode-options {
+            margin-top: 12px;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+
+        .browse-button {
+            padding: 4px 8px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .browse-button:hover {
+            background: #2980b9;
+        }
+
+        .sequence-config-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 16px;
+            font-size: 10px;
+            color: #bbb;
+        }
+
+        /* 导入模式横向布局样式 */
+        .import-mode-options-horizontal {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            padding: 4px 0;
+            width: 100%;
+        }
+
+        .import-mode-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: transparent;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            color: #ffffff;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            min-height: 28px;
+        }
+
+        .import-mode-option:hover {
+            background: transparent;
+            border-color: #888;
+        }
+
+        .import-mode-option input[type="radio"]:checked + span {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .import-mode-option:has(input[type="radio"]:checked) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #aaa;
+        }
+
+        .import-mode-option input[type="radio"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .import-mode-option span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 顺序排列间隔设置弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 8px;
+            width: 280px;
+            max-width: 90vw;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.2s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid #555;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 13px;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: #444;
+            color: #e0e0e0;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .interval-setting {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 12px;
+            height: 60px;
+        }
+
+        .interval-input-section {
+            flex: 1;
+            display: flex;
+        }
+
+        .interval-input-section input[type="number"] {
+            width: 100%;
+            height: 100%;
+            padding: 15px 10px;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 16px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .interval-input-section input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .interval-unit-section {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 70px;
+            height: 100%;
+        }
+
+        .unit-button {
+            flex: 1;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 8px 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            min-height: 0;
+        }
+
+        .unit-button span {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .unit-button small {
+            font-size: 8px;
+            color: #888;
+            opacity: 0.8;
+        }
+
+        .unit-button:hover {
+            background: #444;
+            border-color: #666;
+        }
+
+        .unit-button.active {
+            background: #1e3a5f;
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .unit-button.active small {
+            color: #3498db;
+            opacity: 1;
+        }
+
+        .modal-description {
+            margin-bottom: 12px;
+        }
+
+        .modal-description p {
+            margin: 0;
+            font-size: 10px;
+            color: #bbb;
+            text-align: center;
+        }
+
+        .modal-footer {
+            display: flex;
+            padding: 12px 16px;
+            border-top: 1px solid #555;
+            justify-content: space-between;
+        }
+
+        .modal-btn {
+            padding: 6px 14px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            min-width: 50px;
+        }
+
+        .modal-btn.cancel {
+            background: #333;
+            color: #e0e0e0;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #444;
+            border-color: #666;
+        }
+
+        .modal-btn.confirm {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .modal-btn.confirm:hover {
+            background: #2980b9;
+            border-color: #2980b9;
+        }
+
+        /* 项目旁复制和指定文件夹弹窗样式 */
+        .folder-setting {
+            margin-bottom: 12px;
+        }
+
+        .folder-preset-section {
+            margin-bottom: 12px;
+        }
+
+        .folder-preset-section select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .folder-preset-section select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .folder-preset-section select option {
+            background: #333;
+            color: #e0e0e0;
+        }
+
+        .custom-folder-section input[type="text"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 11px;
+        }
+
+        .custom-folder-section input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        /* 指定文件夹弹窗特有样式 */
+        .folder-path-setting {
+            margin-bottom: 12px;
+        }
+
+        .folder-path-section {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .folder-path-section input[type="text"] {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 11px;
+        }
+
+        .folder-path-section input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .browse-button {
+            background: #3498db;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            padding: 8px 12px;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .browse-button:hover {
+            background: #2980b9;
+            border-color: #2980b9;
+        }
+
+        .recent-folders-section {
+            border-top: 1px solid #555;
+            padding-top: 12px;
+        }
+
+        .recent-folders-title {
+            font-size: 10px;
+            color: #bbb;
+            margin-bottom: 8px;
+        }
+
+        .recent-folders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .recent-folder-item {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 6px 8px;
+            font-size: 9px;
+            transition: all 0.2s ease;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recent-folder-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .recent-folder-delete {
+            background: #e74c3c;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 8px;
+            padding: 2px 4px;
+            margin-left: 6px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .recent-folder-delete:hover {
+            background: #c0392b;
+        }
+
+        .recent-folder-item:hover {
+            background: #444;
+            border-color: #666;
+        }
+
+        .recent-folder-item.selected {
+            background: #1e3a5f;
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .radio-label, .checkbox-label {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            color: #e0e0e0;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .radio-label strong {
+            color: #fff;
+        }
+
+        .radio-label small {
+            color: #999;
+            font-size: 9px;
+        }
+
+        .sub-config {
+            margin-left: 24px;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            border-left: 2px solid #3498db;
+        }
+
+        .sub-config label {
+            display: block;
+            font-size: 10px;
+            color: #ccc;
+            margin-bottom: 4px;
+        }
+
+        .sub-config select,
+        .sub-config input[type="text"],
+        .sub-config input[type="number"] {
+            width: 100%;
+            padding: 4px 6px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 10px;
+        }
+
+        .sub-config input[type="number"] {
+            width: 60px;
+            display: inline-block;
+        }
+
+        .folder-input-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .folder-input-group input {
+            flex: 1;
+        }
+
+        .recent-folders-section {
+            margin-top: 8px;
+        }
+
+        .recent-folders-section label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 10px;
+            color: #bbb;
+        }
+
+        .recent-folders-select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            font-size: 11px;
+        }
+
+        .recent-folders-select option {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        /* 文件夹选择模态框样式 */
+        .folder-picker-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .folder-picker-content {
+            background: #2a2a2a;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow: hidden;
+            border: 1px solid #555;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .folder-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #555;
+            background: #333;
+        }
+
+        .folder-picker-header h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .folder-picker-close {
+            background: none;
+            border: none;
+            color: #bbb;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-picker-close:hover {
+            color: #fff;
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .folder-picker-body {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .picker-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .picker-btn:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        .picker-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .picker-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .picker-btn.secondary:hover:not(:disabled) {
+            background: #7f8c8d;
+        }
+
+        .folder-drop-zone {
+            border: 2px dashed #555;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 20px;
+            background: #1e1e1e;
+        }
+
+        .folder-drop-zone:hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .folder-drop-zone.drag-over {
+            border-color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .drop-zone-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .drop-zone-text {
+            color: #fff;
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .drop-zone-hint {
+            color: #bbb;
+            font-size: 11px;
+        }
+
+        .manual-input-section {
+            background: #1e1e1e;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 16px;
+        }
+
+        .manual-input-section label {
+            display: block;
+            color: #fff;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .manual-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .manual-input-group input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 11px;
+        }
+
+        .manual-input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #2a2a2a;
+        }
+
+
+
+        .folder-picker-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px 20px;
+            border-top: 1px solid #555;
+            background: #333;
+        }
+
+        .settings-footer {
+            padding: 12px 16px;
+            background: #1e1e1e;
+            border-top: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .settings-footer .btn {
+            min-width: 80px;
+        }
+
+        /* 输入组样式 */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .input-option {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-label {
+            font-size: 12px;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-wrapper input[type="number"] {
+            background: #1e1e1e;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 12px;
+            padding: 8px 12px;
+            width: 120px;
+        }
+
+        .input-wrapper input[type="number"]:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+        }
+
+        .input-hint {
+            font-size: 10px;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* 音量滑块样式 */
+        .input-wrapper input[type="range"] {
+            width: 120px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .input-wrapper input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #007acc;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .input-wrapper input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #007acc;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* 测试按钮样式 */
+        .test-button {
+            background: #4a4a4a;
+            border: 1px solid #666;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 11px;
+            padding: 6px 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .test-button:hover {
+            background: #5a5a5a;
+        }
+
+        .test-button:active {
+            background: #3a3a3a;
+        }
+
+        /* 导入模式选择样式 */
+        .import-mode-selection {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+
+        .mode-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: transparent;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 10px;
+            color: #999;
+            user-select: none;
+        }
+
+        .mode-button:hover {
+            border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
+        }
+
+        .mode-button input[type="radio"],
+        .mode-button input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .mode-button input[type="radio"]:checked + .mode-text,
+        .mode-button input[type="checkbox"]:checked + .mode-text {
+            color: #2196f3;
+            transition: color 0.3s ease;
+        }
+
+        .mode-button:has(input[type="radio"]:checked),
+        .mode-button:has(input[type="checkbox"]:checked) {
+            background: transparent;
+            border: 1px solid #2196f3;
+            color: #2196f3;
+            transition: all 0.3s ease;
+        }
+
+        /* 导入合成按钮激活状态 */
+        .mode-button.active {
+            background: #007acc;
+            border-color: #007acc;
+            color: white;
+        }
+
+        .mode-button.active:hover {
+            background: #005a9e;
+            border-color: #005a9e;
+        }
+
+        .mode-button.checked {
+            background: transparent;
+            border-color: #007acc;
+        }
+
+        .mode-text {
+            transition: color 0.3s ease;
+        }
+
+        /* 导入行为设置样式 */
+        .import-behavior {
+            margin-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .import-behavior-buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+
+        .import-behavior-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: transparent;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 10px;
+            color: #999;
+            user-select: none;
+        }
+
+        .import-behavior-button:hover {
+            border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
+        }
+
+        .import-behavior-button input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .import-behavior-button input[type="radio"]:checked + .behavior-text {
+            color: #ff9800;
+            transition: color 0.3s ease;
+        }
+
+        .import-behavior-button:has(input[type="radio"]:checked) {
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
+        }
+
+        .import-behavior-button:has(input[type="radio"]:checked) .behavior-text {
+            color: #ff9800;
+            transition: color 0.3s ease;
+        }
+
+        /* “不导入合成”按钮的特殊状态样式 (辉光效果) */
+        .import-behavior-button.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        .import-behavior-button.filled .behavior-text {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        /* “不导入合成”按钮的特殊状态样式 (辉光效果) */
+        .import-behavior-button.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        .import-behavior-button.filled .behavior-text {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        /* 图层操作按钮样式 */
+        .layer-operations {
+            margin-top: 8px;
+        }
+
+        .layer-operation-buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .layer-operation-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: transparent;
+            border: 1px solid #9b59b6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            color: #9b59b6;
+            user-select: none;
+        }
+
+        .layer-operation-button:hover {
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #a569bd;
+            color: #a569bd;
+        }
+
+        .layer-operation-button:active {
+            background: #1a1a1a;
+            transform: translateY(1px);
+        }
+
+        /* 图层操作按钮变灰样式 */
+        .layer-operation-button.dimmed {
+            opacity: 0.4;
+            color: #666;
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+            cursor: not-allowed;
+            filter: grayscale(50%);
+            transition: all 0.3s ease;
+        }
+        
+        .layer-operation-button.dimmed:hover {
+            opacity: 0.4;
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+            transform: none;
+        }
+
+        .layer-operation-button.dimmed:hover {
+            opacity: 0.6;
+            color: #777;
+        }
+
+        .operation-text {
+            transition: color 0.2s ease;
+        }
+
+        /* 高级设置导入行为按钮样式 */
+        .import-behavior-options-horizontal {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .import-behavior-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: transparent;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 10px;
+            color: #999;
+            min-height: 28px;
+        }
+
+        .import-behavior-option:hover {
+            border-color: #888;
+            color: #bbb;
+            transition: all 0.2s ease;
+        }
+
+        .import-behavior-option input[type="radio"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .import-behavior-option input[type="radio"]:checked + span {
+            color: #ff9800;
+            transition: color 0.3s ease;
+        }
+
+        .import-behavior-option:has(input[type="radio"]:checked) {
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
+        }
+
+        /* 高级设置"不导入合成"按钮的特殊状态样式 (辉光效果) */
+        .import-behavior-option.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        .import-behavior-option.filled span {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        .btn-small {
+            padding: 3px 8px;
+            font-size: 10px;
+            min-width: auto;
+            height: 22px;
+        }
+
+        /* ==================== 拖拽导入样式 ==================== */
+
+        /* 拖拽悬停时的整体效果 */
+        body.drag-over {
+            transition: all 0.3s ease;
+        }
+
+        /* 拖拽时的背景蒙版 */
+        body.drag-over::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 999;
+            pointer-events: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* 拖拽时的边框效果 */
+        body.drag-over::after {
+            content: '';
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            border: 2px dashed #3498db;
+            border-radius: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            animation: dragPulse 1.5s ease-in-out infinite alternate;
+        }
+
+        /* 拖拽时的简约中央提示 */
+        .drag-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1002;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body.drag-over .drag-overlay {
+            opacity: 1;
+        }
+
+        .drag-overlay .drag-icon {
+            color: #3498db;
+            font-size: 48px;
+            font-weight: 200;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .drag-overlay .drag-text {
+            color: #3498db;
+            font-size: 13px;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        @keyframes dragPulse {
+            from { opacity: 0.3; }
+            to { opacity: 0.7; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 拖拽提示样式 */
+        .drag-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #e0e0e0;
+            padding: 16px 24px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            z-index: 1001;
+            animation: fadeInOut 3s ease-in-out;
+            pointer-events: none;
+        }
+
+        .drag-hint-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drag-hint-icon {
+            font-size: 18px;
+        }
+
+        .drag-hint-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+
+        /* ==================== 拖拽状态样式 ==================== */
+
+        /* 项目内文件拖拽警告状态 */
+        body.drag-project-files::after {
+            border-color: #e74c3c !important;
+            animation: dragWarningPulse 1s ease-in-out infinite alternate;
+        }
+
+        body.drag-project-files::before {
+            background: rgba(231, 76, 60, 0.3) !important;
+        }
+
+        /* 拖拽文本状态样式 */
+        .drag-text-warning {
+            color: #e74c3c !important;
+            font-weight: 600;
+        }
+
+        .drag-text-success {
+            color: #27ae60 !important;
+            font-weight: 600;
+        }
+
+        .drag-text-default {
+            color: #3498db;
+            font-weight: 400;
+        }
+
+        /* 拖拽提示文本状态样式 */
+        .drag-hint-text.drag-hint-warning {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .drag-hint-text.drag-hint-success {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .drag-hint-text.drag-hint-default {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        /* 警告状态的脉冲动画 */
+        @keyframes dragWarningPulse {
+            from { 
+                opacity: 0.4; 
+                border-color: #e74c3c;
+            }
+            to { 
+                opacity: 0.8; 
+                border-color: #c0392b;
+            }
+        }
+
+        /* 成功状态的边框效果 */
+        body.drag-success::after {
+            border-color: #27ae60 !important;
+            animation: dragSuccessPulse 1.2s ease-in-out infinite alternate;
+        }
+
+        body.drag-success::before {
+            background: rgba(39, 174, 96, 0.2) !important;
+        }
+
+        @keyframes dragSuccessPulse {
+            from { 
+                opacity: 0.5; 
+                border-color: #27ae60;
+            }
+            to { 
+                opacity: 0.9; 
+                border-color: #2ecc71;
+            }
+        }
+
+        /* 导入状态增强 */
+        .import-status.processing {
+            border-left-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            animation: processingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes processingPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* 拖拽区域指示器 */
+        .panel.drag-active {
+            border: 2px dashed #3498db;
+            background: rgba(52, 152, 219, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        /* Eagle确认对话框 */
+        .eagle-confirm-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .eagle-confirm-content {
+            background: #2a2a2a;
+            border-radius: 8px;
+            border: 1px solid #555;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .eagle-confirm-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #555;
+        }
+
+        .eagle-confirm-header h3 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .eagle-confirm-body {
+            padding: 20px;
+            color: #e0e0e0;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .eagle-confirm-body p {
+            margin: 0 0 12px 0;
+        }
+
+        .file-list {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 4px 0;
+            color: #ccc;
+            font-size: 11px;
+            border-bottom: 1px solid #333;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .eagle-confirm-actions {
+            padding: 16px 20px;
+            border-top: 1px solid #555;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .eagle-confirm-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel {
+            background: #666;
+            color: #fff;
+        }
+
+        .btn-cancel:hover {
+            background: #777;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        /* 新增的导入设置暗色样式 */
+        .import-settings-dark {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #e0e0e0;
+            font-size: 11px;
+            flex: 1;
+        }
+
+        .setting-label {
+            color: #999;
+            font-weight: normal;
+        }
+
+        .setting-value {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        /* 新增的按钮布局样式 */
+        .eagle-confirm-actions-flex {
+            padding: 16px 20px;
+            border-top: 1px solid #555;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* 新增的描边按钮样式 */
+        .btn-outline-secondary {
+            padding: 8px 16px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: transparent;
+            color: #ccc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            border-color: #777;
+            background: rgba(102, 102, 102, 0.1);
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            padding: 8px 16px;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            background: transparent;
+            color: #3498db;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-primary:hover {
+            border-color: #2980b9;
+            background: rgba(52, 152, 219, 0.1);
+            color: #2980b9;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 拖拽反馈消息 */
+        .drop-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(42, 42, 42, 0.95);
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 12px 16px;
+            z-index: 1003;
+            transform: translateX(100%);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .drop-message-show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .drop-message-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drop-message-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .drop-message-text {
+            color: #e0e0e0;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .drop-message-info {
+            border-left: 3px solid #3498db;
+        }
+
+        .drop-message-processing {
+            border-left: 3px solid #f39c12;
+            animation: processingPulse 1.5s ease-in-out infinite;
+        }
+
+        .drop-message-success {
+            border-left: 3px solid #27ae60;
+        }
+
+        .drop-message-error {
+            border-left: 3px solid #e74c3c;
+        }
+
+        .drop-message-warning {
+            border-left: 3px solid #f39c12;
+        }
+
+        /* 剪贴板导入相关样式 */
+        .clipboard-preview {
+            margin: 12px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .clipboard-preview .file-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .clipboard-preview .file-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .clipboard-preview .file-icon {
+            font-size: 16px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .clipboard-preview .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .clipboard-preview .file-name-container {
+            margin-bottom: 2px;
+            word-break: break-all;
+        }
+
+        .clipboard-preview .file-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #e0e0e0;
+            display: inline;
+        }
+
+        .clipboard-preview .file-name.editable {
+            cursor: pointer;
+            padding: 1px 2px;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+
+        .clipboard-preview .file-name.editable:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+
+        .clipboard-preview .file-ext {
+            font-size: 12px;
+            font-weight: 500;
+            color: #999;
+            display: inline;
+        }
+
+        .clipboard-preview .file-details {
+            font-size: 10px;
+            color: #999;
+        }
+
+        .temp-file-warning {
+            color: #f39c12;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
+        .original-file-info {
+            color: #27ae60;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
+        .import-info {
+            margin-top: 12px;
+            padding: 8px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        .import-mode-info {
+            font-size: 11px;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        /* 新的简化文件列表样式 */
+        .file-item-simple {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .file-item-simple:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-item-simple .file-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+
+        .file-item-simple .file-name {
+            flex: 1;
+            color: #e0e0e0;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .file-item-simple .file-size {
+            color: #999;
+            font-size: 10px;
+            flex-shrink: 0;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .file-item-simple .file-type {
+            color: #999;
+            font-size: 10px;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* 导入设置样式 */
+        .import-settings {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .import-settings span {
+            font-size: 11px;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .import-settings strong {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .import-mode-info strong {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <div class="header">
+            <div class="title">
+                <img src="public/logo.png" alt="Eagle2AE Logo" class="title-logo">
+                <div class="title-text">
+                    <span class="char char-e1">E</span>
+                    <span class="char char-a1">a</span>
+                    <span class="char char-g1">g</span>
+                    <span class="char char-l1">l</span>
+                    <span class="char char-e2">e</span>
+                    <span class="char char-2">2</span>
+                    <span class="char char-a2">A</span>
+                    <span class="char char-e3">e</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="log-panel-toggle" class="icon-btn" title="显示/隐藏日志">
+                    <span class="icon">📄</span>
+                </button>
+                <button id="settings-btn" class="icon-btn" title="高级设置">
+                    <span class="icon">⚙️</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">项目信息</div>
+                    <button id="test-connection-btn" class="connection-status-btn" title="点击测试连接">
+                        <div id="status-indicator" class="status-indicator"></div>
+                        <div class="connection-text">
+                            <span id="status-main" class="status-main">未连接</span>
+                            <span id="ping-time" class="ping-time">--ms</span>
+                        </div>
+                    </button>
+                </div>
+                <div class="project-info-container">
+                    <div class="project-info">
+                        <div class="ae-title">After Effects</div>
+                        <div><span class="label">版本:</span> <span id="ae-version">获取中...</span></div>
+                        <div><span class="label">路径:</span> <span id="project-path">未知</span></div>
+                        <div><span class="label">项目:</span> <span id="project-name">未打开项目</span></div>
+                        <div><span class="label">合成:</span> <span id="comp-name">无</span></div>
+                    </div>
+                    <div class="eagle-info">
+                        <div class="eagle-title">Eagle</div>
+                        <div><span class="label">版本:</span> <span id="eagle-version">获取中...</span></div>
+                        <div><span class="label">路径:</span> <span id="eagle-path">获取中...</span></div>
+                        <div><span class="label">资源库:</span> <span id="eagle-library">获取中...</span></div>
+                        <div><span class="label">当前组:</span> <span id="eagle-folder">获取中...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 导入模式和行为面板 -->
+            <div class="section">
+                <div class="section-title">导入模式&行为</div>
+
+                <!-- 导入模式选择 -->
+                <div class="import-mode-selection">
+                    <div class="mode-buttons">
+                        <label class="mode-button" title="从源目录直接导入到AE项目，不复制文件">
+                            <input type="radio" name="quick-import-mode" value="direct">
+                            <span class="mode-text">直接导入</span>
+                        </label>
+                        <label class="mode-button" title="复制文件到AE项目文件旁边后导入">
+                            <input type="radio" name="quick-import-mode" value="project_adjacent" checked>
+                            <span class="mode-text">项目旁复制</span>
+                        </label>
+                        <label class="mode-button" title="复制文件到指定文件夹后导入">
+                            <input type="radio" name="quick-import-mode" value="custom_folder">
+                            <span class="mode-text">指定文件夹</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 导入行为设置 -->
+                <div class="import-behavior">
+                    <div class="import-behavior-buttons">
+                        <label class="import-behavior-button" id="no-import-comp-btn" title="不将导入的素材添加到合成中">
+                            <input type="radio" name="import-behavior" value="no_import">
+                            <span class="behavior-text">不导入合成</span>
+                        </label>
+                        <label class="import-behavior-button" title="将素材放置在当前时间指针位置">
+                            <input type="radio" name="import-behavior" value="current_time" checked>
+                            <span class="behavior-text">当前时间</span>
+                        </label>
+                        <label class="import-behavior-button" title="将素材移至时间轴开始处（0秒位置）">
+                            <input type="radio" name="import-behavior" value="timeline_start">
+                            <span class="behavior-text">时间轴开始</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 图层操作按钮 -->
+                <div class="layer-operations" style="margin-top: 16px;">
+                    <div class="layer-operation-buttons">
+                        <button class="layer-operation-button" id="detect-layers-btn" title="检测当前合成中的图层">
+                            <span class="operation-text">检测图层</span>
+                        </button>
+                        <button class="layer-operation-button" id="export-layers-btn" title="导出选中的图层">
+                            <span class="operation-text">导出图层</span>
+                        </button>
+                        <button class="layer-operation-button" id="export-to-eagle-btn" title="将AE图层数据导出到Eagle资源库">
+                            <span class="operation-text">导出到Eagle</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 状态信息面板 -->
+            <div class="section">
+                <div class="section-title">状态信息</div>
+                <div id="import-status" class="import-status idle">
+                    <span id="latest-log-message" class="status-message">等待导入请求...</span>
+                </div>
+            </div>
+
+            <div class="section log">
+                <div class="log-header">
+                    <div id="log-title" class="section-title clickable">日志 (AE扩展)</div>
+                    <div class="log-controls">
+                        <button id="log-switch-btn" class="btn-small btn-secondary">切换到Eagle日志</button>
+                        <button id="clear-log-btn" class="btn-small btn-secondary">清理日志</button>
+                    </div>
+                </div>
+                <div id="log-output" class="log-output"></div>
+            </div>
+        </div>
+
+        <!-- 文件夹选择模态框 -->
+        <div id="folder-picker-modal" class="folder-picker-modal" style="display: none;">
+            <div class="folder-picker-content">
+                <div class="folder-picker-header">
+                    <h3>选择目标文件夹</h3>
+                    <button id="folder-picker-close" class="folder-picker-close">×</button>
+                </div>
+                <div class="folder-picker-body">
+                    <!-- 拖拽选择区域 -->
+                    <div id="folder-drop-zone" class="folder-drop-zone">
+                        <div class="drop-zone-content">
+                            <div class="drop-zone-icon">📂</div>
+                            <div class="drop-zone-text">将文件夹拖拽到这里</div>
+                            <div class="drop-zone-hint">或点击选择文件夹</div>
+                        </div>
+                    </div>
+
+                    <!-- 手动输入区域 -->
+                    <div class="manual-input-section">
+                        <label>或手动输入路径：</label>
+                        <div class="manual-input-group">
+                            <input type="text" id="manual-folder-input" placeholder="输入文件夹路径...">
+                            <button id="validate-path-btn" class="picker-btn secondary">验证</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="folder-picker-footer">
+                    <button id="folder-picker-cancel" class="picker-btn secondary">取消</button>
+                    <button id="folder-picker-confirm" class="picker-btn primary" disabled>确认</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settings-panel" class="settings-panel" style="display: none;">
+            <div class="settings-header">
+                <div class="settings-title">高级设置</div>
+                <button id="settings-close-btn" class="btn-close">×</button>
+            </div>
+
+            <div class="settings-content">
+                <!-- 导入模式设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">导入模式</div>
+                    <div class="import-mode-options-horizontal">
+                        <label class="import-mode-option" title="从Eagle直接导入到AE项目">
+                            <input type="radio" name="import-mode" value="direct">
+                            <span>直接导入</span>
+                        </label>
+                        <label class="import-mode-option" title="复制到AE项目文件旁边后导入">
+                            <input type="radio" name="import-mode" value="project_adjacent" checked>
+                            <span>项目旁复制</span>
+                        </label>
+                        <label class="import-mode-option" title="复制到指定文件夹后导入">
+                            <input type="radio" name="import-mode" value="custom_folder">
+                            <span>指定文件夹</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 导入行为设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">导入行为</div>
+                    <div class="import-behavior-options-horizontal">
+                        <label class="import-behavior-option" id="advanced-no-import-comp-btn" title="不将导入的素材添加到合成中">
+                            <input type="radio" name="advanced-import-behavior" value="no_import">
+                            <span>不导入合成</span>
+                        </label>
+                        <label class="import-behavior-option" title="将素材放置在当前时间指针位置">
+                            <input type="radio" name="advanced-import-behavior" value="current_time" checked>
+                            <span>当前时间</span>
+                        </label>
+                        <label class="import-behavior-option" title="将素材移至时间轴开始处（0秒位置）">
+                            <input type="radio" name="advanced-import-behavior" value="timeline_start">
+                            <span>时间轴开始</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 导出路径设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">导出路径设置</div>
+                    <div class="import-mode-options-horizontal">
+                        <label class="import-mode-option" title="直接导出到桌面">
+                            <input type="radio" name="export-mode" value="desktop">
+                            <span>桌面导出</span>
+                        </label>
+                        <label class="import-mode-option" title="导出到AE项目文件旁边的文件夹（与导入模式设置一致）">
+                            <input type="radio" name="export-mode" value="project_adjacent" checked>
+                            <span>项目旁导出</span>
+                        </label>
+                        <label class="import-mode-option" id="export-custom-folder-option" title="导出到指定文件夹（与导入模式设置一致）">
+                            <input type="radio" name="export-mode" value="custom_folder">
+                            <span>指定文件夹</span>
+                        </label>
+                    </div>
+
+                    <!-- 导出选项 -->
+                    <div class="checkbox-group-horizontal">
+                        <label class="checkbox-option" title="导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用">
+                            <input type="checkbox" id="export-auto-copy" checked>
+                            <span class="checkbox-label">自动复制</span>
+                        </label>
+                        <label class="checkbox-option" id="burn-after-reading-label" title="启用后图片导出到临时文件夹，导出后复制到剪切板。&#10;文件累计超过100MB或100个文件后自动清空。&#10;Alt+点击清空，Ctrl+点击打开临时文件夹。">
+                            <input type="checkbox" id="export-burn-after-reading">
+                            <span class="checkbox-label">阅后即焚</span>
+                        </label>
+                        <label class="checkbox-option" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
+                            <input type="checkbox" id="export-add-timestamp">
+                            <span class="checkbox-label">时间戳前缀</span>
+                        </label>
+                        <label class="checkbox-option" title="在导出文件夹名称前添加当前合成名称，如：MyComp_Export">
+                            <input type="checkbox" id="export-create-subfolders">
+                            <span class="checkbox-label">合成名前缀</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 通信设置 -->
+                <div class="settings-section">
+                    <div class="settings-section-title">通信设置</div>
+                    <div class="input-group">
+                        <label class="input-option">
+                            <span class="input-label">通信端口</span>
+                            <div class="input-wrapper">
+                                <input type="number" id="communication-port" value="8080" min="1024" max="65535">
+                                <small class="input-hint">端口范围: 1024-65535，修改后需重新连接</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <div class="settings-footer">
+            <button id="reset-settings-btn" class="btn btn-secondary" title="重置为默认并写入预设JSON">重置默认</button>
+            <button id="export-presets-btn" class="btn btn-secondary" title="打开当前预设目录">打开预设目录</button>
+            <button id="choose-presets-dir-btn" class="btn btn-secondary" title="自定义预设目录">⚙</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/CSInterface.js"></script>
+    <!-- 移除了顺序排列间隔设置弹窗，因为不再支持顺序排列 -->
+
+    <!-- 项目旁复制模式设置弹窗 -->
+    <div id="project-adjacent-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>项目旁复制设置</h3>
+                <button class="modal-close" onclick="closeProjectAdjacentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-setting">
+                    <div class="folder-preset-section">
+                        <select id="project-folder-preset-select">
+                            <option value="Eagle_Assets">Eagle_Assets</option>
+                            <option value="Eagle_Import">Eagle_Import</option>
+                            <option value="Source_Files">Source_Files</option>
+                            <option value="Assets">Assets</option>
+                            <option value="Import">Import</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                    </div>
+                    <div class="custom-folder-section">
+                        <input type="text" id="project-custom-folder-input" placeholder="或输入自定义文件夹名">
+                    </div>
+                </div>
+                <div class="modal-description">
+                    <p>选择在AE项目文件旁边创建的文件夹名称</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeProjectAdjacentModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmProjectAdjacentSettings()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 指定文件夹模式设置弹窗 -->
+    <div id="custom-folder-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>指定文件夹设置</h3>
+                <button class="modal-close" onclick="closeCustomFolderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-path-setting">
+                    <div class="folder-path-section">
+                        <input type="text" id="custom-folder-path-input" placeholder="选择目标文件夹路径" readonly>
+                        <button class="browse-button" onclick="browseFolderPath()">浏览...</button>
+                    </div>
+                    <div class="recent-folders-section" id="recent-folders-section" style="display: none;">
+                        <div class="recent-folders-title">最近使用的文件夹</div>
+                        <div class="recent-folders-list" id="recent-folders-list">
+                            <!-- 最近使用的文件夹将动态添加到这里 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-description">
+                    <p>选择素材复制的目标文件夹路径</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeCustomFolderModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmCustomFolderSettings()">确认</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // 移除了sequenceSettings变量，因为不再支持顺序排列
+
+        // 导入模式设置
+        let projectAdjacentSettings = {
+            folderName: 'Eagle_Assets'
+        };
+
+        let customFolderSettings = {
+            folderPath: '',
+            recentFolders: []
+        };
+
+        // 同步操作面板和高级设置的选项
+        function syncQuickToAdvanced() {
+            // 同步导入模式
+            const quickImportMode = document.querySelector('input[name="quick-import-mode"]:checked');
+            const advancedImportMode = document.querySelector(`input[name="import-mode"][value="${quickImportMode?.value}"]`);
+            if (advancedImportMode) {
+                advancedImportMode.checked = true;
+            }
+
+            // 同步导入行为 - 直接同步快速面板和高级设置的导入行为按钮
+            const quickImportBehavior = document.querySelector('input[name="import-behavior"]:checked');
+            if (quickImportBehavior) {
+                const advancedImportBehavior = document.querySelector(`input[name="advanced-import-behavior"][value="${quickImportBehavior.value}"]`);
+                if (advancedImportBehavior) {
+                    advancedImportBehavior.checked = true;
+                }
+            }
+        }
+
+        function syncAdvancedToQuick() {
+            // 同步导入模式
+            const advancedImportMode = document.querySelector('input[name="import-mode"]:checked');
+            const quickImportMode = document.querySelector(`input[name="quick-import-mode"][value="${advancedImportMode?.value}"]`);
+            if (quickImportMode) {
+                quickImportMode.checked = true;
+            }
+
+            // 同步导入行为 - 直接同步高级设置和快速面板的导入行为按钮
+            const advancedImportBehavior = document.querySelector('input[name="advanced-import-behavior"]:checked');
+            if (advancedImportBehavior) {
+                const quickImportBehavior = document.querySelector(`input[name="import-behavior"][value="${advancedImportBehavior.value}"]`);
+                if (quickImportBehavior) {
+                    quickImportBehavior.checked = true;
+                }
+            }
+        }
+
+        // 模态框显示逻辑现在由main.js处理，避免事件监听器冲突
+
+        // 移除了sequence相关的函数，因为不再支持顺序排列
+
+        // 数据持久化功能
+        function saveProjectAdjacentSettings() {
+            try {
+                localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(projectAdjacentSettings));
+            } catch (e) {
+                console.warn('无法保存项目旁复制设置到本地存储:', e);
+            }
+        }
+
+        function loadProjectAdjacentSettings() {
+            try {
+                const saved = localStorage.getItem('ae_extension_project_adjacent_settings');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    projectAdjacentSettings = { ...projectAdjacentSettings, ...parsed };
+                }
+            } catch (e) {
+                console.warn('无法从本地存储加载项目旁复制设置:', e);
+            }
+        }
+
+        function saveCustomFolderSettings() {
+            try {
+                localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(customFolderSettings));
+            } catch (e) {
+                console.warn('无法保存指定文件夹设置到本地存储:', e);
+            }
+        }
+
+        function loadCustomFolderSettings() {
+            try {
+                const saved = localStorage.getItem('ae_extension_custom_folder_settings');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    customFolderSettings = { ...customFolderSettings, ...parsed };
+                }
+            } catch (e) {
+                console.warn('无法从本地存储加载指定文件夹设置:', e);
+            }
+        }
+
+        // 下拉列表变化事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const presetSelect = document.getElementById('project-folder-preset-select');
+            if (presetSelect) {
+                presetSelect.addEventListener('change', function() {
+                    const customInput = document.getElementById('project-custom-folder-input');
+                    if (this.value === 'custom') {
+                        customInput.style.display = 'block';
+                        customInput.focus();
+                    } else {
+                        customInput.style.display = 'none';
+                        customInput.value = '';
+                    }
+                });
+            }
+
+            // 加载设置
+            loadProjectAdjacentSettings();
+            loadCustomFolderSettings();
+            
+            // 初始化按钮的悬浮提示
+            setTimeout(() => {
+                updateProjectAdjacentTooltip();
+                updateCustomFolderTooltip();
+            }, 100);
+        });
+
+        // 点击弹窗外部关闭
+        document.addEventListener('click', function(e) {
+            const projectModal = document.getElementById('project-adjacent-modal');
+            const customModal = document.getElementById('custom-folder-modal');
+
+            if (e.target === projectModal) {
+                closeProjectAdjacentModal();
+            } else if (e.target === customModal) {
+                closeCustomFolderModal();
+            }
+        });
+
+        // 项目旁复制模式弹窗功能
+        function showProjectAdjacentModal() {
+            const modal = document.getElementById('project-adjacent-modal');
+            const presetSelect = document.getElementById('project-folder-preset-select');
+            const customInput = document.getElementById('project-custom-folder-input');
+
+            // 设置当前值
+            presetSelect.value = projectAdjacentSettings.folderName;
+            customInput.value = '';
+
+            // 根据选择显示/隐藏自定义输入框
+            customInput.style.display = presetSelect.value === 'custom' ? 'block' : 'none';
+
+            modal.style.display = 'flex';
+        }
+
+        function closeProjectAdjacentModal() {
+            const modal = document.getElementById('project-adjacent-modal');
+            modal.style.display = 'none';
+
+            // 如果用户取消，恢复到直接导入
+            const directRadio = document.querySelector('input[name="import-mode"][value="direct"]');
+            if (directRadio) {
+                directRadio.checked = true;
+            }
+        }
+
+        function confirmProjectAdjacentSettings() {
+            const presetSelect = document.getElementById('project-folder-preset-select');
+            const customInput = document.getElementById('project-custom-folder-input');
+
+            let folderName = '';
+            if (presetSelect.value === 'custom') {
+                folderName = customInput.value.trim();
+                if (!folderName) {
+                    alert('请输入自定义文件夹名称');
+                    return;
+                }
+            } else {
+                folderName = presetSelect.value;
+            }
+
+            // 验证文件夹名称
+            if (!/^[a-zA-Z0-9_\-\u4e00-\u9fa5]+$/.test(folderName)) {
+                alert('文件夹名称只能包含字母、数字、下划线、中划线和中文字符');
+                return;
+            }
+
+            // 保存设置
+            projectAdjacentSettings.folderName = folderName;
+
+            // 关闭弹窗
+            const modal = document.getElementById('project-adjacent-modal');
+            modal.style.display = 'none';
+
+            // 保存到本地存储
+            saveProjectAdjacentSettings();
+            
+            // 更新项目旁复制按钮的悬浮提示
+            updateProjectAdjacentTooltip();
+
+            console.log('项目旁复制设置已保存:', projectAdjacentSettings);
+        }
+
+        // 指定文件夹模式弹窗功能
+        function showCustomFolderModal() {
+            const modal = document.getElementById('custom-folder-modal');
+            const pathInput = document.getElementById('custom-folder-path-input');
+
+            // 设置当前值
+            pathInput.value = customFolderSettings.folderPath;
+
+            // 显示最近使用的文件夹
+            updateRecentFoldersList();
+            
+            // 更新悬浮提示
+            updateCustomFolderTooltip();
+
+            modal.style.display = 'flex';
+        }
+
+        function closeCustomFolderModal() {
+            const modal = document.getElementById('custom-folder-modal');
+            modal.style.display = 'none';
+
+            // 如果用户取消，恢复到直接导入
+            const directRadio = document.querySelector('input[name="import-mode"][value="direct"]');
+            if (directRadio) {
+                directRadio.checked = true;
+            }
+        }
+
+        function browseFolderPath() {
+            try {
+                console.log('正在使用Web API文件夹选择...');
+
+                // 优先使用 ExtendScript 方法，因为它能获取真实路径
+                if (window.csInterface) {
+                    console.log('使用 ExtendScript 方法获取真实路径');
+                    useExtendScriptFolderPicker('custom-folder-path-input', customFolderSettings.folderPath || '', '选择目标文件夹');
+                    return;
+                }
+
+                // 回退方案1：使用现代的 File System Access API
+                if ('showDirectoryPicker' in window) {
+                    console.log('使用 File System Access API');
+                    showDirectoryPicker()
+                        .then(async directoryHandle => {
+                            const pathInput = document.getElementById('custom-folder-path-input');
+                            
+                            // 尝试获取实际路径，如果不能获取则使用句柄
+                            let actualPath = '';
+                            try {
+                                // 在某些浏览器中可能可以获取路径
+                                if (directoryHandle.getDirectoryHandle) {
+                                    actualPath = directoryHandle.name; // 至少保存文件夹名
+                                }
+                            } catch (e) {
+                                actualPath = directoryHandle.name;
+                            }
+                            
+                            // 验证路径格式，拒绝保存无效路径
+                            if (!actualPath || actualPath.startsWith('[已选择]')) {
+                                console.warn('无法获取有效路径，回退到ExtendScript方法');
+                                useExtendScriptFolderPicker('custom-folder-path-input', '', '选择目标文件夹');
+                                return;
+                            }
+                            
+                            pathInput.value = actualPath;
+                            console.log('已选择文件夹:', actualPath);
+
+                            // 保存文件夹信息
+                            customFolderSettings.directoryHandle = directoryHandle;
+                            customFolderSettings.folderPath = actualPath;
+                            
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.customFolderPath = actualPath;
+                                window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                console.log('路径已同步到SettingsManager:', actualPath);
+                            }
+                            // 更新悬浮提示
+                            updateCustomFolderTooltip();
+                        })
+                        .catch(error => {
+                            if (error.name === 'AbortError') {
+                                console.log('用户取消了文件夹选择');
+                            } else {
+                                console.error('File System Access API 失败:', error);
+                                // 回退到 ExtendScript 方法
+                                if (window.csInterface) {
+                                    useExtendScriptFolderPicker('custom-folder-path-input', '', '选择目标文件夹');
+                                }
+                            }
+                        });
+                    return;
+                }
+
+                // 回退方案2：使用 webkitdirectory（最后选择，因为路径获取有限）
+                if (supportsWebkitDirectory()) {
+                    console.log('使用 webkitdirectory API');
+                    useWebkitDirectoryPicker('custom-folder-path-input');
+                    return;
+                }
+
+                console.warn('所有文件夹选择方法都不可用');
+                alert('您的浏览器不支持文件夹选择功能，请使用较新版本的Chrome或Edge浏览器，或确保AE扩展环境正常');
+            } catch (error) {
+                console.error('文件夹选择出错:', error);
+                alert('文件夹选择功能出现错误: ' + error.message);
+            }
+        }
+
+        // 检查是否支持 webkitdirectory
+        function supportsWebkitDirectory() {
+            const input = document.createElement('input');
+            return 'webkitdirectory' in input;
+        }
+
+        // 使用 webkitdirectory API 选择文件夹
+        function useWebkitDirectoryPicker(inputId) {
+            console.log('使用 webkitdirectory 选择文件夹...');
+
+            // 创建隐藏的文件输入元素
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;
+            input.multiple = true;
+            input.style.display = 'none';
+
+            input.addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files.length > 0) {
+                    // 从第一个文件的路径中提取实际的文件夹路径
+                    const firstFile = files[0];
+                    const relativePath = firstFile.webkitRelativePath;
+                    
+                    // 尝试构建实际的文件夹路径
+                    let actualFolderPath = '';
+                    try {
+                        // 获取文件的完整路径，然后移除相对路径部分
+                        const fullFilePath = firstFile.path || firstFile.webkitRelativePath;
+                        if (fullFilePath && relativePath) {
+                            // 计算父文件夹路径
+                            const pathParts = fullFilePath.split('/');
+                            const relativeParts = relativePath.split('/');
+                            
+                            if (pathParts.length > relativeParts.length) {
+                                // 移除相对路径部分，获取父文件夹路径
+                                const parentParts = pathParts.slice(0, pathParts.length - relativeParts.length + 1);
+                                actualFolderPath = parentParts.join('/');
+                            } else {
+                                // 回退：使用文件夹名称
+                                actualFolderPath = relativePath.split('/')[0];
+                            }
+                        } else {
+                            // 回退：使用顶级文件夹名称
+                            actualFolderPath = relativePath.split('/')[0];
+                        }
+                    } catch (error) {
+                        console.warn('无法提取实际路径，使用文件夹名称:', error);
+                        actualFolderPath = relativePath.split('/')[0];
+                    }
+                    
+                    // 验证路径格式
+                    if (!actualFolderPath || actualFolderPath.startsWith('[已选择]')) {
+                        console.error('获取到无效的文件夹路径，回退到ExtendScript方法');
+                        if (window.csInterface) {
+                            useExtendScriptFolderPicker(inputId, '', '选择目标文件夹');
+                        } else {
+                            alert('无法获取有效的文件夹路径，请使用其他方法选择文件夹');
+                        }
+                        document.body.removeChild(input);
+                        return;
+                    }
+
+                    const pathInput = document.getElementById(inputId);
+                    pathInput.value = actualFolderPath;
+                    console.log('已选择文件夹路径:', actualFolderPath);
+
+                    // 保存文件夹信息
+                    if (inputId === 'custom-folder-path-input') {
+                        customFolderSettings.folderPath = actualFolderPath;
+                        customFolderSettings.files = Array.from(files);
+                        
+                        // 同步到SettingsManager
+                        if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                            const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                            currentSettings.customFolderPath = actualFolderPath;
+                            window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                            console.log('导入路径已同步到SettingsManager:', actualFolderPath);
+                        }
+                        // 更新悬浮提示
+                        updateCustomFolderTooltip();
+                    } else if (inputId === 'export-custom-folder-path-input') {
+                        exportCustomFolderSettings.folderPath = actualFolderPath;
+                        exportCustomFolderSettings.files = Array.from(files);
+                        
+                        // 同步到SettingsManager
+                        if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                            const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                            currentSettings.exportSettings.customExportPath = actualFolderPath;
+                            window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                            console.log('导出路径已同步到SettingsManager:', actualFolderPath);
+                        }
+                    }
+                } else {
+                    console.log('用户取消了文件夹选择');
+                }
+
+                // 清理临时元素
+                document.body.removeChild(input);
+            });
+
+            // 添加到DOM并触发点击
+            document.body.appendChild(input);
+            input.click();
+        }
+
+        // CEP文件夹选择的通用函数
+        function useCEPFolderPicker(inputId, currentPath, title) {
+            console.log('正在使用CEP文件夹选择对话框...');
+
+            try {
+                // 使用CSInterface的文件选择功能
+                if (window.csInterface) {
+                    // 使用ExtendScript调用系统文件夹选择对话框
+                    window.csInterface.evalScript(`
+                        try {
+                            var folder = Folder.selectDialog("${title || '选择导出文件夹'}", "${currentPath || ''}");
+                            if (folder) {
+                                JSON.stringify({success: true, path: folder.fsName});
+                            } else {
+                                JSON.stringify({success: false, cancelled: true});
+                            }
+                        } catch (error) {
+                            JSON.stringify({success: false, error: error.toString()});
+                        }
+                    `, (result) => {
+                        try {
+                            const parsed = JSON.parse(result);
+                            if (parsed.success && parsed.path) {
+                                const selectedPath = parsed.path;
+                                const pathInput = document.getElementById(inputId);
+                                pathInput.value = selectedPath;
+                                console.log('已选择文件夹:', selectedPath);
+
+                                // 保存路径到相应的设置对象并同步到SettingsManager
+                                if (inputId === 'custom-folder-path-input') {
+                                    customFolderSettings.folderPath = selectedPath;
+                                    // 同步到SettingsManager
+                                    if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                        const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                        currentSettings.customFolderPath = selectedPath;
+                                        window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                        console.log('导入路径已同步到SettingsManager:', selectedPath);
+                                    }
+                                    // 更新悬浮提示
+                                    updateCustomFolderTooltip();
+                                } else if (inputId === 'export-custom-folder-path-input') {
+                                    exportCustomFolderSettings.folderPath = selectedPath;
+                                    // 同步到SettingsManager
+                                    if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                        const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                        currentSettings.exportSettings.customExportPath = selectedPath;
+                                        window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                                        console.log('导出路径已同步到SettingsManager:', selectedPath);
+                                    }
+                                }
+
+                                // 更新tooltip显示路径
+                                updatePathTooltip(inputId, selectedPath);
+                            } else if (parsed.cancelled) {
+                                console.log('用户取消了文件夹选择');
+                            } else {
+                                console.error('文件夹选择失败:', parsed.error || '未知错误');
+                            }
+                        } catch (parseError) {
+                            console.error('解析文件夹选择结果失败:', parseError);
+                        }
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error('CEP文件夹选择出错:', error);
+            }
+
+            // 如果CEP方法失败，回退到ExtendScript方法
+            useExtendScriptFolderPicker(inputId, currentPath, title);
+        }
+
+        // ExtendScript文件夹选择的通用函数
+        function useExtendScriptFolderPicker(inputId, currentPath, title) {
+            console.log('正在使用ExtendScript文件夹选择对话框...');
+
+            window.csInterface.evalScript(`selectFolder("${currentPath}", "${title}")`, (result) => {
+                try {
+                    const parsedResult = JSON.parse(result);
+
+                    if (parsedResult.success && parsedResult.path) {
+                        const pathInput = document.getElementById(inputId);
+                        pathInput.value = parsedResult.path;
+                        console.log('已选择文件夹:', parsedResult.path);
+
+                        // 验证路径格式，拒绝保存无效路径
+                        if (parsedResult.path.startsWith('[已选择]')) {
+                            console.error('检测到无效路径格式，拒绝保存:', parsedResult.path);
+                            alert('获取到无效的文件夹路径，请重新选择');
+                            return;
+                        }
+                        
+                        // 保存路径到相应的设置对象
+                        if (inputId === 'custom-folder-path-input') {
+                            customFolderSettings.folderPath = parsedResult.path;
+                            
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.customFolderPath = parsedResult.path;
+                                window.eagleToAeApp.settingsManager.saveSettings(currentSettings);
+                                console.log('导入路径已同步到SettingsManager:', parsedResult.path);
+                            }
+                            // 更新悬浮提示
+                            updateCustomFolderTooltip();
+                        } else if (inputId === 'export-custom-folder-path-input') {
+                            exportCustomFolderSettings.folderPath = parsedResult.path;
+
+                            // 同步到SettingsManager
+                            if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                                const currentSettings = window.eagleToAeApp.settingsManager.getSettings();
+                                currentSettings.exportSettings.customExportPath = parsedResult.path;
+                                window.eagleToAeApp.settingsManager.saveExportSettings(currentSettings.exportSettings);
+                                console.log('导出路径已同步到SettingsManager:', parsedResult.path);
+                            }
+                        }
+                    } else if (parsedResult.cancelled) {
+                        console.log('用户取消了文件夹选择');
+                        // 用户取消时不显示错误提示
+                    } else {
+                        console.error('文件夹选择失败:', parsedResult.error || '未知错误');
+                        // 只有在真正出错时才显示错误提示
+                        alert('文件夹选择失败: ' + (parsedResult.error || '未知错误'));
+                    }
+                } catch (error) {
+                    console.error('解析文件夹选择结果失败:', error);
+                    alert('文件夹选择功能出现错误，请重试');
+                }
+            });
+        }
+
+        // 更新路径tooltip
+        function updatePathTooltip(inputId, path) {
+            const input = document.getElementById(inputId);
+            if (input && path) {
+                input.title = `当前设置的路径: ${path}`;
+                input.setAttribute('data-path', path);
+            }
+
+            // 如果是导出自定义文件夹，更新选项的tooltip
+            if (inputId === 'export-custom-folder-path-input') {
+                updateExportCustomFolderTooltip(path);
+            }
+        }
+
+        // 更新导出自定义文件夹选项的tooltip
+        function updateExportCustomFolderTooltip(path) {
+            const customFolderOption = document.getElementById('export-custom-folder-option');
+            if (customFolderOption) {
+                const baseTooltip = '指定任意文件夹作为导出目录';
+                if (path && path.trim() !== '') {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: ${path}`;
+                } else {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
+        }
+
+        // 回退到输入对话框
+        function fallbackToInputDialog(type) {
+            const currentPath = type === '导入' ? customFolderSettings.folderPath : exportCustomFolderSettings.folderPath;
+            const selectedPath = prompt(`请输入${type}文件夹路径:`, currentPath);
+            if (selectedPath !== null && selectedPath.trim() !== '') {
+                if (type === '导入') {
+                    const pathInput = document.getElementById('custom-folder-path-input');
+                    pathInput.value = selectedPath.trim();
+                } else {
+                    const pathInput = document.getElementById('export-custom-folder-path-input');
+                    pathInput.value = selectedPath.trim();
+                }
+            }
+        }
+
+        function updateRecentFoldersList() {
+            const recentSection = document.getElementById('recent-folders-section');
+            const recentList = document.getElementById('recent-folders-list');
+
+            if (customFolderSettings.recentFolders.length > 0) {
+                recentSection.style.display = 'block';
+                recentList.innerHTML = '';
+
+                customFolderSettings.recentFolders.forEach((folder, index) => {
+                    const item = document.createElement('button');
+                    item.className = 'recent-folder-item';
+                    
+                    // 创建文件夹路径文本
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'recent-folder-text';
+                    textSpan.textContent = folder;
+                    textSpan.title = folder; // 悬浮显示完整路径
+                    
+                    // 创建删除按钮
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'recent-folder-delete';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = '删除此记录';
+                    deleteBtn.onclick = function(e) {
+                        e.stopPropagation(); // 阻止事件冒泡
+                        removeRecentFolder(index);
+                    };
+                    
+                    // 点击文件夹路径选择该路径
+                    textSpan.onclick = function() {
+                        document.getElementById('custom-folder-path-input').value = folder;
+                        // 更新选中状态
+                        document.querySelectorAll('.recent-folder-item').forEach(btn => {
+                            btn.classList.remove('selected');
+                        });
+                        item.classList.add('selected');
+                    };
+                    
+                    item.appendChild(textSpan);
+                    item.appendChild(deleteBtn);
+                    recentList.appendChild(item);
+                });
+            } else {
+                recentSection.style.display = 'none';
+            }
+        }
+
+        // 删除最近使用的文件夹记录
+        function removeRecentFolder(index) {
+            if (index >= 0 && index < customFolderSettings.recentFolders.length) {
+                customFolderSettings.recentFolders.splice(index, 1);
+                saveCustomFolderSettings();
+                updateRecentFoldersList();
+                updateCustomFolderTooltip(); // 更新指定文件夹按钮的悬浮提示
+                console.log('已删除最近使用的文件夹记录，索引:', index);
+            }
+        }
+
+        function confirmCustomFolderSettings() {
+            const pathInput = document.getElementById('custom-folder-path-input');
+            const folderPath = pathInput.value.trim();
+
+            if (!folderPath) {
+                alert('请选择文件夹路径');
+                return;
+            }
+
+            // 保存设置
+            customFolderSettings.folderPath = folderPath;
+
+            // 添加到最近使用列表
+            if (!customFolderSettings.recentFolders.includes(folderPath)) {
+                customFolderSettings.recentFolders.unshift(folderPath);
+                // 限制最近使用列表长度
+                if (customFolderSettings.recentFolders.length > 5) {
+                    customFolderSettings.recentFolders = customFolderSettings.recentFolders.slice(0, 5);
+                }
+            }
+
+            // 关闭弹窗
+            const modal = document.getElementById('custom-folder-modal');
+            modal.style.display = 'none';
+
+            // 保存到本地存储
+            saveCustomFolderSettings();
+
+            console.log('指定文件夹设置已保存:', customFolderSettings);
+            
+            // 更新指定文件夹按钮的悬浮提示
+            updateCustomFolderTooltip();
+        }
+
+        // 更新项目旁复制按钮的悬浮提示
+        function updateProjectAdjacentTooltip() {
+            // 更新快速面板的项目旁复制按钮
+            const projectAdjacentOption = document.querySelector('label[title*="复制文件到AE项目文件旁边后导入"]');
+            if (projectAdjacentOption) {
+                const baseTooltip = '复制文件到AE项目文件旁边后导入';
+                const currentFolder = projectAdjacentSettings.folderName || 'Eagle_Assets';
+                projectAdjacentOption.title = `${baseTooltip}\n当前目录: ${currentFolder}`;
+            }
+            
+            // 更新高级设置面板的项目旁复制按钮
+            const advancedProjectAdjacentOption = document.querySelector('input[name="import-mode"][value="project_adjacent"]');
+            if (advancedProjectAdjacentOption && advancedProjectAdjacentOption.parentElement) {
+                const baseTooltip = '复制到AE项目文件旁边后导入';
+                const currentFolder = projectAdjacentSettings.folderName || 'Eagle_Assets';
+                advancedProjectAdjacentOption.parentElement.title = `${baseTooltip}\n当前目录: ${currentFolder}`;
+            }
+        }
+
+        // 更新指定文件夹按钮的悬浮提示
+        function updateCustomFolderTooltip() {
+            // 更新快速面板的指定文件夹按钮
+            const customFolderOption = document.querySelector('label[title*="复制文件到指定文件夹后导入"]');
+            if (customFolderOption) {
+                const baseTooltip = '复制文件到指定文件夹后导入';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                } else {
+                    customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
+            
+            // 更新高级设置面板的指定文件夹按钮
+            const advancedCustomFolderOption = document.querySelector('input[name="import-mode"][value="custom_folder"]');
+            if (advancedCustomFolderOption && advancedCustomFolderOption.parentElement) {
+                const baseTooltip = '复制到指定文件夹后导入';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                } else {
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
+            
+            // 同时更新导出的指定文件夹按钮悬浮提示
+            const exportCustomFolderOption = document.getElementById('export-custom-folder-option');
+            if (exportCustomFolderOption) {
+                const baseTooltip = '导出到指定文件夹（与导入模式设置一致）';
+                const currentPath = customFolderSettings.folderPath;
+                if (currentPath && currentPath.trim() !== '') {
+                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                } else {
+                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                }
+            }
+        }
+
+
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const sequenceModal = document.getElementById('sequence-modal');
+                const projectModal = document.getElementById('project-adjacent-modal');
+                const customModal = document.getElementById('custom-folder-modal');
+
+                if (sequenceModal.style.display === 'flex') {
+                    closeSequenceModal();
+                } else if (projectModal.style.display === 'flex') {
+                    closeProjectAdjacentModal();
+                } else if (customModal.style.display === 'flex') {
+                    closeCustomFolderModal();
+                }
+            }
+        });
+
+
+    </script>
+
+    <!-- 拖拽提示覆盖层 -->
+    <div class="drag-overlay">
+        <div class="drag-icon">+</div>
+        <div class="drag-text">拖拽文件到此处</div>
+    </div>
+
+    <!-- 演示模式数据覆盖策略 (必须在所有其他脚本之前) -->
+    <script src="js/demo/demo-override.js"></script>
+
+    <script src="js/CSInterface.js"></script>
+    <script src="js/websocket-client.js"></script>
+    <script src="js/constants/ImportSettings.js"></script>
+    <script src="js/services/SettingsManager.js"></script>
+    <script src="js/services/FileHandler.js"></script>
+    <script src="js/services/ProjectStatusChecker.js"></script>
+    <script src="js/services/PortDiscovery.js"></script>
+    <script src="js/utils/SoundPlayer.js"></script>
+    <script src="js/utils/LogManager.js"></script>
+    <script src="js/cep-debug.js"></script>
+    <script src="js/nodejs-test.js"></script>
+
+    <!-- 演示模式脚本 -->
+    <script src="js/demo/demo-apis.js"></script>
+    <script src="js/demo/demo-network-interceptor.js"></script>
+    <script src="js/demo/demo-ui.js"></script>
+    <script src="js/demo/easter-egg.js"></script>
+    <script src="js/demo/demo-mode.js"></script>
+    <!-- <script src="js/demo/demo-validation.js"></script> -->
+
+<script src="js/main.js"></script>
+
+    <script>
+        // 初始化 CSInterface 用于弹窗中的文件夹选择
+        if (typeof CSInterface !== 'undefined') {
+            window.csInterface = new CSInterface();
+        }
+
+        // 手动修复title（备用）
+        window.fixTitles = function() {
+            if (!window.__DEMO_DATA__) return;
+
+            const aeData = window.__DEMO_DATA__.ae.connected;
+            const eagleData = window.__DEMO_DATA__.eagle.connected;
+
+            const projectPath = document.getElementById('project-path');
+            const eaglePath = document.getElementById('eagle-path');
+            const eagleLibrary = document.getElementById('eagle-library');
+
+            if (projectPath && aeData.projectPath) {
+                projectPath.removeAttribute('title');
+                projectPath.setAttribute('title', aeData.projectPath);
+                projectPath.title = aeData.projectPath;
+                console.log('✅ AE路径title已修复:', aeData.projectPath);
+            }
+
+            if (eaglePath && eagleData.execPath) {
+                eaglePath.removeAttribute('title');
+                eaglePath.setAttribute('title', eagleData.execPath);
+                eaglePath.title = eagleData.execPath;
+                console.log('✅ Eagle路径title已修复:', eagleData.execPath);
+            }
+
+            if (eagleLibrary && eagleData.libraryPath) {
+                eagleLibrary.removeAttribute('title');
+                eagleLibrary.setAttribute('title', eagleData.libraryPath);
+                eagleLibrary.title = eagleData.libraryPath;
+                console.log('✅ 资源库title已修复:', eagleData.libraryPath);
+            }
+        };
+
+        // 添加调试功能
+        window.debugTitle = function() {
+            console.log('=== Title调试信息 ===');
+
+            // 检查演示模式状态
+            console.log('演示模式状态:');
+            console.log('  __DEMO_MODE_ACTIVE__:', window.__DEMO_MODE_ACTIVE__);
+            console.log('  __DEMO_DATA__存在:', !!window.__DEMO_DATA__);
+            console.log('  demoMode.isActive:', window.demoMode?.isActive);
+
+            if (window.__DEMO_DATA__) {
+                const aeData = window.__DEMO_DATA__.ae.connected;
+                const eagleData = window.__DEMO_DATA__.eagle.connected;
+                console.log('AE演示数据:', aeData);
+                console.log('Eagle演示数据:', eagleData);
+            }
+
+            // 检查title属性
+            console.log('\nTitle属性检查:');
+            const elements = [
+                { id: 'project-path', name: 'AE路径' },
+                { id: 'eagle-path', name: 'Eagle路径' },
+                { id: 'eagle-library', name: '资源库' }
+            ];
+
+            elements.forEach(({ id, name }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const textContent = element.textContent || '';
+                    const title = element.title || '';
+                    console.log(`${name} (${id}):`);
+                    console.log(`  文本内容: "${textContent}"`);
+                    console.log(`  title属性: "${title}"`);
+                    console.log(`  title类型: ${typeof title}`);
+                    console.log(`  title长度: ${title.length}`);
+
+                    if (title === 'undefined') {
+                        console.error(`⚠️ ${name}的title为undefined！`);
+                    }
+                } else {
+                    console.error(`❌ 元素${id}不存在`);
+                }
+            });
+
+            console.log('=== 调试完成 ===');
+            console.log('在控制台中查看详细信息');
+        };
+
+        // 全局日志控制 - 设置为 false 来简化演示模式日志
+        window.DEMO_QUIET_MODE = true;
+
+        // 重写console方法来过滤演示模式日志
+        if (window.DEMO_QUIET_MODE) {
+            const originalLog = console.log;
+            const originalError = console.error;
+
+            console.log = function(...args) {
+                const message = args.join(' ');
+                // 过滤演示模式相关的日志
+                if (message.includes('🎭') || message.includes('🔍') || message.includes('📋') ||
+                    message.includes('🛡️') || message.includes('💾') || message.includes('🔄') ||
+                    message.includes('🎨') || message.includes('🧩') || message.includes('🎯') ||
+                    message.includes('📊') || message.includes('🔗') || message.includes('🖱️') ||
+                    message.includes('✅') || message.includes('⚠️') || message.includes('👂') ||
+                    message.includes('演示模式') || message.includes('演示数据') ||
+                    message.includes('网络拦截') || message.includes('DOM元素') ||
+                    message.includes('演示UI') || message.includes('演示API') ||
+                    message.includes('配置加载失败') || message.includes('默认配置') ||
+                    message.includes('数据覆盖') || message.includes('缓存DOM') ||
+                    message.includes('连接按钮') || message.includes('状态指示器') ||
+                    message.includes('事件监听器') || message.includes('API已被拦截') ||
+                    message.includes('备份原始') || message.includes('已替换为') ||
+                    message.includes('Web环境') || message.includes('CSInterface存在但调用失败') ||
+                    message.includes('📡 已向Eagle扩展') || message.includes('广播AE端口信息') ||
+                    message.includes('未连接到Eagle，跳过临时文件夹检查')) {
+                    return; // 不输出演示模式相关日志
+                }
+                originalLog.apply(console, args);
+            };
+
+            console.error = function(...args) {
+                const message = args.join(' ');
+                // 过滤Web环境下的预期错误
+                if (message.includes('配置加载失败') ||
+                    message.includes('Failed to fetch') ||
+                    message.includes('获取AE版本失败') ||
+                    message.includes('getHostEnvironment') ||
+                    message.includes('createMockCSInterface') ||
+                    message.includes('Cannot read properties of undefined') ||
+                    message.includes('Cannot read properties of null')) {
+                    return; // 不输出Web环境下的预期错误
+                }
+                originalError.apply(console, args);
+            };
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 页面加载完成');
+
+            // 延迟执行Node.js检测，确保CEP环境完全初始化
+            setTimeout(function() {
+                console.log('🔄 重新检测Node.js环境...');
+
+                // 尝试多种方式检测Node.js
+                let nodeDetected = false;
+
+                // 方法1: 检查window.cep_node
+                if (window.cep_node && window.cep_node.require) {
+                    console.log('✅ 通过cep_node检测到Node.js');
+                    window.require = window.cep_node.require;
+                    window.process = window.cep_node.process;
+                    window.Buffer = window.cep_node.Buffer;
+                    nodeDetected = true;
+                }
+
+                // 方法2: 检查全局require
+                if (!nodeDetected && typeof require !== 'undefined') {
+                    console.log('✅ 检测到全局require');
+                    try {
+                        const testOs = require('os');
+                        if (testOs) {
+                            window.require = require;
+                            nodeDetected = true;
+                        }
+                    } catch (e) {
+                        console.warn('全局require测试失败:', e.message);
+                    }
+                }
+
+                // 方法3: 尝试通过eval执行Node.js代码
+                if (!nodeDetected) {
+                    try {
+                        eval('if (typeof require !== "undefined") { window.require = require; window.__NODE_EVAL_SUCCESS__ = true; }');
+                        if (window.__NODE_EVAL_SUCCESS__) {
+                            console.log('✅ 通过eval检测到Node.js');
+                            nodeDetected = true;
+                        }
+                    } catch (e) {
+                        console.warn('eval检测失败:', e.message);
+                    }
+                }
+
+                // 更新全局标志
+                window.__NODE_JS_AVAILABLE__ = nodeDetected;
+
+                if (nodeDetected) {
+                    console.log('🎉 Node.js环境检测成功！');
+                    if (window.process && window.process.version) {
+                        console.log('Node.js版本:', window.process.version);
+                    }
+                } else {
+                    console.error('❌ Node.js环境检测失败');
+                    console.log('请检查manifest.xml配置和After Effects版本');
+                }
+            }, 1000); // 延迟1秒执行
+        });
+
+        // 标题字符变换处理 - 避免CSS hover冲突
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleElement = document.querySelector('.title');
+            const charA1 = document.querySelector('.char-a1');
+            
+            if (titleElement && charA1) {
+                // 确保初始状态为小写a
+                charA1.textContent = 'a';
+                charA1.classList.remove('uppercase');
+                
+                let isHovered = false;
+                let hoverTimeout = null;
+                let leaveTimeout = null;
+                
+                titleElement.addEventListener('mouseenter', function(e) {
+                    clearTimeout(leaveTimeout);
+                    isHovered = true;
+                    charA1.classList.add('uppercase');
+                    
+                    hoverTimeout = setTimeout(() => {
+                        if (isHovered) {
+                            charA1.textContent = 'A';
+                        }
+                    }, 100);
+                });
+                
+                titleElement.addEventListener('mouseleave', function(e) {
+                    clearTimeout(hoverTimeout);
+                    isHovered = false;
+                    charA1.classList.remove('uppercase');
+                    
+                    leaveTimeout = setTimeout(() => {
+                        if (!isHovered) {
+                            charA1.textContent = 'a';
+                        }
+                    }, 50);
+                });
+                
+                // 监听全局鼠标移动，检测是否真正离开标题区域
+                document.addEventListener('mousemove', function(e) {
+                    const rect = titleElement.getBoundingClientRect();
+                    const isInside = e.clientX >= rect.left && e.clientX <= rect.right && 
+                                   e.clientY >= rect.top && e.clientY <= rect.bottom;
+                    
+                    if (isInside && !isHovered) {
+                        clearTimeout(leaveTimeout);
+                        isHovered = true;
+                        charA1.classList.add('uppercase');
+                        
+                        hoverTimeout = setTimeout(() => {
+                            if (isHovered) {
+                                charA1.textContent = 'A';
+                            }
+                        }, 100);
+                    } else if (!isInside && isHovered) {
+                        clearTimeout(hoverTimeout);
+                        isHovered = false;
+                        charA1.classList.remove('uppercase');
+                        
+                        leaveTimeout = setTimeout(() => {
+                            if (!isHovered) {
+                                charA1.textContent = 'a';
+                            }
+                        }, 50);
+                    }
+                });
+                
+                // 强制重置函数
+                window.resetTitleChar = function() {
+                    clearTimeout(hoverTimeout);
+                    clearTimeout(leaveTimeout);
+                    charA1.textContent = 'a';
+                    charA1.classList.remove('uppercase');
+                    isHovered = false;
+                };
+            }
+        });
+    </script>
+</body>
+</html>

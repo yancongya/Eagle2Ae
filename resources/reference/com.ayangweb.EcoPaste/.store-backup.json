@@ -1,0 +1,68 @@
+{
+  "globalStore": {
+    "app": {
+      "autoStart": true,
+      "silentStart": true,
+      "showMenubarIcon": true,
+      "showTaskbarIcon": false
+    },
+    "appearance": {
+      "theme": "auto",
+      "isDark": true,
+      "language": "zh-CN"
+    },
+    "update": {
+      "auto": true,
+      "beta": true
+    },
+    "shortcut": {
+      "clipboard": "Alt+C",
+      "preference": "Alt+X",
+      "quickPaste": {
+        "enable": false,
+        "value": "Command+Shift"
+      }
+    },
+    "env": {
+      "platform": "windows",
+      "appName": "EcoPaste",
+      "appVersion": "0.5.0",
+      "saveDataDir": "C:\\Users\\Administrator\\AppData\\Roaming\\com.ayangweb.EcoPaste"
+    }
+  },
+  "clipboardStore": {
+    "window": {
+      "style": "float",
+      "position": "follow",
+      "backTop": true,
+      "showAll": false
+    },
+    "audio": {
+      "copy": true
+    },
+    "search": {
+      "position": "top",
+      "defaultFocus": false,
+      "autoClear": false
+    },
+    "content": {
+      "autoPaste": "single",
+      "ocr": true,
+      "copyPlain": false,
+      "pastePlain": false,
+      "operationButtons": [
+        "copy",
+        "star",
+        "delete"
+      ],
+      "autoFavorite": false,
+      "deleteConfirm": true,
+      "autoSort": false
+    },
+    "history": {
+      "duration": 0,
+      "unit": 1,
+      "maxCount": 0
+    }
+  }
+}

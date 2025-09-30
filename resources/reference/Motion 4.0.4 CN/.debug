@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionList>
+  <Extension Id="com.mtmograph.motion-next">
+    <HostList>
+      <Host Name="PPRO" Port="8000" />
+      <Host Name="AEFT" Port="7000" />
+    </HostList>
+  </Extension>
+</ExtensionList>

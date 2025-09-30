@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ExtensionManifest Version="5.0" ExtensionBundleId="com.aescripts.copypasta" ExtensionBundleVersion="1.0.4"
+                   ExtensionBundleName="Copy Pasta" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <ExtensionList>
+        <Extension Id="com.aescripts.copypasta.panel" Version="1.0.4" />
+        <Extension Id="com.aescripts.copypasta.about" Version="1.0.4" />
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <Host Name="AEFT" Version="13.0" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="5.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+    <DispatchInfoList>
+        <Extension Id="com.aescripts.copypasta.panel">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./panel.html</MainPath>
+                    <ScriptPath>./panel-extendscript.jsxbin</ScriptPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--allow-file-access-from-files</Parameter>
+                        <Parameter>--allow-file-access</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>Copy Pasta</Menu>
+                    <Geometry>
+                        <Size>
+                            <Width>200</Width>
+                            <Height>200</Height>
+                        </Size>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+        <Extension Id="com.aescripts.copypasta.about">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./dialog/dialog.html</MainPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--allow-file-access-from-files</Parameter>
+                        <Parameter>--allow-file-access</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Modeless</Type>
+                    <Geometry>
+                        <Size>
+                            <Width>350</Width>
+                            <Height>440</Height>
+                        </Size>
+                        <MaxSize>
+                            <Width>350</Width>
+                            <Height>500</Height>
+                        </MaxSize>
+                        <MinSize>
+                            <Width>350</Width>
+                            <Height>100</Height>
+                        </MinSize>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>

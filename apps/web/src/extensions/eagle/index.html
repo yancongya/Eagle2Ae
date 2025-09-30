@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Eagle2Ae</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #2b2b2b;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .export-ae-panel {
+            padding: 16px;
+            max-width: 100%;
+        }
+
+        h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #ffffff;
+            border-bottom: 2px solid #00a0ff;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-settings-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title-settings-btn:hover {
+            background: #555555;
+            color: #00a0ff;
+        }
+
+        .gear-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+        }
+
+        .gear-icon::before {
+            content: '⚙';
+            font-size: 16px;
+        }
+
+        h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .status-section, .files-section, .actions-section, .log-section {
+            background: #3c3c3c;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #555555;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #555555;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #cccccc;
+        }
+
+        .status-value {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .status-value.connected {
+            background: #1e5f1e;
+            color: #90ee90;
+        }
+
+        .status-value.disconnected {
+            background: #5f1e1e;
+            color: #ff9999;
+        }
+
+        .status-value.error {
+            background: #5f1e1e;
+            color: #ff6666;
+        }
+
+        .files-list {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .no-files {
+            color: #999999;
+            font-style: italic;
+            text-align: center;
+            padding: 16px;
+        }
+
+        .files-count {
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: #555555;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin: 2px 0;
+            background: #4a4a4a;
+            border-radius: 4px;
+            border-left: 3px solid #00a0ff;
+        }
+
+        .file-name {
+            flex: 1;
+            font-weight: 500;
+            color: #ffffff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-type {
+            font-size: 10px;
+            font-weight: 600;
+            color: #cccccc;
+            background: #666666;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: 8px;
+        }
+
+
+
+        .log-output {
+            height: calc(100vh - 420px);
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+
+        .log-entry.log-info {
+            color: #ffffff;
+        }
+
+        .log-entry.log-warning {
+            color: #ffcc00;
+        }
+
+        .log-entry.log-error {
+            color: #ff6666;
+        }
+
+        .log-time {
+            color: #999999;
+            margin-right: 8px;
+        }
+
+        /* 滚动条样式 */
+        .log-output::-webkit-scrollbar,
+        .files-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-output::-webkit-scrollbar-track,
+        .files-list::-webkit-scrollbar-track {
+            background: #2b2b2b;
+            border-radius: 3px;
+        }
+
+        .log-output::-webkit-scrollbar-thumb,
+        .files-list::-webkit-scrollbar-thumb {
+            background: #666666;
+            border-radius: 3px;
+        }
+
+        .log-output::-webkit-scrollbar-thumb:hover,
+        .files-list::-webkit-scrollbar-thumb:hover {
+            background: #777777;
+        }
+
+        /* 设置对话框样式 */
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .settings-dialog {
+            background: #3c3c3c;
+            border-radius: 8px;
+            padding: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .settings-dialog h3 {
+            margin: 0 0 20px 0;
+            color: #ffffff;
+            font-size: 18px;
+            border-bottom: 2px solid #00a0ff;
+            padding-bottom: 8px;
+        }
+
+        .setting-item {
+            margin-bottom: 16px;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #cccccc;
+        }
+
+        .setting-item input[type="text"],
+        .setting-item input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #666666;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #2b2b2b;
+            color: #ffffff;
+        }
+
+        .setting-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .setting-item button {
+            margin-left: 8px;
+            padding: 6px 12px;
+            background: #666666;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .setting-item button:hover {
+            background: #777777;
+        }
+
+        .setting-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #555555;
+        }
+
+        .setting-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #save-settings {
+            background: #00a0ff;
+            color: white;
+        }
+
+        #save-settings:hover {
+            background: #0080cc;
+        }
+
+        #cancel-settings {
+            background: #666666;
+            color: white;
+        }
+
+        #cancel-settings:hover {
+            background: #777777;
+        }
+
+        /* 服务信息样式 */
+        .service-info {
+            background: #2a4a5a;
+            border: 1px solid #4a6a7a;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .service-description {
+            margin: 0;
+            color: #b3d9e6;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .service-note {
+            color: #999999;
+            font-size: 11px;
+            font-style: italic;
+            margin: 4px 0 0 0;
+        }
+
+        .log-info {
+            color: #999999;
+            font-style: italic;
+            text-align: center;
+            padding: 16px;
+            margin: 0;
+        }
+    </style>
+    <script type="text/javascript" src="js/clipboard-handler.js"></script>
+    <script type="text/javascript" src="js/plugin.js"></script>
+</head>
+
+<body>
+    <div class="export-ae-panel">
+        <h2>
+            <span>Eagle2Ae - 后台服务管理</span>
+            <button id="title-settings-button" class="title-settings-btn" title="设置">
+                <span class="gear-icon"></span>
+            </button>
+        </h2>
+
+        <!-- 简化的服务状态 -->
+        <div class="status-section">
+            <h3>服务状态</h3>
+            <div class="status-item">
+                <span class="status-label">AE连接端口</span>
+                <span id="ae-port" class="status-value">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">连接状态</span>
+                <span id="connection-status" class="status-value disconnected">未连接</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">运行时间</span>
+                <span id="uptime" class="status-value">00:00:00</span>
+            </div>
+        </div>
+
+        <!-- 当前选中文件 -->
+        <div class="files-section">
+            <h3>当前选中文件</h3>
+            <div id="files-count" class="files-count">未选择文件</div>
+            <div id="files-list" class="files-list" onclick="handleFileListClick()">
+                <div class="no-files">请在Eagle中选择要导出的文件</div>
+            </div>
+        </div>
+
+
+
+        <!-- 日志输出 -->
+        <div class="log-section">
+            <h3>操作日志</h3>
+            <div id="log-output" class="log-output">
+                <div class="log-info">等待操作日志...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置对话框 -->
+    <div id="settings-overlay" class="settings-overlay" style="display: none;">
+        <div class="settings-dialog">
+            <h3>Eagle2Ae 设置</h3>
+
+            <div class="setting-item">
+                <label for="show-notifications">
+                    <input type="checkbox" id="show-notifications" checked>
+                    显示操作通知
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <label for="server-port">服务器端口:</label>
+                <input type="number" id="server-port" value="8080" min="1024" max="65535">
+            </div>
+
+            <div class="setting-item">
+                <label for="clipboard-interval">剪切板检查间隔(毫秒):</label>
+                <input type="number" id="clipboard-interval" value="1000" min="500" max="10000">
+            </div>
+
+            <div class="setting-actions">
+                <button id="save-settings">保存设置</button>
+                <button id="cancel-settings">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        // UI管理脚本
+        let uiUpdateInterval = null;
+        let startTime = Date.now();
+
+        // 初始化UI
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Eagle2Ae UI 初始化');
+
+            // 绑定事件
+            bindEvents();
+
+            // 开始定期更新UI
+            startUIUpdates();
+
+            // 初始化设置
+            loadSettings();
+        });
+
+        function bindEvents() {
+            // 标题栏设置按钮
+            document.getElementById('title-settings-button').addEventListener('click', function() {
+                showSettings();
+            });
+
+            // 设置对话框按钮
+            document.getElementById('save-settings').addEventListener('click', function() {
+                saveSettings();
+            });
+
+            document.getElementById('cancel-settings').addEventListener('click', function() {
+                hideSettings();
+            });
+
+            // 点击遮罩关闭设置
+            document.getElementById('settings-overlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideSettings();
+                }
+            });
+        }
+
+        // 文件列表点击处理函数
+        function handleFileListClick() {
+            // 直接发送选中的文件到AE
+            handleManualExport();
+        }
+
+        function startUIUpdates() {
+            // 每秒更新一次UI
+            uiUpdateInterval = setInterval(updateUI, 1000);
+            updateUI(); // 立即更新一次
+        }
+
+        async function updateUI() {
+            // 更新选中文件列表
+            await updateSelectedFiles();
+
+            // 更新服务状态（如果有全局的eagle2ae实例）
+            if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                updateServiceStatus();
+            }
+
+            // 更新运行时间
+            updateUptime();
+        }
+
+        async function updateSelectedFiles() {
+            try {
+                // 检查eagle对象是否可用
+                if (typeof eagle === 'undefined') {
+                    console.log('Eagle API不可用（可能在浏览器环境中运行）');
+                    return;
+                }
+                
+                const selectedItems = await eagle.item.getSelected();
+                const filesCount = document.getElementById('files-count');
+                const filesList = document.getElementById('files-list');
+                const exportButton = document.getElementById('export-button');
+
+                if (selectedItems && selectedItems.length > 0) {
+                    filesCount.textContent = `已选择 ${selectedItems.length} 个文件`;
+
+                    // 显示文件列表
+                    filesList.innerHTML = '';
+                    selectedItems.slice(0, 10).forEach(item => { // 最多显示10个
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+
+                        const fileName = document.createElement('span');
+                        fileName.className = 'file-name';
+                        fileName.textContent = item.name || '未知文件';
+
+                        const fileType = document.createElement('span');
+                        fileType.className = 'file-type';
+                        fileType.textContent = (item.ext || '').toUpperCase();
+
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(fileType);
+                        filesList.appendChild(fileItem);
+                    });
+
+                    if (selectedItems.length > 10) {
+                        const moreItem = document.createElement('div');
+                        moreItem.className = 'file-item';
+                        moreItem.style.fontStyle = 'italic';
+                        moreItem.style.color = '#666';
+                        moreItem.textContent = `... 还有 ${selectedItems.length - 10} 个文件`;
+                        filesList.appendChild(moreItem);
+                    }
+
+                } else {
+                    filesCount.textContent = '未选择文件';
+                    filesList.innerHTML = '<div class="no-files">请在Eagle中选择要导出的文件</div>';
+                }
+            } catch (error) {
+                console.error('更新选中文件失败:', error);
+            }
+        }
+
+        function updateServiceStatus() {
+            // 更新AE连接端口
+            if (eagle2ae && eagle2ae.config && eagle2ae.config.wsPort) {
+                document.getElementById('ae-port').textContent = eagle2ae.config.wsPort;
+            } else {
+                // 从设置中获取端口信息作为备选
+                const settings = JSON.parse(localStorage.getItem('eagle2ae-settings') || '{}');
+                if (settings.serverPort) {
+                    document.getElementById('ae-port').textContent = settings.serverPort;
+                } else {
+                    document.getElementById('ae-port').textContent = '8080';
+                }
+            }
+
+            // 更新连接状态
+            if (eagle2ae && eagle2ae.httpServer && eagle2ae.httpServer.listening) {
+                document.getElementById('connection-status').textContent = '已连接';
+                document.getElementById('connection-status').className = 'status-value connected';
+            } else if (eagle2ae && eagle2ae.aeStatus && eagle2ae.aeStatus.connected) {
+                document.getElementById('connection-status').textContent = '已连接';
+                document.getElementById('connection-status').className = 'status-value connected';
+            } else {
+                document.getElementById('connection-status').textContent = '未连接';
+                document.getElementById('connection-status').className = 'status-value disconnected';
+            }
+        }
+
+        function updateUptime() {
+            const now = Date.now();
+            const uptime = now - startTime;
+            const hours = Math.floor(uptime / (1000 * 60 * 60));
+            const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((uptime % (1000 * 60)) / 1000);
+            
+            const uptimeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('uptime').textContent = uptimeString;
+        }
+
+
+
+        async function handleManualExport() {
+            try {
+                // 检查eagle对象是否可用
+                if (typeof eagle === 'undefined') {
+                    addLog('Eagle API不可用（可能在浏览器环境中运行）', 'warning');
+                    return;
+                }
+                
+                const selectedItems = await eagle.item.getSelected();
+                if (selectedItems && selectedItems.length > 0) {
+                    addLog(`开始发送 ${selectedItems.length} 个文件到AE...`, 'info');
+
+                    // 调用插件的导出功能
+                    if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                        await eagle2ae.handleSelectedFiles(selectedItems);
+                        addLog('文件发送完成', 'info');
+                    } else {
+                        addLog('服务未就绪，请稍后重试', 'warning');
+                    }
+                } else {
+                    addLog('没有选中的文件', 'warning');
+                }
+            } catch (error) {
+                console.error('文件发送失败:', error);
+                addLog(`发送失败: ${error.message}`, 'error');
+            }
+        }
+
+
+
+        // 日志去重缓存
+        let lastLogMessage = null;
+        let lastLogTime = null;
+        let duplicateCount = 0;
+
+        function addLog(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const currentTime = new Date();
+            const timeString = currentTime.toLocaleTimeString();
+
+            // 检查是否是重复日志（5秒内的相同消息）
+            const timeDiff = lastLogTime ? currentTime - lastLogTime : Infinity;
+            if (lastLogMessage === message && timeDiff < 5000) {
+                duplicateCount++;
+                // 更新最后一条日志的重复计数
+                const lastEntry = logOutput.lastElementChild;
+                if (lastEntry && lastEntry.classList.contains('log-entry')) {
+                    const countSpan = lastEntry.querySelector('.duplicate-count');
+                    if (countSpan) {
+                        countSpan.textContent = ` (×${duplicateCount + 1})`;
+                    } else {
+                        const newCountSpan = document.createElement('span');
+                        newCountSpan.className = 'duplicate-count';
+                        newCountSpan.style.color = '#888';
+                        newCountSpan.textContent = ` (×${duplicateCount + 1})`;
+                        lastEntry.appendChild(newCountSpan);
+                    }
+                }
+                return;
+            }
+
+            // 重置重复计数
+            lastLogMessage = message;
+            lastLogTime = currentTime;
+            duplicateCount = 0;
+
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `<span class="log-time">[${timeString}]</span>${message}`;
+
+            // 如果是第一条日志，清除占位符
+            if (logOutput.querySelector('.log-info')) {
+                logOutput.innerHTML = '';
+            }
+
+            logOutput.appendChild(logEntry);
+
+            // 保持最多50条日志
+            const entries = logOutput.querySelectorAll('.log-entry');
+            if (entries.length > 50) {
+                entries[0].remove();
+            }
+
+            // 滚动到底部
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function showSettings() {
+            document.getElementById('settings-overlay').style.display = 'flex';
+        }
+
+        function hideSettings() {
+            document.getElementById('settings-overlay').style.display = 'none';
+        }
+
+        function loadSettings() {
+            // 从本地存储加载设置（如果有的话）
+            try {
+                const settings = JSON.parse(localStorage.getItem('eagle2ae-settings') || '{}');
+
+                if (typeof settings.showNotifications === 'boolean') {
+                    document.getElementById('show-notifications').checked = settings.showNotifications;
+                }
+                if (settings.serverPort) {
+                    document.getElementById('server-port').value = settings.serverPort;
+                }
+                if (settings.clipboardInterval) {
+                    document.getElementById('clipboard-interval').value = settings.clipboardInterval;
+                }
+            } catch (error) {
+                console.error('加载设置失败:', error);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const settings = {
+                    showNotifications: document.getElementById('show-notifications').checked,
+                    serverPort: parseInt(document.getElementById('server-port').value),
+                    clipboardInterval: parseInt(document.getElementById('clipboard-interval').value)
+                };
+
+                localStorage.setItem('eagle2ae-settings', JSON.stringify(settings));
+                addLog('设置已保存', 'info');
+                hideSettings();
+
+                // 如果有全局实例，更新配置
+                if (typeof eagle2ae !== 'undefined' && eagle2ae) {
+                    eagle2ae.updateSettings(settings);
+
+                    // 应用剪切板设置
+                    if (eagle2ae.clipboardHandler) {
+                        if (settings.clipboardInterval) {
+                            eagle2ae.clipboardHandler.setCheckInterval(settings.clipboardInterval);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                addLog('保存设置失败', 'error');
+            }
+        }
+
+
+
+        // 暴露给全局使用的函数
+        window.uiAddLog = addLog;
+        window.uiUpdateStatus = updateServiceStatus;
+
+        // 初始日志
+        setTimeout(() => {
+            addLog('Eagle2Ae 管理界面已启动', 'info');
+        }, 100);
+    </script>
+</body>
+</html>

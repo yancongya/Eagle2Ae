@@ -1,0 +1,16 @@
+{
+  "preference": {
+    "type": "Physical",
+    "width": 1225,
+    "height": 840,
+    "x": 1048,
+    "y": 773
+  },
+  "main": {
+    "type": "Physical",
+    "width": 1066,
+    "height": 1048,
+    "x": 1425,
+    "y": 950
+  }
+}

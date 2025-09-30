@@ -1,0 +1,257 @@
+/*
+  The StatusBar requires the body's margin to be 0 pixels. This is harcoded
+  in the StatusBar module of the framework. Therefore we set the margin on
+  the main div. So make sure you wrap your UI with this div.
+*/
+#main {
+  margin: 5px;
+}
+
+/*
+  According to OS standards a pointer (hand) cursor only appears on actual
+  HTML links that direct to the browser. In every other case it is the
+  default (arrow) cursor. So only use the <a> tag for actual links, not
+  for buttons.
+*/
+a {
+  cursor: pointer;
+}
+
+.active {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 10px 5px;
+}
+
+.hidden {
+  display: none;
+}
+
+.btn-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+
+
+@media (max-width:89px) {
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+  body::-webkit-scrollbar {
+    width: 0px;
+  }
+
+  .tooltip-container {
+    display: none;
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    z-index: 1;
+
+    text-overflow: ellipsis;
+  }
+
+  .tooltip {
+    color: black;
+    font-size: 9pt;
+    background-color: gainsboro;
+    padding: 3px 5px;
+  }
+
+  #content {
+    margin: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    vertical-align: middle;
+    width: 100%;
+  }
+
+  .sm-btn-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+
+  .title {
+    font-size: large;
+    text-align: center;
+  }
+
+  .btn-push {
+    width: 42px;
+    height: 42px;
+
+    cursor: pointer;
+  }
+
+
+  .btn-toggle {
+    display: block;
+    text-align: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 0px;
+    padding: 0.5px;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .selection-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 20px;
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+
+    min-width: 240px;
+
+    cursor: pointer;
+  }
+
+  .selection-wrapper>* {
+    margin: 0;
+    width: 50%;
+    padding: 4px;
+
+    border: 1px solid white;
+  }
+
+  .selection-active {
+    font-weight: bold;
+    color: black;
+    background: white;
+  }
+
+
+  .hostButton {
+    border: 1px solid;
+    border-radius: 2px;
+    height: 20px;
+    vertical-align: bottom;
+    font-family: inherit;
+    color: inherit;
+    font-size: inherit;
+  }
+}
+
+@media (min-width:90px) {
+
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+  body::-webkit-scrollbar {
+    width: 0px;
+  }
+
+  .tooltip-container {
+    display: none;
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    z-index: 1;
+    text-overflow: ellipsis;
+  }
+
+  .tooltip {
+    color: black;
+    font-size: 9pt;
+    background-color: gainsboro;
+    padding: 3px 5px;
+  }
+
+  #content {
+    margin: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* align-items: center; */
+    vertical-align: middle;
+    width: 100%;
+  }
+
+  .sm-btn-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+
+  .title {
+    font-size: large;
+    text-align: center;
+  }
+
+  .btn-push {
+    width: 42px;
+    height: 42px;
+
+    cursor: pointer;
+  }
+
+
+  .btn-toggle {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: 0px;
+    padding: 0.5px;
+    margin: 0;
+
+    cursor: pointer;
+  }
+
+
+  .selection-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 20px;
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+
+    min-width: 240px;
+
+    cursor: pointer;
+  }
+
+  .selection-wrapper>* {
+    margin: 0;
+    width: 50%;
+    padding: 4px;
+
+    border: 1px solid white;
+  }
+
+  .selection-active {
+    font-weight: bold;
+    color: black;
+    background: white;
+  }
+
+}

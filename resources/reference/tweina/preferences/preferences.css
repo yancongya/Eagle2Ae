@@ -1,0 +1,199 @@
+/*
+  We show the default (arrow) cursor at all times, except on text inputs.
+  The user should not be able to select anything in the panel.
+*/
+
+body {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 15px;
+    -webkit-user-select: none;
+    cursor: default;
+    display: -webkit-flex;
+    -webkit-flex-direction: column;
+}
+
+html, body {
+    height: 100%;
+}
+
+/*
+  Assign to each element specifically for Windows
+*/
+
+body, input, select, textarea {
+    font-family: "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", sans-serif !important;
+    font-size: 12px;
+    line-height: 16px;
+    color: #CCCCCC;
+}
+
+
+/*
+  According to OS standards a pointer (hand) cursor only appears on actual
+  HTML links that direct to the browser. In every other case it is the
+  default (arrow) cursor. So only use the <a> tag for actual links, not
+  for buttons.
+*/
+
+a {
+    cursor: pointer;
+}
+
+
+/*
+  Rounded Button
+*/
+
+.rounded-button {
+    display: inline;
+    height: 18px;
+    border-radius: 10px;
+    outline: none;
+    background-color: hsla(360, 100%, 100%, 0);
+    border: 1px solid hsl(360, 0%, 54%);
+    color: hsl(360, 0%, 54%);
+    padding: 0px 15px;
+    line-height: 0px;
+    font-weight: 600;
+    min-width: 70px;
+    box-shadow: 0 0 1px hsl(360, 0%, 54%) inset;
+}
+
+.rounded-button:hover {
+    background-color: hsl(360, 0%, 54%);
+}
+
+.rounded-button:focus {
+    background-color: #2D8CEB;
+    border-color: #2D8CEB;
+    color: #CCCCCC !important;
+}
+
+
+/*
+  Text Input
+*/
+
+.text-input {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: #CCCCCC;
+    border: 2px solid #313131;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 5px;
+    border-radius: 3px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.text-input::placeholder {
+    color: #9C9C9C;
+}
+
+.text-input:focus {
+    border: 2px solid #2D8CEB;
+}
+
+
+/*
+  Checkbox
+*/
+
+.checkbox {
+    background-color: #8A8A8A;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    outline: none;
+}
+
+.checkbox:checked {
+    background-color: #8A8A8A;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.checkbox:checked:after {
+    content: "✓";
+    color: #000000;
+    font-size: 16px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.checkbox:hover, .checkbox:checked:hover {
+    background-color: #C5C5C5;
+}
+
+
+/*
+  Label
+*/
+
+label {
+    font-size: 11px;
+    color: #9C9C9C;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 200px;
+}
+
+
+/*
+  Select (Drop Down)
+*/
+
+select {
+    color: hsla(360, 100%, 100%, 0.85);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+option {
+    background: hsl(360, 0%, 10%);
+    line-height: 50px;
+}
+
+
+/*
+  Loader
+*/
+
+@-webkit-keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+.loader {
+    border: 3px solid hsla(360, 0%, 100%, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #2D8CEB;
+    width: 50px;
+    height: 50px;
+    -webkit-animation: spin .7s linear infinite;
+    margin: auto;
+}
+
+/*
+  Footer
+*/
+
+.footer {
+    display: -webkit-flex;
+    -webkit-flex-direction: row;
+    -webkit-justify-content: space-between;
+    margin-top: auto;
+}

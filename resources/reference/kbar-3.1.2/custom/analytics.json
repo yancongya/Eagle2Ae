@@ -1,0 +1,34 @@
+{
+    "Groups": [
+        {
+            "name": "KBar Analytics",
+            "description": "KBar collects general anonymous data so the author can understand how the product is used",
+            "reason": "The data is used to help improve the product",
+            "pageviews": [
+                {
+                    "id": "loadToolbar",
+                    "isSent": "when a toolbar is loaded",
+                    "path": "kbar/load?id={id}"
+                }
+            ],
+            "events": [
+                {
+                    "id": "buttonCreated",
+                    "isSent": "When a button is created",
+                    "category": "button",
+                    "action": "created",
+                    "label": "{type}",
+                    "value": "1"
+                },
+                {
+                    "id": "buttonClicked",
+                    "isSent": "When a button is clicked",
+                    "category": "button",
+                    "action": "clicked",
+                    "label": "{type}",
+                    "value": "1"
+                }
+            ]
+        }
+    ]
+}

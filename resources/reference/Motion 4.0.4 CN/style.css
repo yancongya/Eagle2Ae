@@ -1,0 +1,159 @@
+@font-face {
+	font-family: 'm_1pmedium';
+	src: url('mplus-1p-medium-webfont.eot');
+	src: url('mplus-1p-medium-webfont.eot?#iefix') format('embedded-opentype'),
+		url('mplus-1p-medium-webfont.woff2') format('woff2'), url('mplus-1p-medium-webfont.woff') format('woff');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'm_1pbold';
+	src: url('mplus-1p-bold-webfont.eot');
+	src: url('mplus-1p-bold-webfont.eot?#iefix') format('embedded-opentype'),
+		url('mplus-1p-bold-webfont.woff2') format('woff2'), url('mplus-1p-bold-webfont.woff') format('woff');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'm_1mmedium';
+	src: url('mplus-1m-medium-webfont.eot');
+	src: url('mplus-1m-medium-webfont.eot?#iefix') format('embedded-opentype'),
+		url('mplus-1m-medium-webfont.woff2') format('woff2'), url('mplus-1m-medium-webfont.woff') format('woff'),
+		url('mplus-1m-medium-webfont.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	font-size: 12px;
+	font-family: m_1pmedium;
+	outline: none;
+	width: 100%;
+	height: 100%;
+	color: rgb(181, 181, 181);
+}
+
+* {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+.no-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+::-webkit-scrollbar {
+	height: 2px;
+	width: 4px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	border-radius: 10px;
+	background: #3f3a3a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #f1f1f1;
+}
+
+.file-drop > .file-drop-target.file-drop-dragging-over-target {
+	background: rgba(169, 169, 169, 0.5);
+}
+
+.file-drop > .file-drop-target.file-drop-dragging-over-frame {
+	pointer-events: auto;
+}
+
+.page-overlay-enter {
+	top: 100%;
+}
+.page-overlay-enter-active {
+	transform: translateY(-100%);
+	transition: transform 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.page-overlay-enter-done {
+	top: 0%;
+}
+.page-overlay-appear {
+	top: 100%;
+}
+.page-overlay-appear-active {
+	transform: translateY(-100%);
+	transition: transform 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.page-overlay-appear-done {
+	top: 0%;
+}
+.page-overlay-exit {
+	top: 0%;
+}
+.page-overlay-exit-active {
+	transform: translateY(100%);
+	transition: transform 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.overlay-background-enter {
+	background-color: rgba(0, 0, 0, 0);
+}
+.overlay-background-enter-active {
+	background-color: rgba(0, 0, 0, 0.3);
+	transition: background-color 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.overlay-background-enter-done {
+	background-color: rgba(0, 0, 0, 0.3);
+}
+.overlay-background-appear {
+	background-color: rgba(0, 0, 0, 0);
+}
+.overlay-background-appear-active {
+	background-color: rgba(0, 0, 0, 0.3);
+	transition: background-color 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.overlay-background-appear-done {
+	background-color: rgba(0, 0, 0, 0.3);
+}
+.overlay-background-exit {
+	background-color: rgba(0, 0, 0, 0.3);
+}
+.overlay-background-exit-active {
+	background-color: rgba(0, 0, 0, 0);
+	transition: background-color 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.overlay-container-enter {
+	backdrop-filter: blur(2px) opacity(0);
+}
+.overlay-container-enter-active {
+	backdrop-filter: blur(2px) opacity(1);
+	transition: backdrop-filter 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.overlay-container-enter-done {
+	backdrop-filter: blur(2px) opacity(1);
+}
+.overlay-container-appear {
+	backdrop-filter: blur(2px) opacity(0);
+}
+.overlay-container-appear-active {
+	backdrop-filter: blur(2px) opacity(1);
+	transition: backdrop-filter 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.overlay-container-appear-done {
+	backdrop-filter: blur(2px) opacity(1);
+}
+.overlay-container-exit {
+	backdrop-filter: blur(2px) opacity(1);
+}
+.overlay-container-exit-active {
+	backdrop-filter: blur(2px) opacity(0);
+	transition: backdrop-filter 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}

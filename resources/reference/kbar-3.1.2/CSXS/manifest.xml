@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  Version="6.0" 
+  ExtensionBundleId="kbar" 
+  ExtensionBundleVersion="3.1.2" 
+  ExtensionBundleName="KBar3">
+
+  <ExtensionList>
+    <Extension Id="com.kraftyfx.kbar.server" Version="3.1"/>
+    <Extension Id="com.kraftyfx.kbar.config" Version="3.1"/>
+    <Extension Id="com.kraftyfx.kbar.toolbar-1" Version="3.1"/>
+    <Extension Id="com.kraftyfx.kbar.toolbar-2" Version="3.1"/>
+    <Extension Id="com.kraftyfx.kbar.toolbar-3" Version="3.1"/>
+    <Extension Id="com.kraftyfx.kbar.toolbar-4" Version="3.1"/>
+    <Extension Id="com.aescripts.kbar3.about" Version="4.01.000" />
+  </ExtensionList>
+
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="AEFT" Version="16" />
+    </HostList>
+    <LocaleList>
+      <Locale Code="All"/>
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="8.0"/>
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+
+  <DispatchInfoList>
+      <Extension Id="com.kraftyfx.kbar.server">
+        <DispatchInfo>
+            <Resources>
+              <MainPath>./server.html</MainPath>
+              <CEFCommandLine>
+                <Parameter>--enable-nodejs</Parameter>
+                <Parameter>--mixed-content</Parameter>
+                <Parameter>--allow-file-access</Parameter>
+                <Parameter>--allow-file-access-from-files</Parameter>
+              </CEFCommandLine>
+            </Resources>
+            <Lifecycle>
+                <AutoVisible>false</AutoVisible>
+                <StartOn>
+                  <!-- <Event>applicationActivate</Event> -->
+                  <!-- <Event>com.adobe.csxs.events.ApplicationActivate</Event> -->
+                  <Event>com.kraftyfx.cep.message</Event>
+                </StartOn>
+            </Lifecycle>
+            <UI>
+                <Type>Custom</Type>
+                <Geometry>
+                  <Size>
+                    <Height>100</Height>
+                    <Width>100</Width>
+                  </Size>
+                </Geometry>
+            </UI>
+        </DispatchInfo>
+    </Extension>
+        
+    <Extension Id="com.kraftyfx.kbar.toolbar-1">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./toolbar.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-content</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+          <ScriptPath>./all.jsxbin</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>%global-title1</Menu>
+          <Geometry>
+            <Size>
+              <Height>50</Height>
+              <Width>300</Width>
+            </Size>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.kraftyfx.kbar.toolbar-2">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./toolbar.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-content</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+          <ScriptPath>./all.jsxbin</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>%global-title2</Menu>
+          <Geometry>
+            <Size>
+              <Height>50</Height>
+              <Width>300</Width>
+            </Size>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.kraftyfx.kbar.toolbar-3">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./toolbar.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-content</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+          <ScriptPath>./all.jsxbin</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>%global-title3</Menu>
+          <Geometry>
+            <Size>
+              <Height>50</Height>
+              <Width>300</Width>
+            </Size>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.kraftyfx.kbar.toolbar-4">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./toolbar.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-content</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+          <ScriptPath>./all.jsxbin</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>%global-title4</Menu>
+          <Geometry>
+            <Size>
+              <Height>50</Height>
+              <Width>300</Width>
+            </Size>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.kraftyfx.kbar.config">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./config.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+          <ScriptPath>./all.jsxbin</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Custom</Type>
+          <Geometry>
+            <Size>
+              <Height>600</Height>
+              <Width>600</Width>
+            </Size>
+            <MaxSize>
+              <Height>2400</Height>
+              <Width>2400</Width>
+            </MaxSize>
+           <MinSize>
+              <Height>600</Height>
+              <Width>600</Width>
+            </MinSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.aescripts.kbar3.about">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./dialog/dialog.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Modeless</Type>
+          <Geometry>
+          <Size>
+            <Height>440</Height>
+            <Width>350</Width>
+          </Size>
+          <MaxSize>
+            <Height>500</Height>
+            <Width>350</Width>
+          </MaxSize>
+          <MinSize>
+            <Height>100</Height>
+            <Width>350</Width>
+          </MinSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>
