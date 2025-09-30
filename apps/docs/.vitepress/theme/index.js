@@ -1,10 +1,12 @@
 import DefaultTheme from 'vitepress/theme'
 import { watch, onMounted } from 'vue'
 import { useRoute } from 'vitepress'
+import { inject } from '@vercel/analytics';
 
 export default {
   ...DefaultTheme,
   setup() {
+    inject();
     const route = useRoute()
 
     onMounted(() => {
