@@ -6,7 +6,8 @@ export default defineConfig({
   lang: 'zh-CN',
   ignoreDeadLinks: true, // 暂时禁用死链接检查，以便调试
   head: [
-    ['link', { rel: 'icon', href: '/logo.png' }]
+    ['link', { rel: 'icon', href: '/logo.png' }],
+    ['script', { src: 'https://cdn.jsdelivr.net/gh/moezx/cdn@master/busuanzi/busuanzi.pure.mini.js', async: true }]
   ],
   themeConfig: {
     nav: [
