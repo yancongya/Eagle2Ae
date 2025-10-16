@@ -26,15 +26,17 @@
         <!-- Bottom Part: Feature Cards (Balanced Size) -->
         <div ref="cardsContainer" class="container mx-auto mt-24">
            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            <div v-for="(feature, index) in features" :key="feature.id" @click="scrollTo(feature.id)"
+            <div v-for="(feature, index) in features" :key="feature.id"
                  :ref="el => { if (el) cardRefs[index] = el }"
                  @mouseenter="hoveredCardId = feature.id"
                  @mouseleave="hoveredCardId = null"
                  :style="{ zIndex: hoveredCardId === feature.id ? 10 : 1 }"
-                 :class="{ 'grayscale brightness-50': hoveredCardId && hoveredCardId !== feature.id }"
-                 class="relative block rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md cursor-pointer aspect-[3/4] opacity-0 translate-y-8">
-              <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl">
-              <h3 class="absolute top-0 left-0 px-1 py-0 text-white text-xs font-semibold z-10">{{ feature.title }}</h3>
+                 class="flex flex-col items-center text-center cursor-pointer opacity-0 transition-all duration-300">
+              <div @click="scrollTo(feature.id)"
+                   class="relative block rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
+                <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl">
+              </div>
+              <h3 class="mt-2 font-bold text-lg text-gray-800 dark:text-gray-100">{{ feature.title }}</h3>
             </div>
           </div>
         </div>
@@ -83,23 +85,84 @@ const scrollTo = (id) => {
   gsap.to(window, { duration: 1, scrollTo: destination, ease: 'power2.inOut' });
 };
 
+// Helper function to split text into words and wrap them in spans
+const splitTextIntoWords = (element) => {
+  if (!element) return [];
+
+  const text = element.textContent;
+  element.innerHTML = ''; // Clear original content
+
+  const words = text.split(' ');
+  const wordSpans = [];
+
+  words.forEach((word, index) => {
+    const wordSpan = document.createElement('span');
+    wordSpan.textContent = word;
+    wordSpan.style.display = 'inline-block'; // Important for animation
+    wordSpan.style.marginRight = '0.25em'; // Add some space between words
+    element.appendChild(wordSpan);
+    wordSpans.push(wordSpan);
+  });
+  return wordSpans;
+};
+
+// Helper function to split text into characters and wrap them in spans
+const splitTextIntoChars = (element) => {
+  if (!element) return [];
+
+  const text = element.textContent;
+  element.innerHTML = ''; // Clear original content
+
+  const chars = text.split(''); // Split by characters
+  const charSpans = [];
+
+  chars.forEach((char, index) => {
+    const charSpan = document.createElement('span');
+    charSpan.textContent = char === ' ' ? '\u00A0' : char; // Preserve space
+    charSpan.style.display = 'inline-block'; // Important for animation
+    element.appendChild(charSpan);
+    charSpans.push(charSpan);
+  });
+  return charSpans;
+};
+
 onMounted(() => {
-  nextTick(() => {
-    // Initial state is now set by CSS classes for cards
-  gsap.set([title.value, subtitle.value, buttons.value], { opacity: 0, y: 30 });
+  const titleChars = splitTextIntoChars(title.value);
+  const subtitleWords = splitTextIntoWords(subtitle.value);
+
+  // Initial state for chars, words, buttons, and cards
+  gsap.set([...titleChars, ...subtitleWords, buttons.value, cardRefs.value], { opacity: 0, y: 30 });
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-  tl.to(title.value, { y: 0, opacity: 1, duration: 0.8 }) // Restored duration
-    .to(subtitle.value, { y: 0, opacity: 1, duration: 0.7 }, "-=0.7") // Restored duration
-    .to(buttons.value, { y: 0, opacity: 1, duration: 0.6 }, "-=0.6") // Restored duration
-    .to(cardRefs.value, { // Staggered animation for cards
+  // 1. Title characters animation (faster)
+  tl.to(titleChars, {
       y: 0,
       opacity: 1,
-      duration: 0.5, // Restored duration
-      stagger: 0.1, // Restored stagger
+      duration: 0.4, // Faster duration
+      stagger: 0.04, // Faster stagger
+      ease: 'back.out(1.7)'
+    }, 0) // Start at 0
+
+  // 2. Cards animation (0.2s after title starts)
+  .to(cardRefs.value, {
+      y: 0,
+      opacity: 1,
+      duration: 0.8, // Keep cards duration for now
+      stagger: 0.15, // Keep cards stagger for now
       ease: 'power3.out',
-    }, "-=0.5");
-  });
+    }, 0.2) // Start 0.2 seconds into the timeline
+
+  // 3. Subtitle words animation (0.4s after title starts)
+  .to(subtitleWords, {
+      y: 0,
+      opacity: 1,
+      duration: 0.5, // Slower duration for words
+      stagger: 0.1, // Slower stagger for words
+      ease: 'back.out(1.7)'
+    }, 0.4) // Start 0.4 seconds into the timeline
+
+  // 4. Buttons animation (when subtitle is halfway)
+  .to(buttons.value, { y: 0, opacity: 1, duration: 0.6 }, 0.65); // Start at 0.65 seconds into the timeline
 });
 
 watch(hoveredCardId, (newId) => {
@@ -118,6 +181,7 @@ watch(hoveredCardId, (newId) => {
   }
 });
 
+// Watch cardRefs to ensure all cards are rendered before animating them
 // Watch cardRefs to ensure all cards are rendered before animating them
 watch(cardRefs, (newVal) => {
   if (newVal.length === features.value.length) {
