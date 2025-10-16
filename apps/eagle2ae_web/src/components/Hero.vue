@@ -7,9 +7,11 @@
       <div class="pt-32">
         <!-- Top Part: Title & Buttons -->
         <div class="text-center max-w-4xl mx-auto">
-          <h1 ref="title" class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
-            Eagle 与 AE 的无缝桥梁
-          </h1>
+          <div class="overflow-hidden">
+            <h1 ref="title" class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
+              Eagle 与 AE 的无缝桥梁
+            </h1>
+          </div>
           <p ref="subtitle" class="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8">
             一键将您的 Eagle 素材库带入 After Effects，告别繁琐的拖拽与导入。
           </p>
@@ -33,10 +35,11 @@
                  :style="{ zIndex: hoveredCardId === feature.id ? 10 : 1 }"
                  class="flex flex-col items-center text-center cursor-pointer opacity-0 transition-all duration-300">
               <div @click="scrollTo(feature.id)"
-                   class="relative block rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
+                   :class="{ 'filter-dim-blur': hoveredCardId && hoveredCardId !== feature.id }"
+                   class="relative block rounded-xl p-6 shadow-lg hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
                 <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl">
               </div>
-              <h3 class="mt-2 font-bold text-lg text-gray-800 dark:text-gray-100">{{ feature.title }}</h3>
+              <h3 class="mt-2 font-bold text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
             </div>
           </div>
         </div>
@@ -127,20 +130,19 @@ const splitTextIntoChars = (element) => {
 };
 
 onMounted(() => {
-  const titleChars = splitTextIntoChars(title.value);
+  // const titleChars = splitTextIntoChars(title.value); // Removed
   const subtitleWords = splitTextIntoWords(subtitle.value);
 
-  // Initial state for chars, words, buttons, and cards
-  gsap.set([...titleChars, ...subtitleWords, buttons.value, cardRefs.value], { opacity: 0, y: 30 });
+  // Initial state for title, words, buttons, and cards
+  gsap.set([title.value, ...subtitleWords, buttons.value, cardRefs.value], { opacity: 0, y: 30 }); // Adjusted initial set
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-  // 1. Title characters animation (faster)
-  tl.to(titleChars, {
+  // 1. Title animation (clip-in effect)
+  tl.to(title.value, { // Animate title.value directly
       y: 0,
       opacity: 1,
-      duration: 0.4, // Faster duration
-      stagger: 0.04, // Faster stagger
-      ease: 'back.out(1.7)'
+      duration: 1.2, // Slower duration for clip-in
+      ease: 'power3.out'
     }, 0) // Start at 0
 
   // 2. Cards animation (0.2s after title starts)

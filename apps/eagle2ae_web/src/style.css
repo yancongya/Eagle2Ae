@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom filter for dimming and blurring */
+.filter-dim-blur {
+  filter: grayscale(60%) brightness(25%) saturate(25%);
+}
