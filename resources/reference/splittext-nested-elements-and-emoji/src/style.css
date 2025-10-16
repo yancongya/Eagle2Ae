@@ -1,0 +1,74 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+strong {
+  color: var(--color-orangey);
+}
+
+.highlight {
+  color: red;
+  font-family: serif;
+}
+
+.code {
+  font-family: Courier;
+  color: var(--color-surface-white);
+}
+
+#demo {
+  position: relative;
+}
+#quote {
+  font-size: clamp(2rem, 6rem, 4.5vw);
+  line-height: 1.2;
+  color: #dfdcff;
+  text-align: center;
+}
+
+button {
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+#nav {
+  padding-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75em;
+  flex-wrap: wrap;
+}
+
+a:visited,
+a:link,
+a:active {
+  color: var(--color-orangey);
+  text-decoration: none;
+  display: inline-block;
+}
+
+a:hover {
+  background-color: var(--color-orangey);
+  color: var(--color-surface-white);
+}
+
+span {
+  display: inline-block;
+}

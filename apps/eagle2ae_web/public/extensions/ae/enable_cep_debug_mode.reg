@@ -1,0 +1,40 @@
+Windows Registry Editor Version 5.00
+
+; Eagle2Ae - CEP调试模式启用
+; 支持After Effects CC 2015 - CC 2024及更高版本
+; 双击此文件即可启用所有版本的CEP调试模式
+
+; CSXS.6 - After Effects CC 2015
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.6]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.7 - After Effects CC 2017
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.7]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.8 - After Effects CC 2018
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.8]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.9 - After Effects CC 2019
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.9]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.10 - After Effects CC 2020-2021
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.10]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.11 - After Effects CC 2022-2023
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"="1"
+"LogLevel"="1"
+
+; CSXS.12 - After Effects CC 2024及更高版本
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.12]
+"PlayerDebugMode"="1"
+"LogLevel"="1"

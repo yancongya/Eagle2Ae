@@ -1,0 +1,135 @@
+<template>
+  <section class="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative">
+    <!-- Centering Container -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl px-6">
+
+      <!-- Inner container with adjusted top padding -->
+      <div class="pt-32">
+        <!-- Top Part: Title & Buttons -->
+        <div class="text-center max-w-4xl mx-auto">
+          <h1 ref="title" class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
+            Eagle 与 AE 的无缝桥梁
+          </h1>
+          <p ref="subtitle" class="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8">
+            一键将您的 Eagle 素材库带入 After Effects，告别繁琐的拖拽与导入。
+          </p>
+          <div ref="buttons" class="space-x-4">
+            <router-link to="/ae-preview" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 inline-block">
+              AE 预览
+            </router-link>
+            <router-link to="/eagle-preview" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 inline-block">
+              Eagle 预览
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Bottom Part: Feature Cards (Balanced Size) -->
+        <div ref="cardsContainer" class="container mx-auto mt-24">
+           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+            <div v-for="(feature, index) in features" :key="feature.id" @click="scrollTo(feature.id)"
+                 :ref="el => { if (el) cardRefs[index] = el }"
+                 @mouseenter="hoveredCardId = feature.id"
+                 @mouseleave="hoveredCardId = null"
+                 :style="{ zIndex: hoveredCardId === feature.id ? 10 : 1 }"
+                 :class="{ 'grayscale brightness-50': hoveredCardId && hoveredCardId !== feature.id }"
+                 class="relative block rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md cursor-pointer aspect-[3/4] opacity-0 translate-y-8">
+              <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl">
+              <h3 class="absolute top-0 left-0 px-1 py-0 text-white text-xs font-semibold z-10">{{ feature.title }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</template>
+
+<script setup>
+import { ref, onMounted, nextTick, watch } from 'vue';
+import { gsap } from 'gsap';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+
+gsap.registerPlugin(ScrollToPlugin);
+
+// Animation Refs
+const title = ref(null);
+const subtitle = ref(null);
+const buttons = ref(null);
+const cardsContainer = ref(null);
+const cardRefs = ref([]); // To hold refs for each card
+
+// Hover state
+const hoveredCardId = ref(null);
+
+// Card Data & Scroll Logic
+const features = ref([
+  { id: 'feature-drag-import', title: 'AE: 拖拽导入', iconUrl: '/images/features/feature-drag-import.png' },
+  { id: 'feature-import-mode', title: 'AE: 导入模式', iconUrl: '/images/features/feature-import-mode.png' },
+  { id: 'feature-import-behavior', title: 'AE: 导入行为', iconUrl: '/images/features/feature-import-behavior.png' },
+  { id: 'feature-export-layer', title: 'AE: 导出图层', iconUrl: '/images/features/feature-export-layer.png' },
+  { id: 'feature-presets', title: 'AE: 预设管理', iconUrl: '/images/features/feature-presets.png' },
+  { id: 'feature-eagle-comms', title: 'Eagle: 扩展通信', iconUrl: '/images/features/feature-eagle-comms.png' },
+]);
+
+const scrollTo = (id) => {
+  const targetElem = document.querySelector(`#${id}`);
+  if (!targetElem) return;
+
+  const targetTop = targetElem.getBoundingClientRect().top + window.scrollY;
+  const targetHeight = targetElem.offsetHeight;
+  const viewportHeight = window.innerHeight;
+  const destination = targetTop - (viewportHeight / 2) + (targetHeight / 2);
+
+  gsap.to(window, { duration: 1, scrollTo: destination, ease: 'power2.inOut' });
+};
+
+onMounted(() => {
+  nextTick(() => {
+    // Initial state is now set by CSS classes for cards
+  gsap.set([title.value, subtitle.value, buttons.value], { opacity: 0, y: 30 });
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  tl.to(title.value, { y: 0, opacity: 1, duration: 0.8 }) // Restored duration
+    .to(subtitle.value, { y: 0, opacity: 1, duration: 0.7 }, "-=0.7") // Restored duration
+    .to(buttons.value, { y: 0, opacity: 1, duration: 0.6 }, "-=0.6") // Restored duration
+    .to(cardRefs.value, { // Staggered animation for cards
+      y: 0,
+      opacity: 1,
+      duration: 0.5, // Restored duration
+      stagger: 0.1, // Restored stagger
+      ease: 'power3.out',
+    }, "-=0.5");
+  });
+});
+
+watch(hoveredCardId, (newId) => {
+  if (newId) {
+    // Card is hovered
+    const hoveredCardIndex = features.value.findIndex(f => f.id === newId);
+    if (hoveredCardIndex !== -1) {
+      const cardEl = cardRefs.value[hoveredCardIndex];
+      gsap.to(cardEl, { duration: 0.05, scale: 1.1, y: -20, ease: 'power2.out', overwrite: true }); // Kept fast hover
+    }
+  } else {
+    // No card hovered, revert all to normal
+    cardRefs.value.forEach((cardEl) => {
+      gsap.to(cardEl, { duration: 0.05, scale: 1, y: 0, ease: 'power2.out', overwrite: true }); // Kept fast hover
+    });
+  }
+});
+
+// Watch cardRefs to ensure all cards are rendered before animating them
+watch(cardRefs, (newVal) => {
+  if (newVal.length === features.value.length) {
+    gsap.to(newVal, { // Animate the actual DOM elements in the array
+      y: 0,
+      opacity: 1,
+      duration: 0.5,
+      stagger: 0.1,
+      ease: 'power3.out',
+    });
+  }
+}, { flush: 'post' }); // 'post' ensures watch runs after DOM updates
+
+// Removed onBeforeUnmount hook
+</script>
