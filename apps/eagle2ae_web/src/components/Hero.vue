@@ -21,7 +21,7 @@
               AE 预览
             </router-link>
             <router-link to="/eagle-preview" class="inline-flex justify-center w-36 px-4 py-2 text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light"
-                         style="background-color: rgb(0, 73, 125); border: 3px solid rgb(0, 98, 201); color: rgb(161, 216, 255);">
+                         style="background-color: rgb(0, 37, 63); border: 3px solid rgb(0, 98, 201); color: rgb(161, 216, 255);">
               Eagle 预览
             </router-link>
           </div>
