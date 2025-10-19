@@ -57,23 +57,28 @@ let cannonInstance = null;
 
 onMounted(() => {
   nextTick(() => {
+    const container = flairContainer.value;
+    const canvas = svgCanvas.value;
+    const proxy = proxyDiv.value;
+    if (!container || !canvas || !proxy) return;
+
     // Pass the root element of the component as the container for confetti images
-    cannonInstance = new ConfettiCannon(flairContainer.value, () => {
+    cannonInstance = new ConfettiCannon(container, () => {
       // This function checks if we are outside the Hero section
       return window.scrollY > window.innerHeight - 100;
     });
 
     // Pass specific refs to the init method
     cannonInstance.init(
-      flairContainer.value.querySelector(".pricing-hero__hand"),
-      flairContainer.value.querySelector(".pricing-hero__hand small"),
-      flairContainer.value.querySelector(".pricing-hero__rock"),
-      flairContainer.value.querySelector(".pricing-hero__drag"),
-      flairContainer.value.querySelector(".pricing-hero__handle"),
-      flairContainer.value.querySelectorAll(".image-preload img"),
-      flairContainer.value.querySelectorAll(".explosion-preload img"),
-      svgCanvas.value,
-      proxyDiv.value
+      container.querySelector(".pricing-hero__hand"),
+      container.querySelector(".pricing-hero__hand small"),
+      container.querySelector(".pricing-hero__rock"),
+      container.querySelector(".pricing-hero__drag"),
+      container.querySelector(".pricing-hero__handle"),
+      container.querySelectorAll(".image-preload img"),
+      container.querySelectorAll(".explosion-preload img"),
+      canvas,
+      proxy
     );
   });
 });
@@ -82,6 +87,7 @@ onUnmounted(() => {
   if (cannonInstance && cannonInstance.observer) {
     cannonInstance.observer.kill();
   }
+  cannonInstance = null;
 });
 
 defineExpose({

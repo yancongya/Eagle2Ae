@@ -1,6 +1,6 @@
 <script setup>
 import DocsLink from './DocsLink.vue';
-import DownloadCTA from './Download.vue'; // Assuming Download.vue is the CTA component
+// 旧下载 CTA 已移除，避免与新的下载入口重复
 </script>
 
 <template>
@@ -8,7 +8,7 @@ import DownloadCTA from './Download.vue'; // Assuming Download.vue is the CTA co
     <div class="container mx-auto px-6">
       <div class="grid md:grid-cols-2 gap-12 items-center">
         <DocsLink />
-        <DownloadCTA />
+        <!-- DownloadCTA 组件已移除 -->
       </div>
     </div>
   </section>

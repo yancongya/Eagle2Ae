@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "logo1Src": "/src/assets/logo.png",
+  "logo2Src": "/src/assets/logo2.png",
+  "explosionSprites": [
+    "/explosion/frag-star.svg",
+    "/explosion/frag-ring.svg",
+    "/explosion/frag-triangle.svg",
+    "/explosion/frag-bolt.svg",
+    "/explosion/frag-shard.svg"
+  ],
+  "explosionDurationMs": 7000,
+  "explosionFadeOutMs": 900,
+  "baseGravityY": 1.3,
+  "scroll": {
+    "deadbandDy": 2,
+    "down": {
+      "gravityFactor": 0.85,
+      "impulseCoeff": 0.0028,
+      "impulseMin": 0.0008,
+      "impulseMax": 0.010,
+      "restoreDurationMs": 700,
+      "restoreDelayMs": 60
+    },
+    "up": {
+      "gravityFactor": 1.45,
+      "gravityMax": 2.0,
+      "durationMs": 200,
+      "restoreDurationMs": 800,
+      "restoreDelayMs": 50
+    }
+  }
+}

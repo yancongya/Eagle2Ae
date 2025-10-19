@@ -1,0 +1,41 @@
+{
+  "defaultOS": "ae",
+  "platforms": {
+    "ae": {
+      "version": "1.0.0",
+      "requirement": {
+        "zh-CN": "Ae CC 2017+",
+        "en-US": "Ae CC 2017+"
+      },
+      "updated": "2025-10-18",
+      "url": "https://example.com/ae-plugin",
+      "target": "_blank",
+      "ctaText": {
+        "zh-CN": "下载 AE 插件",
+        "en-US": "Get AE Plugin"
+      },
+      "prompt": {
+        "zh-CN": "点击后将打开 AE 插件的网页（示例链接）。",
+        "en-US": "This will open the AE plugin page (demo link)."
+      }
+    },
+    "eagle": {
+      "version": "1.0.0",
+      "requirement": {
+        "zh-CN": "Eagle 4.0+",
+        "en-US": "Eagle 4.0+"
+      },
+      "updated": "2025-10-18",
+      "url": "eagle://",
+      "target": "protocol",
+      "ctaText": {
+        "zh-CN": "打开 Eagle",
+        "en-US": "Open Eagle"
+      },
+      "prompt": {
+        "zh-CN": "将通过 eagle:// 协议打开 Eagle（需本机已注册）。",
+        "en-US": "Will open Eagle via eagle:// protocol (requires registered handler)."
+      }
+    }
+  }
+}

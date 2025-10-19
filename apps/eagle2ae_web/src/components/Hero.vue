@@ -1,47 +1,52 @@
 <template>
-  <section class="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative">
+  <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative">
     <!-- Centering Container -->
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl px-6">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-screen-2xl px-6">
 
       <!-- Inner container with adjusted top padding -->
-      <div class="pt-32">
+      <div class="pt-8 md:pt-24">
         <!-- Top Part: Title & Buttons -->
         <div class="text-center max-w-4xl mx-auto">
           <div class="overflow-hidden">
-            <h1 ref="title" class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
-              Eagle 与 AE 的无缝桥梁
+            <h1 ref="title" 
+                class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4 cursor-pointer"
+                @mouseenter="toggleTitle">
+              <span class="title-part" data-role="eagle">Eagle</span>
+              <span class="title-arrow mx-1" data-role="arrow" aria-hidden="true">👉</span>
+              <span class="title-part" data-role="ae">AE</span>
+              <span class="title-part"> {{ t('hero.bridge') }} </span>
             </h1>
           </div>
           <p ref="subtitle" class="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8">
-            一键将您的 Eagle 素材库带入 After Effects，告别繁琐的拖拽与导入。
+            {{ t('hero.subtitle') }}
           </p>
           <div ref="buttons" class="space-x-4">
-            <router-link to="/ae-preview" class="inline-flex justify-center w-36 px-4 py-2 text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light"
+            <router-link to="/ae-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
                          style="background-color: rgb(0, 0, 91); border: 3px solid rgb(82, 59, 196); color: rgb(153, 153, 255);">
-              AE 预览
+              {{ t('nav.aePreview') }}
             </router-link>
-            <router-link to="/eagle-preview" class="inline-flex justify-center w-36 px-4 py-2 text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light"
+            <router-link to="/eagle-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
                          style="background-color: rgb(0, 37, 63); border: 3px solid rgb(0, 98, 201); color: rgb(161, 216, 255);">
-              Eagle 预览
+              {{ t('nav.eaglePreview') }}
             </router-link>
           </div>
         </div>
 
         <!-- Bottom Part: Feature Cards (Balanced Size) -->
-        <div ref="cardsContainer" class="container mx-auto mt-24">
-           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div ref="cardsContainer" class="mx-auto mt-12 md:mt-24 w-full">
+           <div class="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-5 lg:gap-6" :style="{ perspective: '900px' }">
             <div v-for="(feature, index) in features" :key="feature.id"
                  :ref="el => { if (el) cardRefs[index] = el }"
-                 @mouseenter="hoveredCardId = feature.id"
-                 @mouseleave="hoveredCardId = null"
+                 @mouseenter="onCardEnter(feature.id)"
+                 @mouseleave="onCardLeave"
                  :style="{ zIndex: hoveredCardId === feature.id ? 10 : 1 }"
                  class="flex flex-col items-center text-center cursor-pointer opacity-0 transition-all duration-300">
               <div @click="scrollTo(feature.id)"
-                   :class="{ 'filter-dim-blur': hoveredCardId && hoveredCardId !== feature.id }"
-                   class="relative block rounded-xl p-6 shadow-lg hover:-translate-y-2 transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
-                <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl">
+                   :style="cardStyle(index)"
+                   class="relative block rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
+                <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl md:rounded-2xl">
               </div>
-              <h3 class="mt-2 font-bold text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
+              <h3 class="mt-2 font-bold text-sm md:text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
             </div>
           </div>
         </div>
@@ -52,9 +57,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch, computed } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import { useI18n } from 'vue-i18n';
+
+const { t, locale } = useI18n();
+
+const emit = defineEmits(['scroll-to-feature']);
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -66,28 +76,102 @@ const cardsContainer = ref(null);
 const cardRefs = ref([]); // To hold refs for each card
 
 // Hover state
-const hoveredCardId = ref(null);
+let hoverClearTimer = null;
 
+const onCardEnter = (id) => {
+  if (hoverClearTimer) { clearTimeout(hoverClearTimer); hoverClearTimer = null; }
+  hoveredCardId.value = id;
+};
+const onCardLeave = () => {
+  if (hoverClearTimer) { clearTimeout(hoverClearTimer); }
+  hoverClearTimer = setTimeout(() => {
+    hoveredCardId.value = null;
+    hoverClearTimer = null;
+  }, 110);
+};
+const hoveredCardId = ref(null);
+const isTitleFlipped = ref(false);
+const hasPlayedOnce = ref(false);
+
+// 计算当前悬浮卡片索引
+const hoveredIndex = computed(() => {
+  if (!hoveredCardId.value) return -1;
+  return features.value.findIndex(f => f.id === hoveredCardId.value);
+});
+
+// 基于与悬浮卡片的距离，计算缩放与 Z 轴位移样式
+const cardStyle = (index) => {
+  const sel = hoveredIndex.value;
+  const transition = {
+    transitionTimingFunction: 'cubic-bezier(.23,1,.32,1)',
+    transitionDuration: '420ms',
+    transitionProperty: 'transform, opacity, box-shadow, filter'
+  };
+  if (sel < 0) {
+    return {
+      transform: 'translateY(0) scale(1) translateZ(0)',
+      opacity: 1,
+      filter: 'blur(0px)',
+      transformStyle: 'preserve-3d',
+      willChange: 'transform, opacity, box-shadow, filter',
+      ...transition
+    };
+  }
+  const maxDist = Math.max(sel, features.value.length - 1 - sel);
+  const dist = Math.abs(index - sel);
+  const delayBase = 25; // 每一段距离约 25ms 级联延迟，减轻切换生硬
+  const delayMs = `${Math.round(dist * delayBase)}ms`;
+ 
+  if (dist === 0) {
+    return {
+      transform: 'translateY(0) scale(1.10) translateZ(0)',
+      opacity: 1,
+      boxShadow: '0 24px 48px rgba(0,0,0,0.35)',
+      filter: 'blur(0px)',
+      transformStyle: 'preserve-3d',
+      willChange: 'transform, opacity, box-shadow, filter',
+      transitionDelay: '0ms',
+      ...transition
+    };
+  }
+ 
+  const t = maxDist === 0 ? 1 : dist / maxDist; // 0: 最近；1: 最远
+  // 映射改为统一的 ease-in 曲线（靠近更平缓、远端快速增强）
+  const easeInCubic = (x) => x * x * x;
+  const u = easeInCubic(t);
+  const scale = 1 - 0.30 * u; // 最远 0.70（曲线加持）
+  const z = -80 * u; // 最远约 -80px 深度（曲线加持）
+  const y = dist === 1 ? -8 : 0; // 最近未选卡片轻微上浮
+  const opacity = 1 - 0.70 * u; // 距离越远越淡（最远≈0.30，曲线加持）
+  const blurMax = 6; // 30% 强度对应的最大模糊约 6px
+  const blurPx = blurMax * u;
+
+   return {
+     transform: `translateY(${y}px) scale(${scale}) translateZ(${z}px)`,
+     opacity,
+     filter: `blur(${blurPx}px)`,
+     transformStyle: 'preserve-3d',
+     willChange: 'transform, opacity, box-shadow, filter',
+     transitionDelay: delayMs,
+     ...transition
+   };
+};
 // Card Data & Scroll Logic
-const features = ref([
-  { id: 'feature-drag-import', title: 'AE: 拖拽导入', iconUrl: '/images/features/feature-drag-import.png' },
-  { id: 'feature-import-mode', title: 'AE: 导入模式', iconUrl: '/images/features/feature-import-mode.png' },
-  { id: 'feature-import-behavior', title: 'AE: 导入行为', iconUrl: '/images/features/feature-import-behavior.png' },
-  { id: 'feature-export-layer', title: 'AE: 导出图层', iconUrl: '/images/features/feature-export-layer.png' },
-  { id: 'feature-presets', title: 'AE: 预设管理', iconUrl: '/images/features/feature-presets.png' },
-  { id: 'feature-eagle-comms', title: 'Eagle: 扩展通信', iconUrl: '/images/features/feature-eagle-comms.png' },
-]);
+const features = computed(() => {
+  // Depend on locale to re-compute when language changes
+  const _ = locale.value;
+  return [
+    { id: 'feature-drag-drop', title: t('hero.featuresTitles.dragDrop'), iconUrl: '/images/features/feature-drag-import.png' },
+    { id: 'feature-format-support', title: t('hero.featuresTitles.formatSupport'), iconUrl: '/images/features/feature-import-mode.png' },
+    { id: 'feature-smart-options', title: t('hero.featuresTitles.smartOptions'), iconUrl: '/images/features/feature-import-behavior.png' },
+    { id: 'feature-auto-sync', title: t('hero.featuresTitles.autoSync'), iconUrl: '/images/features/feature-export-layer.png' },
+    { id: 'feature-presets', title: t('hero.featuresTitles.presets'), iconUrl: '/images/features/feature-presets.png' },
+    { id: 'feature-performance', title: t('hero.featuresTitles.performance'), iconUrl: '/images/features/feature-import-mode.png' },
+  ];
+});
 
 const scrollTo = (id) => {
-  const targetElem = document.querySelector(`#${id}`);
-  if (!targetElem) return;
-
-  const targetTop = targetElem.getBoundingClientRect().top + window.scrollY;
-  const targetHeight = targetElem.offsetHeight;
-  const viewportHeight = window.innerHeight;
-  const destination = targetTop - (viewportHeight / 2) + (targetHeight / 2);
-
-  gsap.to(window, { duration: 1, scrollTo: destination, ease: 'power2.inOut' });
+  emit('scroll-to-feature', id);
 };
 
 // Helper function to split text into words and wrap them in spans
@@ -131,75 +215,89 @@ const splitTextIntoChars = (element) => {
   return charSpans;
 };
 
-onMounted(() => {
-  // const titleChars = splitTextIntoChars(title.value); // Removed
+const buildEnterTimeline = async () => {
   const subtitleWords = splitTextIntoWords(subtitle.value);
-
-  // Initial state for title, words, buttons, and cards
-  gsap.set([title.value, ...subtitleWords, buttons.value, cardRefs.value], { opacity: 0, y: 30 }); // Adjusted initial set
+  await nextTick();
+  gsap.set([title.value, ...subtitleWords, buttons.value, cardRefs.value], { opacity: 0, y: 30 });
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  tl.to(title.value, { y: 0, opacity: 1, duration: 1.2, ease: 'power3.out' }, 0)
+    .to(cardRefs.value, { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: 'power3.out' }, 0.2)
+    .to(subtitleWords, { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)' }, 0.4)
+    .to(buttons.value, { y: 0, opacity: 1, duration: 0.6 }, 0.65);
+};
 
-  // 1. Title animation (clip-in effect)
-  tl.to(title.value, { // Animate title.value directly
-      y: 0,
-      opacity: 1,
-      duration: 1.2, // Slower duration for clip-in
-      ease: 'power3.out'
-    }, 0) // Start at 0
-
-  // 2. Cards animation (0.2s after title starts)
-  .to(cardRefs.value, {
-      y: 0,
-      opacity: 1,
-      duration: 0.8, // Keep cards duration for now
-      stagger: 0.15, // Keep cards stagger for now
-      ease: 'power3.out',
-    }, 0.2) // Start 0.2 seconds into the timeline
-
-  // 3. Subtitle words animation (0.4s after title starts)
-  .to(subtitleWords, {
-      y: 0,
-      opacity: 1,
-      duration: 0.5, // Slower duration for words
-      stagger: 0.1, // Slower stagger for words
-      ease: 'back.out(1.7)'
-    }, 0.4) // Start 0.4 seconds into the timeline
-
-  // 4. Buttons animation (when subtitle is halfway)
-  .to(buttons.value, { y: 0, opacity: 1, duration: 0.6 }, 0.65); // Start at 0.65 seconds into the timeline
+onMounted(async () => {
+  await buildEnterTimeline();
+  hasPlayedOnce.value = true;
 });
 
-watch(hoveredCardId, (newId) => {
-  if (newId) {
-    // Card is hovered
-    const hoveredCardIndex = features.value.findIndex(f => f.id === newId);
-    if (hoveredCardIndex !== -1) {
-      const cardEl = cardRefs.value[hoveredCardIndex];
-      gsap.to(cardEl, { duration: 0.05, scale: 1.1, y: -20, ease: 'power2.out', overwrite: true }); // Kept fast hover
+const playEnter = (delay = 0) => {
+  gsap.delayedCall(delay, () => {
+    if (!hasPlayedOnce.value) {
+      buildEnterTimeline();
+      hasPlayedOnce.value = true;
     }
+  });
+};
+const playExit = (delay = 0) => {
+  gsap.to([title.value, buttons.value, cardRefs.value], { opacity: 0, y: -10, duration: 0.4, ease: 'power2.in', delay });
+};
+
+defineExpose({ playEnter, playExit });
+
+// Title hover toggle functions
+const flipText3D = (el, newText) => {
+  if (!el) return;
+  gsap.killTweensOf(el);
+  gsap.to(el, {
+    duration: 0.25,
+    rotationY: 90,
+    transformPerspective: 600,
+    transformOrigin: '50% 50%',
+    ease: 'power2.in',
+    onComplete: () => {
+      el.textContent = newText;
+      gsap.set(el, { rotationY: -90 });
+      gsap.to(el, {
+        duration: 0.35,
+        rotationY: 0,
+        ease: 'power2.out'
+      });
+    }
+  });
+};
+
+const applyTitleState = (flip) => {
+  if (!title.value) return;
+  const eaglePart = title.value.querySelector('[data-role="eagle"]');
+  const aePart = title.value.querySelector('[data-role="ae"]');
+  const arrowPart = title.value.querySelector('[data-role="arrow"]');
+
+  if (flip) {
+    flipText3D(eaglePart, 'AE');
+    flipText3D(aePart, 'Eagle');
+    flipText3D(arrowPart, '👈');
   } else {
-    // No card hovered, revert all to normal
-    cardRefs.value.forEach((cardEl) => {
-      gsap.to(cardEl, { duration: 0.05, scale: 1, y: 0, ease: 'power2.out', overwrite: true }); // Kept fast hover
-    });
+    flipText3D(eaglePart, 'Eagle');
+    flipText3D(aePart, 'AE');
+    flipText3D(arrowPart, '👉');
+  }
+};
+
+const toggleTitle = () => {
+  isTitleFlipped.value = !isTitleFlipped.value;
+  applyTitleState(isTitleFlipped.value);
+};
+
+// Title reset function is no longer needed with hover toggle
+// const resetTitleAnimation = () => {};
+
+// Watch for container width changes and update the cards animation accordingly
+watch(cardsContainer, (newVal) => {
+  if (newVal) {
+    gsap.set(cardRefs.value, { clearProps: 'all' });
   }
 });
-
-// Watch cardRefs to ensure all cards are rendered before animating them
-// Watch cardRefs to ensure all cards are rendered before animating them
-watch(cardRefs, (newVal) => {
-  if (newVal.length === features.value.length) {
-    gsap.to(newVal, { // Animate the actual DOM elements in the array
-      y: 0,
-      opacity: 1,
-      duration: 0.5,
-      stagger: 0.1,
-      ease: 'power3.out',
-    });
-  }
-}, { flush: 'post' }); // 'post' ensures watch runs after DOM updates
-
-// Removed onBeforeUnmount hook
 </script>
 
 <style scoped>
@@ -228,5 +326,15 @@ watch(cardRefs, (newVal) => {
 
   .has-sweep-light:hover::before {
     transform: translateX(200%) skewX(-20deg); /* Move across the button */
+  }
+  
+  /* Title part styling for animation */
+  .title-part {
+    display: inline-block;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+  .title-arrow {
+    display: inline-block;
   }
 </style>
