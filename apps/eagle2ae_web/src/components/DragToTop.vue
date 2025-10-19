@@ -233,10 +233,13 @@ const dragThreshold = 45; // 更友好的触发距离，避免需要拖得很远
 
 // 根据距离动态映射移动时长：距离越远→时长越短→加速更快
 const getMoveDurationByDistance = (distance) => {
-  const min = 0.12; // 最快
-  const max = 0.26; // 最慢（很近的距离）
-  const normalized = Math.min(Math.max(distance / 800, 0), 1); // 0~1
-  const factor = Math.sqrt(normalized); // 压缩极值，远距离提升更明显
+  const cfg = (opts.value.animation && opts.value.animation.return) || {};
+  const min = ((typeof cfg.durationMinMs === 'number' ? cfg.durationMinMs : 120) / 1000); // 秒
+  const max = ((typeof cfg.durationMaxMs === 'number' ? cfg.durationMaxMs : 260) / 1000); // 秒
+  const normD = typeof cfg.distanceNormalizer === 'number' ? cfg.distanceNormalizer : 800;
+  const power = typeof cfg.distanceCurvePower === 'number' ? cfg.distanceCurvePower : 0.5; // 0.5→sqrt
+  const normalized = Math.min(Math.max(distance / normD, 0), 1);
+  const factor = Math.pow(normalized, power);
   return max - (max - min) * factor;
 };
 
@@ -304,7 +307,25 @@ const logoScale = computed(() => {
   const dx = currentPos.value.x - startPos.value.x;
   const dy = currentPos.value.y - startPos.value.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const scale = 1 + Math.log(1 + distance / 200) * 0.8;
+  const cfg = (opts.value.drag && opts.value.drag.logo1Scale) || {};
+  const mode = cfg.mode || 'log';
+  const base = typeof cfg.distanceDivisor === 'number' ? cfg.distanceDivisor : 200;
+  const gain = typeof cfg.gain === 'number' ? cfg.gain : 0.8;
+  const min = typeof cfg.min === 'number' ? cfg.min : 1;
+  const max = typeof cfg.max === 'number' ? cfg.max : Infinity;
+  let scale;
+  if (mode === 'linear') {
+    const k = typeof cfg.k === 'number' ? cfg.k : (gain / base);
+    scale = 1 + distance * k;
+  } else if (mode === 'exp') {
+    const k = typeof cfg.k === 'number' ? cfg.k : 0.0015;
+    scale = 1 + (Math.exp(distance * k) - 1) * gain;
+  } else {
+    // 默认 log 映射：1 + log(1 + distance/base) * gain
+    scale = 1 + Math.log(1 + distance / base) * gain;
+  }
+  if (isFinite(max)) scale = Math.min(scale, max);
+  scale = Math.max(scale, min);
   return scale;
 });
 
@@ -371,20 +392,17 @@ const handleMouseLeave = () => {
 
 const handleMouseDown = (event) => {
   if (!opts.value.enabled) return;
-  const isEmptySpace = checkIfOverEmptySpace(event);
-  if (isEmptySpace) {
-    isDragging.value = true;
-    showLogos.value = true;
-    shrinkProgress.value = 1;
-    document.body.style.cursor = 'grabbing';
-    startPos.value = { x: event.clientX, y: event.clientY };
-    logo1Pos.value = { x: event.clientX - 20, y: event.clientY - 20 };
-    currentPos.value = { x: event.clientX, y: event.clientY };
-    logo2Pos.value = { x: event.clientX - 20, y: event.clientY - 20 };
-  } else {
-    return;
-  }
   if (event.button !== 0) return;
+  const isEmptySpace = checkIfOverEmptySpace(event);
+  if (!isEmptySpace) return;
+  isDragging.value = true;
+  showLogos.value = true;
+  shrinkProgress.value = 1;
+  document.body.style.cursor = 'grabbing';
+  startPos.value = { x: event.clientX, y: event.clientY };
+  logo1Pos.value = { x: event.clientX - 20, y: event.clientY - 20 };
+  currentPos.value = { x: event.clientX, y: event.clientY };
+  logo2Pos.value = { x: event.clientX - 20, y: event.clientY - 20 };
   event.preventDefault();
 };
 
@@ -426,6 +444,46 @@ const resetCursorByCurrentPos = () => {
   document.body.style.cursor = isEmptySpace ? 'grab' : '';
 };
 
+// 强制取消拖拽并重置光标/显示状态，防止卡住
+const forceCancelDrag = () => {
+  isDragging.value = false;
+  showLogos.value = false;
+  try {
+    gsap.killTweensOf([logo1Pos.value, logo2Pos.value, shrinkProgress, logo1El.value, logo2El.value]);
+  } catch (e) {}
+  document.body.style.cursor = '';
+};
+// 当鼠标离开窗口（例如切到其他应用或进出浏览器边界）时取消拖拽
+const handleWindowMouseOut = (e) => {
+  if (!e.relatedTarget && !e.toElement) forceCancelDrag();
+};
+// 页面不可见时（切换标签、最小化）取消拖拽
+const handleVisibilityChange = () => {
+  if (document.hidden) forceCancelDrag();
+};
+
+// 在拖拽过程中右键取消：阻止默认菜单并强制取消拖拽/动画
+const handleContextMenuCancel = (e) => {
+  if (!isDragging.value) return;
+  e.preventDefault();
+  e.stopPropagation();
+  forceCancelDrag();
+  // 不立即根据当前位置重置为抓取态，保持默认光标，等待下次 mousemove 纠正
+  isMouseOverEmptySpace.value = false;
+  document.body.style.cursor = '';
+};
+
+// 捕获阶段右键 mousedown 取消：在左键尚未松开时也能拦截
+const handleRightMouseDownCancel = (e) => {
+  if (e.button !== 2) return;
+  if (!isDragging.value) return;
+  e.preventDefault();
+  e.stopPropagation();
+  forceCancelDrag();
+  // 不调用 resetCursorByCurrentPos，避免立刻设为抓取态
+  isMouseOverEmptySpace.value = false;
+  document.body.style.cursor = '';
+};
 const handleMouseUp = () => {
   if (!opts.value.enabled) return;
   if (isDragging.value) {
@@ -442,10 +500,17 @@ const handleMouseUp = () => {
       if (!logo1El.value || !logo2El.value) {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        if (action === 'refresh') {
-          sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-          location.reload();
-          resetCursorByCurrentPos();
+        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
+        if (forceReload) {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
+        } else if (action === 'refresh') {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
         } else {
           scrollWindowToTop(() => {
             spawnExplosion(ox, oy, power);
@@ -455,19 +520,32 @@ const handleMouseUp = () => {
         return;
       }
       showLogos.value = true;
-      const tl = gsap.timeline({ defaults: { ease: 'fastOut' } });
+      const anim = opts.value.animation || {};
+      const easeOut = (anim.easing && anim.easing.easeOut) || 'fastOut';
+      const easeIn = (anim.easing && anim.easing.easeIn) || 'power2.in';
+      const shrinkDur = ((anim.scaleToZero && typeof anim.scaleToZero.durationMs === 'number' ? anim.scaleToZero.durationMs : 180) / 1000);
+      const tl = gsap.timeline({ defaults: { ease: easeOut, overwrite: 'auto' } });
       const dist = Math.hypot(logo2Pos.value.x - logo1Pos.value.x, logo2Pos.value.y - logo1Pos.value.y);
       const moveDuration = getMoveDurationByDistance(dist);
-      tl.to(logo2Pos.value, { x: logo1Pos.value.x, y: logo1Pos.value.y, duration: moveDuration, ease: 'fastOut' }, 0);
-      tl.to(shrinkProgress, { value: 0, duration: 0.18, ease: 'fastOut' }, '>-0.02');
-      tl.to([logo1El.value, logo2El.value], { opacity: 0, duration: 0.18, ease: 'fastOut' }, '<');
+      tl.to(logo2Pos.value, { x: logo1Pos.value.x, y: logo1Pos.value.y, duration: moveDuration, ease: easeOut, overwrite: 'auto' }, 0);
+      tl.to(shrinkProgress, { value: 0, duration: shrinkDur, ease: easeIn, overwrite: 'auto' }, '>-0.02');
+      tl.to([logo1El.value, logo2El.value], { opacity: 0, duration: shrinkDur, ease: easeOut, overwrite: 'auto' }, '<');
       tl.call(() => {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
+        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
+        if (forceReload) {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
+          return;
+        }
         if (action === 'refresh') {
-          sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-          location.reload();
-          resetCursorByCurrentPos();
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
         } else {
           scrollWindowToTop(() => {
             spawnExplosion(ox, oy, power);
@@ -498,27 +576,49 @@ const handleTouchEnd = () => {
       if (!logo1El.value || !logo2El.value) {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        if (action === 'refresh') {
-          sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-          location.reload();
+        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
+        if (forceReload) {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
+        } else if (action === 'refresh') {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
         } else {
           scrollWindowToTop(() => spawnExplosion(ox, oy, power));
         }
         return;
       }
       showLogos.value = true;
-      const tl = gsap.timeline({ defaults: { ease: 'fastOut' } });
+      const anim = opts.value.animation || {};
+      const easeOut = (anim.easing && anim.easing.easeOut) || 'fastOut';
+      const easeIn = (anim.easing && anim.easing.easeIn) || 'power2.in';
+      const shrinkDur = ((anim.scaleToZero && typeof anim.scaleToZero.durationMs === 'number' ? anim.scaleToZero.durationMs : 180) / 1000);
+      const tl = gsap.timeline({ defaults: { ease: easeOut, overwrite: 'auto' } });
       const dist = Math.hypot(logo2Pos.value.x - logo1Pos.value.x, logo2Pos.value.y - logo1Pos.value.y);
       const moveDuration = getMoveDurationByDistance(dist);
-      tl.to(logo2Pos.value, { x: logo1Pos.value.x, y: logo1Pos.value.y, duration: moveDuration, ease: 'fastOut' }, 0);
-      tl.to(shrinkProgress, { value: 0, duration: 0.18, ease: 'fastOut' }, '>-0.02');
-      tl.to([logo1El.value, logo2El.value], { opacity: 0, duration: 0.18, ease: 'fastOut' }, '<');
+      tl.to(logo2Pos.value, { x: logo1Pos.value.x, y: logo1Pos.value.y, duration: moveDuration, ease: easeOut, overwrite: 'auto' }, 0);
+      tl.to(shrinkProgress, { value: 0, duration: shrinkDur, ease: easeIn, overwrite: 'auto' }, '>-0.02');
+      tl.to([logo1El.value, logo2El.value], { opacity: 0, duration: shrinkDur, ease: easeOut, overwrite: 'auto' }, '<');
       tl.call(() => {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
+        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
+        if (forceReload) {
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
+          return;
+        }
         if (action === 'refresh') {
-          sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-          location.reload();
+          scrollWindowToTop(() => {
+            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
+            location.reload();
+          });
         } else {
           scrollWindowToTop(() => spawnExplosion(ox, oy, power));
         }
@@ -546,12 +646,18 @@ onMounted(() => {
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mousedown', handleMouseDown);
   document.addEventListener('mouseup', handleMouseUp);
+  // window.addEventListener('pointerup', forceCancelDrag);
+  window.addEventListener('blur', forceCancelDrag);
+  window.addEventListener('mouseout', handleWindowMouseOut);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('contextmenu', handleContextMenuCancel);
+  document.addEventListener('mousedown', handleRightMouseDownCancel, true);
   document.addEventListener('touchstart', handleTouchStart, { passive: false });
   document.addEventListener('touchmove', handleTouchMove, { passive: false });
   document.addEventListener('touchend', handleTouchEnd);
   document.addEventListener('touchcancel', handleTouchEnd);
 
-  // 滚动交互：下滚轻重力并给碎片上抛冲量
+  // 滚动交互：下滚nlight力量并给碎片上抛冲量
   lastScrollY = window.scrollY;
   lastScrollTime = performance.now();
   handleScrollFn = () => {
@@ -607,6 +713,11 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove);
   document.removeEventListener('mousedown', handleMouseDown);
   document.removeEventListener('mouseup', handleMouseUp);
+  // window.removeEventListener('pointerup', forceCancelDrag);
+  window.removeEventListener('blur', forceCancelDrag);
+  window.removeEventListener('mouseout', handleWindowMouseOut);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  document.removeEventListener('contextmenu', handleContextMenuCancel);
   document.removeEventListener('touchstart', handleTouchStart, { passive: false });
   document.removeEventListener('touchmove', handleTouchMove, { passive: false });
   document.removeEventListener('touchend', handleTouchEnd);

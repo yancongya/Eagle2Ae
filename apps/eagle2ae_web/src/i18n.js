@@ -44,7 +44,11 @@ export const messages = {
         ae: '点击后将打开 AE 插件的网页（示例链接）。',
         eagle: '将通过 eagle:// 协议打开 Eagle（需本机已注册）。'
       },
-      demoNote: '当前为虚拟下载链接，用于演示（无真实文件）。'
+      demoNote: '当前为虚拟下载链接，用于演示（无真实文件）。',
+      page: {
+        heading: '客户端下载',
+        subtitle: '立即下载扩展，体验高效素材导出与 AE 项目生成能力。'
+      }
     },
     hero: {
       bridge: '的无缝桥梁',
@@ -122,7 +126,11 @@ export const messages = {
         ae: 'This will open the AE plugin page (demo link).',
         eagle: 'Will open Eagle via eagle:// protocol (requires registered handler).'
       },
-      demoNote: 'This is a placeholder download link for demo purposes.'
+      demoNote: 'This is a placeholder download link for demo purposes.',
+      page: {
+        heading: 'Client Download',
+        subtitle: 'Download the extension to export assets efficiently and generate AE projects.'
+      }
     },
     hero: {
       bridge: 'Seamless bridge',

@@ -12,6 +12,30 @@
   "explosionDurationMs": 7000,
   "explosionFadeOutMs": 900,
   "baseGravityY": 1.3,
+  "drag": {
+    "logo1Scale": {
+      "mode": "log",
+      "distanceDivisor": 200,
+      "gain": 0.8,
+      "min": 1,
+      "max": 2.4
+    }
+  },
+  "animation": {
+    "easing": {
+      "easeIn": "power2.in",
+      "easeOut": "fastOut"
+    },
+    "return": {
+      "durationMinMs": 120,
+      "durationMaxMs": 260,
+      "distanceNormalizer": 800,
+      "distanceCurvePower": 0.5
+    },
+    "scaleToZero": {
+      "durationMs": 180
+    }
+  },
   "scroll": {
     "deadbandDy": 2,
     "down": {
@@ -29,5 +53,8 @@
       "restoreDurationMs": 800,
       "restoreDelayMs": 50
     }
+  },
+  "behavior": {
+    "forceReloadAfterRelease": true
   }
 }

@@ -9,8 +9,8 @@
               <div class="flex items-center justify-center mb-6">
                 <img ref="logoRef" src="/logo_download.png" alt="Download Logo" class="h-16 w-16 rounded-2xl shadow-lg ring-1 ring-white/10" />
               </div>
-              <h1 ref="titleRef" class="text-4xl md:text-6xl font-extrabold tracking-tight text-white">客户端下载</h1>
-              <p ref="subtitleRef" class="mt-3 md:mt-4 text-base md:text-lg text-gray-400">立即下载扩展，体验高效素材导出与 AE 项目生成能力。</p>
+              <h1 ref="titleRef" class="text-4xl md:text-6xl font-extrabold tracking-tight text-white">{{ t('download.page.heading') }}</h1>
+              <p ref="subtitleRef" class="mt-3 md:mt-4 text-base md:text-lg text-gray-400">{{ t('download.page.subtitle') }}</p>
 
               <div class="mt-10">
                 <div ref="panelRef" class="mx-auto w-full max-w-3xl relative overflow-hidden rounded-2xl bg-white/5 dark:bg-white/10 backdrop-blur-md border border-white/10 ring-1 ring-white/10 shadow-2xl transform origin-center scale-[0.9] sm:scale-100 transition-colors">
