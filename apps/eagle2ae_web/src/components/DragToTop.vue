@@ -5,7 +5,7 @@
     <svg class="absolute inset-0 w-full h-full z-0">
       <line :x1="lineStartOffset.x" :y1="lineStartOffset.y"
             :x2="logo2Pos.x + 20" :y2="logo2Pos.y + 20"
-            stroke="rgba(255, 255, 255, 0.7)" stroke-width="3" stroke-dasharray="5,5" />
+            :stroke="lineColor" stroke-width="3" stroke-dasharray="5,5" />
     </svg>
 
     <!-- Logo 1 (Start Point) with rotation and scale -->
@@ -293,6 +293,12 @@ const isPointInHero = (x, y) => {
   }
   return false;
 };
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+
+const lineColor = computed(() => {
+  return isDarkMode.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+});
 
 // 计算拖拽方向的角度
 const rotationAngle = computed(() => {
@@ -629,7 +635,13 @@ const handleTouchEnd = () => {
   }
 };
 
+let observer = null;
+
 onMounted(() => {
+  observer = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   // 加载本地 JSON 配置（若存在则覆盖 props）
   (async () => {
     try {
@@ -710,6 +722,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (observer) observer.disconnect();
   document.removeEventListener('mousemove', handleMouseMove);
   document.removeEventListener('mousedown', handleMouseDown);
   document.removeEventListener('mouseup', handleMouseUp);
