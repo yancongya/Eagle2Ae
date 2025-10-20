@@ -36,87 +36,170 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { useI18n } from 'vue-i18n';
 
-const { t, locale } = useI18n();
+const { t, locale, tm } = useI18n();
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
+
+
 const features = computed(() => {
+
   // 依赖语言切换
+
   const _ = locale.value;
+
+  const featureMessages = tm('home.features');
+
+
+
   return [
+
     {
+
       id: 'feature-drag-drop',
-      title: t('home.features.dragDrop.title'),
-      descriptionLines: [t('home.features.dragDrop.desc')],
+
+      title: featureMessages.dragDrop.title,
+
+      descriptionLines: featureMessages.dragDrop.desc,
+
       imageUrls: [
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-import-mode.png',
+
         '/images/features/feature-import-behavior.png',
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-presets.png',
+
       ],
+
     },
+
     {
+
       id: 'feature-format-support',
-      title: t('home.features.formatSupport.title'),
-      descriptionLines: [t('home.features.formatSupport.desc')],
+
+      title: featureMessages.formatSupport.title,
+
+      descriptionLines: featureMessages.formatSupport.desc,
+
       imageUrls: [
+
         '/images/features/feature-import-mode.png',
+
         '/images/features/feature-presets.png',
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-import-behavior.png',
+
       ],
+
     },
+
     {
+
       id: 'feature-smart-options',
-      title: t('home.features.smartOptions.title'),
-      descriptionLines: [t('home.features.smartOptions.desc')],
+
+      title: featureMessages.smartOptions.title,
+
+      descriptionLines: featureMessages.smartOptions.desc,
+
       imageUrls: [
+
         '/images/features/feature-import-behavior.png',
+
         '/images/features/feature-presets.png',
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-import-mode.png',
+
       ],
+
     },
+
     {
+
       id: 'feature-auto-sync',
-      title: t('home.features.autoSync.title'),
-      descriptionLines: [t('home.features.autoSync.desc')],
+
+      title: featureMessages.autoSync.title,
+
+      descriptionLines: featureMessages.autoSync.desc,
+
       imageUrls: [
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-import-mode.png',
+
         '/images/features/feature-import-behavior.png',
+
         '/images/features/feature-presets.png',
+
       ],
+
     },
+
     {
+
       id: 'feature-presets',
-      title: t('home.features.presets.title'),
-      descriptionLines: [t('home.features.presets.desc')],
+
+      title: featureMessages.presets.title,
+
+      descriptionLines: featureMessages.presets.desc,
+
       imageUrls: [
+
         '/images/features/feature-presets.png',
+
         '/images/features/feature-import-mode.png',
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-import-behavior.png',
+
       ],
+
     },
+
     {
+
       id: 'feature-performance',
-      title: t('home.features.performance.title'),
-      descriptionLines: [t('home.features.performance.desc')],
+
+      title: featureMessages.performance.title,
+
+      descriptionLines: featureMessages.performance.desc,
+
       imageUrls: [
+
         '/images/features/feature-import-mode.png',
+
         '/images/features/feature-export-layer.png',
+
         '/images/features/feature-presets.png',
+
         '/images/features/feature-drag-import.png',
+
         '/images/features/feature-import-behavior.png',
+
       ],
+
     },
+
   ];
+
 });
 
 // ===== 分页滚动（Wheel Threshold Paging） =====
