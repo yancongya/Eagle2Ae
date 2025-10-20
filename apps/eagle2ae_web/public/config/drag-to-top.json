@@ -36,6 +36,10 @@
       "durationMs": 180
     }
   },
+  "scrollTopAnimation": {
+    "duration": 1.5,
+    "ease": "expo.inOut"
+  },
   "scroll": {
     "deadbandDy": 2,
     "down": {

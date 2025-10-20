@@ -13,6 +13,40 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 
+// Helper to check for object type
+const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
+
+// Deep merge utility
+const deepMerge = (target, source) => {
+  const output = { ...target };
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = deepMerge(target[key], source[key]);
+        }
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
+  }
+  return output;
+};
+
+// Default configuration
+const defaults = ref({
+  animation: {
+    duration: 0.8,
+    ease: "power2.out"
+  }
+});
+
+const externalConfig = ref({});
+const opts = computed(() => deepMerge(defaults.value, externalConfig.value));
+
+
 gsap.registerPlugin(ScrollToPlugin);
 
 const showButton = ref(false);
@@ -45,7 +79,7 @@ const handleScroll = () => {
 };
 
 const scrollToTop = () => {
-  gsap.to(window, { duration: 0.8, scrollTo: 0, ease: 'power2.out' });
+  gsap.to(window, { duration: opts.value.animation.duration, scrollTo: 0, ease: opts.value.animation.ease });
 };
 
 const attachFooterObserver = () => {
@@ -66,7 +100,16 @@ const observeDomForFooters = () => {
   domObserver.observe(document.body, { childList: true, subtree: true });
 };
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const res = await fetch('/config/return-to-top.json', { cache: 'no-store' });
+    if (res.ok) {
+      externalConfig.value = await res.json();
+    }
+  } catch (e) {
+    console.warn('ReturnToTopButton config not found, using defaults.', e);
+  }
+
   window.addEventListener('scroll', handleScroll);
   attachFooterObserver();
   observeDomForFooters();

@@ -60,6 +60,45 @@ import 'swiper/css';
 import 'swiper/css/effect-cards';
 import 'swiper/css/pagination';
 
+// Helper to check for object type
+const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
+
+// Deep merge utility
+const deepMerge = (target, source) => {
+  const output = { ...target };
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = deepMerge(target[key], source[key]);
+        }
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
+  }
+  return output;
+};
+
+// Default configuration
+const defaults = ref({
+  enterAnimation: {
+    duration: 0.8,
+    ease: "power3.out",
+    stagger: 0.05
+  },
+  exitAnimation: {
+    duration: 0.6,
+    ease: "power2.in"
+  }
+});
+
+const externalConfig = ref({});
+const opts = computed(() => deepMerge(defaults.value, externalConfig.value));
+
+
 gsap.registerPlugin(ScrollTrigger);
 
 const props = defineProps({
@@ -135,18 +174,27 @@ let ctx;
 // 供父级调用：分页滚动完成后再触发（大屏）
 const playEnter = (delay = 0) => {
   const imageX = props.isImageLeft ? -100 : 100;
-  gsap.to(imageContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay });
-  gsap.to(textContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: delay + 0.05 });
+  gsap.to(imageContainer.value, { x: 0, opacity: 1, duration: opts.value.enterAnimation.duration, ease: opts.value.enterAnimation.ease, delay });
+  gsap.to(textContainer.value, { x: 0, opacity: 1, duration: opts.value.enterAnimation.duration, ease: opts.value.enterAnimation.ease, delay: delay + opts.value.enterAnimation.stagger });
 };
 const playExit = (delay = 0) => {
   const imageX = props.isImageLeft ? -100 : 100;
-  gsap.to(imageContainer.value, { x: imageX, opacity: 0, duration: 0.6, ease: 'power2.in', delay });
-  gsap.to(textContainer.value, { x: -imageX, opacity: 0, duration: 0.6, ease: 'power2.in', delay });
+  gsap.to(imageContainer.value, { x: imageX, opacity: 0, duration: opts.value.exitAnimation.duration, ease: opts.value.exitAnimation.ease, delay });
+  gsap.to(textContainer.value, { x: -imageX, opacity: 0, duration: opts.value.exitAnimation.duration, ease: opts.value.exitAnimation.ease, delay });
 };
 
 defineExpose({ playEnter, playExit });
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const res = await fetch('/config/feature-detail.json', { cache: 'no-store' });
+    if (res.ok) {
+      externalConfig.value = await res.json();
+    }
+  } catch (e) {
+    console.warn('Feature detail config not found, using defaults.', e);
+  }
+
   nextTick(() => {
     const imageX = props.isImageLeft ? -100 : 100; // 左/右方向
     // 初始状态：离场且透明

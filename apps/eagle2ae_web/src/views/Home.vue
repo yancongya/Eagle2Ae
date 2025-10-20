@@ -328,7 +328,7 @@ const scrollToIndex = (idx, prevIdx = getCurrentIndex()) => {
       if (!isPrevHero && prevComp && typeof prevComp.playExit === 'function') prevComp.playExit(0);
     },
     onUpdate: function () {
-       if (!enterTriggered && this.progress() >= 0.6) {
+       if (!enterTriggered && this.progress() >= 0.5) {
          enterTriggered = true;
          const refs = getCompRefs();
          const isNextHero = idx === 0;
@@ -462,18 +462,6 @@ const scrollToFeatureById = (id) => {
   const idxInFeatures = features.value.findIndex(f => f.id === id);
   const targetIdx = idxInFeatures >= 0 ? idxInFeatures + 1 : 1; // anchors: [Hero, ...features]，找不到则回退到第一个功能段
   const prevIdx = getCurrentIndex();
-  const refs = getCompRefs();
-  const nextComp = refs[targetIdx];
-  // 立即触发目标段落入场，避免“必须滚动后才显示”的体验问题
-  if (targetIdx !== 0 && nextComp && typeof nextComp.playEnter === 'function') {
-    nextComp.playEnter(0);
-  } else if (targetIdx !== 0) {
-    setTimeout(() => {
-      const refs2 = getCompRefs();
-      const comp2 = refs2[targetIdx];
-      if (comp2 && typeof comp2.playEnter === 'function') comp2.playEnter(0);
-    }, 100);
-  }
   scrollToIndex(targetIdx, prevIdx);
 };
 </script>
