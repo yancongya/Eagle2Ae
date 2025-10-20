@@ -62,6 +62,54 @@ import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { useI18n } from 'vue-i18n';
 
+// Helper to check for object type
+const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
+
+// Deep merge utility to combine default and external configurations
+const deepMerge = (target, source) => {
+  const output = { ...target };
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = deepMerge(target[key], source[key]);
+        }
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
+  }
+  return output;
+};
+
+// Default configuration for hero card interactions
+const defaults = ref({
+  transition: {
+    durationMs: 420,
+    timingFunction: 'cubic-bezier(.23,1,.32,1)'
+  },
+  hovered: {
+    scale: 1.10,
+    shadow: '0 24px 48px rgba(0,0,0,0.35)',
+    yOffset: -24
+  },
+  unhovered: {
+    cascadeDelayMs: 25,
+    maxScaleReduction: 0.30,
+    maxZDepth: -80,
+    maxOpacityReduction: 0.70,
+    maxBlurPx: 6,
+    maxDownwardYOffset: 16
+  },
+  leaveDelayMs: 110
+});
+
+const externalConfig = ref({});
+const opts = computed(() => deepMerge(defaults.value, externalConfig.value));
+
+
 const { t, locale } = useI18n();
 
 const emit = defineEmits(['scroll-to-feature']);
@@ -87,7 +135,7 @@ const onCardLeave = () => {
   hoverClearTimer = setTimeout(() => {
     hoveredCardId.value = null;
     hoverClearTimer = null;
-  }, 110);
+  }, opts.value.leaveDelayMs);
 };
 const hoveredCardId = ref(null);
 const isTitleFlipped = ref(false);
@@ -103,8 +151,8 @@ const hoveredIndex = computed(() => {
 const cardStyle = (index) => {
   const sel = hoveredIndex.value;
   const transition = {
-    transitionTimingFunction: 'cubic-bezier(.23,1,.32,1)',
-    transitionDuration: '420ms',
+    transitionTimingFunction: opts.value.transition.timingFunction,
+    transitionDuration: `${opts.value.transition.durationMs}ms`,
     transitionProperty: 'transform, opacity, box-shadow, filter'
   };
   if (sel < 0) {
@@ -119,14 +167,14 @@ const cardStyle = (index) => {
   }
   const maxDist = Math.max(sel, features.value.length - 1 - sel);
   const dist = Math.abs(index - sel);
-  const delayBase = 25; // 每一段距离约 25ms 级联延迟，减轻切换生硬
+  const delayBase = opts.value.unhovered.cascadeDelayMs;
   const delayMs = `${Math.round(dist * delayBase)}ms`;
- 
+
   if (dist === 0) {
     return {
-      transform: 'translateY(0) scale(1.10) translateZ(0)',
+      transform: `translateY(${opts.value.hovered.yOffset}px) scale(${opts.value.hovered.scale}) translateZ(0)`,
       opacity: 1,
-      boxShadow: '0 24px 48px rgba(0,0,0,0.35)',
+      boxShadow: opts.value.hovered.shadow,
       filter: 'blur(0px)',
       transformStyle: 'preserve-3d',
       willChange: 'transform, opacity, box-shadow, filter',
@@ -134,27 +182,26 @@ const cardStyle = (index) => {
       ...transition
     };
   }
- 
+
   const t = maxDist === 0 ? 1 : dist / maxDist; // 0: 最近；1: 最远
-  // 映射改为统一的 ease-in 曲线（靠近更平缓、远端快速增强）
   const easeInCubic = (x) => x * x * x;
   const u = easeInCubic(t);
-  const scale = 1 - 0.30 * u; // 最远 0.70（曲线加持）
-  const z = -80 * u; // 最远约 -80px 深度（曲线加持）
-  const y = dist === 1 ? -8 : 0; // 最近未选卡片轻微上浮
-  const opacity = 1 - 0.70 * u; // 距离越远越淡（最远≈0.30，曲线加持）
-  const blurMax = 6; // 30% 强度对应的最大模糊约 6px
+  const scale = 1 - opts.value.unhovered.maxScaleReduction * u;
+  const z = opts.value.unhovered.maxZDepth * u;
+  const y = opts.value.unhovered.maxDownwardYOffset * u; // New downward offset logic
+  const opacity = 1 - opts.value.unhovered.maxOpacityReduction * u;
+  const blurMax = opts.value.unhovered.maxBlurPx;
   const blurPx = blurMax * u;
 
-   return {
-     transform: `translateY(${y}px) scale(${scale}) translateZ(${z}px)`,
-     opacity,
-     filter: `blur(${blurPx}px)`,
-     transformStyle: 'preserve-3d',
-     willChange: 'transform, opacity, box-shadow, filter',
-     transitionDelay: delayMs,
-     ...transition
-   };
+  return {
+    transform: `translateY(${y}px) scale(${scale}) translateZ(${z}px)`,
+    opacity,
+    filter: `blur(${blurPx}px)`,
+    transformStyle: 'preserve-3d',
+    willChange: 'transform, opacity, box-shadow, filter',
+    transitionDelay: delayMs,
+    ...transition
+  };
 };
 // Card Data & Scroll Logic
 const features = computed(() => {
@@ -227,6 +274,15 @@ const buildEnterTimeline = async () => {
 };
 
 onMounted(async () => {
+  try {
+    const res = await fetch('/config/hero-cards.json', { cache: 'no-store' });
+    if (res.ok) {
+      externalConfig.value = await res.json();
+    }
+  } catch (e) {
+    console.warn('Hero cards config not found, using defaults.', e);
+  }
+
   await buildEnterTimeline();
   hasPlayedOnce.value = true;
 });
