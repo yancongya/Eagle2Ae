@@ -256,7 +256,10 @@ const getExplosionPowerByDistance = (distance) => {
 const scrollWindowToTop = (onComplete) => {
   const hasPlugin = !!(gsap && gsap.plugins && gsap.plugins.ScrollToPlugin);
   if (hasPlugin) {
-    gsap.to(window, { duration: 1.0, scrollTo: 0, ease: 'power2.out', onComplete });
+    const animOpts = opts.value.scrollTopAnimation || {};
+    const duration = typeof animOpts.duration === 'number' ? animOpts.duration : 1.0;
+    const ease = typeof animOpts.ease === 'string' ? animOpts.ease : 'power2.out';
+    gsap.to(window, { duration, scrollTo: 0, ease, onComplete });
   } else {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof onComplete === 'function') {
@@ -506,13 +509,7 @@ const handleMouseUp = () => {
       if (!logo1El.value || !logo2El.value) {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
-        if (forceReload) {
-          scrollWindowToTop(() => {
-            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-            location.reload();
-          });
-        } else if (action === 'refresh') {
+        if (action === 'refresh') {
           scrollWindowToTop(() => {
             sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
             location.reload();
@@ -539,24 +536,15 @@ const handleMouseUp = () => {
       tl.call(() => {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
-        if (forceReload) {
-          scrollWindowToTop(() => {
-            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-            location.reload();
-          });
-          return;
-        }
         if (action === 'refresh') {
           scrollWindowToTop(() => {
             sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
             location.reload();
           });
         } else {
-          scrollWindowToTop(() => {
-            spawnExplosion(ox, oy, power);
-            resetCursorByCurrentPos();
-          });
+          scrollWindowToTop();
+          spawnExplosion(ox, oy, power);
+          resetCursorByCurrentPos();
         }
       });
     } else {
@@ -582,13 +570,7 @@ const handleTouchEnd = () => {
       if (!logo1El.value || !logo2El.value) {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
-        if (forceReload) {
-          scrollWindowToTop(() => {
-            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-            location.reload();
-          });
-        } else if (action === 'refresh') {
+        if (action === 'refresh') {
           scrollWindowToTop(() => {
             sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
             location.reload();
@@ -612,21 +594,14 @@ const handleTouchEnd = () => {
       tl.call(() => {
         showLogos.value = false;
         const power = getExplosionPowerByDistance(dragDistance);
-        const forceReload = !!(opts.value.behavior && opts.value.behavior.forceReloadAfterRelease);
-        if (forceReload) {
-          scrollWindowToTop(() => {
-            sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
-            location.reload();
-          });
-          return;
-        }
         if (action === 'refresh') {
           scrollWindowToTop(() => {
             sessionStorage.setItem('postReloadExplosion', JSON.stringify({ x: ox, y: oy, power }));
             location.reload();
           });
         } else {
-          scrollWindowToTop(() => spawnExplosion(ox, oy, power));
+          scrollWindowToTop();
+          spawnExplosion(ox, oy, power);
         }
       });
     } else {
