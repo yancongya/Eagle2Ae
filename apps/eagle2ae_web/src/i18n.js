@@ -52,14 +52,14 @@ export const messages = {
     },
     hero: {
       bridge: '的无缝桥梁',
-      subtitle: '一键将您的 Eagle 素材库带入 After Effects，告别繁琐的拖拽与导入。',
+      subtitle: '像Eagle一样，快速在Ae导入导出素材，避免到处拉屎',
       featuresTitles: {
-        dragDrop: '一键拖拽，轻松导入 AE',
-        formatSupport: '丰富格式支持，无缝兼容',
-        smartOptions: '智能选项，定制导入行为',
-        autoSync: '自动同步，保持最新版本',
-        presets: '预设支持，协同更高效',
-        performance: '性能优化，导入更快更稳'
+        dragDrop: '拖拽&粘贴导入 AE',
+        formatSupport: '多种导入模式',
+        smartOptions: '多种导入模式',
+        autoSync: '快速导出图层',
+        presets: '预设支持',
+        performance: '和Eagle进行通信'
       }
     },
     home: {

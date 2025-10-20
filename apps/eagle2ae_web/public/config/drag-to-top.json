@@ -3,11 +3,11 @@
   "logo1Src": "/src/assets/logo.png",
   "logo2Src": "/src/assets/logo2.png",
   "explosionSprites": [
-    "/explosion/frag-star.svg",
-    "/explosion/frag-ring.svg",
-    "/explosion/frag-triangle.svg",
-    "/explosion/frag-bolt.svg",
-    "/explosion/frag-shard.svg"
+    "/explosion/Gif.svg",
+    "/explosion/Mov.svg",
+    "/explosion/Mp3.svg",
+    "/explosion/Wav.svg",
+    "/explosion/图片.svg"
   ],
   "explosionDurationMs": 7000,
   "explosionFadeOutMs": 900,

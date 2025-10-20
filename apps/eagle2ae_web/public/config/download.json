@@ -15,8 +15,8 @@
         "en-US": "Get AE Plugin"
       },
       "prompt": {
-        "zh-CN": "点击后将打开 AE 插件的网页（示例链接）。",
-        "en-US": "This will open the AE plugin page (demo link)."
+        "zh-CN": "点击下载最新版本",
+        "en-US": "Click to download the latest version."
       }
     },
     "eagle": {
@@ -33,8 +33,8 @@
         "en-US": "Open Eagle"
       },
       "prompt": {
-        "zh-CN": "将通过 eagle:// 协议打开 Eagle（需本机已注册）。",
-        "en-US": "Will open Eagle via eagle:// protocol (requires registered handler)."
+        "zh-CN": "4.0+版本即可去插件中心进行安装",
+        "en-US": "Version 4.0+ can be installed in the plugin center."
       }
     }
   }
