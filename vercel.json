@@ -1,1 +1,14 @@
-{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "builds": [
+    {
+      "src": "apps/eagle2ae_docs/.vitepress/dist/**",
+      "use": "@vercel/static"
+    }
+  ]
+}
