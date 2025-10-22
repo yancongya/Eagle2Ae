@@ -15,19 +15,25 @@ export const messages = {
       home: '首页',
       aePreview: 'AE 演示',
       eaglePreview: 'Eagle 演示',
-      download: '下载'
+      download: '下载',
+      about: '关于',
+      docs: '使用文档'
     },
     footer: {
       copyright: '© 2025 烟囱鸭. 保留所有权利。',
       github: 'GitHub',
       feedback: '问题反馈'
     },
+    links: {
+      docs: 'https://example.com/docs'
+    },
     route: {
       title: {
         home: '首页 - Eagle2AE',
         aePreview: 'AE 演示 - Eagle2AE',
         eaglePreview: 'Eagle 演示 - Eagle2AE',
-        download: '下载 - Eagle2AE'
+        download: '下载 - Eagle2AE',
+        about: '关于 - Eagle2AE'
       }
     },
     download: {
@@ -63,22 +69,22 @@ export const messages = {
       }
     },
     home: {
-      downloadCta: '立即下载，体验更高效的 Eagle → AE 工作流',
+      downloadCta: '点击跳转至下载页',
       features: {
         dragDrop: {
-          title: '一键拖拽，轻松导入 AE',
+          title: '拖拽&粘贴导入AE',
           desc: [
-            '将 Eagle 中的素材直接拖拽到 AE，自动识别并导入。 (图1)',
-            '支持多种导入模式，例如作为素材或序列。 (图2)',
-            '可自定义导入行为，如设置合成尺寸。 (图3)',
-            '图层会自动根据文件名命名，方便管理。 (图4)',
-            '导入预设可以保存并与团队共享。 (图5)'
+            '可以直接在eagle直接拖拽素材到扩展面板中',
+            '可以电脑任意拖拽素材到扩展面板中',
+            '可以电脑本地复制文件在扩展面板进行粘贴',
+            '可以截图后在扩展面板进行粘贴',
+            '能够智能识别粘贴到面板的文件类型'
           ]
         },
         formatSupport: {
-          title: '丰富格式支持，无缝兼容',
+          title: '多种导入模式',
           desc: [
-            '支持 JPG, PNG, GIF 等多种静态图片格式。 (图1)',
+            '直接导入和ae原生直接拖拽素材导入一样，不推荐使用',
             '矢量文件如 SVG, AI 会被自动转换为形状图层。 (图2)',
             'PSD 文件可以按图层结构导入。 (图3)',
             '视频文件如 MP4, MOV 也能无缝拖入。 (图4)',
@@ -133,19 +139,25 @@ export const messages = {
       home: 'Home',
       aePreview: 'AE Demo',
       eaglePreview: 'Eagle Demo',
-      download: 'Download'
+      download: 'Download',
+      about: 'About',
+      docs: 'Documentation'
     },
     footer: {
       copyright: '© 2025 ChimneyDuck. All Rights Reserved.',
       github: 'GitHub',
       feedback: 'Feedback'
     },
+    links: {
+      docs: 'https://example.com/docs'
+    },
     route: {
       title: {
         home: 'Home - Eagle2AE',
         aePreview: 'AE Demo - Eagle2AE',
         eaglePreview: 'Eagle Demo - Eagle2AE',
-        download: 'Download - Eagle2AE'
+        download: 'Download - Eagle2AE',
+        about: 'About - Eagle2AE'
       }
     },
     download: {

@@ -2,11 +2,9 @@
   <div class="min-h-screen bg-white dark:bg-neutral-950 transition-colors duration-200 overflow-x-hidden">
     <Navbar />
     <router-view v-slot="{ Component }">
-      <transition name="page" mode="out-in" appear>
-        <div ref="routeContainer" class="page-transition-layer" :style="pageLayerStyle">
-          <component :is="Component" />
-        </div>
-      </transition>
+      <div ref="routeContainer" class="page-transition-layer" :style="pageLayerStyle">
+        <component :is="Component" />
+      </div>
     </router-view>
     <!-- 已根据偏好移除过渡期间遮罩层 -->
     <!-- 仅在首页挂载拖拽组件 -->
@@ -35,7 +33,10 @@ const isLoading = ref(true);
 const routeContainer = ref(null);
 
 // ===== 全局导航高度变量：避免 fixed Navbar 遮挡 =====
-const pageLayerStyle = computed(() => ({ paddingTop: 'var(--navbar-height, 0px)' }));
+const pageLayerStyle = computed(() => ({
+  paddingTop: 'var(--navbar-height, 0px)',
+  'view-transition-name': 'page'
+}));
 let __navbarResizeObserver;
 const updateNavbarHeight = () => {
   const el = document.querySelector('header');
@@ -75,6 +76,7 @@ const routeTitleKey = (name) => {
     case 'AE_Preview': return 'route.title.aePreview';
     case 'Eagle_Preview': return 'route.title.eaglePreview';
     case 'Download': return 'route.title.download';
+    case 'About': return 'route.title.about';
     default: return 'route.title.home';
   }
 };

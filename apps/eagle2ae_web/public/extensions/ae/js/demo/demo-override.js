@@ -72,6 +72,30 @@
         const aeData = isConnected ? data.ae.connected : data.ae.disconnected;
         const eagleData = isConnected ? data.eagle.connected : data.eagle.disconnected;
 
+        // i18n 助手
+        const t = (k, fb) => (window.i18n?.getText(k) || fb);
+        const normalizePlaceholder = (id, val) => {
+            if (val == null) return '';
+            const v = String(val);
+            switch (id) {
+                case 'ae-version':
+                    return ['获取中...', 'Waiting for import request...', 'Waiting'].includes(v) ? t('common.waitingForImport', 'Waiting for import request...') : v;
+                case 'project-path':
+                    return ['未知', 'Unknown', 'undefined', ''].includes(v) ? t('common.unknown', 'Unknown') : v;
+                case 'project-name':
+                    return ['未打开项目', 'No project open', 'undefined', ''].includes(v) ? t('common.noProjectOpen', 'No project open') : v;
+                case 'comp-name':
+                    return ['无', 'None', 'undefined', ''].includes(v) ? t('common.none', 'None') : v;
+                case 'eagle-version':
+                case 'eagle-path':
+                case 'eagle-library':
+                case 'eagle-folder':
+                    return ['获取中...', 'Waiting for import request...', 'Waiting'].includes(v) ? t('common.waitingForImport', 'Waiting for import request...') : v;
+                default:
+                    return v;
+            }
+        };
+
         // 所有元素（根据连接状态选择数据）
         const elements = [
             { id: 'ae-version', value: aeData.version },
@@ -86,11 +110,12 @@
 
         elements.forEach(({ id, value, title }) => {
             const element = document.getElementById(id);
-            if (element && (force || element.textContent !== value)) {
-                element.textContent = value;
+            const normalizedValue = normalizePlaceholder(id, value);
+            if (element && (force || element.textContent !== normalizedValue)) {
+                element.textContent = normalizedValue;
 
                 // 正确设置title属性
-                if (title && title !== '获取中...' && title !== '未知' && title !== 'undefined') {
+                if (title && !['获取中...', '未知', 'Unknown', 'undefined'].includes(title)) {
                     // 先清除可能存在的错误title
                     element.removeAttribute('title');
                     // 重新设置正确的title
@@ -112,7 +137,8 @@
             const statusIndicator = document.getElementById('status-indicator');
 
             if (statusMain && (force || !statusMain.textContent.includes('演示'))) {
-                statusMain.textContent = '已连接 (演示)';
+                const t2 = (k, fb) => (window.i18n?.getText(k) || fb);
+                statusMain.textContent = t2('common.connectedDemo', 'Connected (Demo)');
                 statusMain.setAttribute('data-demo-mode', 'true');
                 changedCount++;
             }
@@ -177,7 +203,8 @@
                     ].includes(target.id)) {
 
                         // 检查是否不是演示数据
-                        const expectedValue = getExpectedValue(target.id);
+                        const expectedValueRaw = getExpectedValue(target.id);
+                        const expectedValue = normalizePlaceholder(target.id, expectedValueRaw);
                         if (target.textContent !== expectedValue) {
                             console.log(`🎭 检测到 ${target.id} 被修改为: "${target.textContent}", 期望值: "${expectedValue}"`);
                             console.log(`🔍 数据源检查 - aeData:`, aeData);
@@ -251,6 +278,8 @@
         const aeData = isConnected ? data.ae.connected : data.ae.disconnected;
         const eagleData = isConnected ? data.eagle.connected : data.eagle.disconnected;
 
+        const t3 = (k, fb) => (window.i18n?.getText(k) || fb);
+
         const valueMap = {
             'ae-version': aeData.version,
             'project-path': aeData.projectPath,
@@ -260,7 +289,7 @@
             'eagle-path': eagleData.execPath,
             'eagle-library': eagleData.libraryName || eagleData.libraryPath,
             'eagle-folder': eagleData.selectedFolder,
-            'status-main': '已连接 (演示)',
+            'status-main': t3('common.connectedDemo', 'Connected (Demo)'),
             'ping-time': `${data.connection.pingTime}ms`
         };
         return valueMap[elementId] || '';
@@ -390,7 +419,7 @@
                                 // 模拟连接测试成功
                                 return {
                                     success: true,
-                                    message: '演示模式：ExtendScript连接正常',
+                                    message: window.i18n?.getText('logs.extendScriptConnectedReady') || 'ExtendScript connected: AE script environment ready',
                                     aeVersion: window.__DEMO_DATA__.ae.version,
                                     scriptVersion: '演示版本 v1.0.0'
                                 };
@@ -413,7 +442,7 @@
                                         totalSelected: 0,
                                         exportableCount: 0,
                                         nonExportableCount: 0,
-                                        logs: ['🎭 演示模式：没有选中任何图层']
+                                        logs: [`🎭 ${window.i18n?.getText('logs.demoNoLayerSelected') || 'Demo Mode: No layer selected'}`]
                                     };
                                 }
                             }
@@ -425,7 +454,7 @@
                                 return {
                                     success: true,
                                     userChoice: true,
-                                    message: '演示模式：图层检测总结弹窗已显示'
+                                    message: window.i18n?.getText('logs.demoLayerDetectionSummaryShown') || 'Demo Mode: Layer detection summary dialog shown'
                                 };
                             }
                             
@@ -433,7 +462,7 @@
                             console.log(`🎭 模拟ExtendScript调用: ${scriptName}`);
                             return {
                                 success: true,
-                                message: `演示模式响应: ${scriptName}`
+                                message: `${window.i18n?.getText('logs.demoModeResponsePrefix') || 'Demo Mode response'}: ${scriptName}`
                             };
                         }
 
@@ -465,27 +494,27 @@
         // 根据真实连接状态设置演示状态
         switch (connectionState) {
             case 0: // DISCONNECTED
-                statusMain.textContent = '未连接 (演示)';
+                statusMain.textContent = (window.i18n?.getText('common.disconnectedDemo') || 'Disconnected (Demo)');
                 pingTime.textContent = '--ms';
                 statusIndicator.className = 'status-indicator disconnected';
                 break;
             case 1: // CONNECTING
-                statusMain.textContent = '连接中 (演示)';
+                statusMain.textContent = (window.i18n?.getText('common.connectingDemo') || 'Connecting (Demo)');
                 pingTime.textContent = '--ms';
                 statusIndicator.className = 'status-indicator connecting';
                 break;
             case 2: // CONNECTED
-                statusMain.textContent = '已连接 (演示)';
+                statusMain.textContent = (window.i18n?.getText('common.connectedDemo') || 'Connected (Demo)');
                 pingTime.textContent = `${window.__DEMO_DATA__.connection.pingTime}ms`;
                 statusIndicator.className = 'status-indicator connected';
                 break;
             case 3: // ERROR
-                statusMain.textContent = '连接失败 (演示)';
+                statusMain.textContent = (window.i18n?.getText('common.connectionErrorDemo') || 'Connection failed (Demo)');
                 pingTime.textContent = '--ms';
                 statusIndicator.className = 'status-indicator error';
                 break;
             default:
-                statusMain.textContent = '已连接 (演示)';
+                statusMain.textContent = (window.i18n?.getText('common.connectedDemo') || 'Connected (Demo)');
                 pingTime.textContent = `${window.__DEMO_DATA__.connection.pingTime}ms`;
                 statusIndicator.className = 'status-indicator connected';
         }

@@ -2455,16 +2455,26 @@ class Eagle2Ae {
 
         // UI日志（仅在UI模式下）
         if (this.uiMode && typeof document !== 'undefined') {
+            // 如果有i18n可用，尝试使用本地化消息
+            let localizedMessage = message;
+            if (window.i18n) {
+                // 尝试将消息作为键来查找本地化
+                const localized = window.i18n.t(message);
+                if (localized !== message) {
+                    localizedMessage = localized;
+                }
+            }
+            
             // 优先使用index.html中的addLog函数
             if (typeof window.addLog === 'function') {
-                window.addLog(message, type);
+                window.addLog(localizedMessage, type);
             } else {
                 // 备选方案：直接操作DOM
                 const logOutput = document.getElementById('log-output');
                 if (logOutput) {
                     const logEntry = document.createElement('div');
                     logEntry.className = `log-entry log-${type}`;
-                    logEntry.innerHTML = `<span class="log-time">${timestamp}</span> ${message}`;
+                    logEntry.innerHTML = `<span class="log-time">${timestamp}</span> ${localizedMessage}`;
 
                     logOutput.appendChild(logEntry);
                     logOutput.scrollTop = logOutput.scrollHeight;

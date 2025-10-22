@@ -30,7 +30,10 @@
           @click="onSelect(opt.value)"
           @mouseenter="activeIndex=idx"
         >
-          <span class="ls-item-label">{{ opt.label }}</span>
+          <span class="relative inline-block group">
+            <span class="ls-item-label">{{ opt.label }}</span>
+            <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </span>
           <svg v-if="opt.value===locale.value" class="ls-check" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true">
             <path d="M5 10l3 3 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -110,13 +113,29 @@ onMounted(() => { document.addEventListener('pointerdown', onClickOutside) })
 onBeforeUnmount(() => { document.removeEventListener('pointerdown', onClickOutside) })
 
 const onMenuEnter = (el, done) => {
-  const items = el.querySelectorAll('.ls-item')
-  gsap.fromTo(el, { opacity: 0, y: -6, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.18, ease: 'power2.out', onComplete: done })
-  gsap.fromTo(items, { opacity: 0, y: -3 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out', stagger: 0.04 })
-}
+  const items = el.querySelectorAll('.ls-item');
+  gsap.set(el, { transformOrigin: 'top center' });
+
+  const tl = gsap.timeline({ onComplete: done });
+  tl.fromTo(el,
+    { scaleY: 0, opacity: 0 },
+    { scaleY: 1, opacity: 1, duration: 0.35, ease: 'power3.out' }
+  );
+  tl.fromTo(items,
+    { opacity: 0, x: -20 },
+    { opacity: 1, x: 0, stagger: 0.07, duration: 0.3, ease: 'power3.out' },
+    "-=0.2"
+  );
+};
+
 const onMenuLeave = (el, done) => {
-  gsap.to(el, { opacity: 0, y: -4, scale: 0.98, duration: 0.16, ease: 'power2.in', onComplete: done })
-}
+  const items = el.querySelectorAll('.ls-item');
+  gsap.set(el, { transformOrigin: 'top center' });
+
+  const tl = gsap.timeline({ onComplete: done });
+  tl.to(items, { opacity: 0, x: -15, stagger: 0.05, duration: 0.2, ease: 'power2.in' });
+  tl.to(el, { scaleY: 0, opacity: 0, duration: 0.3, ease: 'power3.in' }, "-=0.15");
+};
 </script>
 
 <style scoped>
@@ -125,16 +144,20 @@ const onMenuLeave = (el, done) => {
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid transparent; /* No visible border */
   background: transparent;
   color: rgb(75 85 99); /* gray-600 */
-  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 100ms ease;
+  transition: color 200ms ease, transform 200ms ease-out;
 }
 .ls-md { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
 .ls-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
 
-.ls-trigger:hover { background: rgba(0, 0, 0, 0.04); }
-.ls-trigger:active { transform: translateY(0.5px); }
+.ls-trigger:hover {
+  background: transparent;
+  transform: scale(1.08);
+  color: rgb(31 41 55); /* Darker text */
+}
+.ls-trigger:active { transform: translateY(0.5px) scale(1.08); }
 
 /* Remove click outline, keep keyboard-visible focus ring */
 .ls-trigger:focus { outline: none; }
@@ -151,18 +174,18 @@ const onMenuLeave = (el, done) => {
   transform: rotate(180deg);
 }
 
+/* shadcn-vue inspired menu */
 .ls-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 4px);
   right: 0;
   min-width: 8rem;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0.75rem;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  border: none;
+  border-radius: 0.5rem; /* 8px */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   padding: 0.25rem;
   z-index: 50;
-  backdrop-filter: blur(8px);
   will-change: transform, opacity;
 }
 
@@ -172,27 +195,36 @@ const onMenuLeave = (el, done) => {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.375rem 0.5rem;
-  border-radius: 0.5rem;
-  color: rgb(55 65 81); /* gray-700 */
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-.ls-item:hover, .ls-item.is-active {
-  background: rgba(59, 130, 246, 0.12);
+  border-radius: 0.25rem; /* 4px */
   color: rgb(31 41 55); /* gray-800 */
+  cursor: pointer;
+  transition: background-color 100ms ease, color 100ms ease;
 }
+
+/* Subtle background on hover/focus, as per shadcn */
+.ls-item:hover, .ls-item.is-active {
+  background-color: #f1f5f9; /* slate-100 */
+  color: rgb(15 23 42); /* slate-900 */
+}
+
+.ls-item.is-current {
+  background: transparent;
+}
+
 .ls-item.is-current .ls-item-label {
   font-weight: 600;
 }
+
 .ls-check { color: rgb(37 99 235); /* blue-600 */ }
 
+/* Fallback transitions */
 .ls-menu-enter-active, .ls-menu-leave-active {
   transition: opacity 160ms ease, transform 180ms ease;
   transform-origin: top right;
 }
 .ls-menu-enter-from, .ls-menu-leave-to {
   opacity: 0;
-  transform: scale(0.97) translateY(-6px);
+  transform: scale(0.95) translateY(-4px);
 }
 .ls-menu-enter-to, .ls-menu-leave-from {
   opacity: 1;
@@ -202,31 +234,43 @@ const onMenuLeave = (el, done) => {
 /* Dark mode */
 :global(.dark) .ls-trigger {
   color: rgb(255 255 255); /* text-white in dark */
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: transparent;
 }
-:global(.dark) .ls-trigger:hover { background: transparent; }
+:global(.dark) .ls-trigger:hover { 
+  background: transparent;
+  color: rgb(255 255 255);
+}
 </style>
 <style>
+/* shadcn-vue inspired dark mode */
 html.dark .ls-menu {
-  background: rgb(17 24 39) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55) !important;
-  backdrop-filter: blur(8px);
+  background: rgb(15 23 42) !important; /* slate-900 */
+  border: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
 }
 html.dark .ls-trigger {
   color: rgb(255 255 255) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: transparent !important;
 }
 html.dark .ls-label { color: rgb(255 255 255) !important; }
 html.dark .ls-item {
-  color: rgb(255 255 255) !important; /* text-white in dark menu */
+  color: rgb(226, 232, 240) !important; /* slate-200 */
 }
 html.dark .ls-item:hover,
 html.dark .ls-item.is-active {
-  background: rgba(59, 130, 246, 0.20);
-  color: rgb(255 255 255) !important;
+  background-color: rgb(30 41 59) !important; /* slate-800 */
+  color: rgb(248 250 252) !important; /* slate-50 */
 }
+
+html.dark .ls-item.is-current {
+  background: transparent;
+}
+
+html.dark .ls-item.is-current .ls-item-label {
+  color: rgb(248 250 252) !important; /* slate-50 */
+}
+
 html.dark .ls-check {
-  color: rgb(96 165 250); /* blue-400 */
+  color: rgb(96, 165, 250); /* blue-400 */
 }
 </style>

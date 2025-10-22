@@ -570,7 +570,7 @@ class AEExtension {
             try {
                 this.getAEVersion();
                 this.updateAEInfoOnStartup();
-                this.log('AE信息已在启动时获取', 'info');
+                this.log(window.i18n.getText('logs.aeInfoFetchedOnStartup') || 'AE info fetched at startup', 'info');
             } catch (aeError) {
                 this.log(`获取AE信息失败: ${aeError.message}`, 'warning');
             }
@@ -584,7 +584,7 @@ class AEExtension {
                     this.log(`端口发现服务初始化失败: ${portError.message}`, 'error');
                 }
             } else {
-                this.log('端口发现服务已禁用，使用配置端口以提高启动性能', 'info');
+                this.log(window.i18n.getText('logs.portDiscoveryDisabledUsingConfigPort') || 'Port discovery disabled; using configured port for faster startup', 'info');
             }
 
             // 强制初始化快速设置，不依赖setupUI的结果
@@ -673,6 +673,7 @@ class AEExtension {
 
     // 设置UI事件
     setupUI() {
+
         // 安全获取所有按钮元素
         const buttons = {
             testConnection: document.getElementById('test-connection-btn'),
@@ -684,8 +685,15 @@ class AEExtension {
             exportLayers: document.getElementById('export-layers-btn'),
             exportToEagle: document.getElementById('export-to-eagle-btn'),
             debugTest: document.getElementById('debug-test-btn'),
-
+            themeToggle: document.getElementById('theme-toggle-btn'),
         };
+
+        // 应用已保存的主题（默认暗色）
+        try {
+            const savedTheme = localStorage.getItem('aeTheme') || 'dark';
+            this.applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+        } catch (_) {}
+
 
         // 安全绑定事件监听器
         if (buttons.testConnection) {
@@ -792,6 +800,12 @@ class AEExtension {
             });
         }
 
+        if (buttons.themeToggle) {
+            buttons.themeToggle.addEventListener('click', () => {
+                this.toggleTheme();
+            });
+        }
+
         // 设置面板事件（使用try-catch保护）
         try {
             this.setupSettingsPanel();
@@ -842,7 +856,7 @@ class AEExtension {
         }
 
         this.setConnectionState(ConnectionState.CONNECTING);
-        this.log('正在测试连接到Eagle...', 'info');
+        this.log(`${window.i18n.getText('logs.testingConnectionToEagle') || 'Testing connection to Eagle...'}`, 'info');
 
         // 优先尝试WebSocket连接
         if (this.useWebSocket) {
@@ -875,7 +889,7 @@ class AEExtension {
 
         // 连接成功
         this.setConnectionState(ConnectionState.CONNECTED);
-        this.log(`✅ WebSocket连接成功！`, 'success');
+        this.log(`✅ ${window.i18n.getText('logs.websocketConnected') || 'WebSocket connected!'}`, 'success');
 
         // 播放连接成功音效
         this.playConnectionSound('linked');
@@ -915,7 +929,7 @@ class AEExtension {
 
             // 连接成功
             this.setConnectionState(ConnectionState.CONNECTED);
-            this.log(`HTTP连接成功！延迟: ${pingTime}ms`, 'success');
+            this.log(`${window.i18n.getText('logs.httpConnected') || 'HTTP connection successful!'} ${window.i18n.getText('logs.latency') || 'Latency'}: ${pingTime}ms`, 'success');
 
             // 播放连接成功音效
             this.playConnectionSound('linked');
@@ -1370,7 +1384,7 @@ class AEExtension {
 
         try {
             // 导入前刷新项目信息，确保导入到正确的合成
-            this.log('🔄 导入前刷新项目状态...', 'info');
+            this.log(`🔄 ${window.i18n.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...'}`, 'info');
 
             let currentProjectInfo = null;
             try {
@@ -1399,7 +1413,7 @@ class AEExtension {
 
             // 显示当前导入目标信息并进行安全检查
             if (currentProjectInfo.activeComp && currentProjectInfo.activeComp.name) {
-                this.log(`📍 导入目标: ${currentProjectInfo.activeComp.name}`, 'info');
+                this.log(`📍 ${window.i18n.getText('logs.importTargetPrefix') || 'Import target'}: ${currentProjectInfo.activeComp.name}`, 'info');
             } else {
                 this.logWarning('⚠️ 未检测到活动合成，请确保已选择要导入的合成');
 
@@ -1522,7 +1536,7 @@ class AEExtension {
                         setTimeout(() => {
                             this.logEagle(`🏷️ 智能标签分析完成`, 'info');
                             this.logEagle(`💾 文件已保存到 "AE导入" 文件夹`, 'success');
-                            this.log(`📍 导入目标: 佛跳墙`, 'info');
+                            this.log(`📍 ${window.i18n.getText('logs.importTargetPrefix') || 'Import target'}: 佛跳墙`, 'info');
                         }, 1000);
                         setTimeout(() => {
                             this.log(`🎉 导入完成！共 ${result.importedCount} 个文件已添加到合成`, 'success');
@@ -1642,10 +1656,10 @@ class AEExtension {
         // 检查是否为demo模式，如果是则直接返回成功
         if (window.__DEMO_MODE_ACTIVE__ || 
             (window.demoMode && window.demoMode.state && window.demoMode.state.currentMode !== 'normal')) {
-            this.log('🎭 演示模式：ExtendScript连接测试跳过', 'info');
-            this.log('ExtendScript连接成功: 演示模式：ExtendScript连接正常', 'success');
-            this.log('AE版本: 2024 (24.0.0)', 'info');
-            this.log('JSX脚本版本: 演示版本 v1.0.0', 'info');
+            this.log(`🎭 ${window.i18n.getText('logs.demoExtendScriptTestSkipped') || 'Demo Mode: ExtendScript connection test skipped'}`, 'info');
+            this.log(window.i18n.getText('logs.extendScriptConnectedReady') || 'ExtendScript connected: AE script environment ready', 'success');
+            this.log(`${window.i18n.getText('logs.aeVersionPrefix') || 'AE version'}: 2024 (24.0.0)`, 'info');
+            this.log(`${window.i18n.getText('logs.jsxScriptVersionPrefix') || 'JSX script version'}: 演示版本 v1.0.0`, 'info');
             return true;
         }
 
@@ -1653,12 +1667,12 @@ class AEExtension {
             const result = await this.executeExtendScript('testExtendScriptConnection', {});
 
             if (result.success) {
-                this.log(`ExtendScript连接成功: ${result.message}`, 'success');
-                this.log(`AE版本: ${result.aeVersion}`, 'info');
+                this.log(`${window.i18n.getText('logs.extendScriptConnectedPrefix') || 'ExtendScript connected:'} ${result.message}`, 'success');
+                this.log(`${window.i18n.getText('logs.aeVersionPrefix') || 'AE version'}: ${result.aeVersion}`, 'info');
 
                 // 显示JSX脚本版本信息
                 if (result.scriptVersion) {
-                    this.log(`JSX脚本版本: ${result.scriptVersion}`, 'info');
+                    this.log(`${window.i18n.getText('logs.jsxScriptVersionPrefix') || 'JSX script version'}: ${result.scriptVersion}`, 'info');
                 } else {
                     this.log('⚠️ 未检测到脚本版本信息，可能使用的是旧版本脚本', 'warning');
                 }
@@ -1837,12 +1851,12 @@ class AEExtension {
 
     // 测试基本的ExtendScript环境
     testBasicExtendScript() {
-        this.log('🧪 测试基本ExtendScript环境...', 'info');
+        this.log(`🧪 ${window.i18n.getText('logs.testingExtendScriptBasics') || 'Testing basic ExtendScript environment...'}`, 'info');
 
         // 首先测试最简单的脚本
         this.csInterface.evalScript('app.version', (result) => {
             if (result && result !== 'EvalScript error.') {
-                this.log(`✅ ExtendScript环境正常，AE版本: ${result}`, 'success');
+                this.log(`✅ ${window.i18n.getText('logs.extendScriptEnvOkWithVersionPrefix') || 'ExtendScript environment OK, AE version:'} ${result}`, 'success');
                 // 继续加载完整的JSX脚本
                 this.loadJSXScript();
             } else {
@@ -1888,7 +1902,7 @@ class AEExtension {
             });
 
         } catch (error) {
-            this.log(`JSX脚本加载失败: ${error.message}`, 'error');
+            this.log(`${window.i18n.getText('logs.jsxScriptLoadFailedPrefix') || 'JSX script load failed:'} ${error.message}`, 'error');
             // 尝试加载简单测试脚本
             this.loadSimpleTestScript();
         }
@@ -1912,7 +1926,7 @@ class AEExtension {
                 }
             });
         } catch (error) {
-            this.log(`简单测试脚本加载异常: ${error.message}`, 'error');
+            this.log(`${window.i18n.getText('logs.simpleTestScriptLoadErrorPrefix') || 'Simple test script error:'} ${error.message}`, 'error');
         }
     }
 
@@ -5635,7 +5649,7 @@ class AEExtension {
                 aeStatusElement.className = 'status-ready';
             }
             
-            this.log('AE项目信息已更新', 'info');
+            this.log(window.i18n.getText('logs.aeProjectInfoUpdated') || 'AE project information updated', 'info');
         } catch (error) {
             this.log(`更新AE信息失败: ${error.message}`, 'warning');
             
@@ -6177,6 +6191,29 @@ class AEExtension {
             logSection.classList.add('visible');
             toggleBtn.title = '隐藏日志';
         }
+    }
+
+    // 新增：应用主题与切换
+    applyTheme(theme) {
+        const root = document.documentElement;
+        const btn = document.getElementById('theme-toggle-btn');
+        const iconSpan = btn ? btn.querySelector('.icon') : null;
+        const isLight = theme === 'light';
+
+        root.classList.toggle('theme-light', isLight);
+        try { localStorage.setItem('aeTheme', isLight ? 'light' : 'dark'); } catch (_) {}
+
+        if (btn) {
+            btn.setAttribute('aria-pressed', String(isLight));
+            btn.title = isLight ? '切换为暗色模式' : '切换为亮色模式';
+            if (iconSpan) iconSpan.textContent = isLight ? '☀️' : '🌙';
+        }
+    }
+
+    toggleTheme() {
+        const current = (() => { try { return localStorage.getItem('aeTheme'); } catch (_) { return null; } })() || 'dark';
+        const next = current === 'light' ? 'dark' : 'light';
+        this.applyTheme(next);
     }
 
     // 更新日志控制按钮
@@ -7774,31 +7811,42 @@ class AEExtension {
 
     // 启动演示模式虚拟日志
     startDemoLogs(port) {
-        this.log(`🎭 演示模式已启用 - 虚拟端口: ${port}`, 'info');
+        const demoEnabledPrefix = window.i18n?.getText('logs.demoModeEnabledPrefix') || 'Demo Mode enabled — virtual port';
+        this.log(`${demoEnabledPrefix}: ${port}`, 'info');
 
         // 延迟显示虚拟日志，模拟真实的启动过程
         setTimeout(() => {
-            this.log(`🔗 正在测试连接到Eagle...`, 'info');
+            const testingEagle = window.i18n?.getText('logs.testingConnectionToEagle') || 'Testing connection to Eagle...';
+            this.log(testingEagle, 'info');
         }, 1000);
 
         setTimeout(() => {
-            this.log(`HTTP连接成功！延迟: 23ms`, 'success');
-            this.log(`✅ WebSocket连接成功！`, 'success');
+            const httpConnected = window.i18n?.getText('logs.httpConnected') || 'HTTP connection successful!';
+            const latency = window.i18n?.getText('logs.latency') || 'Latency';
+            this.log(`${httpConnected} ${latency}: 23ms`, 'success');
+            const wsConnected = window.i18n?.getText('logs.websocketConnected') || 'WebSocket connected!';
+            this.log(wsConnected, 'success');
         }, 2000);
 
         setTimeout(() => {
-            this.log(`🔄 导入前刷新项目状态...`, 'info');
-            this.log(`📍 导入目标: 佛跳墙`, 'info');
+            const refreshState = window.i18n?.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...';
+            this.log(refreshState, 'info');
+            const importTargetPrefix = window.i18n?.getText('logs.importTargetPrefix') || 'Import target';
+            this.log(`${importTargetPrefix}: 佛跳墙`, 'info');
         }, 3000);
 
         setTimeout(() => {
-            this.log(`✅ ExtendScript连接成功: AE脚本环境已就绪`, 'success');
-            this.log(`AE版本: 2024 (24.0.0)`, 'info');
+            const esReady = window.i18n?.getText('logs.extendScriptConnectedReady') || 'ExtendScript connected: AE script environment ready';
+            this.log(esReady, 'success');
+            const aeVersionPrefix = window.i18n?.getText('logs.aeVersionPrefix') || 'AE version';
+            this.log(`${aeVersionPrefix}: 2024 (24.0.0)`, 'info');
         }, 4000);
 
         setTimeout(() => {
-            this.log(`🚀 Eagle2Ae 演示环境准备完成`, 'success');
-            this.log(`💡 提示: 拖拽图片到此处开始体验导入功能`, 'info');
+            const demoReady = window.i18n?.getText('logs.demoEnvReady') || 'Eagle2Ae demo environment ready';
+            this.log(demoReady, 'success');
+            const dragTip = window.i18n?.getText('logs.dragTipStartImport') || 'Tip: Drag images here to start import';
+            this.log(dragTip, 'info');
         }, 5000);
 
         // 启动Eagle虚拟日志
@@ -7815,14 +7863,14 @@ class AEExtension {
         if (!window.__DEMO_MODE_ACTIVE__) return;
 
         const activities = [
-            '🗑️ 临时文件夹清理完成',
-            '🔄 导入前刷新项目状态...',
-            '✅ JSX脚本重新加载完成',
-            '📁 检测到新的项目文件',
-            '🎯 合成状态检查完成',
-            '💾 设置自动保存完成',
-            '🔍 扫描可导入文件...',
-            '⚡ 性能优化完成'
+            window.i18n?.getText('logs.tempFolderCleaned') || 'Temporary folder cleaned',
+            window.i18n?.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...',
+            window.i18n?.getText('logs.jsxScriptReloaded') || 'JSX script reloaded',
+            window.i18n?.getText('logs.detectedNewProjectFiles') || 'Detected new project files',
+            window.i18n?.getText('logs.compositionStatusChecked') || 'Composition status check completed',
+            window.i18n?.getText('logs.autoSaveSettingsCompleted') || 'Auto-save settings completed',
+            window.i18n?.getText('logs.scanningImportableFiles') || 'Scanning importable files...',
+            window.i18n?.getText('logs.performanceOptimizationCompleted') || 'Performance optimization completed'
         ];
 
         let activityIndex = 0;
@@ -8408,7 +8456,7 @@ class AEExtension {
         }
 
         this.log('=== 调试完成 ===', 'info');
-        this.log('💡 如果JSX脚本版本不正确，请尝试以下方法:', 'info');
+        this.log(`💡 ${window.i18n.getText('logs.jsxVersionTipsPrefix') || 'If the JSX script version is incorrect, try these steps:'}`, 'info');
         this.log('1. 完全重启After Effects', 'info');
         this.log('2. 运行 aeExtension.reloadJSXScript() 重新加载脚本', 'info');
         this.log('3. 手动运行JSX脚本文件: 文件 > 脚本 > 运行脚本文件', 'info');
@@ -10761,7 +10809,7 @@ async handleFolderImportToAE(folder) {
                 this.handleClipboardPaste(e);
             });
 
-            this.log('剪贴板监听已设置', 'debug');
+            this.log(window.i18n.getText('logs.clipboardListenerSet') || 'Clipboard listener set', 'debug');
         } catch (error) {
             this.log(`设置剪贴板监听失败: ${error.message}`, 'error');
         }

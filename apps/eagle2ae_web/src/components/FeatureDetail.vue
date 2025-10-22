@@ -4,7 +4,7 @@
       <div class="flex flex-col md:items-start gap-12" :class="[isImageLeft ? 'md:flex-row' : 'md:flex-row-reverse']">
         <!-- Image Stacked Cards -->
         <div ref="imageContainer" class="md:w-1/2 opacity-0">
-          <div class="relative w-full overflow-visible">
+          <div class="relative w-full overflow-visible feature-swiper-container">
             <Swiper
               :modules="[EffectCards, Pagination, A11y]"
               effect="cards"
@@ -31,17 +31,19 @@
         <div ref="textContainer" class="md:w-1/2 opacity-0" :class="{ 'md:text-right': isImageLeft }">
           <h2 class="text-3xl font-bold mb-4 text-gray-800 dark:text-gray-200">{{ title }}</h2>
           <TransitionGroup
-            tag="ul"
-            :class="['list-disc space-y-2', isImageLeft ? 'md:pr-5 md:pl-0' : 'pl-5']"
+            tag="div"
+            class="space-y-2"
             :css="false"
             appear
             @before-enter="beforeEnterLine"
             @enter="enterLine"
             @leave="leaveLine"
           >
-            <li v-for="(line, idx) in visibleLines" :key="idx" class="text-sm md:text-base text-gray-600 dark:text-gray-400">
-              {{ line }}
-            </li>
+            <div v-for="(line, idx) in visibleLines" :key="idx" :class="['flex', isImageLeft ? 'justify-end' : 'items-start']">
+              <div v-if="!isImageLeft" class="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full mr-3 mt-2 flex-shrink-0"></div>
+              <span class="text-sm md:text-base text-gray-600 dark:text-gray-400">{{ line }}</span>
+              <div v-if="isImageLeft" class="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full ml-3 mt-2 flex-shrink-0"></div>
+            </div>
           </TransitionGroup>
         </div>
       </div>
@@ -74,8 +76,6 @@ const deepMerge = (target, source) => {
         } else {
           output[key] = deepMerge(target[key], source[key]);
         }
-      } else {
-        Object.assign(output, { [key]: source[key] });
       }
     });
   }
@@ -155,9 +155,61 @@ const lines = computed(() => {
 
 const visibleLines = computed(() => lines.value.slice(0, Math.min(activeIndex.value + 1, lines.value.length)));
 
+// --- Theme detection ---
+const isDarkMode = ref(false);
+
 // Swiper events & controls
-const onSwiper = (swiper) => { swiperRef.value = swiper; };
-const onSlideChange = (swiper) => { activeIndex.value = swiper.realIndex ?? swiper.activeIndex; };
+const updateSlideShadows = (swiper) => {
+  if (!swiper) return;
+  const slides = swiper.slides;
+  const activeIndex = swiper.activeIndex;
+
+  // Define shadow parameters for light mode
+  const lightMode = {
+    base: { y: 5, blur: 8, opacity: 0.15, color: 'rgba(0, 0, 0, ' },
+    step: { y: 6, blur: 7, opacity: 0.20 },
+  };
+
+  // Define glow parameters for dark mode
+  const darkMode = {
+    base: { y: 0, blur: 10, opacity: 0.10, color: 'rgba(255, 255, 255, ' }, // Subtle white glow
+    step: { y: 2, blur: 5, opacity: 0.10 }, // Glow grows slightly
+  };
+
+  const currentMode = isDarkMode.value ? darkMode : lightMode;
+
+  const maxVisibleCards = 3;
+  const maxDepth = maxVisibleCards - 1;
+
+  slides.forEach((slide, index) => {
+    const offset = index - activeIndex;
+
+    if (offset > 0 && offset <= maxVisibleCards) {
+      const depth = maxDepth - (offset - 1);
+
+      const y = currentMode.base.y + depth * currentMode.step.y;
+      const blur = currentMode.base.blur + depth * currentMode.step.blur;
+      const opacity = Math.min(currentMode.base.opacity + depth * currentMode.step.opacity, 0.9);
+
+      slide.style.filter = `drop-shadow(0 ${y}px ${blur}px ${currentMode.base.color}${opacity}))`;
+      
+      const shadowEl = slide.querySelector('.swiper-slide-shadow');
+      if (shadowEl) shadowEl.style.opacity = '0';
+
+    } else {
+      slide.style.filter = 'none';
+    }
+  });
+};
+
+const onSwiper = (swiper) => {
+  swiperRef.value = swiper;
+  updateSlideShadows(swiper);
+};
+const onSlideChange = (swiper) => {
+  activeIndex.value = swiper.realIndex ?? swiper.activeIndex;
+  updateSlideShadows(swiper);
+};
 const next = () => { swiperRef.value?.slideNext(); };
 const prev = () => { swiperRef.value?.slidePrev(); };
 const setIndex = (i) => {
@@ -170,6 +222,7 @@ const setIndex = (i) => {
 };
 
 let ctx;
+let themeObserver; // Declare here
 
 // 供父级调用：分页滚动完成后再触发（大屏）
 const playEnter = (delay = 0) => {
@@ -195,6 +248,20 @@ onMounted(async () => {
     console.warn('Feature detail config not found, using defaults.', e);
   }
 
+  // --- Theme detection logic ---
+  isDarkMode.value = document.documentElement.classList.contains('dark');
+  themeObserver = new MutationObserver(() => {
+    const newIsDarkMode = document.documentElement.classList.contains('dark');
+    if (newIsDarkMode !== isDarkMode.value) {
+      isDarkMode.value = newIsDarkMode;
+      if (swiperRef.value) {
+        updateSlideShadows(swiperRef.value); // Re-apply shadows on theme change
+      }
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  // --- End Theme detection logic ---
+
   nextTick(() => {
     const imageX = props.isImageLeft ? -100 : 100; // 左/右方向
     // 初始状态：离场且透明
@@ -204,6 +271,7 @@ onMounted(async () => {
     const show = (delay = 0) => {
       gsap.to(imageContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay });
       gsap.to(textContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: delay + 0.05 });
+      if (swiperRef.value) updateSlideShadows(swiperRef.value); // Ensure shadows are set on show
     };
     const hide = (delay = 0) => {
       gsap.to(imageContainer.value, { x: imageX, opacity: 0, duration: 0.6, ease: 'power2.in', delay });
@@ -226,10 +294,18 @@ onMounted(async () => {
     }
 
     // 大屏由父级 Home.vue 调度，已在顶层暴露 playEnter/playExit
+    // Initial shadow application if not handled by ScrollTrigger
+    if (window.innerWidth >= 1024 && swiperRef.value) {
+        updateSlideShadows(swiperRef.value);
+    }
   });
 });
 
-onUnmounted(() => { if (ctx) ctx.revert(); });
+onUnmounted(() => {
+  if (ctx) ctx.revert();
+  // Clean up theme observer
+  if (themeObserver) themeObserver.disconnect();
+});
 
 const beforeEnterLine = (el) => {
   gsap.set(el, { opacity: 0, y: 8 });
@@ -268,11 +344,16 @@ const leaveLine = (el, done) => {
   height: 8px;
 }
 
-/* 强化后置卡片阴影 */
-:deep(.swiper-slide-shadow) {
-  opacity: 0.65 !important;
+/* 强化后置卡片阴影 (现在由JS动态控制) */
+
+/* --- Global Hover Effect --- */
+.feature-swiper-container {
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+  border-radius: 0.375rem; /* 6px */
 }
-:deep(.swiper-slide:not(.swiper-slide-active)) {
-  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.55));
+
+.feature-swiper-container:hover {
+  transform: scale(1.03);
+  box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.35);
 }
 </style>

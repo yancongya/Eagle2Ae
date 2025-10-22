@@ -1,10 +1,10 @@
 <template>
   <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm transition-colors duration-300 w-full">
-    <nav class="w-full px-6 py-4 flex justify-between items-center">
+    <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex justify-between items-center">
       <!-- Logo -->
-      <div class="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center">
+      <div class="font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
         <router-link to="/" class="flex items-center">
-          <img src="/logo.png" alt="Logo" class="h-8 mr-2" />
+          <img src="/logo.png" alt="Logo" class="h-6 sm:h-7 md:h-8 mr-2" />
           <span class="font-bold">Eagle2AE</span>
         </router-link>
       </div>
@@ -13,23 +13,28 @@
       <div class="hidden md:flex items-center space-x-6">
         <router-link to="/" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
           {{ t('nav.home') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 group-hover:w-full transition-all duration-500 ease-in-out animate-pulse-slow"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
         <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
           {{ t('nav.aePreview') }}
-          <!-- Loading animation -->
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 group-hover:w-full transition-all duration-500 ease-in-out animate-pulse-slow"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
         <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
           {{ t('nav.eaglePreview') }}
-          <!-- Loading animation -->
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 group-hover:w-full transition-all duration-500 ease-in-out animate-pulse-slow"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
         <router-link to="/download" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
           {{ t('nav.download') }}
-          <!-- Loading animation -->
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 group-hover:w-full transition-all duration-500 ease-in-out animate-pulse-slow"></span>
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
+        <router-link to="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+          {{ t('nav.about') }}
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+        </router-link>
+        <a :href="t('links.docs')" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+          {{ t('nav.docs') }}
+          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+        </a>
         
         <!-- 已移除旧的“详细文档”链接 -->
       </div>
@@ -38,9 +43,9 @@
       <div class="flex items-center gap-2 md:gap-4">
         <LanguageSwitcher size="md" class="hidden md:block" />
         <!-- 移动端始终可见的语言切换 -->
-        <LanguageSwitcher size="sm" class="md:hidden" />
+        <LanguageSwitcher size="sm" class="md:hidden" @languageChanged="isMobileOpen = false"/>
         <!-- 纯 CSS 日/月切换控件 -->
-        <label for="themeToggle" class="themeToggle st-sunMoonThemeToggleBtn w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer transition-transform duration-200 ease-out hover:scale-[1.06] active:scale-[0.96]" aria-label="切换主题">
+        <label for="themeToggle" class="themeToggle st-sunMoonThemeToggleBtn w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer transition-transform duration-200 ease-out hover:scale-[1.06] active:scale-[0.96]" aria-label="切换主题">
           <input type="checkbox" id="themeToggle" class="themeToggleInput" :checked="isDark" @click="onToggleTheme($event)" />
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" stroke="none">
             <mask id="moon-mask">
@@ -60,19 +65,51 @@
         </label>
         <!-- 已移除旧的下载按钮 CTA -->
         <!-- Mobile menu toggle -->
-        <button @click="isMobileOpen = !isMobileOpen" class="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
-          <svg class="w-6 h-6 transition-transform duration-200 ease-out" :class="{ 'rotate-90': isMobileOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <button ref="mobileMenuButtonRef" @click="isMobileOpen = !isMobileOpen" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
+          <svg class="w-5 h-5 md:w-6 md:h-6 transition-transform duration-200 ease-out" :class="{ 'rotate-90': isMobileOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
     </nav>
     <!-- Mobile menu -->
     <transition name="mobile-menu" @enter="mobileEnter" @leave="mobileLeave">
-      <div v-if="isMobileOpen" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
-        <div class="w-full px-6 py-2 flex flex-col space-y-2">
-          <router-link to="/" class="px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">{{ t('nav.home') }}</router-link>
-          <router-link to="/ae-preview" class="px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">{{ t('nav.aePreview') }}</router-link>
-          <router-link to="/eagle-preview" class="px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">{{ t('nav.eaglePreview') }}</router-link>
-          <router-link to="/download" class="px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">{{ t('nav.download') }}</router-link>
+      <div v-if="isMobileOpen" ref="mobileMenuRef" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
+        <div class="w-full px-4 py-3 sm:py-4 flex flex-col space-y-2">
+          <router-link to="/" class="mobile-nav-link">
+            <span class="relative inline-block group">
+              {{ t('nav.home') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </router-link>
+          <router-link to="/ae-preview" class="mobile-nav-link">
+            <span class="relative inline-block group">
+              {{ t('nav.aePreview') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </router-link>
+          <router-link to="/eagle-preview" class="mobile-nav-link">
+            <span class="relative inline-block group">
+              {{ t('nav.eaglePreview') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </router-link>
+          <router-link to="/download" class="mobile-nav-link">
+            <span class="relative inline-block group">
+              {{ t('nav.download') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </router-link>
+          <router-link to="/about" class="mobile-nav-link">
+            <span class="relative inline-block group">
+              {{ t('nav.about') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </router-link>
+          <a :href="t('links.docs')" class="mobile-nav-link" @click="isMobileOpen = false">
+            <span class="relative inline-block group">
+              {{ t('nav.docs') }}
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            </span>
+          </a>
         </div>
       </div>
     </transition>
@@ -80,7 +117,7 @@
 </template>
 
 <script setup>
-import { useDark, useToggle } from '@vueuse/core';
+import { useDark, useToggle, onClickOutside } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -88,10 +125,20 @@ import LanguageSwitcher from './LanguageSwitcher.vue';
 import { gsap } from 'gsap'
 
 const { t } = useI18n();
-const isDark = useDark();
-const toggleDark = useToggle(isDark);
-const isMobileOpen = ref(false);
-const router = useRouter();
+const isDark = useDark({ storageKey: 'theme' });
+ const toggleDark = useToggle(isDark);
+ const isMobileOpen = ref(false);
+ const router = useRouter();
+
+const mobileMenuRef = ref(null);
+const mobileMenuButtonRef = ref(null);
+
+onClickOutside(
+  mobileMenuRef,
+  () => { isMobileOpen.value = false; },
+  { ignore: [mobileMenuButtonRef] }
+);
+
 router.afterEach(() => { isMobileOpen.value = false; });
 
 const onToggleTheme = (e) => {
@@ -112,13 +159,41 @@ const onToggleTheme = (e) => {
 
 // GSAP: Mobile menu enter/leave animations with item stagger
 const mobileEnter = (el, done) => {
-  const links = el.querySelectorAll('a')
-  gsap.fromTo(el, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out', onComplete: done })
-  gsap.fromTo(links, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out', stagger: 0.04 })
-}
+  const links = el.querySelectorAll('a');
+  gsap.set(el, { transformOrigin: 'top center' });
+
+  const tl = gsap.timeline({ onComplete: done });
+  tl.fromTo(el,
+    { scaleY: 0, opacity: 0 },
+    { scaleY: 1, opacity: 1, duration: 0.35, ease: 'power3.out' }
+  );
+  tl.fromTo(links,
+    { opacity: 0, x: -20 },
+    { opacity: 1, x: 0, stagger: 0.07, duration: 0.3, ease: 'power3.out' },
+    "-=0.2"
+  );
+};
 const mobileLeave = (el, done) => {
-  gsap.to(el, { opacity: 0, y: -6, duration: 0.18, ease: 'power2.in', onComplete: done })
-}
+  const links = el.querySelectorAll('a');
+  gsap.set(el, { transformOrigin: 'top center' });
+
+  const tl = gsap.timeline({ onComplete: done });
+  // 1. Links move down and fade out
+  tl.to(links, {
+    opacity: 0,
+    y: 15, // Move down
+    stagger: 0.05,
+    duration: 0.25,
+    ease: 'power2.in'
+  });
+  // 2. Panel collapses upwards
+  tl.to(el, {
+    scaleY: 0,
+    opacity: 0, // Also fade out the panel
+    duration: 0.3,
+    ease: 'power3.in'
+  }, "-=0.2"); // Overlap for a smoother transition
+};
 </script>
 
 <style scoped>
@@ -135,6 +210,8 @@ const mobileLeave = (el, done) => {
     opacity: 1;
   }
 }
+
+/* Fallback for CSS transition */
 .mobile-menu-enter-active, .mobile-menu-leave-active {
   transition: max-height 250ms ease, opacity 200ms ease, transform 200ms ease;
   overflow: hidden;
@@ -148,6 +225,35 @@ const mobileLeave = (el, done) => {
   max-height: 500px;
   opacity: 1;
   transform: translateY(0);
+}
+
+/* New Interactive Link Styles */
+.mobile-nav-link {
+  position: relative;
+  display: block;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.625rem;
+  font-weight: 500;
+  color: #4a5568; /* gray-700 */
+  text-decoration: none;
+  transition: color 250ms ease-out, transform 150ms ease-out;
+}
+
+.dark .mobile-nav-link {
+  color: #cbd5e0;
+}
+
+.mobile-nav-link:hover {
+  color: #1a202c; /* gray-900 */
+}
+
+.dark .mobile-nav-link:hover {
+  color: #fff;
+}
+
+.mobile-nav-link:active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
 }
 
 /* Sun-Moon Toggle (pure CSS) */

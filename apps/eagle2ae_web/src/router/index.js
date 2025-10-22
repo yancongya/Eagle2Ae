@@ -3,6 +3,7 @@ import Home from '../views/Home.vue';
 import AE_Preview from '../views/AE_Preview.vue';
 import Eagle_Preview from '../views/Eagle_Preview.vue';
 import Download from '../views/Download.vue';
+import About from '../views/About.vue';
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: '/download',
     name: 'Download',
     component: Download,
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
   },
 ];
 
@@ -50,6 +56,11 @@ const router = createRouter({
       name: 'Download',
       component: Download,
     },
+    {
+      path: '/about',
+      name: 'About',
+      component: About,
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     // 1) 浏览器的前进/后退：恢复保存位置
@@ -70,12 +81,12 @@ const router = createRouter({
   }
 });
 
-// View Transitions: apply only for preview pages navigation
-const isPreviewRoute = (route) => ['AE_Preview', 'Eagle_Preview'].includes(route?.name);
+// ===== Global View Transitions for all route navigations =====
 let vtNavigating = false;
 router.beforeEach((to, from, next) => {
   const supported = typeof document !== 'undefined' && 'startViewTransition' in document;
-  if (!supported || vtNavigating || !(isPreviewRoute(to) || isPreviewRoute(from))) return next();
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!supported || reducedMotion || vtNavigating) return next();
   vtNavigating = true;
   document.startViewTransition(() => {
     next();
@@ -87,7 +98,9 @@ router.beforeEach((to, from, next) => {
 router.afterEach((to) => {
   const doc = document.documentElement;
   if (!doc) return;
-  doc.classList.remove('route-AE_Preview', 'route-Eagle_Preview');
+  // 清理所有 route-* 类，避免累积
+  const toRemove = Array.from(doc.classList).filter((cls) => cls.startsWith('route-'));
+  toRemove.forEach((cls) => doc.classList.remove(cls));
   doc.classList.add(`route-${to.name}`);
 });
 

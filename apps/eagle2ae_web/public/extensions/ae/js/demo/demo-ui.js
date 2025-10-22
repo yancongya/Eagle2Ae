@@ -126,7 +126,7 @@ class DemoUI {
         if (this.elements.projectName) {
             const projectName = globalAEData?.projectName || this.demoData.ae.projectName;
             this.elements.projectName.textContent = projectName;
-            if (projectName && projectName !== '未打开项目') {
+            if (projectName && !['未打开项目', 'No project open'].includes(projectName)) {
                 this.elements.projectName.title = projectName;
             } else {
                 this.elements.projectName.removeAttribute('title');
@@ -137,7 +137,7 @@ class DemoUI {
         if (this.elements.compName) {
             const compName = globalAEData?.activeComp || this.demoData.ae.activeComp;
             this.elements.compName.textContent = compName;
-            if (compName && compName !== '无') {
+            if (compName && !['无', 'None'].includes(compName)) {
                 this.elements.compName.title = compName;
             } else {
                 this.elements.compName.removeAttribute('title');
@@ -150,10 +150,10 @@ class DemoUI {
     updateAEInfoDisconnected() {
         // 使用演示数据覆盖中的未连接状态数据
         const disconnectedData = window.__DEMO_DATA__ ? window.__DEMO_DATA__.ae.disconnected : {
-            version: "获取中...",
-            projectPath: "未知",
-            projectName: "未打开项目",
-            activeComp: "无"
+            version: (window.i18n?.getText('common.unknown') || 'Unknown'),
+            projectPath: (window.i18n?.getText('common.unknown') || 'Unknown'),
+            projectName: (window.i18n?.getText('common.noProjectOpen') || 'No project open'),
+            activeComp: (window.i18n?.getText('common.none') || 'None')
         };
 
         // 更新AE版本信息
@@ -165,7 +165,7 @@ class DemoUI {
         if (this.elements.projectPath) {
             this.elements.projectPath.textContent = disconnectedData.projectPath;
             // 只有在有有效路径时才设置title
-            if (disconnectedData.projectPath && disconnectedData.projectPath !== '未知' && disconnectedData.projectPath !== 'undefined') {
+            if (disconnectedData.projectPath && !['未知', 'Unknown', 'undefined'].includes(disconnectedData.projectPath)) {
                 this.elements.projectPath.removeAttribute('title');
                 this.elements.projectPath.setAttribute('title', disconnectedData.projectPath);
                 this.elements.projectPath.title = disconnectedData.projectPath;
@@ -195,8 +195,9 @@ class DemoUI {
         if (this.elements.eagleVersion) {
             const eagleVersion = globalEagleData?.version || this.demoData.eagle.version;
             this.elements.eagleVersion.textContent = eagleVersion;
-            if (eagleVersion && eagleVersion !== '获取中...') {
-                this.elements.eagleVersion.title = `Eagle版本: ${eagleVersion}`;
+            if (eagleVersion && !['获取中...', 'Waiting for import request...', 'Waiting'].includes(eagleVersion)) {
+                const prefix = (window.i18n?.getText('tooltips.eagleVersionPrefix') || 'Eagle Version:');
+                this.elements.eagleVersion.title = `${prefix} ${eagleVersion}`;
             } else {
                 this.elements.eagleVersion.removeAttribute('title');
             }
@@ -204,11 +205,12 @@ class DemoUI {
 
         // 更新Eagle路径 - 显示安装路径
         if (this.elements.eaglePath) {
-            const execPath = globalEagleData?.execPath || '演示路径';
+            const execPath = globalEagleData?.execPath || (window.i18n?.getText('common.demoPath') || 'Demo Path');
             this.elements.eaglePath.textContent = execPath;
             // 设置悬浮显示完整信息
-            if (execPath && execPath !== '演示路径' && execPath !== 'undefined') {
-                const tooltipText = `Eagle安装路径: ${execPath}`;
+            if (execPath && !['演示路径', 'Demo Path', 'undefined'].includes(execPath)) {
+                const prefix = (window.i18n?.getText('tooltips.eagleExecPathPrefix') || 'Eagle Exec Path:');
+                const tooltipText = `${prefix} ${execPath}`;
                 this.elements.eaglePath.removeAttribute('title');
                 this.elements.eaglePath.setAttribute('title', tooltipText);
                 this.elements.eaglePath.title = tooltipText;
@@ -222,8 +224,8 @@ class DemoUI {
 
         // 更新资源库 - 可以点击打开
         if (this.elements.eagleLibrary) {
-            const libraryName = globalEagleData?.libraryName || '演示资源库';
-            const libraryPath = globalEagleData?.libraryPath || '演示路径';
+            const libraryName = globalEagleData?.libraryName || (window.i18n?.getText('common.demoLibrary') || 'Demo Library');
+            const libraryPath = globalEagleData?.libraryPath || (window.i18n?.getText('common.demoPath') || 'Demo Path');
             const librarySize = globalEagleData?.librarySize || 0;
 
             // 格式化显示：资源库名称 | 大小
@@ -235,14 +237,17 @@ class DemoUI {
 
             this.elements.eagleLibrary.textContent = displayText;
             // 设置悬浮显示完整信息
-            if (libraryPath && libraryPath !== '演示路径' && libraryPath !== 'undefined') {
-                let tooltipText = `资源库路径: ${libraryPath}`;
-                if (libraryName && libraryName !== '演示资源库') {
-                    tooltipText = `资源库: ${libraryName}\n路径: ${libraryPath}`;
+            if (libraryPath && !['演示路径', 'Demo Path', 'undefined'].includes(libraryPath)) {
+                const namePrefix = (window.i18n?.getText('tooltips.libraryNamePrefix') || 'Library:');
+                const pathPrefix = (window.i18n?.getText('tooltips.libraryPathPrefix') || 'Path:');
+                const sizePrefix = (window.i18n?.getText('tooltips.sizePrefix') || 'Size:');
+                let tooltipText = `${pathPrefix} ${libraryPath}`;
+                if (libraryName && !['演示资源库', 'Demo Library'].includes(libraryName)) {
+                    tooltipText = `${namePrefix} ${libraryName}\n${pathPrefix} ${libraryPath}`;
                 }
                 if (librarySize > 0) {
                     const formattedSize = this.formatFileSize(librarySize);
-                    tooltipText += `\n大小: ${formattedSize}`;
+                    tooltipText += `\n${sizePrefix} ${formattedSize}`;
                 }
                 this.elements.eagleLibrary.removeAttribute('title');
                 this.elements.eagleLibrary.setAttribute('title', tooltipText);
@@ -265,8 +270,9 @@ class DemoUI {
         if (this.elements.eagleFolder) {
             const selectedFolder = globalEagleData?.selectedFolder || this.demoData.eagle.selectedFolder;
             this.elements.eagleFolder.textContent = selectedFolder;
-            if (selectedFolder && selectedFolder !== '获取中...') {
-                this.elements.eagleFolder.title = `当前组: ${selectedFolder}`;
+            if (selectedFolder && !['获取中...', 'Waiting for import request...', 'Waiting'].includes(selectedFolder)) {
+                const prefix = (window.i18n?.getText('tooltips.currentGroupPrefix') || 'Current Group:');
+                this.elements.eagleFolder.title = `${prefix} ${selectedFolder}`;
             } else {
                 this.elements.eagleFolder.removeAttribute('title');
             }
@@ -280,10 +286,10 @@ class DemoUI {
         // 使用全局演示数据
         const globalEagleData = window.__DEMO_DATA__?.eagle?.disconnected;
         const disconnectedData = window.__DEMO_DATA__ ? window.__DEMO_DATA__.eagle.disconnected : {
-            version: globalEagleData?.version || "获取中...",
-            execPath: globalEagleData?.execPath || "获取中...",
-            libraryPath: globalEagleData?.libraryPath || "获取中...",
-            selectedFolder: globalEagleData?.selectedFolder || "获取中..."
+            version: globalEagleData?.version || (window.i18n?.getText('common.waitingForImport') || 'Waiting for import request...'),
+            execPath: globalEagleData?.execPath || (window.i18n?.getText('common.waitingForImport') || 'Waiting for import request...'),
+            libraryPath: globalEagleData?.libraryPath || (window.i18n?.getText('common.waitingForImport') || 'Waiting for import request...'),
+            selectedFolder: globalEagleData?.selectedFolder || (window.i18n?.getText('common.waitingForImport') || 'Waiting for import request...')
         };
 
         // 更新Eagle版本信息
@@ -302,7 +308,7 @@ class DemoUI {
 
         // 更新资源库
         if (this.elements.eagleLibrary) {
-            this.elements.eagleLibrary.textContent = '获取中...';
+            this.elements.eagleLibrary.textContent = (window.i18n?.getText('common.waitingForImport') || 'Waiting for import request...');
             this.elements.eagleLibrary.removeAttribute('title'); // 未连接状态移除悬浮提示
             this.elements.eagleLibrary.classList.remove('clickable');
             this.elements.eagleLibrary.onclick = null;
@@ -451,30 +457,45 @@ class DemoUI {
                     }, 200);
                     // 在演示模式下显示虚拟连接日志
         if (window.aeExtension && typeof window.aeExtension.log === 'function') {
-            window.aeExtension.log('🔗 正在测试连接到Eagle...', 'info');
+            const tTesting = (window.i18n?.getText('logs.testingConnectionToEagle')) || 'Testing connection to Eagle...';
+            window.aeExtension.log(`🔗 ${tTesting}`, 'info');
 
-            // Eagle端的连接日志
+            // Eagle-side connection logs
             if (typeof window.aeExtension.logEagle === 'function') {
                 setTimeout(() => {
-                    window.aeExtension.logEagle('📡 接收到连接请求', 'info');
-                    window.aeExtension.logEagle('🔐 验证API权限...', 'debug');
+                    const tRecv = (window.i18n?.getText('logs.eagleReceivedConnectionRequest')) || 'Received connection request';
+                    const tVerify = (window.i18n?.getText('logs.eagleVerifyApiPermission')) || 'Verifying API permissions...';
+                    window.aeExtension.logEagle(`📡 ${tRecv}`, 'info');
+                    window.aeExtension.logEagle(`🔐 ${tVerify}`, 'debug');
                 }, 300);
 
                 setTimeout(() => {
-                    window.aeExtension.logEagle('✅ API权限验证通过', 'success');
-                    window.aeExtension.logEagle('📁 当前选中文件夹: "仓鼠党"', 'info');
-                    window.aeExtension.logEagle('📊 资源库状态: 1,247 个文件可用', 'info');
+                    const tVerified = (window.i18n?.getText('logs.eagleApiPermissionVerified')) || 'API permissions verified';
+                    const tSelectedPrefix = (window.i18n?.getText('logs.eagleSelectedFolderPrefix')) || 'Current selected folder';
+                    const tLibStatus = (window.i18n?.getText('logs.eagleLibraryStatus')) || 'Library status';
+                    const tItemsSuffix = (window.i18n?.getText('logs.itemsAvailableSuffix')) || 'items available';
+                    const folderName = (window.demoMode?.config?.demoData?.eagle?.selectedFolder) || (window.DemoI18nHelper?.getDemoText('eagle.libraryName')) || 'Hamster Party';
+                    const totalItems = (window.demoMode?.config?.demoData?.eagle?.totalItems) || 1247;
+                    const formattedItems = Number(totalItems).toLocaleString();
+                    window.aeExtension.logEagle(`✅ ${tVerified}`, 'success');
+                    window.aeExtension.logEagle(`📁 ${tSelectedPrefix}: "${folderName}"`, 'info');
+                    window.aeExtension.logEagle(`📊 ${tLibStatus}: ${formattedItems} ${tItemsSuffix}`, 'info');
                 }, 800);
 
                 setTimeout(() => {
-                    window.aeExtension.logEagle('🚀 Eagle插件就绪，等待导入请求', 'success');
+                    const tReady = (window.i18n?.getText('logs.eaglePluginReady')) || 'Eagle plugin ready, awaiting import';
+                    window.aeExtension.logEagle(`🚀 ${tReady}`, 'success');
                 }, 1200);
             }
 
             setTimeout(() => {
-                window.aeExtension.log('HTTP连接成功！延迟: 18ms', 'success');
-                window.aeExtension.log('✅ WebSocket连接成功！', 'success');
-                window.aeExtension.log('🎯 系统就绪 - 可以开始拖拽导入', 'success');
+                const tHttp = (window.i18n?.getText('logs.httpConnected')) || 'HTTP connection successful!';
+                const tLatency = (window.i18n?.getText('logs.latency')) || 'Latency';
+                const tWs = (window.i18n?.getText('logs.websocketConnected')) || 'WebSocket connected!';
+                const tSystemReady = (window.i18n?.getText('logs.systemReady')) || 'System ready — drag to import';
+                window.aeExtension.log(`${tHttp} ${tLatency}: 18ms`, 'success');
+                window.aeExtension.log(`✅ ${tWs}`, 'success');
+                window.aeExtension.log(`🎯 ${tSystemReady}`, 'success');
             }, 1400);
         }
         console.log('✅ 演示连接完成');
@@ -495,7 +516,8 @@ class DemoUI {
         }
         
         if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '连接中...';
+            const t = (k, fb) => (window.i18n?.getText(k) || fb);
+            this.elements.statusMain.textContent = t('common.connecting', 'Connecting...');
         }
         
         if (this.elements.pingTime) {
@@ -515,7 +537,8 @@ class DemoUI {
         }
 
         if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '已连接 (演示)';
+            const t = (k, fb) => (window.i18n?.getText(k) || fb);
+            this.elements.statusMain.textContent = t('common.connectedDemo', 'Connected (Demo)');
         }
 
         if (this.elements.pingTime) {
@@ -540,7 +563,8 @@ class DemoUI {
         }
 
         if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '断开连接中...';
+            const t = (k, fb) => (window.i18n?.getText(k) || fb);
+            this.elements.statusMain.textContent = t('common.disconnecting', 'Disconnecting...');
         }
 
         if (this.elements.pingTime) {
@@ -554,7 +578,8 @@ class DemoUI {
         }
 
         if (this.elements.statusMain) {
-            this.elements.statusMain.textContent = '未连接 (演示)';
+            const t = (k, fb) => (window.i18n?.getText(k) || fb);
+            this.elements.statusMain.textContent = t('common.disconnectedDemo', 'Disconnected (Demo)');
         }
 
         if (this.elements.pingTime) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Eagle2Ae</title>
+    <title>Eagle2Ae_Eagle</title>
     <style>
         * {
             margin: 0;
@@ -22,6 +22,10 @@
         .export-ae-panel {
             padding: 16px;
             max-width: 100%;
+            height: calc(100vh - 32px);  /* 考虑到padding的高度 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         h2 {
@@ -34,36 +38,82 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;  /* 防止标题收缩 */
         }
-
-        .title-settings-btn {
-            background: none;
-            border: none;
+        
+        #main-title {
+            margin-right: auto; /* Push controls to the right */
+            user-select: none; /* Make text non-selectable */
+            -webkit-user-select: none; /* For Safari */
+            -moz-user-select: none; /* For Firefox */
+            -ms-user-select: none; /* For IE/Edge */
+            cursor: pointer; /* Show hand cursor to indicate clickability */
+            transition: color 0.2s ease; /* Add transition for color change on hover */
+        }
+        
+        #main-title:hover {
+            color: #00a0ff; /* Change color on hover to indicate it's clickable */
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .language-switch-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #ffffff;
             cursor: pointer;
-            font-size: 16px;
-            padding: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
             border-radius: 4px;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-width: 30px;
+        }
+
+        .language-switch-btn:hover {
+            background: #555555;
+            color: #00a0ff;
+            border-color: #00a0ff;
+        }
+        
+        .language-icon {
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .title-settings-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 30px;
         }
 
         .title-settings-btn:hover {
             background: #555555;
             color: #00a0ff;
+            border-color: #00a0ff;
         }
 
         .gear-icon {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
+            font-size: 16px;
+            line-height: 1;
         }
 
         .gear-icon::before {
             content: '⚙';
-            font-size: 16px;
         }
 
         h3 {
@@ -73,12 +123,24 @@
             color: #ffffff;
         }
 
-        .status-section, .files-section, .actions-section, .log-section {
+        .status-section, .files-section, .actions-section {
             background: #3c3c3c;
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 12px;
             border: 1px solid #555555;
+            flex-shrink: 0;  /* 防止这些部分收缩 */
+        }
+
+        .log-section {
+            background: #3c3c3c;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #555555;
+            flex: 1;  /* 日志部分使用剩余空间 */
+            display: flex;
+            flex-direction: column;
         }
 
         .status-item {
@@ -121,7 +183,7 @@
         }
 
         .files-list {
-            max-height: 120px;
+            max-height: 100px;
             overflow-y: auto;
         }
 
@@ -130,6 +192,7 @@
             font-style: italic;
             text-align: center;
             padding: 16px;
+            margin: 0;
         }
 
         .files-count {
@@ -175,9 +238,9 @@
 
 
         .log-output {
-            height: calc(100vh - 420px);
-            min-height: 200px;
-            max-height: 400px;
+            flex: 1;  /* 使用剩余空间 */
+            min-height: 100px;
+            max-height: none;
             overflow-y: auto;
             background: #1e1e1e;
             border-radius: 4px;
@@ -369,18 +432,87 @@
             padding: 16px;
             margin: 0;
         }
+
+        /* ===== Light Theme Overrides (activated by html/body.theme-light) ===== */
+        :is(html.theme-light, body.theme-light) {
+            background: #ffffff !important;
+            color: #111827 !important;
+        }
+        :is(html.theme-light, body.theme-light) .export-ae-panel { padding: 16px; }
+        :is(html.theme-light, body.theme-light) h2 { color: #111827 !important; border-bottom-color: #3b82f6 !important; }
+        :is(html.theme-light, body.theme-light) .title-settings-btn { background: #e5e7eb !important; color: #6b7280 !important; border-color: #d1d5db !important; }
+        :is(html.theme-light, body.theme-light) .title-settings-btn:hover { background: #d1d5db !important; color: #2563eb !important; border-color: #2563eb !important; }
+        :is(html.theme-light, body.theme-light) .language-switch-btn { background: #e5e7eb !important; color: #6b7280 !important; border-color: #d1d5db !important; }
+        :is(html.theme-light, body.theme-light) .language-switch-btn:hover { background: #d1d5db !important; color: #2563eb !important; border-color: #2563eb !important; }
+        :is(html.theme-light, body.theme-light) h3 { color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .status-section,
+        :is(html.theme-light, body.theme-light) .files-section,
+        :is(html.theme-light, body.theme-light) .actions-section,
+        :is(html.theme-light, body.theme-light) .log-section {
+            background: #f9fafb !important;
+            border-color: #e5e7eb !important;
+        }
+        :is(html.theme-light, body.theme-light) .status-item { border-bottom-color: #e5e7eb !important; }
+        :is(html.theme-light, body.theme-light) .status-label { color: #374151 !important; }
+        :is(html.theme-light, body.theme-light) .status-value { background: #eef2ff !important; color: #1f2937 !important; }
+        :is(html.theme-light, body.theme-light) .status-value.connected { background: #dcfce7 !important; color: #166534 !important; }
+        :is(html.theme-light, body.theme-light) .status-value.disconnected,
+        :is(html.theme-light, body.theme-light) .status-value.error { background: #fee2e2 !important; color: #991b1b !important; }
+        :is(html.theme-light, body.theme-light) .files-count { color: #111827 !important; background: #e5e7eb !important; }
+        :is(html.theme-light, body.theme-light) .file-item { background: #ffffff !important; border-left-color: #3b82f6 !important; }
+        :is(html.theme-light, body.theme-light) .file-name { color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .file-type { background: #e5e7eb !important; color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .no-files { color: #6b7280 !important; }
+        :is(html.theme-light, body.theme-light) .log-output { background: #f3f4f6 !important; color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .log-entry.log-info { color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .log-entry.log-warning { color: #d97706 !important; }
+        :is(html.theme-light, body.theme-light) .log-entry.log-error { color: #b91c1c !important; }
+        :is(html.theme-light, body.theme-light) .log-time { color: #6b7280 !important; }
+        :is(html.theme-light, body.theme-light) .log-output::-webkit-scrollbar-track,
+        :is(html.theme-light, body.theme-light) .files-list::-webkit-scrollbar-track { background: #f3f4f6 !important; }
+        :is(html.theme-light, body.theme-light) .log-output::-webkit-scrollbar-thumb,
+        :is(html.theme-light, body.theme-light) .files-list::-webkit-scrollbar-thumb { background: #d1d5db !important; }
+        :is(html.theme-light, body.theme-light) .log-output::-webkit-scrollbar-thumb:hover,
+        :is(html.theme-light, body.theme-light) .files-list::-webkit-scrollbar-thumb:hover { background: #9ca3af !important; }
+        :is(html.theme-light, body.theme-light) .settings-overlay { background: rgba(255,255,255,0.6) !important; }
+        :is(html.theme-light, body.theme-light) .settings-dialog { background: #ffffff !important; box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; }
+        :is(html.theme-light, body.theme-light) .settings-dialog h3 { color: #111827 !important; border-bottom-color: #3b82f6 !important; }
+        :is(html.theme-light, body.theme-light) .setting-item label { color: #374151 !important; }
+        :is(html.theme-light, body.theme-light) .setting-item input[type="text"],
+        :is(html.theme-light, body.theme-light) .setting-item input[type="number"] {
+            background: #ffffff !important; color: #111827 !important; border-color: #d1d5db !important;
+        }
+        :is(html.theme-light, body.theme-light) .setting-item button { background: #e5e7eb !important; color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) .setting-item button:hover { background: #d1d5db !important; }
+        :is(html.theme-light, body.theme-light) .setting-actions { border-top-color: #e5e7eb !important; }
+        :is(html.theme-light, body.theme-light) #save-settings { background: #3b82f6 !important; color: #ffffff !important; }
+        :is(html.theme-light, body.theme-light) #save-settings:hover { background: #2563eb !important; }
+        :is(html.theme-light, body.theme-light) #cancel-settings { background: #e5e7eb !important; color: #111827 !important; }
+        :is(html.theme-light, body.theme-light) #cancel-settings:hover { background: #d1d5db !important; }
     </style>
     <script type="text/javascript" src="js/clipboard-handler.js"></script>
     <script type="text/javascript" src="js/plugin.js"></script>
+    <script type="text/javascript" src="js/i18n.js"></script>
+    <script>
+        // Configuration for the title link URL
+        const TITLE_LINK_URL = 'https://www.example.com'; // Replace with actual URL when available
+    </script>
 </head>
 
 <body>
     <div class="export-ae-panel">
         <h2>
-            <span>Eagle2Ae - 后台服务管理</span>
-            <button id="title-settings-button" class="title-settings-btn" title="设置">
-                <span class="gear-icon"></span>
-            </button>
+            <a href="#" id="main-title-link" style="text-decoration: none; color: inherit;">
+                <span id="main-title">Eagle2Ae_Eagle</span>
+            </a>
+            <div class="header-controls">
+                <button id="language-switch" class="language-switch-btn" title="切换语言">
+                    <span class="language-icon">中</span>
+                </button>
+                <button id="title-settings-button" class="title-settings-btn" title="设置">
+                    <span class="gear-icon"></span>
+                </button>
+            </div>
         </h2>
 
         <!-- 简化的服务状态 -->
@@ -423,22 +555,22 @@
     <!-- 设置对话框 -->
     <div id="settings-overlay" class="settings-overlay" style="display: none;">
         <div class="settings-dialog">
-            <h3>Eagle2Ae 设置</h3>
+            <h3 id="settings-dialog-title">Eagle2Ae_Eagle 设置</h3>
 
             <div class="setting-item">
-                <label for="show-notifications">
+                <label for="show-notifications" id="show-notifications-label">
                     <input type="checkbox" id="show-notifications" checked>
                     显示操作通知
                 </label>
             </div>
 
             <div class="setting-item">
-                <label for="server-port">服务器端口:</label>
+                <label for="server-port" id="server-port-label">服务器端口:</label>
                 <input type="number" id="server-port" value="8080" min="1024" max="65535">
             </div>
 
             <div class="setting-item">
-                <label for="clipboard-interval">剪切板检查间隔(毫秒):</label>
+                <label for="clipboard-interval" id="clipboard-interval-label">剪切板检查间隔(毫秒):</label>
                 <input type="number" id="clipboard-interval" value="1000" min="500" max="10000">
             </div>
 
@@ -463,6 +595,9 @@
             // 绑定事件
             bindEvents();
 
+            // 初始化 i18n
+            initializeI18n();
+
             // 开始定期更新UI
             startUIUpdates();
 
@@ -474,6 +609,11 @@
             // 标题栏设置按钮
             document.getElementById('title-settings-button').addEventListener('click', function() {
                 showSettings();
+            });
+
+            // 语言切换按钮
+            document.getElementById('language-switch').addEventListener('click', function() {
+                switchLanguage();
             });
 
             // 设置对话框按钮
@@ -532,7 +672,11 @@
                 const exportButton = document.getElementById('export-button');
 
                 if (selectedItems && selectedItems.length > 0) {
-                    filesCount.textContent = `已选择 ${selectedItems.length} 个文件`;
+                    // 使用 i18n 系统进行本地化
+                    const countText = window.i18n ? 
+                        window.i18n.t('selectedCount', { count: selectedItems.length }) : 
+                        `已选择 ${selectedItems.length} 个文件`;
+                    filesCount.textContent = countText;
 
                     // 显示文件列表
                     filesList.innerHTML = '';
@@ -542,7 +686,9 @@
 
                         const fileName = document.createElement('span');
                         fileName.className = 'file-name';
-                        fileName.textContent = item.name || '未知文件';
+                        // 使用原始文件名，但可以考虑本地化 "未知文件"
+                        const fileNameText = item.name || (window.i18n ? window.i18n.t('unknownFile', { defaultValue: '未知文件' }) : '未知文件');
+                        fileName.textContent = fileNameText;
 
                         const fileType = document.createElement('span');
                         fileType.className = 'file-type';
@@ -558,13 +704,25 @@
                         moreItem.className = 'file-item';
                         moreItem.style.fontStyle = 'italic';
                         moreItem.style.color = '#666';
-                        moreItem.textContent = `... 还有 ${selectedItems.length - 10} 个文件`;
+                        // 使用 i18n 系统进行本地化
+                        const moreText = window.i18n ? 
+                            `... ${window.i18n.t('andMore', { count: selectedItems.length - 10, defaultValue: `还有 ${selectedItems.length - 10} 个文件` })}` : 
+                            `... 还有 ${selectedItems.length - 10} 个文件`;
+                        moreItem.textContent = moreText;
                         filesList.appendChild(moreItem);
                     }
 
                 } else {
-                    filesCount.textContent = '未选择文件';
-                    filesList.innerHTML = '<div class="no-files">请在Eagle中选择要导出的文件</div>';
+                    // 使用 i18n 系统进行本地化
+                    const noSelectionText = window.i18n ? 
+                        window.i18n.t('noSelection') : 
+                        '未选择文件';
+                    filesCount.textContent = noSelectionText;
+                    
+                    const noFilesMessage = window.i18n ? 
+                        window.i18n.t('selectFilesInEagle', { defaultValue: '请在Eagle中选择要导出的文件' }) : 
+                        '请在Eagle中选择要导出的文件';
+                    filesList.innerHTML = `<div class="no-files">${noFilesMessage}</div>`;
                 }
             } catch (error) {
                 console.error('更新选中文件失败:', error);
@@ -587,13 +745,16 @@
 
             // 更新连接状态
             if (eagle2ae && eagle2ae.httpServer && eagle2ae.httpServer.listening) {
-                document.getElementById('connection-status').textContent = '已连接';
+                const connectedText = window.i18n ? window.i18n.t('connected') : '已连接';
+                document.getElementById('connection-status').textContent = connectedText;
                 document.getElementById('connection-status').className = 'status-value connected';
             } else if (eagle2ae && eagle2ae.aeStatus && eagle2ae.aeStatus.connected) {
-                document.getElementById('connection-status').textContent = '已连接';
+                const connectedText = window.i18n ? window.i18n.t('connected') : '已连接';
+                document.getElementById('connection-status').textContent = connectedText;
                 document.getElementById('connection-status').className = 'status-value connected';
             } else {
-                document.getElementById('connection-status').textContent = '未连接';
+                const disconnectedText = window.i18n ? window.i18n.t('disconnected') : '未连接';
+                document.getElementById('connection-status').textContent = disconnectedText;
                 document.getElementById('connection-status').className = 'status-value disconnected';
             }
         }
@@ -615,27 +776,45 @@
             try {
                 // 检查eagle对象是否可用
                 if (typeof eagle === 'undefined') {
-                    addLog('Eagle API不可用（可能在浏览器环境中运行）', 'warning');
+                    const message = window.i18n ? 
+                        window.i18n.t('eagleApiUnavailable') : 
+                        'Eagle API不可用（可能在浏览器环境中运行）';
+                    addLog(message, 'warning');
                     return;
                 }
                 
                 const selectedItems = await eagle.item.getSelected();
                 if (selectedItems && selectedItems.length > 0) {
-                    addLog(`开始发送 ${selectedItems.length} 个文件到AE...`, 'info');
+                    const message = window.i18n ? 
+                        window.i18n.t('logFileExportStart', { count: selectedItems.length }) : 
+                        `开始发送 ${selectedItems.length} 个文件到AE...`;
+                    addLog(message, 'info');
 
                     // 调用插件的导出功能
                     if (typeof eagle2ae !== 'undefined' && eagle2ae) {
                         await eagle2ae.handleSelectedFiles(selectedItems);
-                        addLog('文件发送完成', 'info');
+                        const successMessage = window.i18n ? 
+                            window.i18n.t('exportSuccess') : 
+                            '文件发送完成';
+                        addLog(successMessage, 'info');
                     } else {
-                        addLog('服务未就绪，请稍后重试', 'warning');
+                        const notReadyMessage = window.i18n ? 
+                            window.i18n.t('serviceNotReady') : 
+                            '服务未就绪，请稍后重试';
+                        addLog(notReadyMessage, 'warning');
                     }
                 } else {
-                    addLog('没有选中的文件', 'warning');
+                    const noFilesMessage = window.i18n ? 
+                        window.i18n.t('noFilesSelected') : 
+                        '没有选中的文件';
+                    addLog(noFilesMessage, 'warning');
                 }
             } catch (error) {
                 console.error('文件发送失败:', error);
-                addLog(`发送失败: ${error.message}`, 'error');
+                const failMessage = window.i18n ? 
+                    window.i18n.t('exportFailed', { message: error.message }) : 
+                    `发送失败: ${error.message}`;
+                addLog(failMessage, 'error');
             }
         }
 
@@ -705,6 +884,81 @@
         function hideSettings() {
             document.getElementById('settings-overlay').style.display = 'none';
         }
+        
+        function switchLanguage() {
+            const currentLang = window.i18n.getLanguage();
+            const newLang = currentLang === 'zh' ? 'en' : 'zh';
+            window.i18n.setLanguage(newLang);
+            
+            // Update the language icon to reflect current language
+            const langIcon = document.querySelector('.language-icon');
+            if (langIcon) {
+                langIcon.textContent = newLang === 'zh' ? '中' : 'EN';
+            }
+            
+            // Update the title of the language switch button
+            const langSwitchBtn = document.getElementById('language-switch');
+            if (langSwitchBtn) {
+                langSwitchBtn.title = newLang === 'zh' ? 'Switch to English' : '切换到中文';
+            }
+        }
+        
+        // Initialize UI with current language on load
+        function initializeI18n() {
+            if (window.i18n) {
+                // Update the language icon to show current language
+                const langIcon = document.querySelector('.language-icon');
+                if (langIcon) {
+                    const currentLang = window.i18n.getLanguage();
+                    langIcon.textContent = currentLang === 'zh' ? '中' : 'EN';
+                }
+                
+                // Update the title of the language switch button
+                const langSwitchBtn = document.getElementById('language-switch');
+                if (langSwitchBtn) {
+                    const currentLang = window.i18n.getLanguage();
+                    langSwitchBtn.title = currentLang === 'zh' ? 'Switch to English' : '切换到中文';
+                }
+                
+                // Update all UI elements with current language
+                window.i18n.updateUI();
+            }
+            
+            // Bind the title click event to open the link
+            setupTitleClickEvent();
+        }
+        
+        function setupTitleClickEvent() {
+            const titleLink = document.getElementById('main-title-link');
+            if (titleLink) {
+                titleLink.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent default anchor behavior
+                    // Open the configured link in a new tab/window
+                    window.open(TITLE_LINK_URL, '_blank');
+                });
+            }
+        }
+
+        // Listen for language updates from parent window
+        window.addEventListener('message', function(event) {
+            // Only process messages from our parent application
+            if (event.source !== window.parent) {
+                return;
+            }
+            
+            if (event.data && event.data.type === 'LANGUAGE_UPDATE') {
+                const newLang = event.data.language;
+                if (newLang) {
+                    // Convert from main app language format to our format
+                    const eagleLang = newLang === 'en-US' ? 'en' : 'zh';
+                    
+                    // Update the language if it's different
+                    if (window.i18n && window.i18n.getLanguage() !== eagleLang) {
+                        window.i18n.setLanguage(eagleLang);
+                    }
+                }
+            }
+        });
 
         function loadSettings() {
             // 从本地存储加载设置（如果有的话）
@@ -734,7 +988,10 @@
                 };
 
                 localStorage.setItem('eagle2ae-settings', JSON.stringify(settings));
-                addLog('设置已保存', 'info');
+                const savedMessage = window.i18n ? 
+                    window.i18n.t('settingsSaved') : 
+                    '设置已保存';
+                addLog(savedMessage, 'info');
                 hideSettings();
 
                 // 如果有全局实例，更新配置
@@ -750,7 +1007,10 @@
                 }
             } catch (error) {
                 console.error('保存设置失败:', error);
-                addLog('保存设置失败', 'error');
+                const errorMessage = window.i18n ? 
+                    window.i18n.t('settingsSaveFailed') : 
+                    '保存设置失败';
+                addLog(errorMessage, 'error');
             }
         }
 
@@ -762,7 +1022,10 @@
 
         // 初始日志
         setTimeout(() => {
-            addLog('Eagle2Ae 管理界面已启动', 'info');
+            const initialMessage = window.i18n ? 
+                window.i18n.t('uiStarted') : 
+                'Eagle2Ae_Eagle 管理界面已启动';
+            addLog(initialMessage, 'info');
         }, 100);
     </script>
 </body>

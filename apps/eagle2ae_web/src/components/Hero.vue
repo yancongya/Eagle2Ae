@@ -22,11 +22,11 @@
           </p>
           <div ref="buttons" class="space-x-4">
             <router-link to="/ae-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
-                         style="background-color: rgb(0, 0, 91); border: 3px solid rgb(82, 59, 196); color: rgb(153, 153, 255);">
+                         style="background-color: var(--btn-ae-bg); border: 3px solid var(--btn-ae-border); color: var(--btn-ae-text);">
               {{ t('nav.aePreview') }}
             </router-link>
             <router-link to="/eagle-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
-                         style="background-color: rgb(0, 37, 63); border: 3px solid rgb(0, 98, 201); color: rgb(161, 216, 255);">
+                         style="background-color: var(--btn-eagle-bg); border: 3px solid var(--btn-eagle-border); color: var(--btn-eagle-text);">
               {{ t('nav.eaglePreview') }}
             </router-link>
           </div>
@@ -357,6 +357,23 @@ watch(cardsContainer, (newVal) => {
 </script>
 
 <style scoped>
+  #hero-section {
+    --btn-ae-bg: rgb(156, 152, 255);
+    --btn-ae-border: rgb(81, 61, 197);
+    --btn-ae-text: rgb(4, 1, 91);
+    --btn-eagle-bg: rgb(177, 213, 255);
+    --btn-eagle-border: rgb(36, 116, 221);
+    --btn-eagle-text: rgb(12, 30, 54);
+  }
+
+  .dark #hero-section {
+    --btn-ae-bg: rgb(0, 0, 91);
+    --btn-ae-border: rgb(82, 59, 196);
+    --btn-ae-text: rgb(153, 153, 255);
+    --btn-eagle-bg: rgb(0, 37, 63);
+    --btn-eagle-border: rgb(0, 98, 201);
+    --btn-eagle-text: rgb(161, 216, 255);
+  }
   .has-sweep-light {
     position: relative;
     overflow: hidden; /* Ensure sweep light stays within bounds */

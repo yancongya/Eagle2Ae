@@ -571,49 +571,51 @@ class DemoMode {
     restoreOriginalProjectInfo() {
         console.log('🔄 恢复原始项目信息显示...');
 
+        const t = (k, fb) => (window.i18n?.getText(k) || fb);
+
         // 恢复AE信息为默认状态
         const aeVersion = document.getElementById('ae-version');
         if (aeVersion) {
-            aeVersion.textContent = '获取中...';
+            aeVersion.textContent = t('common.waitingForImport', 'Waiting for import request...');
         }
 
         const projectPath = document.getElementById('project-path');
         if (projectPath) {
-            projectPath.textContent = '未知';
+            projectPath.textContent = t('common.unknown', 'Unknown');
             projectPath.title = '';
         }
 
         const projectName = document.getElementById('project-name');
         if (projectName) {
-            projectName.textContent = '未打开项目';
+            projectName.textContent = t('common.noProjectOpen', 'No project open');
         }
 
         const compName = document.getElementById('comp-name');
         if (compName) {
-            compName.textContent = '无';
+            compName.textContent = t('common.none', 'None');
         }
 
         // 恢复Eagle信息为默认状态
         const eagleVersion = document.getElementById('eagle-version');
         if (eagleVersion) {
-            eagleVersion.textContent = '获取中...';
+            eagleVersion.textContent = t('common.waitingForImport', 'Waiting for import request...');
         }
 
         const eaglePath = document.getElementById('eagle-path');
         if (eaglePath) {
-            eaglePath.textContent = '获取中...';
+            eaglePath.textContent = t('common.waitingForImport', 'Waiting for import request...');
             eaglePath.title = '';
         }
 
         const eagleLibrary = document.getElementById('eagle-library');
         if (eagleLibrary) {
-            eagleLibrary.textContent = '获取中...';
+            eagleLibrary.textContent = t('common.waitingForImport', 'Waiting for import request...');
             eagleLibrary.title = '';
         }
 
         const eagleFolder = document.getElementById('eagle-folder');
         if (eagleFolder) {
-            eagleFolder.textContent = '获取中...';
+            eagleFolder.textContent = t('common.waitingForImport', 'Waiting for import request...');
         }
 
         // 恢复连接状态为默认状态
@@ -624,7 +626,7 @@ class DemoMode {
 
         const statusMain = document.getElementById('status-main');
         if (statusMain) {
-            statusMain.textContent = '未连接';
+            statusMain.textContent = t('common.notConnected', 'Disconnected');
         }
 
         const pingTime = document.getElementById('ping-time');
@@ -1055,7 +1057,8 @@ class DemoMode {
         const aeVersion = document.getElementById('ae-version');
         if (aeVersion) {
             aeVersion.textContent = aeData.version;
-            aeVersion.title = `After Effects版本: ${aeData.version}`; // 添加悬浮提示
+            const aeVerPrefix = window.i18n?.getText('tooltips.aeVersionPrefix') || 'After Effects Version:';
+            aeVersion.title = `${aeVerPrefix} ${aeData.version}`;
             console.log('✅ AE版本已设置:', aeData.version);
         } else {
             console.warn('❌ 未找到ae-version元素');
@@ -1119,7 +1122,8 @@ class DemoMode {
         if (eaglePath) {
             const execPath = eagleData.execPath || '演示路径';
             eaglePath.textContent = execPath;
-            eaglePath.title = `Eagle安装路径: ${execPath}`; // 优化悬浮提示
+            const pathPrefix = window.i18n?.getText('tooltips.libraryPathPrefix') || 'Path:';
+            eaglePath.title = `${pathPrefix} ${execPath}`;
             // Eagle路径不设置点击事件
             eaglePath.classList.remove('clickable');
             eaglePath.onclick = null;
@@ -1179,7 +1183,8 @@ class DemoMode {
         // 状态文本
         const statusMain = document.getElementById('status-main');
         if (statusMain) {
-            statusMain.textContent = '已连接 (演示)';
+            const t = (k, fb) => (window.i18n?.getText(k) || fb);
+            statusMain.textContent = t('common.connectedDemo', 'Connected (Demo)');
         }
 
         // ping时间

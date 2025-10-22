@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 使用系统默认光标（不隐藏、不替换） */
+html, body { cursor: auto; }
+@media (max-width: 768px) { html, body { cursor: auto; } }
+@media (min-width: 1440px) { html, body { cursor: auto; } }
+@media (min-width: 1920px) { html, body { cursor: auto; } }
+
 /* Custom filter for dimming and blurring */
 .filter-dim-blur {
   filter: grayscale(60%) brightness(25%) saturate(25%);
@@ -58,6 +64,25 @@ html.dark, html.dark body { background-color: #0a0a0a; }
 ::view-transition-new(root),
 ::view-transition-old(root) {
   animation: none;
+}
+
+/* ===== Global View Transitions for pages (fade/slide subtle) ===== */
+@keyframes vt-page-in {
+  from { opacity: 0.02; transform: translateY(4px) scale(0.997); filter: blur(0.8px); }
+  to   { opacity: 1;    transform: none;                     filter: none; }
+}
+@keyframes vt-page-out {
+  from { opacity: 1;    transform: none;                     filter: none; }
+  to   { opacity: 0.02; transform: translateY(-4px) scale(0.997); filter: blur(0.4px); }
+}
+html::view-transition-new(page) {
+  animation: vt-page-in 420ms ease-in-out both;
+}
+html::view-transition-old(page) {
+  animation: vt-page-out 420ms ease-in-out both;
+}
+html::view-transition-group(page) {
+  z-index: 0; /* keep under headers */
 }
 
 /* ===== View Transitions for Preview Pages ===== */

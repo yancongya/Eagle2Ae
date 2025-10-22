@@ -59,6 +59,14 @@ export function injectLightThemeIntoIframe(iframe) {
       doc.head.appendChild(styleEl);
     }
     styleEl.textContent = LIGHT_THEME_CSS;
+
+    // Ensure class-based light theme overrides take effect in the embedded page
+    const rootEl = doc.documentElement;
+    const bodyEl = doc.body;
+    rootEl?.classList.remove('dark');
+    bodyEl?.classList.remove('dark');
+    rootEl?.classList.add('theme-light');
+    bodyEl?.classList.add('theme-light');
   } catch (_) {
     // Likely cross-origin or not yet ready
   }
@@ -71,6 +79,14 @@ export function removeLightThemeFromIframe(iframe) {
     if (!doc) return;
     const styleEl = doc.getElementById(INJECT_STYLE_ID);
     if (styleEl) styleEl.remove();
+
+    // Restore original dark class if the embedded page relies on it
+    const rootEl = doc.documentElement;
+    const bodyEl = doc.body;
+    rootEl?.classList.remove('theme-light');
+    bodyEl?.classList.remove('theme-light');
+    rootEl?.classList.add('dark');
+    bodyEl?.classList.add('dark');
   } catch (_) {
     // Ignore
   }
