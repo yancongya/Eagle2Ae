@@ -1,14 +1,6 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "builds": [
-    {
-      "src": "apps/eagle2ae_docs/.vitepress/dist/**",
-      "use": "@vercel/static"
-    }
-  ]
+  "rootDirectory": "apps/eagle2ae_docs",
+  "buildCommand": "pnpm run docs:build",
+  "outputDirectory": "apps/eagle2ae_docs/.vitepress/dist",
+  "framework": "vitepress"
 }
