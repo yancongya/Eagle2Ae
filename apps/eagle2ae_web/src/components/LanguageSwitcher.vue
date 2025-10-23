@@ -1,5 +1,5 @@
 <template>
-  <div class="relative inline-flex items-center">
+  <div class="relative inline-flex items-center" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <button
       ref="triggerRef"
       type="button"
@@ -72,6 +72,15 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'ls-sm' : 'ls-md'))
 const toggleOpen = () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) activeIndex.value = options.findIndex(o => o.value === locale.value)
+}
+
+const onMouseEnter = () => {
+  isOpen.value = true
+  activeIndex.value = options.findIndex(o => o.value === locale.value)
+}
+
+const onMouseLeave = () => {
+  isOpen.value = false
 }
 
 const onSelect = (val) => {

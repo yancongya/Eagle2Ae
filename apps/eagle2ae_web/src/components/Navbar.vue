@@ -3,9 +3,9 @@
     <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex justify-between items-center">
       <!-- Logo -->
       <div class="font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
-        <router-link to="/" class="flex items-center">
+        <router-link to="/" class="flex items-center group">
           <img src="/logo.png" alt="Logo" class="h-6 sm:h-7 md:h-8 mr-2" />
-          <span class="font-bold">Eagle2AE</span>
+          <span class="font-bold" ref="navTitle">Eagle2Ae</span>
         </router-link>
       </div>
 
@@ -119,7 +119,7 @@
 <script setup>
 import { useDark, useToggle, onClickOutside } from '@vueuse/core';
 import { useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LanguageSwitcher from './LanguageSwitcher.vue';
 import { gsap } from 'gsap'
@@ -132,6 +132,7 @@ const isDark = useDark({ storageKey: 'theme' });
 
 const mobileMenuRef = ref(null);
 const mobileMenuButtonRef = ref(null);
+const navTitle = ref(null);
 
 onClickOutside(
   mobileMenuRef,
@@ -143,11 +144,17 @@ router.afterEach(() => { isMobileOpen.value = false; });
 
 const onToggleTheme = (e) => {
   const supports = typeof document !== 'undefined' && 'startViewTransition' in document && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!supports) { toggleDark(); return; }
   const defaultX = window.innerWidth - 4;
   const defaultY = 4;
   const x = (e && typeof e.clientX === 'number') ? e.clientX : defaultX;
   const y = (e && typeof e.clientY === 'number') ? e.clientY : defaultY;
+  
+  // 广播主题切换事件（包含点击坐标）
+  window.dispatchEvent(new CustomEvent('themeToggle', {
+    detail: { x, y, newTheme: !isDark.value ? 'dark' : 'light' }
+  }));
+  
+  if (!supports) { toggleDark(); return; }
   const transition = document.startViewTransition(() => { toggleDark(); });
   const DURATION = 520;
   const EASING = 'ease-in-out';
@@ -194,6 +201,71 @@ const mobileLeave = (el, done) => {
     ease: 'power3.in'
   }, "-=0.2"); // Overlap for a smoother transition
 };
+
+// 标题乱码转场动画
+onMounted(() => {
+  if (!navTitle.value) return;
+
+  const normalText = 'Eagle2Ae';
+  const hoverText = 'Ae2Eagle';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+  let animationFrame = null;
+
+  const scrambleText = (fromText, toText, duration = 600) => {
+    const startTime = Date.now();
+    const textLength = Math.max(fromText.length, toText.length);
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      let result = '';
+      for (let i = 0; i < textLength; i++) {
+        const targetChar = toText[i] || '';
+
+        if (progress === 1) {
+          result += targetChar;
+        } else {
+          const charProgress = (progress * textLength - i) / 2;
+
+          if (charProgress > 1) {
+            result += targetChar;
+          } else if (charProgress > 0) {
+            result += chars[Math.floor(Math.random() * chars.length)];
+          } else {
+            result += fromText[i] || '';
+          }
+        }
+      }
+
+      navTitle.value.textContent = result;
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        navTitle.value.textContent = toText;
+      }
+    };
+
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+    }
+    animate();
+  };
+
+  const linkElement = navTitle.value.closest('a');
+  if (linkElement) {
+    linkElement.addEventListener('mouseenter', () => {
+      scrambleText(normalText, hoverText, 600);
+    });
+
+    linkElement.addEventListener('mouseleave', () => {
+      scrambleText(hoverText, normalText, 600);
+    });
+  }
+
+  navTitle.value.textContent = normalText;
+});
 </script>
 
 <style scoped>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Eagle2Ae_Eagle</title>
+    <title>Eagle2Ae</title>
     <style>
         * {
             margin: 0;
@@ -489,6 +489,12 @@
         :is(html.theme-light, body.theme-light) #save-settings:hover { background: #2563eb !important; }
         :is(html.theme-light, body.theme-light) #cancel-settings { background: #e5e7eb !important; color: #111827 !important; }
         :is(html.theme-light, body.theme-light) #cancel-settings:hover { background: #d1d5db !important; }
+
+        /* View Transitions for language change */
+        html.vt-lang::view-transition-old(root),
+        html.vt-lang::view-transition-new(root) {
+            animation-duration: 0.3s;
+        }
     </style>
     <script type="text/javascript" src="js/clipboard-handler.js"></script>
     <script type="text/javascript" src="js/plugin.js"></script>
@@ -503,7 +509,7 @@
     <div class="export-ae-panel">
         <h2>
             <a href="#" id="main-title-link" style="text-decoration: none; color: inherit;">
-                <span id="main-title">Eagle2Ae_Eagle</span>
+                <span id="main-title">Eagle2Ae</span>
             </a>
             <div class="header-controls">
                 <button id="language-switch" class="language-switch-btn" title="切换语言">
@@ -555,7 +561,7 @@
     <!-- 设置对话框 -->
     <div id="settings-overlay" class="settings-overlay" style="display: none;">
         <div class="settings-dialog">
-            <h3 id="settings-dialog-title">Eagle2Ae_Eagle 设置</h3>
+            <h3 id="settings-dialog-title">Eagle2Ae 设置</h3>
 
             <div class="setting-item">
                 <label for="show-notifications" id="show-notifications-label">
@@ -948,14 +954,108 @@
             
             if (event.data && event.data.type === 'LANGUAGE_UPDATE') {
                 const newLang = event.data.language;
-                if (newLang) {
-                    // Convert from main app language format to our format
-                    const eagleLang = newLang === 'en-US' ? 'en' : 'zh';
-                    
-                    // Update the language if it's different
+                if (!newLang) return;
+                
+                // Convert from main app language format to our format
+                const eagleLang = newLang === 'en-US' ? 'en' : 'zh';
+                
+                // Check if View Transitions API is supported
+                const supportsViewTransition = typeof document !== 'undefined' && 
+                                               'startViewTransition' in document;
+                
+                // Function to update language
+                const updateLanguage = () => {
                     if (window.i18n && window.i18n.getLanguage() !== eagleLang) {
                         window.i18n.setLanguage(eagleLang);
                     }
+                };
+                
+                // Use View Transitions for smooth transition if supported
+                if (supportsViewTransition) {
+                    document.documentElement.classList.add('vt-lang');
+                    document.startViewTransition(() => {
+                        updateLanguage();
+                    }).finished.finally(() => {
+                        document.documentElement.classList.remove('vt-lang');
+                    });
+                } else {
+                    // Fallback to direct update
+                    updateLanguage();
+                }
+            }
+            
+            // 处理主题更新消息
+            if (event.data && event.data.type === 'THEME_UPDATE') {
+                const newTheme = event.data.theme;
+                const clickPosition = event.data.clickPosition;
+                if (!newTheme) return;
+                
+                // 检查是否支持 View Transitions API
+                const supportsViewTransition = typeof document !== 'undefined' && 
+                                               'startViewTransition' in document &&
+                                               !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                
+                // 更新主题的函数
+                const updateTheme = () => {
+                    if (newTheme === 'dark') {
+                        document.documentElement.classList.remove('theme-light');
+                        document.documentElement.classList.add('dark');
+                        document.body.classList.remove('theme-light');
+                        document.body.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        document.documentElement.classList.add('theme-light');
+                        document.body.classList.remove('dark');
+                        document.body.classList.add('theme-light');
+                    }
+                    
+                    // 保存主题到 localStorage（虽然 Eagle 扩展没有主题按钮，但保持状态同步）
+                    try {
+                        localStorage.setItem('eagleTheme', newTheme);
+                    } catch (e) {
+                        console.warn('无法保存主题设置:', e);
+                    }
+                };
+                
+                // 如果支持 View Transitions，使用圆形蒙版动画
+                if (supportsViewTransition) {
+                    // 使用传递的点击位置，如果没有则使用默认位置（右上角）
+                    const defaultX = window.innerWidth - 40;
+                    const defaultY = 40;
+                    const x = clickPosition?.x ?? defaultX;
+                    const y = clickPosition?.y ?? defaultY;
+                    const radius = Math.hypot(
+                        Math.max(x, window.innerWidth - x),
+                        Math.max(y, window.innerHeight - y)
+                    );
+                    
+                    document.documentElement.classList.add('vt-theme');
+                    const transition = document.startViewTransition(() => {
+                        updateTheme();
+                    });
+                    
+                    transition.ready.then(() => {
+                        document.documentElement.animate(
+                            {
+                                clipPath: [
+                                    `circle(0px at ${x}px ${y}px)`,
+                                    `circle(${radius}px at ${x}px ${y}px)`
+                                ]
+                            },
+                            {
+                                duration: 520,
+                                easing: 'ease-in-out',
+                                pseudoElement: '::view-transition-new(root)'
+                            }
+                        );
+                    }).catch(() => {
+                        updateTheme();
+                    }).finally(() => {
+                        document.documentElement.classList.remove('vt-theme');
+                    });
+                } else {
+                    // 不支持则直接更新
+                    updateTheme();
                 }
             }
         });
@@ -1024,9 +1124,80 @@
         setTimeout(() => {
             const initialMessage = window.i18n ? 
                 window.i18n.t('uiStarted') : 
-                'Eagle2Ae_Eagle 管理界面已启动';
+                'Eagle2Ae 管理界面已启动';
             addLog(initialMessage, 'info');
         }, 100);
+
+        // 标题乱码转场动画
+        (function initTitleAnimation() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTitleAnimation);
+                return;
+            }
+            
+            const titleElement = document.getElementById('main-title');
+            const titleLink = document.getElementById('main-title-link');
+
+            if (!titleElement || !titleLink) return;
+
+            const normalText = 'Eagle2Ae';
+            const hoverText = 'Ae2Eagle';
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+
+            let animationFrame = null;
+
+            function scrambleText(fromText, toText, duration = 600) {
+                const startTime = Date.now();
+                const textLength = Math.max(fromText.length, toText.length);
+
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    let result = '';
+                    for (let i = 0; i < textLength; i++) {
+                        const targetChar = toText[i] || '';
+
+                        if (progress === 1) {
+                            result += targetChar;
+                        } else {
+                            const charProgress = (progress * textLength - i) / 2;
+
+                            if (charProgress > 1) {
+                                result += targetChar;
+                            } else if (charProgress > 0) {
+                                result += chars[Math.floor(Math.random() * chars.length)];
+                            } else {
+                                result += fromText[i] || '';
+                            }
+                        }
+                    }
+
+                    titleElement.textContent = result;
+
+                    if (progress < 1) {
+                        animationFrame = requestAnimationFrame(animate);
+                    } else {
+                        titleElement.textContent = toText;
+                    }
+                }
+
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                }
+                animate();
+            }
+
+            titleLink.addEventListener('mouseenter', function () {
+                scrambleText(normalText, hoverText, 600);
+            });
+
+            titleLink.addEventListener('mouseleave', function () {
+                scrambleText(hoverText, normalText, 600);
+            });
+
+            titleElement.textContent = normalText;
+        })();
     </script>
 </body>
 </html>

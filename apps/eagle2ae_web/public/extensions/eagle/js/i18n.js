@@ -28,9 +28,9 @@ class I18n {
         this.translations = {
             'zh': {
                 // Main UI elements
-                'appTitle': 'Eagle2Ae_Eagle',
-                'serviceName': 'Eagle2Ae_Eagle',
-                'settingsTitle': 'Eagle2Ae_Eagle 设置',
+                'appTitle': 'Eagle2Ae',
+                'serviceName': 'Eagle2Ae',
+                'settingsTitle': 'Eagle2Ae 设置',
                 
                 // Status section
                 'statusSectionTitle': '服务状态',
@@ -66,8 +66,8 @@ class I18n {
                 'exportButton': '导出到AE',
                 
                 // Notifications
-                'serviceStarted': 'Eagle2Ae_Eagle 后台服务已启动',
-                'serviceStarting': 'Eagle2Ae_Eagle 后台服务启动中...',
+                'serviceStarted': 'Eagle2Ae 后台服务已启动',
+                'serviceStarting': 'Eagle2Ae 后台服务启动中...',
                 'exportSuccess': '文件发送完成',
                 'exportFailed': '发送失败: {message}',
                 'noFilesSelected': '没有选中的文件',
@@ -92,7 +92,7 @@ class I18n {
                 'unknownFile': '未知文件',
                 'andMore': '还有 {count} 个文件',
                 'selectFilesInEagle': '请在Eagle中选择要导出的文件',
-                'uiStarted': 'Eagle2Ae_Eagle 管理界面已启动',
+                'uiStarted': 'Eagle2Ae 管理界面已启动',
                 
                 // Language switch
                 'language': '语言',
@@ -101,9 +101,9 @@ class I18n {
             },
             'en': {
                 // Main UI elements
-                'appTitle': 'Eagle2Ae_Eagle',
-                'serviceName': 'Eagle2Ae_Eagle',
-                'settingsTitle': 'Eagle2Ae_Eagle Settings',
+                'appTitle': 'Eagle2Ae',
+                'serviceName': 'Eagle2Ae',
+                'settingsTitle': 'Eagle2Ae Settings',
                 
                 // Status section
                 'statusSectionTitle': 'Service Status',
@@ -139,8 +139,8 @@ class I18n {
                 'exportButton': 'Export to AE',
                 
                 // Notifications
-                'serviceStarted': 'Eagle2Ae_Eagle Background Service Started',
-                'serviceStarting': 'Eagle2Ae_Eagle Background Service Starting...',
+                'serviceStarted': 'Eagle2Ae Background Service Started',
+                'serviceStarting': 'Eagle2Ae Background Service Starting...',
                 'exportSuccess': 'File transfer completed',
                 'exportFailed': 'Transfer failed: {message}',
                 'noFilesSelected': 'No files selected',
@@ -165,7 +165,7 @@ class I18n {
                 'unknownFile': 'Unknown file',
                 'andMore': 'And {count} more files',
                 'selectFilesInEagle': 'Please select files to export in Eagle',
-                'uiStarted': 'Eagle2Ae_Eagle Management Interface Started',
+                'uiStarted': 'Eagle2Ae Management Interface Started',
                 
                 // Language switch
                 'language': 'Language',
