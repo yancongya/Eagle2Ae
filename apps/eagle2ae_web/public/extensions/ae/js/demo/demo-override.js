@@ -13,17 +13,17 @@
     function getLocalizedDemoData() {
         // 获取当前语言，确保正确检测
         const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
-        console.log('🌐 当前语言:', currentLang);
+        // console.log('🌐 当前语言:', currentLang);
         const isEn = ((currentLang || '') + '').toLowerCase().includes('en');
         
         // 安全的翻译函数，带回退机制
         const t = (k, fb) => {
             const text = window.i18n?.getText(k);
             if (text) {
-                console.log(`🔤 翻译 ${k}: ${text}`);
+                // console.log(`🔤 翻译 ${k}: ${text}`);
                 return text;
             }
-            console.log(`⚠️ 翻译键 ${k} 未找到，使用回退: ${fb}`);
+            // console.log(`⚠️ 翻译键 ${k} 未找到，使用回退: ${fb}`);
             return fb;
         };
         
@@ -130,7 +130,7 @@
         setInterval(() => {
             const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
             if (currentLang !== lastLanguage) {
-                console.log('⏰ 轮询检测到语言变化:', lastLanguage, '->', currentLang);
+                // console.log('⏰ 轮询检测到语言变化:', lastLanguage, '->', currentLang);
                 lastLanguage = currentLang;
                 window.__updateDemoData__();
             }

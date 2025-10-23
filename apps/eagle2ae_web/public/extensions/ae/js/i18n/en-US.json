@@ -72,6 +72,11 @@
     "connectionTestFailed": "Connection test failed: ",
     "language": "Language",
     "switchLanguage": "Switch Language",
+    "uiSettings": "UI Settings",
+    "theme": "Theme",
+    "logPanel": "Log Panel",
+    "header": "Header",
+    "fullscreen": "Solo Mode",
     "unknown": "Unknown",
     "none": "None",
     "noProjectOpen": "No project open",
@@ -164,6 +169,13 @@
     "compositionNamePrefix": "Add current composition name prefix to export folder name, e.g.: MyComp_Export",
     "resetToDefault": "Reset to default and write to preset JSON",
     "openPresetDirectory": "Open current preset directory",
-    "customPresetDirectory": "Custom preset directory"
+    "customPresetDirectory": "Custom preset directory",
+    "uiToggleTheme": "Toggle theme button visibility",
+    "uiToggleLanguage": "Toggle language button visibility",
+    "uiToggleLog": "Toggle log button visibility",
+    "uiToggleProjectInfo": "Toggle project information panel visibility",
+    "uiToggleLogPanel": "Toggle log panel visibility",
+    "uiToggleHeader": "Toggle header visibility (collapses when disabled, appears on hover)",
+    "uiToggleFullscreen": "Solo mode: Show only import mode panel, hide other panels"
   }
 }

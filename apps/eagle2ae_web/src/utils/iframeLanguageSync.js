@@ -7,7 +7,7 @@
  */
 export function sendLanguageUpdateToIframe(iframe, language) {
   if (!iframe || !iframe.contentWindow) return;
-  
+
   try {
     iframe.contentWindow.postMessage({
       type: 'LANGUAGE_UPDATE',
@@ -32,7 +32,7 @@ export function setupIframeLanguageSync(container) {
 
     // Find all iframes in the container
     const iframes = container.querySelectorAll('iframe');
-    
+
     iframes.forEach(iframe => {
       // Wait for iframe to be loaded
       if (iframe.contentWindow) {
@@ -55,7 +55,7 @@ export function setupIframeLanguageSync(container) {
  * @returns {Function} Cleanup function
  */
 export function setupSingleIframeLanguageSync(iframe) {
-  if (!iframe) return () => {};
+  if (!iframe) return () => { };
 
   const handleLanguageChange = (event) => {
     const newLanguage = event.detail?.locale;

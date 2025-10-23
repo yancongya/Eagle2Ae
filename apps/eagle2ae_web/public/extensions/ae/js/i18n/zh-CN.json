@@ -72,6 +72,11 @@
     "connectionTestFailed": "连接测试失败：",
     "language": "语言",
     "switchLanguage": "切换语言",
+    "uiSettings": "UI 设置",
+    "theme": "主题",
+    "logPanel": "日志面板",
+    "header": "标题栏",
+    "fullscreen": "独显",
     "unknown": "未知",
     "none": "无",
     "noProjectOpen": "未打开项目",
@@ -164,6 +169,13 @@
     "compositionNamePrefix": "在导出文件夹名称前添加当前合成名称，如：MyComp_Export",
     "resetToDefault": "重置为默认并写入预设JSON",
     "openPresetDirectory": "打开当前预设目录",
-    "customPresetDirectory": "自定义预设目录"
+    "customPresetDirectory": "自定义预设目录",
+    "uiToggleTheme": "主题切换按钮显示",
+    "uiToggleLanguage": "语言切换按钮显示",
+    "uiToggleLog": "日志按钮显示",
+    "uiToggleProjectInfo": "项目信息面板显示",
+    "uiToggleLogPanel": "日志面板显示",
+    "uiToggleHeader": "标题栏显示（取消后折叠，悬浮时出现）",
+    "uiToggleFullscreen": "独显模式：只显示导入模式面板，隐藏其他面板"
   }
 }

@@ -155,6 +155,36 @@
             right: 12px;
             z-index: 1000;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* 标题栏折叠状态 */
+        .header.collapsed {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 悬浮触发区域 */
+        .header-hover-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .header-hover-trigger.active {
+            pointer-events: auto;
+        }
+
+        /* 折叠状态下悬浮时显示 */
+        .header.collapsed.hover {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .title {
@@ -532,6 +562,129 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        /* 占满模式 */
+        .content.fullscreen-mode {
+            gap: 0;
+            /* 不强制设置 margin-top 为 0，让动态脚本根据标题栏状态设置 */
+            padding: 12px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .content.fullscreen-mode .section {
+            display: none;
+        }
+
+        .content.fullscreen-mode #import-mode-section {
+            display: flex !important;
+            flex-direction: column;
+            justify-content: space-evenly;
+            gap: clamp(8px, 2vh, 20px);
+            flex: 1;
+            min-height: 0;
+            margin: 0;
+            padding: clamp(12px, 3vh, 32px);
+            overflow: auto;
+            box-sizing: border-box;
+            /* 保留外框样式 */
+            background: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 6px;
+        }
+
+        .content.fullscreen-mode #import-mode-section .section-title {
+            display: none;
+        }
+
+        /* 占满模式下的按钮组样式 */
+        .content.fullscreen-mode #import-mode-section .import-mode-selection,
+        .content.fullscreen-mode #import-mode-section .import-behavior,
+        .content.fullscreen-mode #import-mode-section .layer-operations {
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+            min-height: 32px;
+        }
+
+        .content.fullscreen-mode #import-mode-section .mode-buttons,
+        .content.fullscreen-mode #import-mode-section .import-behavior-buttons,
+        .content.fullscreen-mode #import-mode-section .layer-operation-buttons {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+            min-height: 32px;
+        }
+
+        .content.fullscreen-mode #import-mode-section .mode-button,
+        .content.fullscreen-mode #import-mode-section .import-behavior-button,
+        .content.fullscreen-mode #import-mode-section .layer-operation-button {
+            flex: 1;
+            height: 100%;
+            min-height: 32px;
+            font-size: clamp(10px, 1.5vh, 14px);
+            padding: clamp(6px, 1.5vh, 12px) clamp(8px, 2vh, 16px);
+        }
+
+        /* 极小屏幕优化 */
+        @media (max-height: 500px) {
+            .content.fullscreen-mode #import-mode-section {
+                gap: 6px;
+                padding: 8px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .import-mode-selection,
+            .content.fullscreen-mode #import-mode-section .import-behavior,
+            .content.fullscreen-mode #import-mode-section .layer-operations {
+                min-height: 24px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .mode-buttons,
+            .content.fullscreen-mode #import-mode-section .import-behavior-buttons,
+            .content.fullscreen-mode #import-mode-section .layer-operation-buttons {
+                gap: 6px;
+                min-height: 24px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .mode-button,
+            .content.fullscreen-mode #import-mode-section .import-behavior-button,
+            .content.fullscreen-mode #import-mode-section .layer-operation-button {
+                min-height: 24px;
+                font-size: 10px;
+                padding: 4px 6px;
+            }
+        }
+
+        @media (max-height: 350px) {
+            .content.fullscreen-mode #import-mode-section {
+                gap: 4px;
+                padding: 6px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .import-mode-selection,
+            .content.fullscreen-mode #import-mode-section .import-behavior,
+            .content.fullscreen-mode #import-mode-section .layer-operations {
+                min-height: 20px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .mode-buttons,
+            .content.fullscreen-mode #import-mode-section .import-behavior-buttons,
+            .content.fullscreen-mode #import-mode-section .layer-operation-buttons {
+                gap: 4px;
+                min-height: 20px;
+            }
+
+            .content.fullscreen-mode #import-mode-section .mode-button,
+            .content.fullscreen-mode #import-mode-section .import-behavior-button,
+            .content.fullscreen-mode #import-mode-section .layer-operation-button {
+                min-height: 20px;
+                font-size: 9px;
+                padding: 3px 4px;
+            }
         }
 
         .section {
@@ -2124,6 +2277,98 @@
             font-size: 14px;
         }
 
+        /* UI 设置样式 */
+        .ui-settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .ui-settings-row {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ui-toggle-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            background: transparent;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 10px;
+            color: #4caf50;
+            user-select: none;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 28px;
+            position: relative;
+        }
+
+        .ui-toggle-button:hover {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: #66bb6a;
+            color: #66bb6a;
+        }
+
+        .ui-toggle-button.disabled {
+            background: transparent;
+            border-color: #666;
+            color: #666;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .ui-toggle-button.disabled:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: #777;
+            color: #777;
+        }
+
+        /* 被独显模式锁定的状态 - 使用遮罩 */
+        .ui-toggle-button.locked::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            pointer-events: auto;
+            cursor: not-allowed;
+        }
+
+        /* 响应式：小屏幕省略文本 */
+        @media (max-width: 600px) {
+            .ui-toggle-button {
+                font-size: 9px;
+                padding: 5px 6px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .ui-toggle-button {
+                font-size: 0;
+                padding: 6px;
+                min-width: 32px;
+            }
+
+            .ui-toggle-button::before {
+                content: attr(data-icon);
+                font-size: 12px;
+            }
+        }
+
         /* 输入组样式 */
         .input-group {
             display: flex;
@@ -3406,6 +3651,29 @@
             color: #6b7280;
         }
 
+        /* 亮色模式：UI 设置按钮 */
+        html.theme-light .ui-toggle-button {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        html.theme-light .ui-toggle-button:hover {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: #388e3c;
+            color: #388e3c;
+        }
+
+        html.theme-light .ui-toggle-button.disabled {
+            border-color: #999;
+            color: #999;
+        }
+
+        html.theme-light .ui-toggle-button.disabled:hover {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: #888;
+            color: #888;
+        }
+
         /* 响应式：小屏加大标题栏与元素尺寸，保持单行 */
         @media (max-width: 768px) {
             .header {
@@ -3520,7 +3788,10 @@
 
 <body>
     <div class="panel">
-        <div class="header">
+        <!-- 标题栏悬浮触发区域 -->
+        <div class="header-hover-trigger" id="header-hover-trigger"></div>
+
+        <div class="header" id="main-header">
             <a href="#" id="title-link" class="title"
                 style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
                 <img src="public/logo.png" alt="Eagle2AE Logo" class="title-logo">
@@ -3543,7 +3814,7 @@
         </div>
 
         <div class="content">
-            <div class="section">
+            <div class="section" id="project-info-section">
                 <div class="section-header">
                     <div class="section-title" data-i18n="common.projectInfo">项目信息</div>
                     <button id="test-connection-btn" class="connection-status-btn"
@@ -3582,7 +3853,7 @@
             </div>
 
             <!-- 导入模式和行为面板 -->
-            <div class="section">
+            <div class="section" id="import-mode-section">
                 <div class="section-title" data-i18n="common.importModeBehavior">导入模式&行为</div>
 
                 <!-- 导入模式选择 -->
@@ -3644,7 +3915,7 @@
 
 
             <!-- 状态信息面板 -->
-            <div class="section">
+            <div class="section" id="status-info-section">
                 <div class="section-title" data-i18n="common.statusInfo">状态信息</div>
                 <div id="import-status" class="import-status idle">
                     <span id="latest-log-message" class="status-message"
@@ -3652,7 +3923,7 @@
                 </div>
             </div>
 
-            <div class="section log">
+            <div class="section log" id="log-panel-section">
                 <div class="log-header">
                     <div id="log-title" class="section-title clickable" data-i18n="common.log">日志 (AE扩展)</div>
                     <div class="log-controls">
@@ -3799,6 +4070,37 @@
                                 <small class="input-hint" data-i18n="common.portRange">端口范围: 1024-65535，修改后需重新连接</small>
                             </div>
                         </label>
+                    </div>
+                </div>
+
+                <!-- UI 设置 -->
+                <div class="settings-section" id="ui-settings-section">
+                    <div class="settings-section-title" data-i18n="common.uiSettings">UI 设置</div>
+                    <div class="ui-settings-group">
+                        <!-- 第一行：主题、语言、日志 -->
+                        <div class="ui-settings-row">
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-theme" data-icon="🌙"
+                                data-i18n="common.theme" data-i18n-title="tooltips.uiToggleTheme">主题</button>
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-language" data-icon="🌐"
+                                data-i18n="common.language" data-i18n-title="tooltips.uiToggleLanguage">语言</button>
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-log" data-icon="📄"
+                                data-i18n="common.log" data-i18n-title="tooltips.uiToggleLog">日志</button>
+                        </div>
+                        <!-- 第二行：项目信息、日志面板 -->
+                        <div class="ui-settings-row">
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-project-info" data-icon="ℹ️"
+                                data-i18n="common.projectInfo"
+                                data-i18n-title="tooltips.uiToggleProjectInfo">项目信息</button>
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-log-panel" data-icon="📋"
+                                data-i18n="common.logPanel" data-i18n-title="tooltips.uiToggleLogPanel">日志面板</button>
+                        </div>
+                        <!-- 第三行：标题栏、占满 -->
+                        <div class="ui-settings-row">
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-header" data-icon="📌"
+                                data-i18n="common.header" data-i18n-title="tooltips.uiToggleHeader">标题栏</button>
+                            <button type="button" class="ui-toggle-button" id="ui-toggle-fullscreen" data-icon="⛶"
+                                data-i18n="common.fullscreen" data-i18n-title="tooltips.uiToggleFullscreen">占满</button>
+                        </div>
                     </div>
                 </div>
 
@@ -4744,6 +5046,11 @@
     "communicationPortSettings": "通信端口设置",
     "communicationPort": "通信端口",
     "portRange": "端口范围: 1024-65535，修改后需重新连接",
+    "uiSettings": "UI 设置",
+    "theme": "主题",
+    "language": "语言",
+    "log": "日志",
+    "logPanel": "日志面板",
     "presetManagement": "预设管理",
     "resetToDefault": "重置默认",
     "openPresetDirectory": "打开预设目录",
@@ -4793,7 +5100,12 @@
     "compositionNamePrefix": "在导出文件夹名称前添加当前合成名称，如：MyComp_Export",
     "resetToDefault": "重置为默认并写入预设JSON",
     "openPresetDirectory": "打开当前预设目录",
-    "customPresetDirectory": "自定义预设目录"
+    "customPresetDirectory": "自定义预设目录",
+    "uiToggleTheme": "点击切换主题按钮的显示/隐藏",
+    "uiToggleLanguage": "点击切换语言按钮的显示/隐藏",
+    "uiToggleLog": "点击切换日志按钮的显示/隐藏",
+    "uiToggleProjectInfo": "点击切换项目信息面板的显示/隐藏",
+    "uiToggleLogPanel": "点击切换日志面板的显示/隐藏"
   }
 }
 </script>
@@ -4854,6 +5166,11 @@
     "communicationPortSettings": "Communication Port Settings",
     "communicationPort": "Communication Port",
     "portRange": "Port range: 1024-65535, requires reconnection after modification",
+    "uiSettings": "UI Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "log": "Log",
+    "logPanel": "Log Panel",
     "presetManagement": "Preset Management",
     "resetToDefault": "Reset to Default",
     "openPresetDirectory": "Open Preset Directory",
@@ -4903,7 +5220,12 @@
     "compositionNamePrefix": "Add current composition name prefix to export folder name, e.g.: MyComp_Export",
     "resetToDefault": "Reset to default and write to preset JSON",
     "openPresetDirectory": "Open current preset directory",
-    "customPresetDirectory": "Custom preset directory"
+    "customPresetDirectory": "Custom preset directory",
+    "uiToggleTheme": "Click to toggle theme button visibility",
+    "uiToggleLanguage": "Click to toggle language button visibility",
+    "uiToggleLog": "Click to toggle log button visibility",
+    "uiToggleProjectInfo": "Click to toggle project info panel visibility",
+    "uiToggleLogPanel": "Click to toggle log panel visibility"
   }
 }
 </script>
@@ -5229,11 +5551,23 @@
 
             if (event.data && event.data.type === 'LANGUAGE_UPDATE') {
                 const newLang = event.data.language;
+                console.log('[Iframe Sync] 收到语言更新消息:', newLang);
                 if (!newLang) return;
 
-                // AE 扩展使用完整的语言代码（zh-CN, en-US）
-                // 检查当前语言是否不同
-                if (!window.i18n || window.i18n.currentLang === newLang) {
+                // 如果 i18n 未初始化，跳过
+                if (!window.i18n) {
+                    console.log('[Iframe Sync] i18n 未初始化，跳过');
+                    return;
+                }
+
+                // 即使语言相同，也要确保翻译已经应用到页面上
+                // 因为 iframe 初始加载时翻译可能还没完成
+                if (window.i18n.currentLang === newLang) {
+                    console.log('[Iframe Sync] 语言相同，但强制更新页面文本以确保翻译已应用');
+                    // 直接调用 updatePageTexts，不需要重新加载翻译
+                    if (window.i18n.updatePageTexts) {
+                        window.i18n.updatePageTexts();
+                    }
                     return;
                 }
 
@@ -5244,6 +5578,7 @@
                 // 更新语言的函数
                 const updateLanguage = async () => {
                     if (window.i18n) {
+                        console.log('[Iframe Sync] 开始更新语言:', newLang);
                         // 更新当前语言
                         window.i18n.currentLang = newLang;
                         // 保存到 localStorage
@@ -5253,6 +5588,14 @@
                         } catch (_) { }
                         // 重新加载翻译并更新页面
                         await window.i18n.loadTranslations();
+                        console.log('[Iframe Sync] 翻译加载完成，准备更新页面文本');
+                        // 确保 UI 设置按钮也被更新
+                        setTimeout(() => {
+                            if (window.i18n && window.i18n.updatePageTexts) {
+                                console.log('[Iframe Sync] 调用 updatePageTexts');
+                                window.i18n.updatePageTexts();
+                            }
+                        }, 100);
                     }
                 };
 
@@ -5361,9 +5704,17 @@
                 var header = document.querySelector('.header');
                 var content = document.querySelector('.content');
                 if (!header || !content) return;
-                var top = 12; // header top offset
-                var spacing = 4; // extra spacing below header (reduced from 8)
-                content.style.marginTop = (top + header.offsetHeight + spacing) + 'px';
+
+                // 检查标题栏是否折叠
+                if (header.classList.contains('collapsed')) {
+                    // 折叠状态：内容贴齐顶部
+                    content.style.marginTop = '8px';
+                } else {
+                    // 正常状态：根据标题栏高度设置间距
+                    var top = 12; // header top offset
+                    var spacing = 4; // extra spacing below header (reduced from 8)
+                    content.style.marginTop = (top + header.offsetHeight + spacing) + 'px';
+                }
             }
             function scheduleAdjust() {
                 adjustContentOffset();
@@ -5388,6 +5739,327 @@
             }
             // Initial call
             scheduleAdjust();
+
+            // 暴露函数供 UI 设置使用
+            window.adjustContentOffset = adjustContentOffset;
+        })();
+    </script>
+
+    <!-- UI 设置功能 -->
+    <script>
+        (function () {
+            // UI 设置状态（默认全部启用）
+            const uiSettings = {
+                theme: true,
+                language: true,
+                log: true,
+                projectInfo: true,
+                logPanel: true,
+                header: true,
+                fullscreen: false
+            };
+
+            // 初始化 UI 设置按钮
+            function initUISettings() {
+                console.log('[UI Settings] ========== 开始初始化 UI 设置按钮 ==========');
+
+                const buttons = {
+                    theme: document.getElementById('ui-toggle-theme'),
+                    language: document.getElementById('ui-toggle-language'),
+                    log: document.getElementById('ui-toggle-log'),
+                    projectInfo: document.getElementById('ui-toggle-project-info'),
+                    logPanel: document.getElementById('ui-toggle-log-panel'),
+                    header: document.getElementById('ui-toggle-header'),
+                    fullscreen: document.getElementById('ui-toggle-fullscreen')
+                };
+
+                console.log('[UI Settings] 按钮元素:', buttons);
+
+                // 主面板对应的元素映射
+                const mainPanelElements = {
+                    theme: document.getElementById('theme-toggle-btn'),
+                    language: document.getElementById('language-toggle-btn'),
+                    log: document.getElementById('log-panel-toggle'),
+                    projectInfo: document.getElementById('project-info-section'),
+                    logPanel: document.getElementById('log-panel-section'),
+                    header: document.getElementById('main-header'),
+                    fullscreen: null // 占满功能需要特殊处理
+                };
+
+                // 状态信息面板（日志面板控制时也需要隐藏）
+                const statusInfoSection = document.getElementById('status-info-section');
+
+                // 标题栏悬浮触发区域
+                const headerHoverTrigger = document.getElementById('header-hover-trigger');
+                
+                // 占满功能相关元素
+                const contentContainer = document.querySelector('.content');
+                const importModeSection = document.getElementById('import-mode-section');
+                const importModeTitle = importModeSection ? importModeSection.querySelector('.section-title') : null;
+
+                // 应用 UI 设置到主面板元素
+                function applyUISettings() {
+                    console.log('[UI Settings] 应用设置:', uiSettings);
+
+                    // 主题按钮
+                    if (mainPanelElements.theme) {
+                        mainPanelElements.theme.style.display = uiSettings.theme ? '' : 'none';
+                    }
+
+                    // 语言按钮
+                    if (mainPanelElements.language) {
+                        mainPanelElements.language.style.display = uiSettings.language ? '' : 'none';
+                    }
+
+                    // 日志按钮
+                    if (mainPanelElements.log) {
+                        mainPanelElements.log.style.display = uiSettings.log ? '' : 'none';
+                    }
+
+                    // 项目信息面板
+                    if (mainPanelElements.projectInfo) {
+                        mainPanelElements.projectInfo.style.display = uiSettings.projectInfo ? '' : 'none';
+                    }
+
+                    // 日志面板：取消启用时，状态信息和日志面板都不显示
+                    if (mainPanelElements.logPanel) {
+                        mainPanelElements.logPanel.style.display = uiSettings.logPanel ? '' : 'none';
+                    }
+                    if (statusInfoSection) {
+                        statusInfoSection.style.display = uiSettings.logPanel ? '' : 'none';
+                    }
+
+                    // 标题栏：取消启用时折叠，悬浮时显示
+                    if (mainPanelElements.header) {
+                        if (uiSettings.header) {
+                            // 启用状态：显示标题栏，禁用悬浮触发
+                            mainPanelElements.header.classList.remove('collapsed');
+                            if (headerHoverTrigger) {
+                                headerHoverTrigger.classList.remove('active');
+                            }
+                        } else {
+                            // 禁用状态：折叠标题栏，启用悬浮触发
+                            mainPanelElements.header.classList.add('collapsed');
+                            if (headerHoverTrigger) {
+                                headerHoverTrigger.classList.add('active');
+                            }
+                        }
+                        // 调整内容区域的间距
+                        if (window.adjustContentOffset) {
+                            setTimeout(() => window.adjustContentOffset(), 50);
+                        }
+                    }
+
+                    // 占满：导入模式面板占满整个页面
+                    if (contentContainer) {
+                        if (uiSettings.fullscreen) {
+                            // 启用占满模式
+                            contentContainer.classList.add('fullscreen-mode');
+                            console.log('[UI Settings] 占满模式已启用');
+                        } else {
+                            // 禁用占满模式
+                            contentContainer.classList.remove('fullscreen-mode');
+                            console.log('[UI Settings] 占满模式已禁用');
+                        }
+                    }
+                }
+
+                // 为每个按钮添加点击事件
+                Object.keys(buttons).forEach(key => {
+                    const button = buttons[key];
+                    if (button) {
+                        button.addEventListener('click', (e) => {
+                            console.log(`[UI Settings] 按钮被点击: ${key}`);
+
+                            // 切换状态
+                            uiSettings[key] = !uiSettings[key];
+
+                            // 独显模式联动：启用独显时，锁定项目信息和日志面板按钮
+                            if (key === 'fullscreen' && uiSettings[key]) {
+                                if (buttons.projectInfo) {
+                                    buttons.projectInfo.classList.add('locked');
+                                    buttons.projectInfo.title = '独显模式下不可用';
+                                }
+                                if (buttons.logPanel) {
+                                    buttons.logPanel.classList.add('locked');
+                                    buttons.logPanel.title = '独显模式下不可用';
+                                }
+                                console.log('[UI Settings] 独显模式已启用，锁定项目信息和日志面板按钮');
+                            }
+                            
+                            // 独显模式联动：禁用独显时，解锁项目信息和日志面板按钮
+                            if (key === 'fullscreen' && !uiSettings[key]) {
+                                if (buttons.projectInfo) {
+                                    buttons.projectInfo.classList.remove('locked');
+                                    buttons.projectInfo.title = '';
+                                }
+                                if (buttons.logPanel) {
+                                    buttons.logPanel.classList.remove('locked');
+                                    buttons.logPanel.title = '';
+                                }
+                                console.log('[UI Settings] 独显模式已禁用，解锁项目信息和日志面板按钮');
+                            }
+
+                            // 更新按钮样式
+                            if (uiSettings[key]) {
+                                button.classList.remove('disabled');
+                            } else {
+                                button.classList.add('disabled');
+                            }
+
+                            // 应用设置到主面板
+                            applyUISettings();
+
+                            // 保存设置到 localStorage
+                            try {
+                                localStorage.setItem('uiSettings', JSON.stringify(uiSettings));
+                                console.log(`[UI Settings] 设置已保存: ${key} = ${uiSettings[key]}`);
+                            } catch (e) {
+                                console.warn('[UI Settings] 无法保存设置:', e);
+                            }
+                        });
+                    } else {
+                        console.warn(`[UI Settings] 按钮未找到: ${key}`);
+                    }
+                });
+
+                // 从 localStorage 加载设置
+                try {
+                    const saved = localStorage.getItem('uiSettings');
+                    if (saved) {
+                        const savedSettings = JSON.parse(saved);
+                        Object.assign(uiSettings, savedSettings);
+                        console.log('[UI Settings] 从 localStorage 加载设置:', uiSettings);
+
+                        // 更新按钮状态
+                        Object.keys(uiSettings).forEach(key => {
+                            const button = buttons[key];
+                            if (button && !uiSettings[key]) {
+                                button.classList.add('disabled');
+                            }
+                        });
+
+                        // 如果独显模式已启用，锁定项目信息和日志面板按钮
+                        if (uiSettings.fullscreen) {
+                            if (buttons.projectInfo) {
+                                buttons.projectInfo.classList.add('locked');
+                                buttons.projectInfo.title = '独显模式下不可用';
+                            }
+                            if (buttons.logPanel) {
+                                buttons.logPanel.classList.add('locked');
+                                buttons.logPanel.title = '独显模式下不可用';
+                            }
+                        }
+
+                        // 应用设置到主面板
+                        applyUISettings();
+                    }
+                } catch (e) {
+                    console.warn('[UI Settings] 无法加载设置:', e);
+                }
+
+                // 标题栏悬浮事件监听
+                if (headerHoverTrigger && mainPanelElements.header) {
+                    headerHoverTrigger.addEventListener('mouseenter', () => {
+                        if (!uiSettings.header) {
+                            mainPanelElements.header.classList.add('hover');
+                        }
+                    });
+
+                    headerHoverTrigger.addEventListener('mouseleave', () => {
+                        if (!uiSettings.header) {
+                            mainPanelElements.header.classList.remove('hover');
+                        }
+                    });
+
+                    // 标题栏本身的悬浮事件
+                    mainPanelElements.header.addEventListener('mouseenter', () => {
+                        if (!uiSettings.header) {
+                            mainPanelElements.header.classList.add('hover');
+                        }
+                    });
+
+                    mainPanelElements.header.addEventListener('mouseleave', () => {
+                        if (!uiSettings.header) {
+                            mainPanelElements.header.classList.remove('hover');
+                        }
+                    });
+                }
+
+                // 让 i18n 系统自动处理翻译
+                if (window.i18n && window.i18n.updatePageTexts) {
+                    setTimeout(() => window.i18n.updatePageTexts(), 100);
+                }
+            }
+
+            // 等待 i18n 系统完全加载后初始化
+            function waitForI18n() {
+                if (window.i18n && window.i18n.updatePageTexts) {
+                    console.log('[UI Settings] i18n 系统已就绪，开始初始化');
+                    initUISettings();
+                    // 多次延迟调用以确保 i18n 完全初始化和更新
+                    setTimeout(() => {
+                        if (window.i18n && window.i18n.updatePageTexts) {
+                            console.log('[UI Settings] 第一次 i18n 更新');
+                            window.i18n.updatePageTexts();
+                        }
+                    }, 200);
+                    setTimeout(() => {
+                        if (window.i18n && window.i18n.updatePageTexts) {
+                            console.log('[UI Settings] 第二次 i18n 更新');
+                            window.i18n.updatePageTexts();
+                        }
+                    }, 500);
+                    setTimeout(() => {
+                        if (window.i18n && window.i18n.updatePageTexts) {
+                            console.log('[UI Settings] 第三次 i18n 更新');
+                            window.i18n.updatePageTexts();
+                        }
+                    }, 1000);
+                } else {
+                    setTimeout(waitForI18n, 100);
+                }
+            }
+
+            // DOM 加载完成后初始化
+            console.log('[UI Settings] 脚本加载，document.readyState:', document.readyState);
+            if (document.readyState === 'loading') {
+                console.log('[UI Settings] 等待 DOMContentLoaded');
+                document.addEventListener('DOMContentLoaded', waitForI18n);
+            } else {
+                console.log('[UI Settings] DOM 已就绪，立即初始化');
+                waitForI18n();
+            }
+
+            // 监听语言变化事件，重新应用翻译
+            document.addEventListener('languageChanged', () => {
+                if (window.i18n && window.i18n.updatePageTexts) {
+                    setTimeout(() => window.i18n.updatePageTexts(), 50);
+                }
+            });
+
+            // 监听设置面板的显示，确保 i18n 正确应用
+            setTimeout(() => {
+                const settingsPanel = document.getElementById('settings-panel');
+                if (settingsPanel) {
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                                const isVisible = settingsPanel.style.display !== 'none';
+                                if (isVisible && window.i18n && window.i18n.updatePageTexts) {
+                                    // 设置面板显示时，更新翻译
+                                    setTimeout(() => window.i18n.updatePageTexts(), 50);
+                                }
+                            }
+                        });
+                    });
+
+                    observer.observe(settingsPanel, {
+                        attributes: true,
+                        attributeFilter: ['style']
+                    });
+                }
+            }, 500);
         })();
     </script>
 </body>

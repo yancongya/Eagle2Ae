@@ -61,9 +61,11 @@ class I18n {
   }
 
   async loadTranslations() {
+    console.log('[i18n] loadTranslations 开始，语言:', this.currentLang);
     try {
       // 加载当前语言的翻译（支持HTTP与CEP本地文件）
       this.translations = await this.loadJson(`js/i18n/${this.currentLang}.json`);
+      console.log('[i18n] 翻译加载成功，keys:', Object.keys(this.translations));
       this.updatePageTexts();
       // 切换后补充动态内容刷新，确保占位文案即时本地化
       try {
@@ -135,6 +137,7 @@ class I18n {
   }
 
   updatePageTexts() {
+    console.log('[i18n] updatePageTexts 被调用，当前语言:', this.currentLang, 'translations 已加载:', !!this.translations.common);
     // 暂时禁用可能被演示模式监控的元素更新，避免副作用
     // 只更新非连接状态相关的元素
     
@@ -167,6 +170,10 @@ class I18n {
       const text = this.getText(key);
       if (text) {
         element.textContent = text;
+        // 调试：记录 UI 设置按钮的更新
+        if (element.id && element.id.startsWith('ui-toggle-')) {
+          console.log('[i18n] 更新 UI 按钮:', element.id, '键:', key, '文本:', text);
+        }
       }
     });
 
@@ -187,6 +194,10 @@ class I18n {
       const title = this.getText(key);
       if (title) {
         element.title = title;
+        // 调试：记录 UI 设置按钮的 title 更新
+        if (element.id && element.id.startsWith('ui-toggle-')) {
+          console.log('[i18n] 更新 UI 按钮 title:', element.id, '键:', key, 'title:', title);
+        }
       }
     });
 
