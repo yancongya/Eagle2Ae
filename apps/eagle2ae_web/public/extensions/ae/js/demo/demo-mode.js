@@ -149,45 +149,74 @@ class DemoMode {
     }
     
     getDefaultConfig() {
+        // 获取当前语言设置，优先使用window.i18n.currentLang，否则从localStorage获取，最后回退到zh-CN
+        const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+        const isEn = ((currentLang || '') + '').toLowerCase().includes('en');
+        
+        // 根据当前语言设置默认演示数据
+        const demoData = currentLang === 'en-US' ? {
+            ae: { 
+                version: '2024 (24.0.0)', 
+                projectName: 'Demo Project',
+                projectPath: 'D:\\Work\\HaveYouEatenToday\\AnywayIEat.aep',
+                activeComp: 'Jumps Over the Wall',
+                compDuration: '00:00:30:00',
+                frameRate: 30,
+                resolution: '1920x1080'
+            },
+            eagle: { 
+                version: '4.0.0 build 1 pid 41536',
+                libraryPath: 'D:\\Hamster.library',
+                totalItems: 1247,
+                selectedFolder: 'Hamster Party'
+            }
+        } : {
+            ae: { 
+                version: '2024 (24.0.0)', 
+                projectName: '演示项目',
+                projectPath: 'D:\\工作\\今天你吃饭了嘛\\反正我吃了.aep',
+                activeComp: '佛跳墙',
+                compDuration: '00:00:30:00',
+                frameRate: 30,
+                resolution: '1920x1080'
+            },
+            eagle: { 
+                version: '4.0.0 build 1 pid 41536',
+                libraryPath: 'D:\\仓鼠.library',
+                totalItems: 1247,
+                selectedFolder: '仓鼠党'
+            }
+        };
+        
         return {
             meta: { version: '1.0.0' },
             easterEgg: { enabled: true, clickThreshold: 5, timeWindow: 3000 },
             demoData: {
-                ae: { 
-                    version: '2024 (24.0.0)', 
-                    projectName: '演示项目',
-                    projectPath: 'D:\\工作\\今天你吃饭了嘛\\反正我吃了.aep',
-                    activeComp: '佛跳墙',
-                    compDuration: '00:00:30:00',
-                    frameRate: 30,
-                    resolution: '1920x1080'
-                },
-                eagle: { 
-                    version: '4.0.0 build 1 pid 41536',
-                    libraryPath: 'D:\\仓鼠.library',
-                    totalItems: 1247,
-                    selectedFolder: '仓鼠党'
-                },
+                ...demoData,
+                connection: { status: 'connected', pingTime: 15 },
+                files: [],
+                operations: { importDelay: 1500, connectionDelay: 800, successRate: 0.95 },
+
                 connection: { status: 'connected', pingTime: 15 },
                 files: [],
                 operations: { importDelay: 1500, connectionDelay: 800, successRate: 0.95 },
                 layerDetection: {
-                    compName: '佛跳墙',
+                    compName: currentLang === 'en-US' ? 'Jumps Over the Wall' : '佛跳墙',
                     selectedLayers: [
                         {
                             index: 1,
-                            name: '背景图片.jpg',
+                            name: currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg',
                             type: 'MaterialLayer',
                             exportable: false,
-                            reason: '图片素材，素材文件不支持导出',
+                            reason: currentLang === 'en-US' ? 'Image material, material files do not support export' : '图片素材，素材文件不支持导出',
                             sourceInfo: {
                                 type: 'File',
-                                fileName: '背景图片.jpg',
+                                fileName: currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg',
                                 originalPath: 'D:\\素材\\图片\\背景图片.jpg',
                                 materialType: 'image',
-                                materialCategory: '图片素材',
+                                materialCategory: currentLang === 'en-US' ? 'Image Material' : '图片素材',
                                 categoryType: 'material',
-                                categoryDisplayName: '素材文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
                                 fileExtension: 'jpg',
                                 width: 1920,
                                 height: 1080,
@@ -196,10 +225,10 @@ class DemoMode {
                             },
                             tooltipInfo: {
                                 categoryType: 'material',
-                                categoryDisplayName: '素材文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
                                 originalPath: 'D:\\素材\\图片\\背景图片.jpg',
                                 materialType: 'image',
-                                materialCategory: '图片素材',
+                                materialCategory: currentLang === 'en-US' ? 'Image Material' : '图片素材',
                                 fileSize: '2.1MB',
                                 fileDate: '2024-01-15 14:30:22',
                                 dimensions: '1920x1080',
@@ -209,18 +238,18 @@ class DemoMode {
                         },
                         {
                             index: 2,
-                            name: 'Logo设计.psd',
+                            name: currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd',
                             type: 'MaterialLayer',
                             exportable: true,
-                            reason: '设计文件，可以导出',
+                            reason: currentLang === 'en-US' ? 'Design file, can be exported' : '设计文件，可以导出',
                             sourceInfo: {
                                 type: 'File',
-                                fileName: 'Logo设计.psd',
+                                fileName: currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd',
                                 originalPath: 'D:\\素材\\设计\\Logo设计.psd',
                                 materialType: 'design',
-                                materialCategory: '设计文件',
+                                materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 categoryType: 'design',
-                                categoryDisplayName: '设计文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileExtension: 'psd',
                                 width: 512,
                                 height: 512,
@@ -229,10 +258,10 @@ class DemoMode {
                             },
                             tooltipInfo: {
                                 categoryType: 'design',
-                                categoryDisplayName: '设计文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 originalPath: 'D:\\素材\\设计\\Logo设计.psd',
                                 materialType: 'design',
-                                materialCategory: '设计文件',
+                                materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileSize: '15.8MB',
                                 fileDate: '2024-01-20 09:15:33',
                                 dimensions: '512x512',
@@ -242,18 +271,18 @@ class DemoMode {
                         },
                         {
                             index: 3,
-                            name: '动画视频.mp4',
+                            name: currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4',
                             type: 'MaterialLayer',
                             exportable: false,
-                            reason: '视频素材，将导出第一帧',
+                            reason: currentLang === 'en-US' ? 'Video material, will export first frame' : '视频素材，将导出第一帧',
                             sourceInfo: {
                                 type: 'File',
-                                fileName: '动画视频.mp4',
+                                fileName: currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4',
                                 originalPath: 'D:\\素材\\视频\\动画视频.mp4',
                                 materialType: 'video',
-                                materialCategory: '视频素材',
+                                materialCategory: currentLang === 'en-US' ? 'Video Material' : '视频素材',
                                 categoryType: 'material',
-                                categoryDisplayName: '素材文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
                                 fileExtension: 'mp4',
                                 width: 1920,
                                 height: 1080,
@@ -262,10 +291,10 @@ class DemoMode {
                             },
                             tooltipInfo: {
                                 categoryType: 'material',
-                                categoryDisplayName: '素材文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
                                 originalPath: 'D:\\素材\\视频\\动画视频.mp4',
                                 materialType: 'video',
-                                materialCategory: '视频素材',
+                                materialCategory: currentLang === 'en-US' ? 'Video Material' : '视频素材',
                                 fileSize: '15.2MB',
                                 fileDate: '2024-12-15 14:30:25',
                                 dimensions: '1920x1080',
@@ -274,18 +303,18 @@ class DemoMode {
                         },
                         {
                             index: 4,
-                            name: '图标设计.ai',
+                            name: currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai',
                             type: 'MaterialLayer',
                             exportable: true,
-                            reason: '设计文件，可以导出',
+                            reason: currentLang === 'en-US' ? 'Design file, can be exported' : '设计文件，可以导出',
                             sourceInfo: {
                                 type: 'File',
-                                fileName: '图标设计.ai',
+                                fileName: currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai',
                                 originalPath: 'D:\\素材\\设计\\图标设计.ai',
                                 materialType: 'design',
-                                materialCategory: '设计文件',
+                                materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 categoryType: 'design',
-                                categoryDisplayName: '设计文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileExtension: 'ai',
                                 width: 256,
                                 height: 256,
@@ -294,10 +323,10 @@ class DemoMode {
                             },
                             tooltipInfo: {
                                 categoryType: 'design',
-                                categoryDisplayName: '设计文件',
+                                categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 originalPath: 'D:\\素材\\设计\\图标设计.ai',
                                 materialType: 'design',
-                                materialCategory: '设计文件',
+                                materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileSize: '8.7MB',
                                 fileDate: '2024-01-22 11:20:45',
                                 dimensions: '256x256',
@@ -307,10 +336,10 @@ class DemoMode {
                         },
                         {
                             index: 5,
-                            name: '纯色背景',
+                            name: currentLang === 'en-US' ? 'Solid Background' : '纯色背景',
                             type: 'SolidLayer',
                             exportable: false,
-                            reason: '纯色图层不支持导出',
+                            reason: currentLang === 'en-US' ? 'Solid layer does not support export' : '纯色图层不支持导出',
                             sourceInfo: {
                                 type: 'Solid',
                                 color: [255, 128, 0],
@@ -320,26 +349,26 @@ class DemoMode {
                         },
                         {
                             index: 6,
-                            name: '标题文字',
+                            name: currentLang === 'en-US' ? 'Title Text' : '标题文字',
                             type: 'TextLayer',
                             exportable: true,
-                            reason: '文本图层，可以导出',
+                            reason: currentLang === 'en-US' ? 'Text layer, can be exported' : '文本图层，可以导出',
                             sourceInfo: {
                                 type: 'Text',
-                                text: '佛跳墙制作教程',
+                                text: currentLang === 'en-US' ? 'Jumps Over the Wall Tutorial' : '佛跳墙制作教程',
                                 fontSize: 48,
-                                fontFamily: '微软雅黑'
+                                fontFamily: currentLang === 'en-US' ? 'Arial' : '微软雅黑'
                             }
                         },
                         {
                             index: 7,
-                            name: '预合成-特效',
+                            name: currentLang === 'en-US' ? 'Precomp-Effects' : '预合成-特效',
                             type: 'PrecompLayer',
                             exportable: false,
-                            reason: '预合成图层不支持导出',
+                            reason: currentLang === 'en-US' ? 'Precomp layer does not support export' : '预合成图层不支持导出',
                             sourceInfo: {
                                 type: 'Composition',
-                                compName: '特效合成',
+                                compName: currentLang === 'en-US' ? 'Effects Composition' : '特效合成',
                                 width: 1920,
                                 height: 1080,
                                 duration: '00:00:10:00'
@@ -369,39 +398,44 @@ class DemoMode {
                         pathSummary: {
                             'D:\\素材\\图片\\背景图片.jpg': {
                                 path: 'D:\\素材\\图片\\背景图片.jpg',
-                                fileName: '背景图片.jpg',
+                                fileName: currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg',
                                 categoryType: 'material',
                                 materialType: 'image',
-                                layers: ['背景图片.jpg']
+                                layers: [currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg']
                             },
                             'D:\\素材\\设计\\Logo设计.psd': {
                                 path: 'D:\\素材\\设计\\Logo设计.psd',
-                                fileName: 'Logo设计.psd',
+                                fileName: currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd',
                                 categoryType: 'design',
                                 materialType: 'design',
-                                layers: ['Logo设计.psd']
+                                layers: [currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd']
                             },
                             'D:\\素材\\视频\\动画视频.mp4': {
                                 path: 'D:\\素材\\视频\\动画视频.mp4',
-                                fileName: '动画视频.mp4',
+                                fileName: currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4',
                                 categoryType: 'material',
                                 materialType: 'video',
-                                layers: ['动画视频.mp4']
+                                layers: [currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4']
                             },
                             'D:\\素材\\设计\\图标设计.ai': {
                                 path: 'D:\\素材\\设计\\图标设计.ai',
-                                fileName: '图标设计.ai',
+                                fileName: currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai',
                                 categoryType: 'design',
                                 materialType: 'design',
-                                layers: ['图标设计.ai']
+                                layers: [currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai']
                             }
                         }
                     },
                     pathSummaryAvailable: true,
-                    pathSummaryReport: '\n=== 路径汇总清单 ===\n\n【设计文件】(2个路径):\n🎨 Logo设计.psd\n   路径: D:\\素材\\设计\\Logo设计.psd\n   使用图层: Logo设计.psd\n\n🎨 图标设计.ai\n   路径: D:\\素材\\设计\\图标设计.ai\n   使用图层: 图标设计.ai\n\n\n【素材文件】(2个路径):\n🖼️ 背景图片.jpg\n   路径: D:\\素材\\图片\\背景图片.jpg\n   使用图层: 背景图片.jpg\n\n🎬 动画视频.mp4\n   路径: D:\\素材\\视频\\动画视频.mp4\n   使用图层: 动画视频.mp4\n\n'
+                    pathSummaryReport: currentLang === 'en-US' ? 
+                        '\n=== Design Files === (2 Material Files)\n' :
+                        '\n=== 路径汇总清单 ===\n\n【设计文件】(2个路径):\n🎨 Logo设计.psd\n   路径: D:\\素材\\设计\\Logo设计.psd\n   使用图层: Logo设计.psd\n\n🎨 图标设计.ai\n   路径: D:\\素材\\设计\\图标设计.ai\n   使用图层: 图标设计.ai\n\n\n【素材文件】(2个路径):\n🖼️ 背景图片.jpg\n   路径: D:\\素材\\图片\\背景图片.jpg\n   使用图层: 背景图片.jpg\n\n🎬 动画视频.mp4\n   路径: D:\\素材\\视频\\动画视频.mp4\n   使用图层: 动画视频.mp4\n\n'
                 },
                 ui: {
-                    messages: { connected: '✅ 已连接到演示环境' },
+                    messages: { 
+                        connected: currentLang === 'en-US' ? '✅ Connected to demo environment' : '✅ 已连接到演示环境',
+                        disconnected: currentLang === 'en-US' ? '❌ Disconnected from demo environment' : '❌ 已断开演示环境连接'
+                    },
                     notifications: { showToasts: false, duration: 3000 }
                 }
             }
@@ -1298,7 +1332,7 @@ async function initializeDemoMode() {
 
 // 尽早初始化演示模式，在main.js之前
 (function() {
-    // 立即检查环境并初始化 - 使用简化但更准确的检测
+    // 立即检查环境并初始化 - 使用简化但更严格的检测
     let isCEP = false;
 
     if (window.__adobe_cep__) {

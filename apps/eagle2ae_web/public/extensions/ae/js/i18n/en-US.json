@@ -15,6 +15,7 @@
     "projectAdjacentCopy": "Project Adjacent Copy",
     "customFolder": "Custom Folder",
     "doNotImportToComp": "Don't Import to Comp",
+    "createPrecomp": "Create Pre-comp",
     "currentTime": "Current Time",
     "timelineStart": "Timeline Start",
     "detectLayers": "Detect Layers",
@@ -34,6 +35,7 @@
     "orClickSelect": "or click to select folder",
     "manualPathInput": "Or enter path manually:",
     "inputFolderPath": "Enter folder path...",
+    "customFolderName": "Or enter custom folder name",
     "validate": "Validate",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -78,7 +80,8 @@
     "connectingDemo": "Connecting (Demo)",
     "connectionErrorDemo": "Connection failed (Demo)",
     "connecting": "Connecting...",
-    "disconnecting": "Disconnecting..."
+    "disconnecting": "Disconnecting...",
+    "connected": "Connected"
   },
   "logs": {
     "testingConnectionToEagle": "Testing connection to Eagle...",
@@ -143,6 +146,24 @@
     "libraryPrefix": "Library:",
     "currentGroupPrefix": "Current Group:",
     "libraryPathPrefix": "Path:",
-    "librarySizePrefix": "Size:"
+    "librarySizePrefix": "Size:",
+    "directImport": "Import directly from source directory to AE project without copying files",
+    "projectAdjacentCopy": "Copy files next to AE project file and then import",
+    "customFolder": "Copy files to specified folder and then import",
+    "currentTime": "Place assets at current time indicator position",
+    "timelineStart": "Move assets to timeline start (0 second position)",
+    "detectLayers": "Detect layers in current composition",
+    "exportLayers": "Export selected layers",
+    "exportToEagle": "Export AE layer data to Eagle library",
+    "desktopExport": "Export directly to desktop",
+    "projectAdjacentExport": "Export to folder next to AE project file (consistent with import mode settings)",
+    "customFolderExport": "Export to specified folder (consistent with import mode settings)",
+    "automaticCopy": "Automatically copy export path and files to clipboard after export for direct pasting",
+    "burnAfterReading": "When enabled, images are exported to a temporary folder and copied to clipboard.\nFiles are automatically cleared when exceeding 100MB or 100 files.\nAlt+click to clear, Ctrl+click to open temp folder.",
+    "timestampPrefix": "Add timestamp prefix to export folder name, e.g.: 20240101_120000_Export",
+    "compositionNamePrefix": "Add current composition name prefix to export folder name, e.g.: MyComp_Export",
+    "resetToDefault": "Reset to default and write to preset JSON",
+    "openPresetDirectory": "Open current preset directory",
+    "customPresetDirectory": "Custom preset directory"
   }
 }

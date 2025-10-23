@@ -103,7 +103,7 @@ class DemoNetworkInterceptor {
             }
             
             // 不需要拦截的请求使用原始fetch
-            self.interceptedRequests.push(requestInfo);
+            // self.interceptedRequests.push(requestInfo); // 不记录非拦截请求
             return originalFetch(url, options);
         };
         
@@ -197,6 +197,11 @@ class DemoNetworkInterceptor {
     // 检查是否应该拦截请求
     shouldInterceptRequest(url) {
         if (typeof url !== 'string') return false;
+        
+        // 不拦截本地JSON文件请求（用于国际化）
+        if (url.endsWith('.json') && (url.includes('/i18n/') || url.includes('\\i18n\\'))) {
+            return false;
+        }
         
         // 拦截所有Eagle相关的请求
         const eaglePatterns = [

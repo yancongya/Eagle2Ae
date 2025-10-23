@@ -65,6 +65,14 @@ class I18n {
       // 加载当前语言的翻译（支持HTTP与CEP本地文件）
       this.translations = await this.loadJson(`js/i18n/${this.currentLang}.json`);
       this.updatePageTexts();
+      // 切换后补充动态内容刷新，确保占位文案即时本地化
+      try {
+        if (typeof updateDynamicContent === 'function') {
+          updateDynamicContent(this.currentLang);
+        }
+      } catch (e) {
+        console.warn('Dynamic content update failed:', e);
+      }
     } catch (error) {
       console.error('Failed to load translations:', error);
       // 如果加载失败，尝试加载中文默认语言
@@ -78,6 +86,14 @@ class I18n {
           } catch (_) {}
           this.updatePageTexts();
           this.updateLanguageButton();
+          // 回退后同样刷新动态内容
+          try {
+            if (typeof updateDynamicContent === 'function') {
+              updateDynamicContent(this.currentLang);
+            }
+          } catch (e) {
+            console.warn('Dynamic content update failed:', e);
+          }
         } catch (fallbackErr) {
           console.error('Failed to load fallback zh-CN translations:', fallbackErr);
         }
@@ -103,6 +119,15 @@ class I18n {
         
         // 更新语言切换按钮
         this.updateLanguageButton();
+        
+        // 语言切换后刷新动态内容（占位/状态文案）
+        try {
+          if (typeof updateDynamicContent === 'function') {
+            updateDynamicContent(this.currentLang);
+          }
+        } catch (e) {
+          console.warn('Dynamic content update failed:', e);
+        }
       } catch (error) {
         console.error('Failed to load translations for language:', lang, error);
       }
@@ -231,10 +256,23 @@ class I18n {
   }
 }
 
-// 初始化国际化
-document.addEventListener('DOMContentLoaded', () => {
-  window.i18n = new I18n();
-  
+// 初始化国际化 - 立即执行，不等待DOMContentLoaded
+// 这样可以确保在直接打开HTML时也能正常工作
+(function initI18n() {
+  // 如果DOM还没准备好，等待它
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.i18n = new I18n();
+      setupI18nEventHandlers();
+    });
+  } else {
+    // DOM已经准备好，立即初始化
+    window.i18n = new I18n();
+    setupI18nEventHandlers();
+  }
+})();
+
+function setupI18nEventHandlers() {
   // 检查是否在iframe中，如果是则尝试从父窗口获取语言设置
   if (window.parent && window !== window.parent) {
     // 向父窗口发送消息，报告当前语言设置
@@ -267,6 +305,15 @@ document.addEventListener('DOMContentLoaded', () => {
           
           window.i18n.switchLanguage(newLang);
           
+          // 刷新动态内容以应用新语言到占位/状态文本
+          try {
+            if (typeof updateDynamicContent === 'function') {
+              updateDynamicContent(window.i18n.currentLang);
+            }
+          } catch (e) {
+            console.warn('Dynamic content update failed:', e);
+          }
+          
           // 恢复连接状态相关的UI元素，以避免触发连接行为
           // 只更新语言相关的文本，保持连接状态不变
           if (connectionBtn) {
@@ -291,4 +338,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-});
+}

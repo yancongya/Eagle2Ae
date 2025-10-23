@@ -14,6 +14,18 @@ class DemoI18nHelper {
           'libraryName': '仓鼠党',
           'execPath': 'D:\\\\仓鼠.library'
         },
+        // Demo 连接状态数据
+        'demo': {
+          'projectName': {
+            'connected': '正在做饭'
+          },
+          'compName': {
+            'connected': '佛跳墙'
+          },
+          'folderName': {
+            'connected': '仓鼠党'
+          }
+        },
         // 图层检测相关数据
         'layerDetection': {
           'compName': '佛跳墙',
@@ -81,7 +93,7 @@ class DemoI18nHelper {
         // AE related data
         'ae': {
           'projectName': 'Demo Project',
-          'activeComp': 'Buddha Jumps Over the Wall',
+          'activeComp': 'Jumps Over the Wall',
           'projectPath': 'D:\\\\Work\\\\HaveYouEatenToday\\\\AnywayIEat.aep'
         },
         // Eagle related data
@@ -89,9 +101,21 @@ class DemoI18nHelper {
           'libraryName': 'Hamster Party',
           'execPath': 'D:\\\\Hamster.library'
         },
+        // Demo connected state data
+        'demo': {
+          'projectName': {
+            'connected': 'Cooking'
+          },
+          'compName': {
+            'connected': 'Jumps Over the Wall'
+          },
+          'folderName': {
+            'connected': 'Hamster Party'
+          }
+        },
         // Layer detection related data
         'layerDetection': {
-          'compName': 'Buddha Jumps Over the Wall',
+          'compName': 'Jumps Over the Wall',
           'layers': {
             'backgroundImage': 'Background.jpg',
             'logoDesign': 'Logo.psd',
@@ -192,7 +216,13 @@ class DemoI18nHelper {
 
   // 获取当前语言的完整演示数据
   getLocalizedDemoData() {
-    const lang = window.i18n?.currentLang || 'zh-CN';
+    // 优先使用window.i18n.currentLang，否则从localStorage获取，最后回退到zh-CN
+    const lang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+    
+    // 确保在页面加载时正确初始化语言
+    if (!window.i18n) {
+      console.warn('i18n not initialized, using language from localStorage or default zh-CN');
+    }
     
     return {
       ae: {
@@ -459,12 +489,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 重写switchLanguage方法以支持演示模式更新（只刷新 AE/Eagle 文本，不更改连接状态）
     window.i18n.switchLanguage = function(lang) {
-      // 调用原始方法
-      const result = this.originalSwitchLanguage(lang);
+      // 确保语言设置被正确保存到localStorage
+      try {
+        localStorage.setItem('language', lang);
+        localStorage.setItem('lang', lang);
+      } catch (e) {
+        console.warn('Failed to save language to localStorage:', e);
+      }
       
       // 更新演示模式数据（如果存在）
-      if (window.demoMode && window.demoMode.config) {
-        window.demoMode.config.demoData = window.DemoI18nHelper.getLocalizedDemoData();
+      if (window.DemoI18nHelper && window.demoMode && window.demoMode.config) {
+        // 重新加载配置以确保使用正确的语言数据
+        window.demoMode.config = window.demoMode.getDefaultConfig();
         
         // 如果演示模式UI已经激活，仅刷新 AE/Eagle 文本数据，避免触发连接状态变更
         if (window.demoMode.setAEInfo && window.demoMode.setEagleInfo) {
@@ -476,6 +512,9 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
       }
+      
+      // 调用原始方法
+      const result = this.originalSwitchLanguage(lang);
       
       return result;
     };

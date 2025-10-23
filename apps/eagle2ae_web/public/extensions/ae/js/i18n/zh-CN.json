@@ -15,6 +15,7 @@
     "projectAdjacentCopy": "项目旁复制",
     "customFolder": "指定文件夹",
     "doNotImportToComp": "不导入合成",
+    "createPrecomp": "创建预合成",
     "currentTime": "当前时间",
     "timelineStart": "时间轴开始",
     "detectLayers": "检测图层",
@@ -34,6 +35,7 @@
     "orClickSelect": "或点击选择文件夹",
     "manualPathInput": "或手动输入路径：",
     "inputFolderPath": "输入文件夹路径...",
+    "customFolderName": "或输入自定义文件夹名",
     "validate": "验证",
     "cancel": "取消",
     "confirm": "确认",
@@ -78,7 +80,8 @@
     "connectingDemo": "连接中 (演示)",
     "connectionErrorDemo": "连接失败 (演示)",
     "connecting": "连接中...",
-    "disconnecting": "断开连接中..."
+    "disconnecting": "断开连接中...",
+    "connected": "已连接"
   },
   "logs": {
     "testingConnectionToEagle": "正在测试连接到Eagle...",
@@ -143,6 +146,24 @@
     "libraryPrefix": "资源库:",
     "currentGroupPrefix": "当前组:",
     "libraryPathPrefix": "路径:",
-    "librarySizePrefix": "大小:"
+    "librarySizePrefix": "大小:",
+    "directImport": "从源目录直接导入到AE项目，不复制文件",
+    "projectAdjacentCopy": "复制文件到AE项目文件旁边后导入",
+    "customFolder": "复制文件到指定文件夹后导入",
+    "currentTime": "将素材放置在当前时间指针位置",
+    "timelineStart": "将素材移至时间轴开始处（0秒位置）",
+    "detectLayers": "检测当前合成中的图层",
+    "exportLayers": "导出选中的图层",
+    "exportToEagle": "将AE图层数据导出到Eagle资源库",
+    "desktopExport": "直接导出到桌面",
+    "projectAdjacentExport": "导出到AE项目文件旁边的文件夹（与导入模式设置一致）",
+    "customFolderExport": "导出到指定文件夹（与导入模式设置一致）",
+    "automaticCopy": "导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用",
+    "burnAfterReading": "启用后图片导出到临时文件夹，导出后复制到剪切板。\n文件累计超过100MB或100个文件后自动清空。\nAlt+点击清空，Ctrl+点击打开临时文件夹。",
+    "timestampPrefix": "在导出文件夹名称前添加时间戳，如：20240101_120000_Export",
+    "compositionNamePrefix": "在导出文件夹名称前添加当前合成名称，如：MyComp_Export",
+    "resetToDefault": "重置为默认并写入预设JSON",
+    "openPresetDirectory": "打开当前预设目录",
+    "customPresetDirectory": "自定义预设目录"
   }
 }

@@ -134,7 +134,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 8px;
-            margin-top: 68px; /* 为固定标题栏留出空间 (8px top + 48px height + 12px margin) */
+            margin-top: 0; /* 动态脚本根据标题栏实际高度设置 */
         }
 
         .header {
@@ -145,6 +145,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: nowrap;
+            gap: 8px;
             position: fixed;
             top: 12px;
             left: 12px;
@@ -163,8 +165,9 @@
             gap: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-
-            min-width: 200px;
+            flex: 1 1 240px;
+            min-width: 0;
+            max-width: 100%;
             overflow: visible;
             width: auto;
         }
@@ -172,10 +175,12 @@
         .title-text {
             display: flex;
             position: relative;
-            min-width: 140px;
+            min-width: 0;
+            flex: 1 1 auto;
             width: auto;
-            overflow: visible;
+            overflow: hidden;
             white-space: nowrap;
+            text-overflow: ellipsis;
         }
 
         .char {
@@ -183,7 +188,7 @@
             transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             position: relative;
             flex-shrink: 0;
-            margin: 0 1.5px;
+            margin: 0 clamp(0.5px, 0.3vw, 1.5px);
             color: #9966cc;
         }
 
@@ -251,8 +256,8 @@
 
 
         .title-logo {
-            width: 28px;
-            height: 28px;
+            width: clamp(16px, 3.2vw, 28px);
+            height: clamp(16px, 3.2vw, 28px);
             object-fit: contain;
             transition: all 0.3s ease;
             cursor: pointer;
@@ -263,6 +268,10 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            flex: 0 1 auto;
+            flex-shrink: 0;
         }
 
         .icon-btn {
@@ -270,14 +279,14 @@
             color: #e0e0e0;
             border: 1px solid #555;
             border-radius: 4px;
-            padding: 6px 8px;
+            padding: clamp(2px, 0.4vw, 6px) clamp(3px, 0.6vw, 8px);
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 32px;
-            height: 28px;
+            min-width: clamp(18px, 3.2vw, 32px);
+            height: clamp(18px, 3vw, 28px);
         }
 
         .icon-btn:hover {
@@ -290,7 +299,7 @@
         }
 
         .icon-btn .icon {
-            font-size: 14px;
+            font-size: clamp(10px, 1.4vw, 14px);
             line-height: 1;
         }
 
@@ -612,12 +621,14 @@
             word-break: break-all;
         }
 
-        /* 标签和值的布局优化 */
+        /* 标签和值的布局优化 — 使左列可收缩并省略，避免覆盖右列 */
         .eagle-info .label,
         .project-info .label {
-            min-width: 42px;
-            width: 42px;
-            flex-shrink: 0;
+            flex: 0 1 38%;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* 信息行布局 */
@@ -628,10 +639,10 @@
             gap: 4px;
         }
 
-        /* 值部分允许收缩 */
+        /* 值部分允许收缩 — 分配更多空间给右列并保留省略 */
         .eagle-info span:not(.label):not(.eagle-title),
         .project-info span:not(.label):not(.ae-title) {
-            flex: 1;
+            flex: 1 1 62%;
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -649,13 +660,9 @@
             cursor: help;
         }
 
-        /* 项目信息和Eagle信息的每一行 */
+        /* 项目信息和Eagle信息的每一行 — 让省略在span层完成 */
         .project-info > div, .eagle-info > div {
             margin: 3px 0;
-            word-break: keep-all;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .actions-grid {
@@ -3279,6 +3286,23 @@
         html.theme-light .input-hint { color: #666; }
         html.theme-light .settings-panel .muted,
         html.theme-light .settings-section .muted { color: #6b7280; }
+        /* 响应式：小屏加大标题栏与元素尺寸，保持单行 */
+        @media (max-width: 768px) {
+            .header { gap: 8px; padding: 12px; }
+            .title { gap: 8px; font-size: 15px; }
+            .title-logo { width: clamp(20px, 5vw, 32px); height: clamp(20px, 5vw, 32px); }
+            .header-actions { gap: 8px; }
+            .icon-btn { min-width: clamp(22px, 4.5vw, 36px); height: clamp(22px, 4.5vw, 32px); padding: clamp(3px, 0.6vw, 8px) clamp(4px, 0.8vw, 10px); }
+            .icon-btn .icon { font-size: clamp(12px, 2vw, 16px); }
+        }
+        @media (max-width: 480px) {
+            .header { gap: 8px; padding: 14px; }
+            .title { gap: 8px; font-size: 16px; }
+            .title-logo { width: clamp(22px, 6vw, 34px); height: clamp(22px, 6vw, 34px); }
+            .header-actions { gap: 8px; }
+            .icon-btn { min-width: clamp(24px, 5.5vw, 38px); height: clamp(24px, 5.5vw, 34px); padding: clamp(4px, 0.8vw, 10px) clamp(6px, 1vw, 12px); }
+            .icon-btn .icon { font-size: clamp(13px, 2.4vw, 17px); }
+        }
     </style>
 </head>
 <body>
@@ -3298,16 +3322,16 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="theme-toggle-btn" class="icon-btn" data-i18n-title="common.themeToggle" title="切换明暗模式" aria-pressed="false">
+                <button id="theme-toggle-btn" class="icon-btn" data-i18n-title="common.themeToggle">
                     <span class="icon">🌙</span>
                 </button>
-                <button id="language-toggle-btn" class="icon-btn" data-i18n-title="common.switchLanguage" title="切换语言" aria-pressed="false">
+                <button id="language-toggle-btn" class="icon-btn" data-i18n-title="common.switchLanguage">
                     <span class="icon">🌐</span>
                 </button>
-                <button id="log-panel-toggle" class="icon-btn" data-i18n-title="common.showHideLog" title="显示/隐藏日志">
+                <button id="log-panel-toggle" class="icon-btn" data-i18n-title="common.showHideLog">
                     <span class="icon">📄</span>
                 </button>
-                <button id="settings-btn" class="icon-btn" data-i18n-title="common.settings" title="高级设置">
+                <button id="settings-btn" class="icon-btn" data-i18n-title="common.settings">
                     <span class="icon">⚙️</span>
                 </button>
             </div>
@@ -3329,16 +3353,16 @@
                     <div class="project-info">
                         <div class="ae-title">After Effects</div>
                         <div><span class="label" data-i18n="common.version">版本:</span> <span id="ae-version" data-i18n="common.waitingForImport">获取中...</span></div>
-                        <div><span class="label" data-i18n="common.path">路径:</span> <span id="project-path">未知</span></div>
-                        <div><span class="label" data-i18n="common.project">项目:</span> <span id="project-name" data-i18n="common.waitingForImport">未打开项目</span></div>
-                        <div><span class="label" data-i18n="common.composition">合成:</span> <span id="comp-name">无</span></div>
+                        <div><span class="label" data-i18n="common.path">路径:</span> <span id="project-path" data-i18n="common.unknown">未知</span></div>
+                        <div><span class="label" data-i18n="common.project">项目:</span> <span id="project-name" data-i18n="common.noProjectOpen">未打开项目</span></div>
+                        <div><span class="label" data-i18n="common.composition">合成:</span> <span id="comp-name" data-i18n="common.none">无</span></div>
                     </div>
                     <div class="eagle-info">
                         <div class="eagle-title">Eagle</div>
                         <div><span class="label" data-i18n="common.version">版本:</span> <span id="eagle-version" data-i18n="common.waitingForImport">获取中...</span></div>
-                        <div><span class="label" data-i18n="common.path">路径:</span> <span id="eagle-path">获取中...</span></div>
-                        <div><span class="label" data-i18n="common.library">资源库:</span> <span id="eagle-library">获取中...</span></div>
-                        <div><span class="label" data-i18n="common.currentGroup">当前组:</span> <span id="eagle-folder">获取中...</span></div>
+                        <div><span class="label" data-i18n="common.path">路径:</span> <span id="eagle-path" data-i18n="common.waitingForImport">获取中...</span></div>
+                        <div><span class="label" data-i18n="common.library">资源库:</span> <span id="eagle-library" data-i18n="common.waitingForImport">获取中...</span></div>
+                        <div><span class="label" data-i18n="common.currentGroup">当前组:</span> <span id="eagle-folder" data-i18n="common.waitingForImport">获取中...</span></div>
                     </div>
                 </div>
             </div>
@@ -3350,15 +3374,15 @@
                 <!-- 导入模式选择 -->
                 <div class="import-mode-selection">
                     <div class="mode-buttons">
-                        <label class="mode-button" data-i18n-title="common.directImport" title="从源目录直接导入到AE项目，不复制文件">
+                        <label class="mode-button" data-i18n-title="tooltips.directImport">
                             <input type="radio" name="quick-import-mode" value="direct">
                             <span class="mode-text" data-i18n="common.directImport">直接导入</span>
                         </label>
-                        <label class="mode-button" data-i18n-title="common.projectAdjacentCopy" title="复制文件到AE项目文件旁边后导入">
+                        <label class="mode-button" data-i18n-title="tooltips.projectAdjacentCopy">
                             <input type="radio" name="quick-import-mode" value="project_adjacent" checked>
                             <span class="mode-text" data-i18n="common.projectAdjacentCopy">项目旁复制</span>
                         </label>
-                        <label class="mode-button" data-i18n-title="common.customFolder" title="复制文件到指定文件夹后导入">
+                        <label class="mode-button" data-i18n-title="tooltips.customFolder">
                             <input type="radio" name="quick-import-mode" value="custom_folder">
                             <span class="mode-text" data-i18n="common.customFolder">指定文件夹</span>
                         </label>
@@ -3368,15 +3392,15 @@
                 <!-- 导入行为设置 -->
                 <div class="import-behavior">
                     <div class="import-behavior-buttons">
-                        <label class="import-behavior-button" id="no-import-comp-btn" data-i18n-title="common.doNotImportToComp" title="不将导入的素材添加到合成中">
+                        <label class="import-behavior-button" id="no-import-comp-btn" data-i18n-title="common.doNotImportToComp" title="">
                             <input type="radio" name="import-behavior" value="no_import">
-                            <span class="behavior-text" data-i18n="common.doNotImportToComp">不导入合成</span>
+                            <span class="behavior-text" data-i18n="common.doNotImportToComp"></span>
                         </label>
-                        <label class="import-behavior-button" data-i18n-title="common.currentTime" title="将素材放置在当前时间指针位置">
+                        <label class="import-behavior-button" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="import-behavior" value="current_time" checked>
                             <span class="behavior-text" data-i18n="common.currentTime">当前时间</span>
                         </label>
-                        <label class="import-behavior-button" data-i18n-title="common.timelineStart" title="将素材移至时间轴开始处（0秒位置）">
+                        <label class="import-behavior-button" data-i18n-title="tooltips.timelineStart">
                             <input type="radio" name="import-behavior" value="timeline_start">
                             <span class="behavior-text" data-i18n="common.timelineStart">时间轴开始</span>
                         </label>
@@ -3386,13 +3410,13 @@
                 <!-- 图层操作按钮 -->
                 <div class="layer-operations" style="margin-top: 16px;">
                     <div class="layer-operation-buttons">
-                        <button class="layer-operation-button" id="detect-layers-btn" data-i18n-title="common.detectLayers" title="检测当前合成中的图层">
+                        <button class="layer-operation-button" id="detect-layers-btn" data-i18n-title="tooltips.detectLayers">
                             <span class="operation-text" data-i18n="common.detectLayers">检测图层</span>
                         </button>
-                        <button class="layer-operation-button" id="export-layers-btn" data-i18n-title="common.exportLayers" title="导出选中的图层">
+                        <button class="layer-operation-button" id="export-layers-btn" data-i18n-title="tooltips.exportLayers">
                             <span class="operation-text" data-i18n="common.exportLayers">导出图层</span>
                         </button>
-                        <button class="layer-operation-button" id="export-to-eagle-btn" data-i18n-title="common.exportToEagle" title="将AE图层数据导出到Eagle资源库">
+                        <button class="layer-operation-button" id="export-to-eagle-btn" data-i18n-title="tooltips.exportToEagle">
                             <span class="operation-text" data-i18n="common.exportToEagle">导出到Eagle</span>
                         </button>
                     </div>
@@ -3442,7 +3466,7 @@
                     <div class="manual-input-section">
                         <label data-i18n="common.manualPathInput">或手动输入路径：</label>
                         <div class="manual-input-group">
-                            <input type="text" id="manual-folder-input" data-i18n-placeholder="common.inputFolderPath" placeholder="输入文件夹路径...">
+                            <input type="text" id="manual-folder-input" data-i18n-placeholder="common.inputFolderPath">
                             <button id="validate-path-btn" class="picker-btn secondary" data-i18n="common.validate">验证</button>
                         </div>
                     </div>
@@ -3466,15 +3490,15 @@
                 <div class="settings-section">
                     <div class="settings-section-title" data-i18n="common.importMode">导入模式</div>
                     <div class="import-mode-options-horizontal">
-                        <label class="import-mode-option" data-i18n-title="common.directImport" title="从Eagle直接导入到AE项目">
+                        <label class="import-mode-option" data-i18n-title="tooltips.directImport">
                             <input type="radio" name="import-mode" value="direct">
                             <span data-i18n="common.directImport">直接导入</span>
                         </label>
-                        <label class="import-mode-option" data-i18n-title="common.projectAdjacentCopy" title="复制到AE项目文件旁边后导入">
+                        <label class="import-mode-option" data-i18n-title="tooltips.projectAdjacentCopy">
                             <input type="radio" name="import-mode" value="project_adjacent" checked>
                             <span data-i18n="common.projectAdjacentCopy">项目旁复制</span>
                         </label>
-                        <label class="import-mode-option" data-i18n-title="common.customFolder" title="复制到指定文件夹后导入">
+                        <label class="import-mode-option" data-i18n-title="tooltips.customFolder">
                             <input type="radio" name="import-mode" value="custom_folder">
                             <span data-i18n="common.customFolder">指定文件夹</span>
                         </label>
@@ -3485,15 +3509,15 @@
                 <div class="settings-section">
                     <div class="settings-section-title" data-i18n="common.importBehavior">导入行为</div>
                     <div class="import-behavior-options-horizontal">
-                        <label class="import-behavior-option" id="advanced-no-import-comp-btn" data-i18n-title="common.doNotImportToComp" title="不将导入的素材添加到合成中">
+                        <label class="import-behavior-option" id="advanced-no-import-comp-btn" data-i18n-title="common.doNotImportToComp" title="">
                             <input type="radio" name="advanced-import-behavior" value="no_import">
-                            <span data-i18n="common.doNotImportToComp">不导入合成</span>
+                            <span data-i18n="common.doNotImportToComp"></span>
                         </label>
-                        <label class="import-behavior-option" data-i18n-title="common.currentTime" title="将素材放置在当前时间指针位置">
+                        <label class="import-behavior-option" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="advanced-import-behavior" value="current_time" checked>
                             <span data-i18n="common.currentTime">当前时间</span>
                         </label>
-                        <label class="import-behavior-option" data-i18n-title="common.timelineStart" title="将素材移至时间轴开始处（0秒位置）">
+                        <label class="import-behavior-option" data-i18n-title="tooltips.timelineStart">
                             <input type="radio" name="advanced-import-behavior" value="timeline_start">
                             <span data-i18n="common.timelineStart">时间轴开始</span>
                         </label>
@@ -3504,15 +3528,15 @@
                 <div class="settings-section">
                     <div class="settings-section-title" data-i18n="common.exportPathSettings">导出路径设置</div>
                     <div class="import-mode-options-horizontal">
-                        <label class="import-mode-option" data-i18n-title="common.desktopExport" title="直接导出到桌面">
+                        <label class="import-mode-option" data-i18n-title="tooltips.desktopExport">
                             <input type="radio" name="export-mode" value="desktop">
                             <span data-i18n="common.desktopExport">桌面导出</span>
                         </label>
-                        <label class="import-mode-option" data-i18n-title="common.projectAdjacentExport" title="导出到AE项目文件旁边的文件夹（与导入模式设置一致）">
+                        <label class="import-mode-option" data-i18n-title="tooltips.projectAdjacentExport">
                             <input type="radio" name="export-mode" value="project_adjacent" checked>
                             <span data-i18n="common.projectAdjacentExport">项目旁导出</span>
                         </label>
-                        <label class="import-mode-option" id="export-custom-folder-option" data-i18n-title="common.customFolder" title="导出到指定文件夹（与导入模式设置一致）">
+                        <label class="import-mode-option" id="export-custom-folder-option" data-i18n-title="tooltips.customFolderExport">
                             <input type="radio" name="export-mode" value="custom_folder">
                             <span data-i18n="common.customFolder">指定文件夹</span>
                         </label>
@@ -3520,19 +3544,19 @@
 
                     <!-- 导出选项 -->
                     <div class="checkbox-group-horizontal">
-                        <label class="checkbox-option" data-i18n-title="common.automaticCopy" title="导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用">
+                        <label class="checkbox-option" data-i18n-title="tooltips.automaticCopy">
                             <input type="checkbox" id="export-auto-copy" checked>
                             <span class="checkbox-label" data-i18n="common.automaticCopy">自动复制</span>
                         </label>
-                        <label class="checkbox-option" id="burn-after-reading-label" data-i18n-title="common.burnAfterReading" title="启用后图片导出到临时文件夹，导出后复制到剪切板。&#10;文件累计超过100MB或100个文件后自动清空。&#10;Alt+点击清空，Ctrl+点击打开临时文件夹。">
+                        <label class="checkbox-option" id="burn-after-reading-label" data-i18n-title="tooltips.burnAfterReading">
                             <input type="checkbox" id="export-burn-after-reading">
                             <span class="checkbox-label" data-i18n="common.burnAfterReading">阅后即焚</span>
                         </label>
-                        <label class="checkbox-option" data-i18n-title="common.timestampPrefix" title="在导出文件夹名称前添加时间戳，如：20240101_120000_Export">
+                        <label class="checkbox-option" data-i18n-title="tooltips.timestampPrefix">
                             <input type="checkbox" id="export-add-timestamp">
                             <span class="checkbox-label" data-i18n="common.timestampPrefix">时间戳前缀</span>
                         </label>
-                        <label class="checkbox-option" data-i18n-title="common.compositionNamePrefix" title="在导出文件夹名称前添加当前合成名称，如：MyComp_Export">
+                        <label class="checkbox-option" data-i18n-title="tooltips.compositionNamePrefix">
                             <input type="checkbox" id="export-create-subfolders">
                             <span class="checkbox-label" data-i18n="common.compositionNamePrefix">合成名前缀</span>
                         </label>
@@ -3557,9 +3581,9 @@
                 <div class="settings-section" id="preset-management-section">
                     <div class="settings-section-title" data-i18n="common.presetManagement">预设管理</div>
                     <div class="preset-management-buttons">
-                        <button id="reset-settings-btn" class="preset-button" data-i18n-title="common.resetToDefault" title="重置为默认并写入预设JSON" data-i18n="common.resetToDefault">重置默认</button>
-                        <button id="export-presets-btn" class="preset-button" data-i18n-title="common.openPresetDirectory" title="打开当前预设目录" data-i18n="common.openPresetDirectory">打开预设目录</button>
-                        <button id="choose-presets-dir-btn" class="preset-button icon" data-i18n-title="common.customPresetDirectory" title="自定义预设目录">⚙</button>
+                        <button id="reset-settings-btn" class="preset-button" data-i18n-title="tooltips.resetToDefault" data-i18n="common.resetToDefault">重置默认</button>
+                        <button id="export-presets-btn" class="preset-button" data-i18n-title="tooltips.openPresetDirectory" data-i18n="common.openPresetDirectory">打开预设目录</button>
+                        <button id="choose-presets-dir-btn" class="preset-button icon" data-i18n-title="tooltips.customPresetDirectory">⚙</button>
                     </div>
                 </div>
 
@@ -3592,7 +3616,7 @@
                         </select>
                     </div>
                     <div class="custom-folder-section">
-                        <input type="text" id="project-custom-folder-input" data-i18n-placeholder="common.inputFolderPath" placeholder="或输入自定义文件夹名">
+                        <input type="text" id="project-custom-folder-input" data-i18n-placeholder="common.customFolderName">
                     </div>
                 </div>
                 <div class="modal-description">
@@ -3616,7 +3640,7 @@
             <div class="modal-body">
                 <div class="folder-path-setting">
                     <div class="folder-path-section">
-                        <input type="text" id="custom-folder-path-input" data-i18n-placeholder="common.selectFolder" placeholder="选择目标文件夹路径" readonly>
+                        <input type="text" id="custom-folder-path-input" data-i18n-placeholder="common.selectFolder" readonly>
                         <button class="browse-button" onclick="browseFolderPath()" data-i18n="common.orClickSelect">浏览...</button>
                     </div>
                     <div class="recent-folders-section" id="recent-folders-section" style="display: none;">
@@ -4427,7 +4451,7 @@
     <script src="js/demo/demo-mode.js"></script>
     <!-- <script src="js/demo/demo-validation.js"></script> -->
 
-<!-- 内联 i18n JSON，支持纯 file:// 环境回退加载 -->
+<!-- 内联翻译JSON，用于file://协议下的回退 -->
 <script type="application/json" id="i18n-zh-CN">
 {
   "common": {
@@ -4440,11 +4464,18 @@
     "composition": "合成",
     "eagle": "Eagle",
     "library": "资源库",
+    "currentGroup": "当前组",
     "importModeBehavior": "导入模式&行为",
     "directImport": "直接导入",
     "projectAdjacentCopy": "项目旁复制",
     "customFolder": "指定文件夹",
     "doNotImportToComp": "不导入合成",
+    "createPrecomp": "创建预合成",
+    "currentTime": "当前时间",
+    "timelineStart": "时间轴开始",
+    "detectLayers": "检测图层",
+    "exportLayers": "导出图层",
+    "exportToEagle": "导出到Eagle",
     "statusInfo": "状态信息",
     "waitingForImport": "等待导入请求...",
     "log": "日志",
@@ -4454,11 +4485,82 @@
     "themeToggle": "切换明暗模式",
     "showHideLog": "显示/隐藏日志",
     "testConnection": "点击测试连接",
+    "chooseTargetFolder": "选择目标文件夹",
+    "dragFolderHere": "将文件夹拖拽到这里",
+    "orClickSelect": "或点击选择文件夹",
+    "manualPathInput": "或手动输入路径：",
+    "inputFolderPath": "输入文件夹路径...",
+    "customFolderName": "或输入自定义文件夹名",
+    "validate": "验证",
+    "cancel": "取消",
+    "confirm": "确认",
+    "advancedSettings": "高级设置",
+    "importMode": "导入模式",
+    "importBehavior": "导入行为",
+    "exportPathSettings": "导出路径设置",
+    "desktopExport": "桌面导出",
+    "projectAdjacentExport": "项目旁导出",
+    "automaticCopy": "自动复制",
+    "burnAfterReading": "阅后即焚",
+    "timestampPrefix": "时间戳前缀",
+    "compositionNamePrefix": "合成名前缀",
+    "communicationSettings": "通信设置",
+    "communicationPort": "通信端口",
+    "portRange": "端口范围: 1024-65535，修改后需重新连接",
+    "presetManagement": "预设管理",
+    "resetToDefault": "重置默认",
+    "openPresetDirectory": "打开预设目录",
+    "customPresetDirectory": "自定义预设目录",
+    "projectAdjacentSettings": "项目旁复制设置",
+    "customFolderSettings": "指定文件夹设置",
+    "selectFolder": "选择目标文件夹路径",
+    "recentlyUsedFolders": "最近使用的文件夹",
+    "deleteRecord": "删除此记录",
+    "userCancelled": "用户取消了文件夹选择",
+    "invalidFolderPath": "请选择文件夹路径",
+    "folderNameInvalidChars": "文件夹名称只能包含字母、数字、下划线、中划线和中文字符",
+    "pleaseEnterFolderName": "请输入自定义文件夹名称",
+    "invalidPortRange": "端口必须在1024-65535范围内",
+    "settingsSaved": "设置已保存",
+    "connectionTest": "连接测试",
+    "connectionTestSuccess": "连接测试成功！",
+    "connectionTestFailed": "连接测试失败：",
     "language": "语言",
-    "switchLanguage": "切换语言"
+    "switchLanguage": "切换语言",
+    "unknown": "未知",
+    "none": "无",
+    "noProjectOpen": "未打开项目",
+    "connectedDemo": "已连接 (演示)",
+    "disconnectedDemo": "未连接 (演示)",
+    "connectingDemo": "连接中 (演示)",
+    "connectionErrorDemo": "连接失败 (演示)",
+    "connecting": "连接中...",
+    "disconnecting": "断开连接中...",
+    "connected": "已连接"
+  },
+  "tooltips": {
+    "directImport": "从源目录直接导入到AE项目，不复制文件",
+    "projectAdjacentCopy": "复制文件到AE项目文件旁边后导入",
+    "customFolder": "复制文件到指定文件夹后导入",
+    "currentTime": "将素材放置在当前时间指针位置",
+    "timelineStart": "将素材移至时间轴开始处（0秒位置）",
+    "detectLayers": "检测当前合成中的图层",
+    "exportLayers": "导出选中的图层",
+    "exportToEagle": "将AE图层数据导出到Eagle资源库",
+    "desktopExport": "直接导出到桌面",
+    "projectAdjacentExport": "导出到AE项目文件旁边的文件夹（与导入模式设置一致）",
+    "customFolderExport": "导出到指定文件夹（与导入模式设置一致）",
+    "automaticCopy": "导出完成后自动复制导出路径和文件到剪切板，可直接粘贴使用",
+    "burnAfterReading": "启用后图片导出到临时文件夹，导出后复制到剪切板。\n文件累计超过100MB或100个文件后自动清空。\nAlt+点击清空，Ctrl+点击打开临时文件夹。",
+    "timestampPrefix": "在导出文件夹名称前添加时间戳，如：20240101_120000_Export",
+    "compositionNamePrefix": "在导出文件夹名称前添加当前合成名称，如：MyComp_Export",
+    "resetToDefault": "重置为默认并写入预设JSON",
+    "openPresetDirectory": "打开当前预设目录",
+    "customPresetDirectory": "自定义预设目录"
   }
 }
 </script>
+
 <script type="application/json" id="i18n-en-US">
 {
   "common": {
@@ -4471,11 +4573,18 @@
     "composition": "Composition",
     "eagle": "Eagle",
     "library": "Library",
+    "currentGroup": "Current Group",
     "importModeBehavior": "Import Mode & Behavior",
     "directImport": "Direct Import",
     "projectAdjacentCopy": "Project Adjacent Copy",
     "customFolder": "Custom Folder",
     "doNotImportToComp": "Don't Import to Comp",
+    "createPrecomp": "Create Pre-comp",
+    "currentTime": "Current Time",
+    "timelineStart": "Timeline Start",
+    "detectLayers": "Detect Layers",
+    "exportLayers": "Export Layers",
+    "exportToEagle": "Export to Eagle",
     "statusInfo": "Status Information",
     "waitingForImport": "Waiting for import request...",
     "log": "Log",
@@ -4485,15 +4594,86 @@
     "themeToggle": "Toggle Light/Dark Mode",
     "showHideLog": "Show/Hide Log",
     "testConnection": "Click to test connection",
+    "chooseTargetFolder": "Select Target Folder",
+    "dragFolderHere": "Drag folder here",
+    "orClickSelect": "or click to select folder",
+    "manualPathInput": "Or enter path manually:",
+    "inputFolderPath": "Enter folder path...",
+    "customFolderName": "Or enter custom folder name",
+    "validate": "Validate",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "advancedSettings": "Advanced Settings",
+    "importMode": "Import Mode",
+    "importBehavior": "Import Behavior",
+    "exportPathSettings": "Export Path Settings",
+    "desktopExport": "Desktop Export",
+    "projectAdjacentExport": "Project Adjacent Export",
+    "automaticCopy": "Automatic Copy",
+    "burnAfterReading": "Burn After Reading",
+    "timestampPrefix": "Timestamp Prefix",
+    "compositionNamePrefix": "Composition Name Prefix",
+    "communicationSettings": "Communication Settings",
+    "communicationPort": "Communication Port",
+    "portRange": "Port range: 1024-65535, requires reconnection after modification",
+    "presetManagement": "Preset Management",
+    "resetToDefault": "Reset to Default",
+    "openPresetDirectory": "Open Preset Directory",
+    "customPresetDirectory": "Custom Preset Directory",
+    "projectAdjacentSettings": "Project Adjacent Settings",
+    "customFolderSettings": "Custom Folder Settings",
+    "selectFolder": "Select target folder path",
+    "recentlyUsedFolders": "Recently Used Folders",
+    "deleteRecord": "Delete this record",
+    "userCancelled": "User cancelled folder selection",
+    "invalidFolderPath": "Please select a folder path",
+    "folderNameInvalidChars": "Folder name can only contain letters, numbers, underscores, hyphens, and Chinese characters",
+    "pleaseEnterFolderName": "Please enter a custom folder name",
+    "invalidPortRange": "Port must be in range 1024-65535",
+    "settingsSaved": "Settings saved",
+    "connectionTest": "Connection Test",
+    "connectionTestSuccess": "Connection test successful!",
+    "connectionTestFailed": "Connection test failed: ",
     "language": "Language",
-    "switchLanguage": "Switch Language"
+    "switchLanguage": "Switch Language",
+    "unknown": "Unknown",
+    "none": "None",
+    "noProjectOpen": "No project open",
+    "connectedDemo": "Connected (Demo)",
+    "disconnectedDemo": "Disconnected (Demo)",
+    "connectingDemo": "Connecting (Demo)",
+    "connectionErrorDemo": "Connection failed (Demo)",
+    "connecting": "Connecting...",
+    "disconnecting": "Disconnecting...",
+    "connected": "Connected"
+  },
+  "tooltips": {
+    "directImport": "Import directly from source directory to AE project without copying files",
+    "projectAdjacentCopy": "Copy files next to AE project file and then import",
+    "customFolder": "Copy files to specified folder and then import",
+    "currentTime": "Place assets at current time indicator position",
+    "timelineStart": "Move assets to timeline start (0 second position)",
+    "detectLayers": "Detect layers in current composition",
+    "exportLayers": "Export selected layers",
+    "exportToEagle": "Export AE layer data to Eagle library",
+    "desktopExport": "Export directly to desktop",
+    "projectAdjacentExport": "Export to folder next to AE project file (consistent with import mode settings)",
+    "customFolderExport": "Export to specified folder (consistent with import mode settings)",
+    "automaticCopy": "Automatically copy export path and files to clipboard after export for direct pasting",
+    "burnAfterReading": "When enabled, images are exported to a temporary folder and copied to clipboard.\nFiles are automatically cleared when exceeding 100MB or 100 files.\nAlt+click to clear, Ctrl+click to open temp folder.",
+    "timestampPrefix": "Add timestamp prefix to export folder name, e.g.: 20240101_120000_Export",
+    "compositionNamePrefix": "Add current composition name prefix to export folder name, e.g.: MyComp_Export",
+    "resetToDefault": "Reset to default and write to preset JSON",
+    "openPresetDirectory": "Open current preset directory",
+    "customPresetDirectory": "Custom preset directory"
   }
 }
 </script>
 
-<script src="js/main.js"></script>
+<!-- 国际化系统必须在main.js之前加载 -->
 <script src="js/i18n/i18n.js"></script>
 <script src="js/i18n/helpers.js"></script>
+<script src="js/main.js"></script>
 <script src="js/demo/demo-i18n.js"></script>
 
     <script>
@@ -4771,5 +4951,40 @@
             }
         });
     </script>
+<script>
+(function() {
+  function adjustContentOffset() {
+    var header = document.querySelector('.header');
+    var content = document.querySelector('.content');
+    if (!header || !content) return;
+    var top = 12; // header top offset
+    var spacing = 8; // extra spacing below header
+    content.style.marginTop = (top + header.offsetHeight + spacing) + 'px';
+  }
+  function scheduleAdjust() {
+    adjustContentOffset();
+    setTimeout(adjustContentOffset, 50);
+    setTimeout(adjustContentOffset, 150);
+  }
+  window.addEventListener('DOMContentLoaded', scheduleAdjust);
+  window.addEventListener('load', scheduleAdjust);
+  window.addEventListener('resize', scheduleAdjust);
+  window.addEventListener('orientationchange', scheduleAdjust);
+  // Observe header size/content changes to keep content offset correct
+  var headerEl = document.querySelector('.header');
+  if (headerEl) {
+    if ('ResizeObserver' in window) {
+      var ro = new ResizeObserver(scheduleAdjust);
+      ro.observe(headerEl);
+    }
+    if ('MutationObserver' in window) {
+      var mo = new MutationObserver(scheduleAdjust);
+      mo.observe(headerEl, { attributes: true, childList: true, subtree: true });
+    }
+  }
+  // Initial call
+  scheduleAdjust();
+})();
+</script>
 </body>
 </html>

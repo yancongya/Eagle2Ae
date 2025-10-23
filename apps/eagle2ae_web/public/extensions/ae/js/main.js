@@ -204,7 +204,7 @@ class AEExtension {
             // 直接使用配置端口，避免端口发现的延迟
             const preferences = this.settingsManager.getPreferences();
             this.updateEagleUrl(preferences.communicationPort);
-            this.log('使用配置端口，跳过端口发现以提高启动性能', 'info');
+            this.log(window.i18n?.getText('logs.usingConfigPortSkipDiscovery') || 'Using configured port, skipping discovery to speed startup', 'info');
         }
     }
 
@@ -572,7 +572,7 @@ class AEExtension {
                 this.updateAEInfoOnStartup();
                 this.log(window.i18n.getText('logs.aeInfoFetchedOnStartup') || 'AE info fetched at startup', 'info');
             } catch (aeError) {
-                this.log(`获取AE信息失败: ${aeError.message}`, 'warning');
+                this.log(`${window.i18n?.getText('logs.aeInfoFetchFailed') || 'Failed to fetch AE info'}: ${aeError.message}`, 'warning');
             }
 
             // 初始化端口发现服务（仅在启用时）
@@ -654,18 +654,19 @@ class AEExtension {
 
             // 初始化完成
         } catch (error) {
-            this.log(`AE扩展初始化失败: ${error.message}`, 'error');
+            this.log(`${window.i18n?.getText('logs.aeExtensionInitFailed') || 'AE extension initialization failed'}: ${error.message}`, 'error');
             console.error('AE扩展初始化详细错误:', error);
 
             // 即使初始化失败，也尝试修复快速设置
             setTimeout(() => {
-                this.log('尝试紧急修复快速设置...', 'warning');
+                const __isEn = ((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en');
+                this.log(window.i18n?.getText('logs.quickSettingsEmergencyFixAttempt') || (__isEn ? 'Attempting emergency fix for quick settings...' : '尝试紧急修复快速设置...'), 'warning');
                 this.quickSettingsInitialized = true;
                 try {
                     this.rebindQuickSettingsEventListeners();
-                    this.log('✅ 紧急修复完成', 'success');
+                    this.log(window.i18n?.getText('logs.quickSettingsEmergencyFixCompleted') || (__isEn ? '✅ Emergency fix completed' : '✅ 紧急修复完成'), 'success');
                 } catch (emergencyError) {
-                    this.log(`紧急修复失败: ${emergencyError.message}`, 'error');
+                    this.log(`${window.i18n?.getText('logs.quickSettingsEmergencyFixFailedPrefix') || (__isEn ? 'Emergency fix failed:' : '紧急修复失败:')} ${emergencyError.message}`, 'error');
                 }
             }, 3000);
         }
@@ -1413,7 +1414,7 @@ class AEExtension {
 
             // 显示当前导入目标信息并进行安全检查
             if (currentProjectInfo.activeComp && currentProjectInfo.activeComp.name) {
-                this.log(`📍 ${window.i18n.getText('logs.importTargetPrefix') || 'Import target'}: ${currentProjectInfo.activeComp.name}`, 'info');
+                this.log(`📍 ${(window.i18n?.getText('logs.importTargetPrefix') || 'Import target')}: ${(window.i18n?.getText('demo.compName.connected') || ((((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en')) ? 'Jumps Over the Wall' : (currentProjectInfo.activeComp?.name || '佛跳墙')))}`, 'info');
             } else {
                 this.logWarning('⚠️ 未检测到活动合成，请确保已选择要导入的合成');
 
@@ -1536,7 +1537,7 @@ class AEExtension {
                         setTimeout(() => {
                             this.logEagle(`🏷️ 智能标签分析完成`, 'info');
                             this.logEagle(`💾 文件已保存到 "AE导入" 文件夹`, 'success');
-                            this.log(`📍 ${window.i18n.getText('logs.importTargetPrefix') || 'Import target'}: 佛跳墙`, 'info');
+                            this.log(`📍 ${window.i18n?.getText('logs.importTargetPrefix') || 'Import target'}: ${window.i18n?.getText('demo.compName.connected') || 'Jumps Over the Wall'}`, 'info');
                         }, 1000);
                         setTimeout(() => {
                             this.log(`🎉 导入完成！共 ${result.importedCount} 个文件已添加到合成`, 'success');
@@ -1604,25 +1605,26 @@ class AEExtension {
                 console.log(`📤 [ExtendScript] 原始返回结果: "${result}"`);
                 console.log(`📊 [ExtendScript] 返回结果类型: ${typeof result}`);
                 console.log(`📏 [ExtendScript] 返回结果长度: ${result ? result.length : 'null'}`);
+                const __isEn = ((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en');
                 
                 // 检查返回结果是否为空或undefined
                 if (result === undefined || result === null) {
                     console.error(`❌ [ExtendScript] 返回结果为空`);
-                    reject(new Error(`ExtendScript执行错误: 返回结果为空`));
+                    reject(new Error(__isEn ? 'ExtendScript error: Empty result' : 'ExtendScript执行错误: 返回结果为空'));
                     return;
                 }
                 
                 // 检查返回结果是否为字符串
                 if (typeof result !== 'string') {
                     console.error(`❌ [ExtendScript] 返回结果不是字符串: ${typeof result}`);
-                    reject(new Error(`ExtendScript执行错误: 返回结果类型错误 (${typeof result})`));
+                    reject(new Error(__isEn ? `ExtendScript error: Invalid return type (${typeof result})` : `ExtendScript执行错误: 返回结果类型错误 (${typeof result})`));
                     return;
                 }
                 
                 // 检查是否为空字符串
                 if (result.trim() === '') {
                     console.error(`❌ [ExtendScript] 返回空字符串`);
-                    reject(new Error(`ExtendScript执行错误: 返回空字符串`));
+                    reject(new Error(__isEn ? 'ExtendScript error: Empty string returned' : 'ExtendScript执行错误: 返回空字符串'));
                     return;
                 }
 
@@ -1638,11 +1640,11 @@ class AEExtension {
                     
                     // 尝试分析返回结果的内容
                     if (result.includes('Error:') || result.includes('error:')) {
-                        reject(new Error(`ExtendScript执行错误: ${result}`));
+                        reject(new Error(__isEn ? `ExtendScript error: ${result}` : `ExtendScript执行错误: ${result}`));
                     } else if (result.includes('undefined')) {
-                        reject(new Error(`ExtendScript执行错误: 函数返回undefined - ${result}`));
+                        reject(new Error(__isEn ? `ExtendScript error: function returned undefined - ${result}` : `ExtendScript执行错误: 函数返回undefined - ${result}`));
                     } else {
-                        reject(new Error(`ExtendScript执行错误: JSON解析失败 - ${result}`));
+                        reject(new Error(__isEn ? `ExtendScript error: JSON parse failed - ${result}` : `ExtendScript执行错误: JSON解析失败 - ${result}`));
                     }
                 }
             });
@@ -1659,7 +1661,7 @@ class AEExtension {
             this.log(`🎭 ${window.i18n.getText('logs.demoExtendScriptTestSkipped') || 'Demo Mode: ExtendScript connection test skipped'}`, 'info');
             this.log(window.i18n.getText('logs.extendScriptConnectedReady') || 'ExtendScript connected: AE script environment ready', 'success');
             this.log(`${window.i18n.getText('logs.aeVersionPrefix') || 'AE version'}: 2024 (24.0.0)`, 'info');
-            this.log(`${window.i18n.getText('logs.jsxScriptVersionPrefix') || 'JSX script version'}: 演示版本 v1.0.0`, 'info');
+            this.log(`${window.i18n?.getText('logs.jsxScriptVersionPrefix') || 'JSX script version'}: Demo version v1.0.0`, 'info');
             return true;
         }
 
@@ -5651,7 +5653,7 @@ class AEExtension {
             
             this.log(window.i18n.getText('logs.aeProjectInfoUpdated') || 'AE project information updated', 'info');
         } catch (error) {
-            this.log(`更新AE信息失败: ${error.message}`, 'warning');
+            this.log(`${window.i18n?.getText('logs.aeInfoUpdateFailed') || 'Failed to update AE info'}: ${error.message}`, 'warning');
             
             // 设置默认状态
             const aeStatusElement = document.getElementById('ae-status');
@@ -6474,7 +6476,7 @@ class AEExtension {
                     event.preventDefault();
                     const isFilled = advancedNoImportBtn.classList.toggle('filled');
                     if (isFilled) {
-                        textSpan.textContent = '创建预合成';
+                        textSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                         // 确保设置能够正确保存到localStorage
                         const result = this.settingsManager.updateField('noImportSubMode', 'pre_comp', true, false);
                         if (!result.success) {
@@ -6482,7 +6484,7 @@ class AEExtension {
                         }
                         this.log('高级设置已切换到创建预合成模式', 'info');
                     } else {
-                        textSpan.textContent = '不导入合成';
+                        textSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                         // 确保设置能够正确保存到localStorage
                         const result = this.settingsManager.updateField('noImportSubMode', 'normal', true, false);
                         if (!result.success) {
@@ -6498,10 +6500,10 @@ class AEExtension {
                         if (quickNoImportBtn && quickTextSpan) {
                             if (isFilled) {
                                 quickNoImportBtn.classList.add('filled');
-                                quickTextSpan.textContent = '创建预合成';
+                                quickTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                             } else {
                                 quickNoImportBtn.classList.remove('filled');
-                                quickTextSpan.textContent = '不导入合成';
+                                quickTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                             }
                         }
                     }
@@ -6730,10 +6732,10 @@ class AEExtension {
                 const subMode = settings.noImportSubMode || 'normal';
                 if (subMode === 'pre_comp') {
                     advancedNoImportBtn.classList.add('filled');
-                    advancedTextSpan.textContent = '创建预合成';
+                    advancedTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                 } else {
                     advancedNoImportBtn.classList.remove('filled');
-                    advancedTextSpan.textContent = '不导入合成';
+                    advancedTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                 }
             }
         }
@@ -7198,7 +7200,7 @@ class AEExtension {
     // 处理选择的文件夹（统一处理方法）
     handleSelectedFolder(folderPath) {
         if (!folderPath) {
-            this.log('无效的文件夹路径', 'error');
+            this.log(window.i18n?.getText('common.invalidFolderPath') || 'Invalid folder path', 'error');
             return;
         }
 
@@ -7221,7 +7223,7 @@ class AEExtension {
     showFolderPickerModal() {
         const modal = document.getElementById('folder-picker-modal');
         if (!modal) {
-            this.log('文件夹选择模态框未找到', 'error');
+            this.log('Folder picker modal not found', 'error');
             return;
         }
 
@@ -7832,7 +7834,9 @@ class AEExtension {
             const refreshState = window.i18n?.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...';
             this.log(refreshState, 'info');
             const importTargetPrefix = window.i18n?.getText('logs.importTargetPrefix') || 'Import target';
-            this.log(`${importTargetPrefix}: 佛跳墙`, 'info');
+            const __isEn = ((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en');
+            const compName = __isEn ? 'Jumps Over the Wall' : '佛跳墙';
+            this.log(`${importTargetPrefix}: ${compName}`, 'info');
         }, 3000);
 
         setTimeout(() => {
@@ -8109,15 +8113,15 @@ class AEExtension {
                         const subMode = this.settingsManager.getField('noImportSubMode');
                         if (subMode === 'pre_comp') {
                             noImportBtn.classList.add('filled');
-                            noImportTextSpan.textContent = '创建预合成';
+                            noImportTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                         } else {
                             noImportBtn.classList.remove('filled');
-                            noImportTextSpan.textContent = '不导入合成';
+                            noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                         }
                     } else {
                         // 如果“不导入合成”按钮现在是未选中状态，强制清除其特殊样式和文本
                         noImportBtn.classList.remove('filled');
-                        noImportTextSpan.textContent = '不导入合成';
+                        noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                         // 重置noImportSubMode为normal状态
                         this.settingsManager.updateField('noImportSubMode', 'normal');
                     }
@@ -8301,10 +8305,10 @@ class AEExtension {
                         const subMode = settings.noImportSubMode || 'normal';
                         if (subMode === 'pre_comp') {
                             noImportBtn.classList.add('filled');
-                            noImportTextSpan.textContent = '创建预合成';
+                            noImportTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                         } else {
                             noImportBtn.classList.remove('filled');
-                            noImportTextSpan.textContent = '不导入合成';
+                            noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                         }
                     }
                 } else {
@@ -8716,7 +8720,7 @@ class AEExtension {
      */
     async loadPresetsFromDisk() {
         try {
-            this.log('🔎 正在尝试加载本地预设...', 'info');
+            this.log(`🔎 ${window.i18n?.getText('logs.tryingToLoadLocalPresets') || 'Trying to load local presets...'}`, 'info');
             const params = { fileName: 'Eagle2Ae-Presets.json' };
             const baseFolder = this.getPresetsBaseFolderPath();
             if (baseFolder) {
@@ -8746,7 +8750,7 @@ class AEExtension {
             this.loadQuickSettings();
             this.log('✅ 已加载并应用本地预设', 'success');
         } catch (error) {
-            this.log(`⚠️ 加载本地预设失败：${error.message}`, 'warning');
+            this.log(`⚠️ ${(window.i18n?.getText('logs.loadLocalPresetsFailedPrefix') || 'Failed to load local presets:')} ${error.message}`, 'warning');
         }
     }
 
@@ -8844,7 +8848,7 @@ class AEExtension {
                 this.log(`⚠️ 创建预设目录失败：${msg}`, 'warning');
             }
         } catch (e) {
-            this.log(`⚠️ 确保预设目录异常：${e.message}`, 'warning');
+            this.log(`⚠️ ${(window.i18n?.getText('logs.ensurePresetDirErrorPrefix') || 'Ensure preset directory error:')} ${e.message}`, 'warning');
         }
     }
 
@@ -9781,7 +9785,7 @@ class AEExtension {
             importBehavior = timelinePlacement;
         } else {
             // 如果不自动添加到合成，显示"不导入合成"
-            importBehavior = '不导入合成';
+            importBehavior = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
         }
         
         let importMode = importModeText;
@@ -11136,7 +11140,7 @@ async handleFolderImportToAE(folder) {
                 importBehavior = timelinePlacement;
             } else {
                 // 如果不自动添加到合成，显示"不导入合成"
-                importBehavior = '不导入合成';
+                importBehavior = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
             }
 
             dialog.innerHTML = `
@@ -11879,7 +11883,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 const isFilled = noImportCompBtn.classList.toggle('filled');
                 if (isFilled) {
-                    textSpan.textContent = '创建预合成';
+                    textSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                     // 确保设置能够正确保存到localStorage
                     const result = aeExtension.settingsManager.updateField('noImportSubMode', 'pre_comp', true, false);
                     if (!result.success) {
@@ -11887,7 +11891,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     aeExtension.log('快速设置已切换到创建预合成模式', 'info');
                 } else {
-                    textSpan.textContent = '不导入合成';
+                    textSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                     // 确保设置能够正确保存到localStorage
                     const result = aeExtension.settingsManager.updateField('noImportSubMode', 'normal', true, false);
                     if (!result.success) {
@@ -11902,10 +11906,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (advancedNoImportBtn && advancedTextSpan) {
                     if (isFilled) {
                         advancedNoImportBtn.classList.add('filled');
-                        advancedTextSpan.textContent = '创建预合成';
+                        advancedTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
                     } else {
                         advancedNoImportBtn.classList.remove('filled');
-                        advancedTextSpan.textContent = '不导入合成';
+                        advancedTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
                     }
                 }
             }

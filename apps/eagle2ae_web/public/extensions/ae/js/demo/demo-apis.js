@@ -378,7 +378,8 @@ class DemoAPIs {
                 // 模拟脚本执行
                 setTimeout(() => {
                     if (callback) {
-                        callback('演示脚本执行结果');
+                        const msg = (window.i18n?.currentLang === 'en-US') ? 'Demo script execution result' : '演示脚本执行结果';
+        callback(msg);
                     }
                 }, 100);
             },

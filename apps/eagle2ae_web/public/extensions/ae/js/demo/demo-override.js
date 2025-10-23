@@ -9,44 +9,140 @@
     // 不立即激活，等待演示模式真正启用时才激活
     window.__DEMO_MODE_ACTIVE__ = false;
     
-    // 设置演示数据
-    window.__DEMO_DATA__ = {
-        ae: {
-            connected: {
-                version: "2024 (24.0.0)",
-                projectPath: "D:\\工作\\今天你吃饭了嘛\\反正我吃了.aep",
-                projectName: "正在做饭",
-                activeComp: "佛跳墙"
-            },
-            disconnected: {
-                version: "获取中...",
-                projectPath: "未知",
-                projectName: "未打开项目",
-                activeComp: "无"
+    // 获取国际化演示数据
+    function getLocalizedDemoData() {
+        // 获取当前语言，确保正确检测
+        const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+        console.log('🌐 当前语言:', currentLang);
+        const isEn = ((currentLang || '') + '').toLowerCase().includes('en');
+        
+        // 安全的翻译函数，带回退机制
+        const t = (k, fb) => {
+            const text = window.i18n?.getText(k);
+            if (text) {
+                console.log(`🔤 翻译 ${k}: ${text}`);
+                return text;
             }
-        },
-        eagle: {
-            connected: {
-                version: "4.0.0 build 1 pid 41536",
-                execPath: "C:\\Program Files\\Eagle\\Eagle.exe",
-                libraryPath: "D:\\仓鼠.library",
-                libraryName: "仓鼠.library",
-                librarySize: 3221225472,
-                selectedFolder: "仓鼠党"
+            console.log(`⚠️ 翻译键 ${k} 未找到，使用回退: ${fb}`);
+            return fb;
+        };
+        
+        return {
+            ae: {
+                connected: {
+                    version: "2024 (24.0.0)",
+                    projectPath: "D:\\Work\\What did you eat today\\Anyway I ate.aep",
+                    projectName: t('demo.projectName.connected', isEn ? 'Cooking' : '正在做饭'),
+                    activeComp: t('demo.compName.connected', isEn ? 'Jumps Over the Wall' : '佛跳墙')
+                },
+                disconnected: {
+                    version: t('common.waitingForImport', isEn ? 'Waiting for import request...' : '获取中...'),
+                    projectPath: t('common.unknown', isEn ? 'Unknown' : '未知'),
+                    projectName: t('common.noProjectOpen', isEn ? 'No project open' : '未打开项目'),
+                    activeComp: t('common.none', isEn ? 'None' : '无')
+                }
             },
-            disconnected: {
-                version: "获取中...",
-                execPath: "获取中...",
-                libraryPath: "获取中...",
-                librarySize: 0,
-                selectedFolder: "获取中..."
+            eagle: {
+                connected: {
+                    version: "4.0.0 build 1 pid 41536",
+                    execPath: "C:\\Program Files\\Eagle\\Eagle.exe",
+                    libraryPath: "D:\\Hamster.library",
+                    libraryName: "Hamster.library",
+                    librarySize: 3221225472,
+                    selectedFolder: t('demo.folderName.connected', isEn ? 'Hamster Party' : '仓鼠党')
+                },
+                disconnected: {
+                    version: t('common.waitingForImport', isEn ? 'Waiting for import request...' : '获取中...'),
+                    execPath: t('common.waitingForImport', isEn ? 'Waiting for import request...' : '获取中...'),
+                    libraryPath: t('common.waitingForImport', isEn ? 'Waiting for import request...' : '获取中...'),
+                    librarySize: 0,
+                    selectedFolder: t('common.waitingForImport', isEn ? 'Waiting for import request...' : '获取中...')
+                }
+            },
+            connection: {
+                status: "connected",
+                pingTime: 12
             }
-        },
-        connection: {
-            status: "connected",
-            pingTime: 12
+        };
+    }
+
+    // 设置演示数据（动态获取国际化数据）
+    window.__DEMO_DATA__ = getLocalizedDemoData();
+
+    // 更新演示数据的函数
+    window.__updateDemoData__ = function() {
+        const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+        console.log('🔄 更新演示数据，当前语言:', currentLang);
+        
+        // 重新生成本地化的演示数据
+        const newDemoData = getLocalizedDemoData();
+        window.__DEMO_DATA__ = newDemoData;
+        
+        console.log('📊 新的演示数据:', newDemoData);
+        console.log('🌐 演示数据已更新为当前语言');
+        
+        // 立即应用新的演示数据
+        if (window.__DEMO_MODE_ACTIVE__) {
+            console.log('🎭 演示模式激活，应用新的本地化数据');
+            window.__setDemoInfo__(true, true);
         }
     };
+
+    // 监听语言切换事件
+    function setupLanguageListener() {
+        let lastLanguage = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+        console.log('🎯 初始语言:', lastLanguage);
+        
+        // 监听 localStorage 变化（主要的语言切换方式）
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'language' || e.key === 'lang') {
+                console.log('📦 localStorage 语言变化:', e.oldValue, '->', e.newValue);
+                setTimeout(() => {
+                    window.__updateDemoData__();
+                }, 100); // 短暂延迟确保 i18n 已更新
+            }
+        });
+        
+        // 监听同窗口内的 localStorage 变化
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function(key, value) {
+            const oldValue = localStorage.getItem(key);
+            originalSetItem.call(this, key, value);
+            if ((key === 'language' || key === 'lang') && oldValue !== value) {
+                console.log('🔄 本窗口语言变化:', oldValue, '->', value);
+                setTimeout(() => {
+                    window.__updateDemoData__();
+                }, 100);
+            }
+        };
+        
+        // 监听 i18n 语言切换事件
+        if (window.i18n && typeof window.i18n.on === 'function') {
+            window.i18n.on('languageChanged', function(newLang) {
+                console.log('🌐 i18n 语言变化事件:', newLang);
+                setTimeout(() => {
+                    window.__updateDemoData__();
+                }, 50);
+            });
+        }
+        
+        // 备用方案：定期检查语言变化
+        setInterval(() => {
+            const currentLang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+            if (currentLang !== lastLanguage) {
+                console.log('⏰ 轮询检测到语言变化:', lastLanguage, '->', currentLang);
+                lastLanguage = currentLang;
+                window.__updateDemoData__();
+            }
+        }, 500); // 减少轮询频率
+    }
+
+    // 初始化语言监听器
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupLanguageListener);
+    } else {
+        setupLanguageListener();
+    }
     
     // 获取当前连接状态
     function getCurrentConnectionState() {
