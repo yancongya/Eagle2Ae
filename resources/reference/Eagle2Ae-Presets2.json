@@ -1,0 +1,206 @@
+{
+  "version": "2.0.0",
+  "metadata": {
+    "createdAt": "2025-10-24T16:19:32.270Z",
+    "lastModified": "2025-10-24T16:19:32.343Z",
+    "modifiedBy": "com.yanrouya.eagle2ae.panel1",
+    "migratedFrom": null,
+    "migrationDate": null
+  },
+  "globalSettings": {
+    "communicationPort": 8080,
+    "autoSaveSettings": true,
+    "eagleServerUrl": "http://localhost:8080"
+  },
+  "panels": {
+    "com.yanrouya.eagle2ae.panel1": {
+      "name": "默认配置",
+      "description": "默认配置的配置",
+      "lastUsed": "2025-10-24T16:19:32.343Z",
+      "importSettings": {
+        "mode": "project_adjacent",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "customFolderPath": "",
+        "addToComposition": true,
+        "noImportSubMode": "normal",
+        "timelineOptions": {
+          "enabled": true,
+          "placement": "current_time"
+        },
+        "fileManagement": {
+          "keepOriginalName": true,
+          "addTimestamp": false,
+          "createTagFolders": false,
+          "deleteFromEagle": false
+        },
+        "soundSettings": {
+          "enabled": true,
+          "volume": 60
+        },
+        "exportSettings": {
+          "mode": "project_adjacent",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "customExportPath": "",
+          "autoCopy": true,
+          "addTimestamp": false,
+          "createSubfolders": false
+        }
+      },
+      "userPreferences": {
+        "lastUsedMode": "project_adjacent",
+        "favoriteFolder": "",
+        "autoSaveSettings": true,
+        "showWelcomeWizard": true,
+        "theme": "ae_native",
+        "communicationPort": 8080,
+        "lastUsedExportMode": "project_adjacent",
+        "favoriteExportFolder": ""
+      },
+      "uiSettings": {
+        "showThemeButton": true,
+        "showLanguageButton": true,
+        "showLogButton": true,
+        "showProjectInfo": true,
+        "showLogPanel": true,
+        "showHeader": true,
+        "fullscreenMode": false,
+        "theme": "dark",
+        "language": "zh-CN"
+      },
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets"
+      },
+      "customFolderSettings": {
+        "folderPath": "",
+        "recentFolders": [],
+        "directoryHandle": {}
+      }
+    },
+    "com.yanrouya.eagle2ae.panel2": {
+      "name": "快速预览",
+      "description": "快速预览的配置",
+      "lastUsed": "2025-10-24T16:19:32.334Z",
+      "importSettings": {
+        "mode": "project_adjacent",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "customFolderPath": "",
+        "addToComposition": true,
+        "noImportSubMode": "normal",
+        "timelineOptions": {
+          "enabled": true,
+          "placement": "current_time"
+        },
+        "fileManagement": {
+          "keepOriginalName": true,
+          "addTimestamp": false,
+          "createTagFolders": false,
+          "deleteFromEagle": false
+        },
+        "soundSettings": {
+          "enabled": true,
+          "volume": 60
+        },
+        "exportSettings": {
+          "mode": "project_adjacent",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "customExportPath": "",
+          "autoCopy": true,
+          "addTimestamp": false,
+          "createSubfolders": false
+        }
+      },
+      "userPreferences": {
+        "lastUsedMode": "project_adjacent",
+        "favoriteFolder": "",
+        "autoSaveSettings": true,
+        "showWelcomeWizard": true,
+        "theme": "ae_native",
+        "communicationPort": 8080,
+        "lastUsedExportMode": "project_adjacent",
+        "favoriteExportFolder": ""
+      },
+      "uiSettings": {
+        "showThemeButton": true,
+        "showLanguageButton": true,
+        "showLogButton": true,
+        "showProjectInfo": true,
+        "showLogPanel": true,
+        "showHeader": true,
+        "fullscreenMode": false,
+        "theme": "dark",
+        "language": "zh-CN"
+      },
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets"
+      },
+      "customFolderSettings": {
+        "folderPath": "",
+        "recentFolders": [],
+        "directoryHandle": {}
+      }
+    },
+    "com.yanrouya.eagle2ae.panel3": {
+      "name": "音频项目",
+      "description": "音频项目的配置",
+      "lastUsed": "2025-10-24T16:19:32.336Z",
+      "importSettings": {
+        "mode": "project_adjacent",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "customFolderPath": "",
+        "addToComposition": true,
+        "noImportSubMode": "normal",
+        "timelineOptions": {
+          "enabled": true,
+          "placement": "current_time"
+        },
+        "fileManagement": {
+          "keepOriginalName": true,
+          "addTimestamp": false,
+          "createTagFolders": false,
+          "deleteFromEagle": false
+        },
+        "soundSettings": {
+          "enabled": true,
+          "volume": 60
+        },
+        "exportSettings": {
+          "mode": "project_adjacent",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "customExportPath": "",
+          "autoCopy": true,
+          "addTimestamp": false,
+          "createSubfolders": false
+        }
+      },
+      "userPreferences": {
+        "lastUsedMode": "project_adjacent",
+        "favoriteFolder": "",
+        "autoSaveSettings": true,
+        "showWelcomeWizard": true,
+        "theme": "ae_native",
+        "communicationPort": 8080,
+        "lastUsedExportMode": "project_adjacent",
+        "favoriteExportFolder": ""
+      },
+      "uiSettings": {
+        "showThemeButton": true,
+        "showLanguageButton": true,
+        "showLogButton": true,
+        "showProjectInfo": true,
+        "showLogPanel": true,
+        "showHeader": true,
+        "fullscreenMode": false,
+        "theme": "dark",
+        "language": "zh-CN"
+      },
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets"
+      },
+      "customFolderSettings": {
+        "folderPath": "",
+        "recentFolders": [],
+        "directoryHandle": {}
+      }
+    }
+  }
+}

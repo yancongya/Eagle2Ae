@@ -197,10 +197,8 @@
             gap: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            flex: 1 1 auto;
+            flex: 0 0 auto;
             min-width: 0;
-            max-width: 100%;
-            overflow: hidden;
             width: auto;
         }
 
@@ -208,11 +206,10 @@
             display: flex;
             position: relative;
             min-width: 0;
-            flex: 1 1 auto;
+            flex: 0 0 auto;
             width: auto;
-            overflow: hidden;
+            overflow: visible;
             white-space: nowrap;
-            text-overflow: ellipsis;
         }
 
         .char {
@@ -2469,7 +2466,7 @@
         /* 导入模式选择样式 */
         .import-mode-selection {
             margin-top: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
 
         .mode-buttons {
@@ -2552,8 +2549,8 @@
 
         /* 导入行为设置样式 */
         .import-behavior {
-            margin-bottom: 8px;
-            margin-top: 0;
+            margin-bottom: 0;
+            margin-top: 8px;
         }
 
         .import-behavior-buttons {
@@ -2710,6 +2707,47 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
+        }
+
+        /* 按钮图标样式 */
+        .mode-icon,
+        .behavior-icon,
+        .operation-icon,
+        .mode-option-icon,
+        .behavior-option-icon {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            display: none;
+        }
+
+        /* 极小尺寸：只显示图标 */
+        @media (max-width: 280px) {
+            .mode-button,
+            .import-behavior-button,
+            .layer-operation-button,
+            .import-mode-option,
+            .import-behavior-option {
+                padding: 6px;
+                min-width: 32px;
+                justify-content: center;
+            }
+
+            .mode-icon,
+            .behavior-icon,
+            .operation-icon,
+            .mode-option-icon,
+            .behavior-option-icon {
+                display: block;
+            }
+
+            .mode-text,
+            .behavior-text,
+            .operation-text,
+            .import-mode-option span,
+            .import-behavior-option span {
+                display: none;
+            }
         }
 
         /* 高级设置导入行为按钮样式 */
@@ -3674,6 +3712,192 @@
             color: #888;
         }
 
+        /* 亮色模式：导入模式按钮（独显模式） */
+        html.theme-light .mode-button {
+            border-color: #ccc;
+            color: #333;
+            background: transparent;
+        }
+
+        html.theme-light .mode-button:hover {
+            border-color: #999;
+            background: transparent;
+        }
+
+        html.theme-light .mode-button:has(input[type="radio"]:checked),
+        html.theme-light .mode-button:has(input[type="checkbox"]:checked) {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        html.theme-light .mode-button input[type="radio"]:checked+.mode-text,
+        html.theme-light .mode-button input[type="checkbox"]:checked+.mode-text {
+            color: #3498db;
+        }
+
+        html.theme-light .mode-button.active {
+            background: #27ae60;
+            border-color: #27ae60;
+            color: white;
+        }
+
+        html.theme-light .mode-button.active:hover {
+            background: #229954;
+            border-color: #229954;
+        }
+
+        /* 亮色模式：导入行为按钮（独显模式） */
+        html.theme-light .import-behavior-button {
+            border-color: #ccc;
+            color: #333;
+            background: transparent;
+        }
+
+        html.theme-light .import-behavior-button:hover {
+            border-color: #999;
+            background: transparent;
+        }
+
+        html.theme-light .import-behavior-button:has(input[type="radio"]:checked) {
+            background: rgba(255, 152, 0, 0.1);
+            border-color: #ff9800;
+            color: #ff9800;
+        }
+
+        html.theme-light .import-behavior-button input[type="radio"]:checked+.behavior-text {
+            color: #ff9800;
+        }
+
+        html.theme-light .import-behavior-button.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        html.theme-light .import-behavior-button.filled .behavior-text {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        /* 亮色模式：图层操作按钮（独显模式） */
+        html.theme-light .layer-operation-button {
+            border-color: #9b59b6;
+            color: #9b59b6;
+            background: transparent;
+        }
+
+        html.theme-light .layer-operation-button:hover {
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #a569bd;
+            color: #a569bd;
+        }
+
+        html.theme-light .layer-operation-button:active {
+            background: #f5f5f5;
+        }
+
+        html.theme-light .layer-operation-button.dimmed {
+            opacity: 0.4;
+            color: #999;
+            background-color: transparent !important;
+            border-color: #ccc !important;
+        }
+
+        html.theme-light .layer-operation-button.dimmed:hover {
+            opacity: 0.6;
+            background-color: transparent !important;
+            border-color: #ccc !important;
+            color: #aaa;
+        }
+
+        /* 亮色模式：高级设置导入模式选项 */
+        html.theme-light .import-mode-option {
+            border-color: #ccc;
+            color: #333;
+            background: transparent;
+        }
+
+        html.theme-light .import-mode-option:hover {
+            border-color: #999;
+            background: transparent;
+        }
+
+        html.theme-light .import-mode-option:has(input[type="radio"]:checked) {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        html.theme-light .import-mode-option input[type="radio"]:checked+span {
+            color: #3498db;
+        }
+
+        /* 亮色模式：高级设置导入行为选项 */
+        html.theme-light .import-behavior-option {
+            border-color: #ccc;
+            color: #333;
+            background: transparent;
+        }
+
+        html.theme-light .import-behavior-option:hover {
+            border-color: #999;
+            background: transparent;
+        }
+
+        html.theme-light .import-behavior-option:has(input[type="radio"]:checked) {
+            background: rgba(255, 152, 0, 0.1);
+            border-color: #ff9800;
+            color: #ff9800;
+        }
+
+        html.theme-light .import-behavior-option input[type="radio"]:checked+span {
+            color: #ff9800;
+        }
+
+        html.theme-light .import-behavior-option.filled {
+            background: rgba(255, 152, 0, 0.1) !important;
+            border-color: #ffaf40 !important;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+
+        html.theme-light .import-behavior-option.filled span {
+            color: #ffaf40 !important;
+            font-weight: bold;
+        }
+
+        /* 亮色模式：独显模式容器背景 */
+        html.theme-light .content.fullscreen-mode #import-mode-section {
+            background: #ffffff;
+            border-color: #ddd;
+        }
+
+        /* 亮色模式：状态信息框 */
+        html.theme-light .import-status {
+            background: #f5f5f7;
+            border-left-color: #3498db;
+        }
+
+        html.theme-light .import-status.success {
+            border-left-color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        html.theme-light .import-status.error {
+            border-left-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        html.theme-light .import-status.idle {
+            border-left-color: #95a5a6;
+            background: #f5f5f7;
+            opacity: 0.8;
+        }
+
+        html.theme-light .status-message {
+            color: #333;
+        }
+
         /* 响应式：小屏加大标题栏与元素尺寸，保持单行 */
         @media (max-width: 768px) {
             .header {
@@ -3797,6 +4021,7 @@
                 <img src="public/logo.png" alt="Eagle2AE Logo" class="title-logo">
                 <div class="title-text" id="title-text">Eagle2Ae</div>
             </a>
+            <div style="flex: 1;"></div>
             <div class="header-actions">
                 <button id="theme-toggle-btn" class="icon-btn" data-i18n-title="common.themeToggle">
                     <span class="icon">🌙</span>
@@ -3861,14 +4086,17 @@
                     <div class="mode-buttons">
                         <label class="mode-button" data-i18n-title="tooltips.directImport">
                             <input type="radio" name="quick-import-mode" value="direct">
+                            <img src="public/icons/direct-import.svg" class="mode-icon" alt="">
                             <span class="mode-text" data-i18n="common.directImport">直接导入</span>
                         </label>
                         <label class="mode-button" data-i18n-title="tooltips.projectAdjacentCopy">
                             <input type="radio" name="quick-import-mode" value="project_adjacent" checked>
+                            <img src="public/icons/project-adjacent.svg" class="mode-icon" alt="">
                             <span class="mode-text" data-i18n="common.projectAdjacentCopy">项目旁复制</span>
                         </label>
                         <label class="mode-button" data-i18n-title="tooltips.customFolder">
                             <input type="radio" name="quick-import-mode" value="custom_folder">
+                            <img src="public/icons/custom-folder.svg" class="mode-icon" alt="">
                             <span class="mode-text" data-i18n="common.customFolder">指定文件夹</span>
                         </label>
                     </div>
@@ -3880,32 +4108,38 @@
                         <label class="import-behavior-button" id="no-import-comp-btn"
                             data-i18n-title="common.doNotImportToComp" title="">
                             <input type="radio" name="import-behavior" value="no_import">
+                            <img src="public/icons/no-import.svg" class="behavior-icon" alt="">
                             <span class="behavior-text" data-i18n="common.doNotImportToComp"></span>
                         </label>
                         <label class="import-behavior-button" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="import-behavior" value="current_time" checked>
+                            <img src="public/icons/current-time.svg" class="behavior-icon" alt="">
                             <span class="behavior-text" data-i18n="common.currentTime">当前时间</span>
                         </label>
                         <label class="import-behavior-button" data-i18n-title="tooltips.timelineStart">
                             <input type="radio" name="import-behavior" value="timeline_start">
+                            <img src="public/icons/timeline-start.svg" class="behavior-icon" alt="">
                             <span class="behavior-text" data-i18n="common.timelineStart">时间轴开始</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- 图层操作按钮 -->
-                <div class="layer-operations" style="margin-top: 16px;">
+                <div class="layer-operations">
                     <div class="layer-operation-buttons">
                         <button class="layer-operation-button" id="detect-layers-btn"
                             data-i18n-title="tooltips.detectLayers">
+                            <img src="public/icons/detect-layers.svg" class="operation-icon" alt="">
                             <span class="operation-text" data-i18n="common.detectLayers">检测图层</span>
                         </button>
                         <button class="layer-operation-button" id="export-layers-btn"
                             data-i18n-title="tooltips.exportLayers">
+                            <img src="public/icons/export-layers.svg" class="operation-icon" alt="">
                             <span class="operation-text" data-i18n="common.exportLayers">导出图层</span>
                         </button>
                         <button class="layer-operation-button" id="export-to-eagle-btn"
                             data-i18n-title="tooltips.exportToEagle">
+                            <img src="public/icons/export-eagle.svg" class="operation-icon" alt="">
                             <span class="operation-text" data-i18n="common.exportToEagle">导出到Eagle</span>
                         </button>
                     </div>
@@ -3986,14 +4220,17 @@
                     <div class="import-mode-options-horizontal">
                         <label class="import-mode-option" data-i18n-title="tooltips.directImport">
                             <input type="radio" name="import-mode" value="direct">
+                            <img src="public/icons/direct-import.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.directImport">直接导入</span>
                         </label>
                         <label class="import-mode-option" data-i18n-title="tooltips.projectAdjacentCopy">
                             <input type="radio" name="import-mode" value="project_adjacent" checked>
+                            <img src="public/icons/project-adjacent.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.projectAdjacentCopy">项目旁复制</span>
                         </label>
                         <label class="import-mode-option" data-i18n-title="tooltips.customFolder">
                             <input type="radio" name="import-mode" value="custom_folder">
+                            <img src="public/icons/custom-folder.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.customFolder">指定文件夹</span>
                         </label>
                     </div>
@@ -4006,14 +4243,17 @@
                         <label class="import-behavior-option" id="advanced-no-import-comp-btn"
                             data-i18n-title="common.doNotImportToComp" title="">
                             <input type="radio" name="advanced-import-behavior" value="no_import">
+                            <img src="public/icons/no-import.svg" class="behavior-option-icon" alt="">
                             <span data-i18n="common.doNotImportToComp"></span>
                         </label>
                         <label class="import-behavior-option" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="advanced-import-behavior" value="current_time" checked>
+                            <img src="public/icons/current-time.svg" class="behavior-option-icon" alt="">
                             <span data-i18n="common.currentTime">当前时间</span>
                         </label>
                         <label class="import-behavior-option" data-i18n-title="tooltips.timelineStart">
                             <input type="radio" name="advanced-import-behavior" value="timeline_start">
+                            <img src="public/icons/timeline-start.svg" class="behavior-option-icon" alt="">
                             <span data-i18n="common.timelineStart">时间轴开始</span>
                         </label>
                     </div>
@@ -4025,15 +4265,18 @@
                     <div class="import-mode-options-horizontal">
                         <label class="import-mode-option" data-i18n-title="tooltips.desktopExport">
                             <input type="radio" name="export-mode" value="desktop">
+                            <img src="public/icons/desktop-export.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.desktopExport">桌面导出</span>
                         </label>
                         <label class="import-mode-option" data-i18n-title="tooltips.projectAdjacentExport">
                             <input type="radio" name="export-mode" value="project_adjacent" checked>
+                            <img src="public/icons/project-adjacent.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.projectAdjacentExport">项目旁导出</span>
                         </label>
                         <label class="import-mode-option" id="export-custom-folder-option"
                             data-i18n-title="tooltips.customFolderExport">
                             <input type="radio" name="export-mode" value="custom_folder">
+                            <img src="public/icons/custom-folder.svg" class="mode-option-icon" alt="">
                             <span data-i18n="common.customFolder">指定文件夹</span>
                         </label>
                     </div>
@@ -4113,12 +4356,12 @@
                         <button id="export-presets-btn" class="preset-button"
                             data-i18n-title="tooltips.openPresetDirectory"
                             data-i18n="common.openPresetDirectory">打开预设目录</button>
-                        <button id="download-preset-btn" class="preset-button" title="下载/另存为预设文件">
-                            下载预设文件
-                        </button>
-                        <button id="open-preset-btn" class="preset-button" title="打开预设文件">
-                            打开预设文件
-                        </button>
+                        <button id="download-preset-btn" class="preset-button" 
+                            data-i18n-title="tooltips.downloadPresetFile"
+                            data-i18n="common.downloadPresetFile">下载预设文件</button>
+                        <button id="open-preset-btn" class="preset-button" 
+                            data-i18n-title="tooltips.openPresetFile"
+                            data-i18n="common.openPresetFile">打开预设文件</button>
                         <button id="choose-presets-dir-btn" class="preset-button icon"
                             data-i18n-title="tooltips.customPresetDirectory">⚙</button>
                     </div>
@@ -5526,24 +5769,234 @@
                 titleLink.addEventListener('click', function (e) {
                     e.preventDefault();
 
-                    // 检查是否在 CEP 环境中
-                    const isCEP = typeof CSInterface !== 'undefined' ||
-                        typeof cep !== 'undefined' ||
-                        window.__adobe_cep__;
+                    const url = TITLE_LINK_URL || 'https://github.com/';
 
-                    if (isCEP && typeof CSInterface !== 'undefined') {
-                        // CEP 环境：使用 CSInterface 打开链接
+                    // 检查是否在 CEP 环境中
+                    if (typeof cep !== 'undefined' && cep.util) {
+                        // CEP 环境：使用 cep.util.openURLInDefaultBrowser
+                        try {
+                            cep.util.openURLInDefaultBrowser(url);
+                            console.log('✅ 已在默认浏览器中打开链接 (cep.util)');
+                        } catch (error) {
+                            console.error('cep.util 打开链接失败:', error);
+                            // 尝试使用 CSInterface
+                            try {
+                                if (typeof CSInterface !== 'undefined') {
+                                    const csInterface = new CSInterface();
+                                    csInterface.openURLInDefaultBrowser(url);
+                                    console.log('✅ 已在默认浏览器中打开链接 (CSInterface)');
+                                }
+                            } catch (err2) {
+                                console.error('CSInterface 打开链接失败:', err2);
+                                window.open(url, '_blank');
+                            }
+                        }
+                    } else if (typeof CSInterface !== 'undefined') {
+                        // 使用 CSInterface
                         try {
                             const csInterface = new CSInterface();
-                            csInterface.openURLInDefaultBrowser(TITLE_LINK_URL);
+                            csInterface.openURLInDefaultBrowser(url);
+                            console.log('✅ 已在默认浏览器中打开链接 (CSInterface)');
                         } catch (error) {
-                            console.error('Failed to open URL in CEP:', error);
-                            // 降级到 window.open
-                            window.open(TITLE_LINK_URL, '_blank');
+                            console.error('CSInterface 打开链接失败:', error);
+                            window.open(url, '_blank');
                         }
                     } else {
                         // 网页环境：使用 window.open
-                        window.open(TITLE_LINK_URL, '_blank');
+                        window.open(url, '_blank');
+                    }
+                });
+            }
+        })();
+
+        // 预设按钮事件
+        (function setupPresetButtons() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupPresetButtons);
+                return;
+            }
+
+            const downloadBtn = document.getElementById('download-preset-btn');
+            const openBtn = document.getElementById('open-preset-btn');
+
+            // 下载预设文件按钮 - CEP环境选择目录并复制文件
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', async function (e) {
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    
+                    try {
+                        if (!window.eagleToAeApp) {
+                            alert('应用未初始化');
+                            return;
+                        }
+
+                        // 检查是否在 CEP 环境中
+                        const isCEP = typeof CSInterface !== 'undefined';
+
+                        if (isCEP && window.eagleToAeApp.csInterface) {
+                            // CEP 环境：使用 ExtendScript 选择目录并复制文件
+                            const fileName = window.eagleToAeApp.getPresetFileName();
+                            
+                            // 获取源文件路径并复制
+                            const copyScript = `
+                                (function() {
+                                    try {
+                                        // 获取用户文档目录
+                                        var documentsFolder = Folder.myDocuments;
+                                        var presetsDir = new Folder(documentsFolder.fsName + '/Eagle2Ae-Ae/presets');
+                                        var sourceFile = new File(presetsDir.fsName + '/${fileName}');
+                                        
+                                        if (!sourceFile.exists) {
+                                            return JSON.stringify({
+                                                success: false, 
+                                                error: '预设文件不存在',
+                                                path: sourceFile.fsName,
+                                                presetsDir: presetsDir.fsName
+                                            });
+                                        }
+                                        
+                                        // 选择目标文件夹
+                                        var targetFolder = Folder.selectDialog('选择保存预设文件的目录');
+                                        if (!targetFolder) {
+                                            return JSON.stringify({success: false, cancelled: true});
+                                        }
+                                        
+                                        // 复制文件
+                                        var targetFile = new File(targetFolder.fsName + '/${fileName}');
+                                        if (sourceFile.copy(targetFile)) {
+                                            return JSON.stringify({
+                                                success: true, 
+                                                path: targetFile.fsName
+                                            });
+                                        } else {
+                                            return JSON.stringify({success: false, error: '文件复制失败'});
+                                        }
+                                    } catch (e) {
+                                        return JSON.stringify({success: false, error: e.toString()});
+                                    }
+                                })();
+                            `;
+
+                            window.eagleToAeApp.csInterface.evalScript(copyScript, (result) => {
+                                try {
+                                    const res = JSON.parse(result);
+                                    if (res.success) {
+                                        alert(`预设文件已保存到:\n${res.path}`);
+                                        console.log(`✅ 预设文件已复制到: ${res.path}`);
+                                    } else if (res.cancelled) {
+                                        console.log('用户取消了文件夹选择');
+                                    } else {
+                                        alert('保存失败: ' + res.error);
+                                        console.error('保存失败:', res.error);
+                                    }
+                                } catch (error) {
+                                    console.error('解析结果失败:', error, result);
+                                    alert('保存失败: ' + error.message);
+                                }
+                            });
+                        } else {
+                            // 网页环境：使用浏览器下载
+                            const settings = window.eagleToAeApp.settingsManager.getSettings();
+                            const presetData = JSON.stringify(settings, null, 2);
+                            const fileName = window.eagleToAeApp.getPresetFileName();
+                            
+                            const blob = new Blob([presetData], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            
+                            console.log(`✅ 预设文件下载已触发: ${fileName}`);
+                        }
+                    } catch (error) {
+                        console.error('下载预设文件失败:', error);
+                        alert('下载预设文件失败: ' + error.message);
+                    }
+                });
+            }
+
+            // 打开预设文件按钮 - 使用系统默认程序打开
+            if (openBtn) {
+                openBtn.addEventListener('click', async function () {
+                    try {
+                        if (!window.eagleToAeApp) {
+                            alert('应用未初始化');
+                            return;
+                        }
+
+                        // 检查是否在 CEP 环境中
+                        const isCEP = typeof CSInterface !== 'undefined';
+
+                        if (isCEP && window.eagleToAeApp.csInterface) {
+                            // CEP 环境：使用 ExtendScript 打开文件
+                            const fileName = window.eagleToAeApp.getPresetFileName();
+                            
+                            const openFileScript = `
+                                (function() {
+                                    try {
+                                        // 获取用户文档目录
+                                        var documentsFolder = Folder.myDocuments;
+                                        var presetsDir = new Folder(documentsFolder.fsName + '/Eagle2Ae-Ae/presets');
+                                        var presetFile = new File(presetsDir.fsName + '/${fileName}');
+                                        
+                                        if (!presetFile.exists) {
+                                            return JSON.stringify({
+                                                success: false, 
+                                                error: '预设文件不存在',
+                                                path: presetFile.fsName,
+                                                presetsDir: presetsDir.fsName
+                                            });
+                                        }
+                                        
+                                        // 使用系统默认程序打开文件
+                                        if (presetFile.execute()) {
+                                            return JSON.stringify({
+                                                success: true, 
+                                                path: presetFile.fsName
+                                            });
+                                        } else {
+                                            return JSON.stringify({
+                                                success: false, 
+                                                error: '无法打开文件',
+                                                path: presetFile.fsName
+                                            });
+                                        }
+                                    } catch (e) {
+                                        return JSON.stringify({success: false, error: e.toString()});
+                                    }
+                                })();
+                            `;
+
+                            window.eagleToAeApp.csInterface.evalScript(openFileScript, (result) => {
+                                try {
+                                    const res = JSON.parse(result);
+                                    if (res.success) {
+                                        console.log(`✅ 已打开预设文件: ${res.path}`);
+                                    } else {
+                                        if (res.path) {
+                                            alert(`${res.error}\n\n文件路径:\n${res.path}\n\n请手动打开此文件`);
+                                        } else {
+                                            alert('打开失败: ' + res.error);
+                                        }
+                                        console.error('打开失败:', res.error);
+                                    }
+                                } catch (error) {
+                                    console.error('解析结果失败:', error, result);
+                                    alert('打开失败: ' + error.message);
+                                }
+                            });
+                        } else {
+                            // 网页环境：提示用户
+                            alert('网页环境下无法直接打开预设文件\n请使用"下载预设文件"功能');
+                        }
+                    } catch (error) {
+                        console.error('打开预设文件失败:', error);
+                        alert('打开预设文件失败: ' + error.message);
                     }
                 });
             }

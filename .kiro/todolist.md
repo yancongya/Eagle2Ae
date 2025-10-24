@@ -12,12 +12,13 @@
 
 ## 阶段 1: 配置文件结构设计 ✅
 
-### 1.1 设计多面板配置 JSON 结构
-- [ ] 创建新的配置文件结构设计文档
-- [ ] 定义面板配置的数据模型
+### 1.1 设计多面板配置 JSON 结构 ✅
+- [x] 创建新的配置文件结构设计文档
+- [x] 定义面板配置的数据模型
   - 每个面板有独立的 `importSettings`、`uiSettings` 等
-  - 添加 `currentPanel` 字段标识当前激活的面板
+  - ~~添加 `currentPanel` 字段~~ (已移除，不需要)
   - 添加 `panels` 对象存储 3 个面板的配置
+  - 添加 `metadata` 记录配置元信息
 
 **配置结构示例**:
 ```json
@@ -76,65 +77,141 @@
 
 ---
 
-## 阶段 3: 面板识别与初始化
+## 阶段 3: 面板识别与初始化 ✅
 
-### 3.1 实现面板 ID 识别
-- [ ] 在 `main.js` 中添加获取当前面板 ID 的函数
-  ```javascript
-  getCurrentPanelId() {
-      if (window.cep && window.cep.getExtensionId) {
-          return window.cep.getExtensionId();
-      }
-      return 'com.yanrouya.eagle2ae.panel1'; // 默认
-  }
-  ```
+### 3.1 实现面板 ID 识别 ✅
+- [x] 在 `main.js` 中添加 `getCurrentPanelId()` 函数
+  - 支持 CEP 环境 (通过 CSInterface.getExtensionID)
+  - 支持 Demo 模式 (通过 URL 参数)
+  - 默认返回 panel1
+- [x] 在 `main.js` 中添加 `getPanelDisplayName()` 函数
+  - 返回面板的显示名称
 
-### 3.2 根据面板 ID 加载对应配置
-- [ ] 修改 `loadPresetsFromDisk()` 函数
-- [ ] 根据当前面板 ID 加载对应的配置分支
-- [ ] Demo 模式下也要支持面板识别
+### 3.2 根据面板 ID 加载对应配置 ✅
+- [x] ConfigManager 根据当前面板 ID 加载配置
+- [x] Demo 模式支持面板识别 (通过 URL 参数 `?panel=panel1`)
 
 ---
 
-## 阶段 4: 配置保存与加载
+## 阶段 4: 配置保存与加载 ⏸️ (已暂停)
 
-### 4.1 修改配置保存逻辑
-- [ ] 修改 `savePresetsSilently()` 函数
-- [ ] 保存时只更新当前面板的配置分支
-- [ ] 保持其他面板的配置不变
-- [ ] 更新 `currentPanel` 字段
+### 4.1 创建 ConfigManager 模块 ✅
+- [x] 创建 `js/utils/ConfigManager.js` 独立模块
+- [x] 在 `index.html` 中引入 ConfigManager
+- [x] 在 `main.js` 中集成 ConfigManager
 
-### 4.2 修改配置加载逻辑
-- [ ] 修改 `loadSettingsToUI()` 函数
-- [ ] 根据当前面板 ID 加载对应的配置
-- [ ] 如果配置不存在，使用默认配置初始化
+### 4.2 配置文件操作 ✅
+- [x] 实现 `loadConfigFile()` - 加载完整配置文件
+  - 支持虚拟文件系统 (Demo模式)
+  - 支持 Node.js fs (CEP环境)
+  - 支持 fetch (后备方案)
+- [x] 实现 `saveConfigFile()` - 保存完整配置文件
+  - 自动更新 metadata
+  - 支持多种保存方式
+- [x] 实现 `getExtensionRoot()` - 获取扩展根目录
 
-### 4.3 配置迁移
-- [ ] 实现旧配置格式到新格式的迁移函数
-- [ ] 首次运行时将现有配置迁移到 `panel1`
-- [ ] 为 `panel2` 和 `panel3` 创建默认配置
+### 4.3 面板配置操作 ✅
+- [x] 实现 `loadPanelConfig()` - 加载当前面板配置
+- [x] 实现 `savePanelConfig()` - 保存当前面板配置
+- [x] 实现 `collectPanelConfig()` - 收集当前配置
+- [x] 实现 `applyPanelConfigToSettingsManager()` - 应用配置到 settingsManager
+
+### 4.4 配置迁移 ✅
+- [x] 实现 `checkIfNeedsMigration()` - 检查是否需要迁移
+- [x] 实现 `migrateOldConfig()` - 迁移旧配置到新格式
+- [x] 实现 `convertOldConfigToPanelConfig()` - 转换配置格式
+- [x] 实现 `migrateTheme()` - 主题值迁移
+- [x] 使用迁移标记避免重复迁移
+
+### 4.5 默认配置生成 ✅
+- [x] 实现 `getDefaultConfig()` - 默认完整配置
+- [x] 实现 `getDefaultPanelConfig()` - 默认面板配置
+- [x] 实现 `getDefaultImportSettings()` - 默认导入设置
+- [x] 实现 `getDefaultUserPreferences()` - 默认用户偏好
+- [x] 实现 `getDefaultUISettings()` - 默认UI设置
+
+### 4.6 自动保存机制 ✅
+- [x] 实现 `setupAutoSave()` - 设置自动保存监听
+- [x] 实现 `debouncedSave()` - 防抖保存 (500ms)
+
+### 4.7 配置初始化流程 ✅
+- [x] 实现 `init()` - 异步配置初始化
+  - 加载配置文件
+  - 检查并执行迁移
+  - 加载面板配置
+  - 应用到 settingsManager
+  - 设置自动保存
+
+### 4.8 待优化项 ⚠️
+- [ ] 添加配置验证机制
+- [ ] 添加配置备份机制
+- [ ] 优化防抖时间 (500ms → 2000ms)
+- [ ] 优化 ConfigManager 与 SettingsManager 的职责划分
+- [ ] 添加配置变更通知机制
 
 ---
 
-## 阶段 5: UI 面板切换功能
+## 阶段 5: UI 面板切换功能 🎯
 
-### 5.1 添加面板切换按钮
-- [ ] 在 HTML 的 `UI Settings` 面板组中添加"面板切换"按钮
-- [ ] 按钮位置：在现有 UI 设置按钮下方
-- [ ] 添加 i18n 支持（中文：面板切换，英文：Switch Panel）
+### 5.1 添加面板切换下拉菜单
+- [ ] 在标题栏中间（标题和右侧按钮组之间）添加 `<select>` 下拉菜单
+- [ ] 下拉菜单包含3个选项：
+  - 选项1: "默认配置" (panel1)
+  - 选项2: "快速预览" (panel2)
+  - 选项3: "音频项目" (panel3)
+- [ ] CSS 样式：
+  - 自适应宽度（flex-grow）
+  - 与标题栏风格一致
+  - 支持深色/浅色主题
+- [ ] 添加 i18n 支持（中文/英文）
 
 ### 5.2 实现面板切换逻辑
-- [ ] 创建 `switchPanel()` 函数
-- [ ] 点击按钮时循环切换: panel1 → panel2 → panel3 → panel1
-- [ ] 保存当前面板的配置
-- [ ] 加载目标面板的配置
-- [ ] 更新 UI 显示
-- [ ] 更新 `currentPanel` 字段
+- [ ] 创建 `switchToPanel(panelId)` 函数
+- [ ] 切换流程：
+  1. 保存当前面板的配置到 localStorage
+  2. 从 localStorage 加载目标面板的配置
+  3. 应用配置到 settingsManager
+  4. 刷新 UI（重新加载设置到界面）
+  5. 更新下拉菜单的选中状态
+- [ ] 监听下拉菜单的 `change` 事件
+- [ ] 添加切换动画/过渡效果（可选）
 
-### 5.3 显示当前面板信息
-- [ ] 在 UI 中显示当前面板名称
-- [ ] 可以在标题栏或设置面板中显示
-- [ ] 例如: "当前面板: 面板 1"
+### 5.3 配置存储方案（简化版）
+- [ ] 使用 localStorage 存储每个面板的配置
+  - Key: `eagle2ae_panel1_config`
+  - Key: `eagle2ae_panel2_config`
+  - Key: `eagle2ae_panel3_config`
+- [ ] 配置内容：
+  - importSettings
+  - userPreferences
+  - uiSettings
+  - language
+  - aeTheme
+- [ ] 首次加载时，如果面板配置不存在，使用默认配置
+
+### 5.4 UI 更新
+- [ ] 修改标题栏 HTML 结构：
+  ```html
+  <div class="header-title-bar">
+    <h1>Eagle2Ae</h1>
+    <select id="panel-selector" class="panel-selector">
+      <option value="panel1">默认配置</option>
+      <option value="panel2">快速预览</option>
+      <option value="panel3">音频项目</option>
+    </select>
+    <div class="header-buttons">
+      <!-- 现有按钮 -->
+    </div>
+  </div>
+  ```
+- [ ] 添加 CSS 样式
+- [ ] 确保响应式布局正常
+
+### 5.5 测试
+- [ ] 测试面板切换功能
+- [ ] 测试配置保存和加载
+- [ ] 测试刷新后配置保持
+- [ ] 测试不同面板的独立性
 
 ---
 
@@ -201,25 +278,32 @@
 
 ## 技术要点
 
-### 关键函数需要修改
-1. `loadPresetsFromDisk()` - 加载配置
-2. `savePresetsSilently()` - 保存配置
-3. `loadSettingsToUI()` - 加载 UI 设置
-4. `getCurrentPanelId()` - 获取当前面板 ID (新增)
-5. `switchPanel()` - 切换面板 (新增)
-6. `migrateOldConfig()` - 配置迁移 (新增)
+### 关键函数实现状态
+1. ✅ `getCurrentPanelId()` - 获取当前面板 ID (已实现)
+2. ✅ `getPanelDisplayName()` - 获取面板显示名称 (已实现)
+3. ✅ `ConfigManager.loadConfigFile()` - 加载配置文件 (已实现)
+4. ✅ `ConfigManager.saveConfigFile()` - 保存配置文件 (已实现)
+5. ✅ `ConfigManager.loadPanelConfig()` - 加载面板配置 (已实现)
+6. ✅ `ConfigManager.savePanelConfig()` - 保存面板配置 (已实现)
+7. ✅ `ConfigManager.migrateOldConfig()` - 配置迁移 (已实现)
+8. ⏳ `switchPanel()` - 切换面板 (待实现 - 阶段5)
+9. ⏳ `applyConfigToUI()` - 应用配置到UI (待实现 - 阶段5)
 
-### 需要新增的文件
-- 无需新增文件，所有功能在现有文件中实现
+### 已新增的文件
+- ✅ `js/utils/ConfigManager.js` - 配置管理器模块 (阶段4)
 
-### 需要修改的文件
-- `CSXS/manifest.xml` - 添加面板定义
-- `.debug` - 添加 i18n 菜单名称
-- `index.html` - 添加面板切换按钮
-- `js/main.js` - 核心逻辑修改
-- `js/demo/demo-file-system.js` - Demo 模式支持
-- `js/i18n/zh-CN.json` - 中文翻译
-- `js/i18n/en-US.json` - 英文翻译
+### 已修改的文件
+- ✅ `index.html` - 引入 ConfigManager (阶段4)
+- ✅ `js/main.js` - 集成 ConfigManager (阶段4)
+
+### 待修改的文件
+- ⏳ `CSXS/manifest.xml` - 添加面板定义 (阶段2)
+- ⏳ `.debug` - 添加 i18n 菜单名称 (阶段2)
+- ⏳ `index.html` - 添加面板切换按钮 (阶段5)
+- ⏳ `js/main.js` - 添加面板切换逻辑 (阶段5)
+- ⏳ `js/demo/demo-file-system.js` - Demo 模式支持 (阶段6)
+- ⏳ `js/i18n/zh-CN.json` - 中文翻译 (阶段5)
+- ⏳ `js/i18n/en-US.json` - 英文翻译 (阶段5)
 
 ---
 
@@ -235,13 +319,17 @@
 
 ## 预计时间
 
-- 阶段 1-2: 配置设计和 Manifest (1-2 小时)
-- 阶段 3-4: 核心逻辑实现 (3-4 小时)
-- 阶段 5: UI 实现 (2-3 小时)
-- 阶段 6: Demo 模式 (2-3 小时)
-- 阶段 7-8: 测试和优化 (2-3 小时)
+- ✅ 阶段 1: 配置设计 (已完成)
+- ⏳ 阶段 2: Manifest 配置 (1-2 小时)
+- ✅ 阶段 3: 面板识别 (已完成)
+- ✅ 阶段 4: 配置管理 (已完成)
+- ⏳ 阶段 5: UI 实现 (2-3 小时)
+- ⏳ 阶段 6: Demo 模式 (2-3 小时)
+- ⏳ 阶段 7-8: 测试和优化 (2-3 小时)
 
-**总计**: 约 10-15 小时
+**已完成**: 约 4-5 小时  
+**剩余**: 约 7-11 小时  
+**总计**: 约 11-16 小时
 
 ---
 

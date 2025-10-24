@@ -90,6 +90,14 @@ class ConnectionMonitor {
 class AEExtension {
     constructor() {
         this.csInterface = new CSInterface();
+
+        // 🔥 识别当前面板 ID
+        this.panelId = this.getPanelId();
+        console.log('='.repeat(60));
+        console.log(`[Panel] 当前面板 ID: ${this.panelId}`);
+        console.log(`[Panel] 预设文件名: ${this.getPresetFileName()}`);
+        console.log('='.repeat(60));
+
         this.connectionState = ConnectionState.DISCONNECTED;
         this.eagleUrl = 'http://localhost:8080';
         this.currentPort = 8080;
@@ -168,17 +176,25 @@ class AEExtension {
 
     // 异步初始化方法
     async asyncInit() {
+        console.log(`[${this.panelId}] 🚀 开始异步初始化`);
+        
         // 先执行同步初始化
         this.init();
 
         // 确保预设目录已创建
         await this.ensurePresetsFolderReady();
 
-        // 启动时自动读取预设并设置自动同步
-        await this.loadPresetsFromDisk();
-        this.setupAutoPresetSync();
-        // 更新打开预设目录按钮的悬浮提示
-        this.updateOpenPresetsBtnTooltip();
+        // 🔥 延迟加载预设，确保 DOM 完全准备好
+        // 等待 init() 中的 2 秒延迟完成后再加载预设
+        setTimeout(async () => {
+            console.log(`[${this.panelId}] 📂 准备加载预设文件: ${this.getPresetFileName()}`);
+            // 启动时自动读取预设并设置自动同步
+            await this.loadPresetsFromDisk();
+            this.setupAutoPresetSync();
+            // 更新打开预设目录按钮的悬浮提示
+            this.updateOpenPresetsBtnTooltip();
+            console.log(`[${this.panelId}] ✅ 预设加载完成`);
+        }, 2500); // 比 init() 中的延迟稍长一点
 
         // 然后执行异步的端口初始化
         await this.initializePort();
@@ -206,6 +222,55 @@ class AEExtension {
             this.updateEagleUrl(preferences.communicationPort);
             this.log(window.i18n?.getText('logs.usingConfigPortSkipDiscovery') || 'Using configured port, skipping discovery to speed startup', 'info');
         }
+    }
+
+    /**
+     * 获取当前面板 ID
+     * @returns {string} 'panel1', 'panel2', 或 'panel3'
+     */
+    getPanelId() {
+        try {
+            if (this.csInterface && typeof this.csInterface.getExtensionID === 'function') {
+                const extensionId = this.csInterface.getExtensionID();
+                console.log(`[Panel] Extension ID: ${extensionId}`);
+
+                // 🔥 安全检查：确保 extensionId 不是 null 或 undefined
+                if (extensionId && typeof extensionId === 'string') {
+                    // 从 Extension ID 中提取面板编号
+                    if (extensionId.includes('panel1')) {
+                        return 'panel1';
+                    } else if (extensionId.includes('panel2')) {
+                        return 'panel2';
+                    } else if (extensionId.includes('panel3')) {
+                        return 'panel3';
+                    }
+                }
+            }
+
+            // Demo 模式：从 URL 参数获取
+            if (window.location && window.location.search) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const panelParam = urlParams.get('panel');
+                if (panelParam && ['panel1', 'panel2', 'panel3'].includes(panelParam)) {
+                    return panelParam;
+                }
+            }
+
+            // 默认返回 panel1
+            return 'panel1';
+        } catch (error) {
+            console.error('[Panel] 获取面板 ID 失败:', error);
+            return 'panel1';
+        }
+    }
+
+    /**
+     * 获取当前面板的配置文件名
+     * @returns {string} 'Eagle2Ae1.Presets', 'Eagle2Ae2.Presets', 或 'Eagle2Ae3.Presets'
+     */
+    getPresetFileName() {
+        const panelNumber = this.panelId.replace('panel', '');
+        return `Eagle2Ae${panelNumber}.Presets`;
     }
 
     // 启动端口广播服务
@@ -6667,7 +6732,7 @@ class AEExtension {
         this.loadSettingsToUI();
         // 立即更新阅后即焚的tooltip
         this.updateBurnAfterReadingTooltip();
-        
+
         // 初始化预设文件管理按钮（两种模式通用）
         // 每次打开面板都重新初始化，确保事件绑定正确
         console.log('[Settings] 准备初始化预设文件按钮（300ms 后）');
@@ -6675,7 +6740,7 @@ class AEExtension {
             console.log('[Settings] 现在调用 initPresetFileButtons()');
             this.initPresetFileButtons();
         }, 300);
-        
+
         this.log('打开导入设置面板', 'info');
     }
 
@@ -8651,8 +8716,8 @@ class AEExtension {
                 userPreferences: preferences, // 用户偏好
                 exportedAt: new Date().toISOString() // 导出时间
             };
-            // 使用固定文件名（移除时间戳）
-            const fileName = 'Eagle2Ae-Presets.json';
+            // 🔥 使用面板特定的文件名
+            const fileName = this.getPresetFileName();
 
             // 目标子目录（在用户文档目录下）
             const targetSubFolder = 'Eagle2Ae-Ae\\presets';
@@ -8748,6 +8813,9 @@ class AEExtension {
      */
     async savePresetsSilently() {
         try {
+            const fileName = this.getPresetFileName();
+            console.log(`[${this.panelId}] 💾 准备保存预设到文件: ${fileName}`);
+            
             const settings = this.settingsManager.getSettings();
             const preferences = this.settingsManager.getPreferences();
 
@@ -8781,8 +8849,10 @@ class AEExtension {
 
                     // 保存到虚拟文件系统
                     if (window.demoFileSystem) {
+                        // 🔥 使用面板特定的文件名
+                        const demoFileName = `Eagle2Ae-Ae/presets/${this.getPresetFileName()}`;
                         const result = window.demoFileSystem.writeFile(
-                            'Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json',
+                            demoFileName,
                             jsonContent
                         );
 
@@ -8805,8 +8875,9 @@ class AEExtension {
             }
 
             // CEP 模式：保存到文件系统
+            // 🔥 使用面板特定的文件名
             const params = {
-                fileName: 'Eagle2Ae-Presets.json',
+                fileName: this.getPresetFileName(),
                 overwrite: true,
                 jsonData: JSON.stringify(exportPayload)
             };
@@ -8838,6 +8909,8 @@ class AEExtension {
      */
     async loadPresetsFromDisk() {
         try {
+            const fileName = this.getPresetFileName();
+            console.log(`[${this.panelId}] 🔎 尝试加载预设文件: ${fileName}`);
             this.log(`🔎 ${window.i18n?.getText('logs.tryingToLoadLocalPresets') || 'Trying to load local presets...'}`, 'info');
 
             let parsed = null;
@@ -8849,7 +8922,9 @@ class AEExtension {
 
                     // 尝试从虚拟文件系统读取
                     if (window.demoFileSystem) {
-                        const result = window.demoFileSystem.readFile('Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json');
+                        // 🔥 使用面板特定的文件名
+                        const demoFileName = `Eagle2Ae-Ae/presets/${this.getPresetFileName()}`;
+                        const result = window.demoFileSystem.readFile(demoFileName);
                         if (result.success) {
                             content = result.content;
                             this.log(`✅ 从虚拟文件系统加载预设 (${result.size} bytes)`, 'info');
@@ -8868,6 +8943,30 @@ class AEExtension {
                         parsed = JSON.parse(content);
                     } else {
                         this.log('ℹ️ Demo 模式：未找到保存的预设', 'info');
+
+                        // 🔥 如果预设文件不存在，创建默认预设文件
+                        const fileNameToCreate = this.getPresetFileName();
+                        console.log(`[${this.panelId}] 📝 预设文件不存在，正在创建: ${fileNameToCreate}`);
+                        this.log(`📝 正在创建默认预设文件: ${fileNameToCreate}`, 'info');
+                        const saveResult = await this.savePresetsSilently();
+                        
+                        if (saveResult) {
+                            this.log(`✅ 默认预设文件已创建: ${this.getPresetFileName()}`, 'success');
+                            // 应用默认配置到界面（添加 DOM 检查）
+                            try {
+                                const quickSettingsContainer = document.querySelector('.quick-settings-container');
+                                if (quickSettingsContainer) {
+                                    this.updateSettingsUI();
+                                    this.loadQuickSettings();
+                                } else {
+                                    this.log('⚠️ DOM 未就绪，跳过 UI 更新', 'warning');
+                                }
+                            } catch (uiError) {
+                                this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+                            }
+                        } else {
+                            this.log(`⚠️ 创建默认预设文件失败`, 'warning');
+                        }
                         return;
                     }
                 } catch (e) {
@@ -8876,7 +8975,8 @@ class AEExtension {
                 }
             } else {
                 // CEP 模式：从文件系统加载
-                const params = { fileName: 'Eagle2Ae-Presets.json' };
+                // 🔥 使用面板特定的文件名
+                const params = { fileName: this.getPresetFileName() };
                 const baseFolder = this.getPresetsBaseFolderPath();
                 if (baseFolder) {
                     params.baseFolderFsPath = baseFolder;
@@ -8888,6 +8988,30 @@ class AEExtension {
                 if (!result || !result.success) {
                     const msg = result && result.error ? result.error : '未找到预设文件';
                     this.log(`ℹ️ 本地预设不可用：${msg}`, 'info');
+
+                    // 🔥 如果预设文件不存在，创建默认预设文件
+                    const fileNameToCreate = this.getPresetFileName();
+                    console.log(`[${this.panelId}] 📝 预设文件不存在，正在创建: ${fileNameToCreate}`);
+                    this.log(`📝 正在创建默认预设文件: ${fileNameToCreate}`, 'info');
+                    const saveResult = await this.savePresetsSilently();
+                    
+                    if (saveResult) {
+                        this.log(`✅ 默认预设文件已创建: ${this.getPresetFileName()}`, 'success');
+                        // 应用默认配置到界面（添加 DOM 检查）
+                        try {
+                            const quickSettingsContainer = document.querySelector('.quick-settings-container');
+                            if (quickSettingsContainer) {
+                                this.updateSettingsUI();
+                                this.loadQuickSettings();
+                            } else {
+                                this.log('⚠️ DOM 未就绪，跳过 UI 更新', 'warning');
+                            }
+                        } catch (uiError) {
+                            this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+                        }
+                    } else {
+                        this.log(`⚠️ 创建默认预设文件失败`, 'warning');
+                    }
                     return;
                 }
 
@@ -8966,10 +9090,20 @@ class AEExtension {
                 }
             }
 
-            // 应用到UI
-            this.updateSettingsUI();
-            this.loadQuickSettings();
-            this.log('✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）', 'success');
+            // 应用到UI（添加 DOM 就绪检查）
+            try {
+                // 检查关键 DOM 元素是否存在
+                const quickSettingsContainer = document.querySelector('.quick-settings-container');
+                if (quickSettingsContainer) {
+                    this.updateSettingsUI();
+                    this.loadQuickSettings();
+                    this.log('✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）', 'success');
+                } else {
+                    this.log('⚠️ DOM 未就绪，跳过 UI 更新（配置已加载到内存）', 'warning');
+                }
+            } catch (uiError) {
+                this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+            }
         } catch (error) {
             this.log(`⚠️ ${(window.i18n?.getText('logs.loadLocalPresetsFailedPrefix') || 'Failed to load local presets:')} ${error.message}`, 'warning');
         }
@@ -9015,6 +9149,32 @@ class AEExtension {
     /**
      * 更新“打开预设目录”按钮的悬浮提示为当前目录
      */
+    /**
+ * 获取当前面板的预设文件完整路径
+ * 🔥 使用面板特定的文件名
+ * @returns {string} 预设文件的完整路径
+ */
+    getPresetsFilePath() {
+        const baseFolder = this.getPresetsBaseFolderPath();
+        const fileName = this.getPresetFileName();
+
+        if (baseFolder) {
+            // 用户自定义目录
+            return `${baseFolder}\\${fileName}`;
+        } else {
+            // 默认目录
+            if (window.require) {
+                const path = window.require('path');
+                const os = window.require('os');
+                const documentsPath = path.join(os.homedir(), 'Documents');
+                return path.join(documentsPath, 'Eagle2Ae-Ae', 'presets', fileName);
+            } else {
+                // 降级方案
+                return `我的文档\\Eagle2Ae-Ae\\presets\\${fileName}`;
+            }
+        }
+    }
+
     updateOpenPresetsBtnTooltip() {
         const btn = document.getElementById('export-presets-btn');
         if (!btn) return;
@@ -9113,11 +9273,11 @@ class AEExtension {
     initPresetFileButtons() {
         console.log('[Preset] 开始初始化预设文件管理按钮');
         console.log('[Preset] 当前模式:', window.__DEMO_MODE_ACTIVE__ ? 'Demo' : 'CEP');
-        
+
         // 下载预设按钮
         const downloadPresetBtn = document.getElementById('download-preset-btn');
         console.log('[Preset] 查找 download-preset-btn:', downloadPresetBtn);
-        
+
         if (downloadPresetBtn) {
             console.log('[Preset] ✓ 找到下载预设按钮');
             console.log('[Preset] 按钮样式:', {
@@ -9125,7 +9285,7 @@ class AEExtension {
                 visibility: downloadPresetBtn.style.visibility,
                 pointerEvents: downloadPresetBtn.style.pointerEvents
             });
-            
+
             // 直接绑定，不使用 cloneNode（避免可能的问题）
             downloadPresetBtn.onclick = (e) => {
                 console.log('[Preset] ★★★ 下载预设按钮被点击 ★★★', e);
@@ -9141,7 +9301,7 @@ class AEExtension {
         // 打开预设文件按钮
         const openPresetBtn = document.getElementById('open-preset-btn');
         console.log('[Preset] 查找 open-preset-btn:', openPresetBtn);
-        
+
         if (openPresetBtn) {
             console.log('[Preset] ✓ 找到打开预设按钮');
             console.log('[Preset] 按钮样式:', {
@@ -9149,7 +9309,7 @@ class AEExtension {
                 visibility: openPresetBtn.style.visibility,
                 pointerEvents: openPresetBtn.style.pointerEvents
             });
-            
+
             // 直接绑定，不使用 cloneNode
             openPresetBtn.onclick = (e) => {
                 console.log('[Preset] ★★★ 打开预设按钮被点击 ★★★', e);
@@ -9172,7 +9332,7 @@ class AEExtension {
         console.log('[Preset] handleDownloadPreset 被调用');
         console.log('[Preset] Demo 模式:', window.__DEMO_MODE_ACTIVE__);
         console.log('[Preset] demoFileSystem:', window.demoFileSystem);
-        
+
         if (window.__DEMO_MODE_ACTIVE__) {
             // Demo 模式：从虚拟文件系统下载
             if (!window.demoFileSystem) {
@@ -9182,9 +9342,11 @@ class AEExtension {
             }
 
             console.log('[Preset] 开始下载预设文件...');
+            // 🔥 使用面板特定的文件名
+            const presetFileName = this.getPresetFileName();
             const success = window.demoFileSystem.downloadFile(
-                'Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json',
-                'Eagle2Ae-Presets.json'
+                `Eagle2Ae-Ae/presets/${presetFileName}`,
+                presetFileName
             );
 
             if (success) {
@@ -9202,7 +9364,7 @@ class AEExtension {
                     '另存为预设文件',
                     presetPath,
                     ['json'],
-                    'Eagle2Ae-Presets.json'
+                    this.getPresetFileName()  // 🔥 使用面板特定的文件名
                 );
 
                 if (destPath.data) {
@@ -9232,7 +9394,7 @@ class AEExtension {
         console.log('[Preset] handleOpenPreset 被调用');
         console.log('[Preset] Demo 模式:', window.__DEMO_MODE_ACTIVE__);
         console.log('[Preset] demoFileSystem:', window.demoFileSystem);
-        
+
         if (window.__DEMO_MODE_ACTIVE__) {
             // Demo 模式：在新标签页打开
             if (!window.demoFileSystem) {
@@ -9242,8 +9404,10 @@ class AEExtension {
             }
 
             console.log('[Preset] 读取预设文件...');
-            const result = window.demoFileSystem.readFile('Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json');
-            
+            // 🔥 使用面板特定的文件名
+            const demoFileName = `Eagle2Ae-Ae/presets/${this.getPresetFileName()}`;
+            const result = window.demoFileSystem.readFile(demoFileName);
+
             if (!result.success) {
                 console.error('[Preset] 读取失败:', result.error);
                 this.log('⚠️ 无法读取预设文件', 'warning');
@@ -9254,17 +9418,17 @@ class AEExtension {
                 // 解析并格式化 JSON
                 const presets = JSON.parse(result.content);
                 const formattedJson = JSON.stringify(presets, null, 2);
-                
+
                 // 创建 Blob 对象
                 const blob = new Blob([formattedJson], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
+
                 // 在新标签页打开
                 window.open(url, '_blank');
-                
+
                 // 延迟释放 URL
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                
+
                 console.log('[Preset] 预设文件已在新标签页打开');
                 this.log('✅ 预设文件已在新标签页打开', 'success');
             } catch (error) {
@@ -9275,7 +9439,7 @@ class AEExtension {
             // CEP 模式：用系统默认程序打开本地文件
             try {
                 const presetPath = this.getPresetsFilePath();
-                
+
                 // 检查文件是否存在
                 const fileExists = window.cep.fs.stat(presetPath);
                 if (fileExists.err !== 0) {

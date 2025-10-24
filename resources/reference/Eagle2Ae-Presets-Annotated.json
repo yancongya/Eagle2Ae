@@ -1,0 +1,309 @@
+{
+  "// 配置文件说明": "Eagle2Ae 多面板配置文件 - 完整注释版本",
+  "// 版本": "2.0.0",
+  "// 更新日期": "2025-10-24",
+  "version": "2.0.0",
+  "// ========== 元数据 ==========": "",
+  "metadata": {
+    "// 说明": "配置文件的元信息",
+    "createdAt": "2025-10-24T07:30:20.967Z",
+    "// createdAt": "配置文件创建时间 (ISO 8601格式)",
+    "lastModified": "2025-10-24T11:56:21.835Z",
+    "// lastModified": "最后修改时间",
+    "modifiedBy": "com.yanrouya.eagle2ae.panel3",
+    "// modifiedBy": "最后修改配置的面板ID",
+    "migratedFrom": "single-panel",
+    "// migratedFrom": "从哪个版本迁移而来 (single-panel表示从单面板版本迁移)",
+    "migrationDate": "2025-10-24T07:30:20.967Z",
+    "// migrationDate": "迁移日期"
+  },
+  "// ========== 全局设置 ==========": "",
+  "// 全局设置说明": "这些设置对所有面板生效，所有面板共享",
+  "globalSettings": {
+    "communicationPort": 8080,
+    "// communicationPort": "Eagle服务器通信端口 (1024-65535)",
+    "autoSaveSettings": true,
+    "// autoSaveSettings": "是否自动保存设置 (true=自动保存, false=手动保存)",
+    "eagleServerUrl": "http://localhost:8080",
+    "// eagleServerUrl": "Eagle服务器地址 (默认本地8080端口)"
+  },
+  "// ========== 面板配置 ==========": "",
+  "// 面板配置说明": "每个面板有独立的配置，互不影响",
+  "panels": {
+    "// ===== 面板1: 默认配置 =====": "",
+    "com.yanrouya.eagle2ae.panel1": {
+      "name": "默认配置",
+      "// name": "面板显示名称 (用户可自定义)",
+      "description": "通用的默认配置，适合日常使用",
+      "// description": "面板描述",
+      "lastUsed": "2025-10-24T11:55:27.163Z",
+      "// lastUsed": "最后使用时间",
+      "// ----- 导入设置 -----": "",
+      "importSettings": {
+        "mode": "custom_folder",
+        "// mode": "导入模式 - direct:直接导入到项目 | project_adjacent:项目旁文件夹 | custom_folder:自定义文件夹",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "// projectAdjacentFolder": "项目旁文件夹名称 (当mode=project_adjacent时使用)",
+        "customFolderPath": "[已选择] sound",
+        "// customFolderPath": "自定义文件夹路径 (当mode=custom_folder时使用)",
+        "addToComposition": false,
+        "// addToComposition": "是否添加到当前合成 (true=添加到合成, false=仅导入到项目)",
+        "noImportSubMode": "normal",
+        "// noImportSubMode": "不导入到合成时的子模式 - normal:普通导入 | pre_comp:创建预合成",
+        "// 时间轴选项": "",
+        "timelineOptions": {
+          "enabled": false,
+          "// enabled": "是否启用时间轴放置 (仅当addToComposition=true时生效)",
+          "placement": "timeline_start",
+          "// placement": "放置位置 - current_time:当前时间 | timeline_start:时间轴起点"
+        },
+        "// 文件管理": "",
+        "fileManagement": {
+          "keepOriginalName": true,
+          "// keepOriginalName": "保持原始文件名",
+          "addTimestamp": false,
+          "// addTimestamp": "添加时间戳到文件名",
+          "createTagFolders": false,
+          "// createTagFolders": "根据Eagle标签创建子文件夹",
+          "deleteFromEagle": false,
+          "// deleteFromEagle": "导入后从Eagle删除原文件"
+        },
+        "// 音效设置": "",
+        "soundSettings": {
+          "enabled": true,
+          "// enabled": "是否启用音效",
+          "volume": 60,
+          "// volume": "音量 (0-100)"
+        },
+        "// 导出设置": "",
+        "exportSettings": {
+          "mode": "desktop",
+          "// mode": "导出模式 - desktop:桌面 | project_adjacent:项目旁文件夹 | custom_folder:自定义文件夹",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "// projectAdjacentFolder": "项目旁文件夹名称",
+          "customExportPath": "[已选择] sound",
+          "// customExportPath": "自定义导出路径",
+          "autoCopy": true,
+          "// autoCopy": "自动复制到剪贴板",
+          "burnAfterReading": true,
+          "// burnAfterReading": "阅后即焚 - 导出后自动删除临时文件",
+          "addTimestamp": true,
+          "// addTimestamp": "添加时间戳",
+          "createSubfolders": false,
+          "// createSubfolders": "创建子文件夹"
+        }
+      },
+      "// ----- 用户偏好 -----": "",
+      "userPreferences": {
+        "favoriteFolder": "",
+        "// favoriteFolder": "收藏的文件夹路径 - 快速访问常用文件夹",
+        "favoriteExportFolder": "",
+        "// favoriteExportFolder": "收藏的导出文件夹 - 快速访问常用导出位置",
+        "communicationPort": 8080,
+        "// communicationPort": "通信端口 (覆盖全局设置) - 如果需要使用不同端口"
+      },
+      "// ----- UI显示设置 -----": "",
+      "uiSettings": {
+        "showThemeButton": true,
+        "// showThemeButton": "显示主题切换按钮 - 控制标题栏是否显示主题切换按钮",
+        "showLanguageButton": true,
+        "// showLanguageButton": "显示语言切换按钮 - 控制标题栏是否显示语言切换按钮",
+        "showLogButton": true,
+        "// showLogButton": "显示日志按钮 - 控制标题栏是否显示日志按钮",
+        "showProjectInfo": false,
+        "// showProjectInfo": "显示项目信息面板 - 显示AE项目和Eagle库信息",
+        "showLogPanel": false,
+        "// showLogPanel": "显示日志面板 - 显示日志输出面板",
+        "showHeader": true,
+        "// showHeader": "显示标题栏 - 控制是否显示顶部标题栏",
+        "fullscreenMode": false,
+        "// fullscreenMode": "独显模式 - 只显示核心功能按钮，隐藏其他UI (适合小屏幕、快速操作)",
+        "theme": "dark",
+        "// theme": "界面主题 - dark:深色 | light:浅色",
+        "language": "zh-CN",
+        "// language": "界面语言 - zh-CN:简体中文 | en-US:英语"
+      },
+      "// ----- 项目旁文件夹详细设置 -----": "",
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets",
+        "// folderName": "文件夹名称"
+      },
+      "// ----- 自定义文件夹详细设置 -----": "",
+      "customFolderSettings": {
+        "folderPath": "[已选择] sound",
+        "// folderPath": "文件夹路径",
+        "recentFolders": [
+          "[已选择] sound"
+        ],
+        "// recentFolders": "最近使用的文件夹列表 (最多10个)",
+        "directoryHandle": {},
+        "// directoryHandle": "文件系统访问句柄 (File System Access API)"
+      }
+    },
+    "// ===== 面板2: 快速预览 =====": "",
+    "com.yanrouya.eagle2ae.panel2": {
+      "name": "快速预览",
+      "description": "快速预览模式，独显界面，适合快速操作",
+      "lastUsed": "2025-10-24T11:56:21.227Z",
+      "importSettings": {
+        "mode": "project_adjacent",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "customFolderPath": "",
+        "addToComposition": false,
+        "noImportSubMode": "normal",
+        "timelineOptions": {
+          "enabled": false,
+          "placement": "current_time"
+        },
+        "fileManagement": {
+          "keepOriginalName": true,
+          "addTimestamp": false,
+          "createTagFolders": false,
+          "deleteFromEagle": false
+        },
+        "soundSettings": {
+          "enabled": true,
+          "volume": 60
+        },
+        "exportSettings": {
+          "mode": "desktop",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "customExportPath": "",
+          "autoCopy": true,
+          "burnAfterReading": true,
+          "addTimestamp": false,
+          "createSubfolders": true
+        }
+      },
+      "userPreferences": {
+        "favoriteFolder": "",
+        "favoriteExportFolder": "",
+        "communicationPort": 8080
+      },
+      "uiSettings": {
+        "showThemeButton": true,
+        "showLanguageButton": false,
+        "showLogButton": false,
+        "showProjectInfo": false,
+        "showLogPanel": false,
+        "showHeader": true,
+        "fullscreenMode": true,
+        "// fullscreenMode": "独显模式开启 - 只显示核心按钮",
+        "theme": "dark",
+        "language": "zh-CN"
+      },
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets"
+      },
+      "customFolderSettings": {
+        "folderPath": "[已选择] sound",
+        "recentFolders": [
+          "[已选择] sound"
+        ],
+        "directoryHandle": {}
+      }
+    },
+    "// ===== 面板3: 音频项目 =====": "",
+    "com.yanrouya.eagle2ae.panel3": {
+      "name": "音频项目",
+      "description": "专为音频项目优化的配置",
+      "lastUsed": "2025-10-24T11:56:21.835Z",
+      "importSettings": {
+        "mode": "project_adjacent",
+        "projectAdjacentFolder": "Eagle_Assets",
+        "customFolderPath": "",
+        "addToComposition": true,
+        "// addToComposition": "音频项目通常需要直接添加到合成",
+        "noImportSubMode": "normal",
+        "timelineOptions": {
+          "enabled": false,
+          "placement": "current_time"
+        },
+        "fileManagement": {
+          "keepOriginalName": true,
+          "addTimestamp": false,
+          "createTagFolders": false,
+          "deleteFromEagle": false
+        },
+        "soundSettings": {
+          "enabled": true,
+          "volume": 60
+        },
+        "exportSettings": {
+          "mode": "desktop",
+          "projectAdjacentFolder": "Eagle_Assets",
+          "customExportPath": "",
+          "autoCopy": true,
+          "addTimestamp": false,
+          "createSubfolders": false,
+          "burnAfterReading": true
+        }
+      },
+      "userPreferences": {
+        "favoriteFolder": "",
+        "favoriteExportFolder": "",
+        "communicationPort": 8081,
+        "// communicationPort": "使用不同端口避免冲突"
+      },
+      "uiSettings": {
+        "showThemeButton": false,
+        "showLanguageButton": true,
+        "showLogButton": true,
+        "showProjectInfo": false,
+        "showLogPanel": false,
+        "showHeader": true,
+        "fullscreenMode": false,
+        "theme": "dark",
+        "language": "en-US"
+      },
+      "projectAdjacentSettings": {
+        "folderName": "Eagle_Assets"
+      },
+      "customFolderSettings": {
+        "folderPath": "",
+        "recentFolders": [],
+        "directoryHandle": {}
+      }
+    }
+  },
+  "// ========== 配置说明 ==========": "",
+  "// 使用说明": {
+    "1. 配置文件位置": "resources/reference/Eagle2Ae-Presets.json",
+    "2. 面板ID格式": "com.yanrouya.eagle2ae.panel{数字}",
+    "3. 添加新面板": "复制现有面板配置，修改面板ID和name",
+    "4. 全局设置": "globalSettings中的设置对所有面板生效",
+    "5. 面板独立设置": "每个面板的importSettings、uiSettings等互不影响",
+    "6. 配置优先级": "面板设置 > 全局设置",
+    "7. 自动保存": "当autoSaveSettings=true时，修改会自动保存",
+    "8. 配置迁移": "从旧版本升级时，系统会自动迁移配置"
+  },
+  "// 字段说明索引": {
+    "导入模式": {
+      "direct": "直接导入到AE项目",
+      "project_adjacent": "导入到项目文件旁的文件夹",
+      "custom_folder": "导入到用户指定的自定义文件夹"
+    },
+    "导出模式": {
+      "desktop": "导出到桌面",
+      "project_adjacent": "导出到项目文件旁的文件夹",
+      "custom_folder": "导出到用户指定的自定义文件夹"
+    },
+    "时间轴放置": {
+      "current_time": "放置在当前时间指示器位置",
+      "timeline_start": "放置在时间轴起点(0帧)"
+    },
+    "不导入子模式": {
+      "normal": "普通导入，不创建额外结构",
+      "pre_comp": "创建预合成包裹导入的素材"
+    },
+    "主题": {
+      "dark": "深色主题",
+      "light": "浅色主题",
+      "ae_native": "跟随After Effects的界面主题"
+    },
+    "语言": {
+      "zh-CN": "简体中文",
+      "en-US": "英语(美国)"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+[33mcommit d37134c43feee1ac465dff6fd925a21a0fd84d66[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: tycon <Cubetan57@gmail.com>
+Date:   Fri Oct 24 12:44:26 2025 +0800
+
+    Add analysis docs and demo mode virtual FS
+    
+    Added multiple analysis and debug markdown guides for demo mode, CORS issues, button testing, and final test checklist. Implemented demo mode virtual file system in JavaScript for preset management, including new UI buttons for downloading and viewing files. Updated main logic to support demo mode file operations and fixed related issues in preset saving and loading. Minor updates to multi-panel config tasks and Eagle2Ae-Presets.json for enhanced demo mode compatibility.
+
+ .kiro/analysis/button-test-script.js               |   50 [32m+[m
+ .kiro/analysis/cors-issue-explanation.md           |  187 [32m+++[m
+ .kiro/analysis/demo-buttons-debug-guide.md         |  233 [32m+++[m
+ .kiro/analysis/demo-mode-fixes-summary.md          |  236 [32m+++[m
+ .kiro/analysis/demo-mode-test-guide.md             |  302 [32m++++[m
+ .kiro/analysis/demo-virtual-fs-guide.md            |  360 [32m+++++[m
+ .kiro/analysis/final-test-checklist.md             |  157 [32m++[m
+ .kiro/analysis/issues-fixed-summary.md             |  235 [32m+++[m
+ .kiro/analysis/preset-config-explanation.md        |  488 [32m++++++[m
+ .kiro/analysis/preset-coverage-analysis.md         |  272 [32m++++[m
+ .kiro/analysis/preset-fix-summary.md               |  217 [32m+++[m
+ .kiro/analysis/preset-fix-testing-guide.md         |  254 [32m++++[m
+ .kiro/analysis/quick-test-checklist.md             |  324 [32m++++[m
+ .kiro/specs/multi-panel-config-system/tasks.md     |   30 [32m+[m[31m-[m
+ .kiro/todolist.md                                  |  262 [32m++++[m
+ apps/eagle2ae_web/public/extensions/ae/index.html  |   36 [32m+[m[31m-[m
+ .../extensions/ae/js/demo/demo-file-system.js      |  322 [32m++++[m
+ apps/eagle2ae_web/public/extensions/ae/js/main.js  | 1567 [32m+++++++++++++[m[31m-------[m
+ .../public/extensions/ae/js/types/ConfigTypes.js   |  104 [32m++[m
+ resources/reference/Eagle2Ae-Presets.json          |   65 [32m+[m[31m-[m
+ 20 files changed, 5123 insertions(+), 578 deletions(-)

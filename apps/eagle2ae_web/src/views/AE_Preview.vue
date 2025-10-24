@@ -2,28 +2,54 @@
   <main class="bg-white dark:bg-gray-900">
     <div ref="pageRef" :style="[{ 'view-transition-name': 'preview' }, wrapperStyle]" class="flex flex-col">
       <section class="flex-1 min-h-0 w-full">
-        <!-- Mobile: single preview -->
+        <!-- Mobile: single preview (Panel 1) -->
         <div class="md:hidden h-full">
-          <iframe src="/extensions/ae/index.html" class="w-full h-full border-0"></iframe>
+          <iframe 
+            src="/extensions/ae/index.html?panel=panel1" 
+            class="w-full h-full border-0"
+            data-panel="panel1"
+            title="Eagle2Ae - 默认配置">
+          </iframe>
         </div>
         <!-- Desktop: three-pane preview -->
         <div class="hidden md:block h-full">
           <splitpanes class="default-theme" style="height: 100%">
-            <!-- Left Pane (Main View) -->
+            <!-- Left Pane (Panel 1 - 默认配置) -->
             <pane :size="70">
-              <iframe src="/extensions/ae/index.html" class="w-full h-full border-0"></iframe>
+              <div class="relative w-full h-full">
+                <iframe 
+                  src="/extensions/ae/index.html?panel=panel1" 
+                  class="w-full h-full border-0"
+                  data-panel="panel1"
+                  title="Eagle2Ae - 默认配置">
+                </iframe>
+              </div>
             </pane>
 
             <!-- Right Pane (Container for vertical split) -->
             <pane :size="30">
               <splitpanes horizontal>
-                <!-- Top-Right Pane -->
+                <!-- Top-Right Pane (Panel 2 - 快速预览) -->
                 <pane :size="50">
-                  <iframe src="/extensions/ae/index.html" class="w-full h-full border-0"></iframe>
+                  <div class="relative w-full h-full">
+                    <iframe 
+                      src="/extensions/ae/index.html?panel=panel2" 
+                      class="w-full h-full border-0"
+                      data-panel="panel2"
+                      title="Eagle2Ae - 快速预览">
+                    </iframe>
+                  </div>
                 </pane>
-                <!-- Bottom-Right Pane -->
+                <!-- Bottom-Right Pane (Panel 3 - 音频项目) -->
                 <pane :size="50">
-                  <iframe src="/extensions/ae/index.html" class="w-full h-full border-0"></iframe>
+                  <div class="relative w-full h-full">
+                    <iframe 
+                      src="/extensions/ae/index.html?panel=panel3" 
+                      class="w-full h-full border-0"
+                      data-panel="panel3"
+                      title="Eagle2Ae - 音频项目">
+                    </iframe>
+                  </div>
                 </pane>
               </splitpanes>
             </pane>
@@ -45,10 +71,17 @@ import gsap from 'gsap';
 import { useI18n } from 'vue-i18n';
 
 const route = useRoute();
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const pageRef = ref(null);
 const wrapperStyle = computed(() => ({ height: '100vh' }));
 const isDark = useDark({ storageKey: 'theme' });
+
+// 面板标签文本（支持国际化）
+const panelLabels = computed(() => ({
+  panel1: locale.value === 'zh-CN' ? '面板1: 默认配置' : 'Panel 1: Default',
+  panel2: locale.value === 'zh-CN' ? '面板2: 快速预览' : 'Panel 2: Quick Preview',
+  panel3: locale.value === 'zh-CN' ? '面板3: 音频项目' : 'Panel 3: Audio Project'
+}));
 
 // Keep track of iframe load cleanup handlers
 const cleanupFns = [];
@@ -81,6 +114,9 @@ const bindIframeLoadHandlers = () => {
       
       // Send current language to iframe
       syncLanguageToIframe(f);
+      
+      // Send panel info to iframe
+      syncPanelInfoToIframe(f);
     };
     f.addEventListener('load', onLoad);
     cleanupFns.push(() => f.removeEventListener('load', onLoad));
@@ -95,6 +131,20 @@ const syncLanguageToIframe = (iframe) => {
       type: 'LANGUAGE_UPDATE',
       language: locale.value
     }, '*');
+  }
+};
+
+// Function to send panel info to iframe
+const syncPanelInfoToIframe = (iframe) => {
+  if (iframe && iframe.contentWindow) {
+    const panelId = iframe.getAttribute('data-panel');
+    if (panelId) {
+      iframe.contentWindow.postMessage({
+        type: 'PANEL_INFO',
+        panelId: `com.yanrouya.eagle2ae.${panelId}`,
+        panelName: panelLabels.value[panelId]
+      }, '*');
+    }
   }
 };
 

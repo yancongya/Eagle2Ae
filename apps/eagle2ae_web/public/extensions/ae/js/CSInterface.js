@@ -470,6 +470,27 @@ CSInterface.prototype.getApplicationID = function()
     return appId;
 };
 
+// 添加缺失的 getExtensionID 方法，确保能够获取当前扩展的唯一 ID
+CSInterface.prototype.getExtensionID = function()
+{
+    try {
+        // 优先使用 CEP 原生方法
+        if (window.__adobe_cep__ && typeof window.__adobe_cep__.getExtensionId === 'function') {
+            return window.__adobe_cep__.getExtensionId();
+        }
+        // 备用：尝试从 HostEnvironment 中提取（部分版本可能包含）
+        if (window.__adobe_cep__ && typeof window.__adobe_cep__.getHostEnvironment === 'function') {
+            var env = JSON.parse(window.__adobe_cep__.getHostEnvironment() || '{}');
+            if (env && env.extensionId) {
+                return env.extensionId;
+            }
+        }
+    } catch (e) {
+        // 静默失败，回退
+    }
+    return null;
+};
+
 /**
  * Retrieves version information for the current Operating System,
  * See http://www.useragentstring.com/pages/Chrome/ for Chrome \c navigator.userAgent values.
