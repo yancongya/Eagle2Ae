@@ -2,7 +2,7 @@
 
 ## 阶段 1：基础架构搭建
 
-- [ ] 1. 创建配置结构定义和类型声明
+- [x] 1. 创建配置结构定义和类型声明
   - 创建 `js/types/ConfigTypes.js` 文件
   - 定义 ConfigStructure、GlobalConfig、PanelConfig 等接口
   - 定义 ConfigScope 枚举和作用域映射
@@ -10,6 +10,8 @@
   - _需求：2.1, 2.8_
 
 - [ ] 2. 实现 StorageAdapter 接口和基础类
+
+
   - 创建 `js/adapters/StorageAdapter.js` 接口定义
   - 实现 `js/adapters/CEPStorageAdapter.js`
   - 实现 `js/adapters/DemoStorageAdapter.js`
@@ -18,6 +20,8 @@
   - _需求：2.10, 2.3_
 
 - [ ] 3. 实现 ConfigValidator 配置验证器
+
+
   - 创建 `js/validators/ConfigValidator.js`
   - 定义验证规则（类型、范围、必填项）
   - 实现字段级验证方法
@@ -26,6 +30,8 @@
   - _需求：2.1_
 
 - [ ] 4. 实现 ConfigMigrator 配置迁移器
+
+
   - 创建 `js/migrators/ConfigMigrator.js`
   - 实现版本检测逻辑
   - 实现 V1 到 V2 迁移函数
@@ -34,6 +40,8 @@
   - _需求：2.6_
 
 - [ ] 5. 实现 EventBus 事件总线
+
+
   - 创建 `js/events/EventBus.js`
   - 实现 CEP 事件的发布和订阅
   - 实现 Storage 事件的监听
@@ -44,6 +52,8 @@
 ## 阶段 2：SettingsManager 改造
 
 - [ ] 6. 重构 SettingsManager 核心类
+
+
   - 修改 `js/services/SettingsManager.js`
   - 添加 StorageAdapter 依赖注入
   - 添加 ConfigValidator 和 ConfigMigrator 依赖
@@ -52,6 +62,8 @@
   - _需求：2.9_
 
 - [ ] 7. 实现面板 ID 识别功能
+
+
   - 在 SettingsManager 中添加 `getCurrentPanelId()` 方法
   - 实现多优先级的面板 ID 识别逻辑
   - 支持 CEP Extension ID 解析
@@ -60,6 +72,8 @@
   - _需求：2.4_
 
 - [ ] 8. 实现全局配置管理方法
+
+
   - 添加 `getGlobalConfig()` 方法
   - 添加 `updateGlobalConfig(updates)` 方法
   - 实现全局配置变更的事件广播
@@ -68,6 +82,8 @@
   - _需求：2.1, 2.5_
 
 - [ ] 9. 实现面板配置管理方法
+
+
   - 添加 `getPanelConfig(panelId)` 方法
   - 添加 `updatePanelConfig(panelId, updates)` 方法
   - 添加 `getCurrentPanelConfig()` 方法
@@ -76,6 +92,8 @@
   - _需求：2.1_
 
 - [ ] 10. 实现共享配置管理方法
+
+
   - 添加 `getSharedConfig()` 方法
   - 添加 `updateSharedConfig(updates)` 方法
   - 实现最近文件夹的管理
@@ -83,6 +101,8 @@
   - _需求：2.1_
 
 - [ ] 11. 实现字段级操作方法
+
+
   - 添加 `getField(path, panelId)` 方法
   - 添加 `updateField(path, value, panelId)` 方法
   - 支持嵌套路径访问（如 'uiSettings.theme'）
@@ -93,6 +113,8 @@
 ## 阶段 3：UI 面板组配置集成
 
 - [ ] 12. 将 uiSettings 集成到配置系统
+
+
   - 修改 `index.html` 中的 UI 设置初始化逻辑
   - 从 SettingsManager 加载 uiSettings
   - 保存 uiSettings 到面板配置
@@ -101,6 +123,8 @@
   - _需求：2.2_
 
 - [ ] 13. 实现面板切换时的配置加载
+
+
   - 在面板初始化时加载对应的配置
   - 根据面板 ID 应用不同的 uiSettings
   - 实现配置的平滑切换
@@ -108,6 +132,8 @@
   - _需求：2.2_
 
 - [ ] 14. 实现 UI 设置的实时同步
+
+
   - 监听 UI 设置变更
   - 自动保存到 SettingsManager
   - 触发配置变更事件
@@ -117,6 +143,8 @@
 ## 阶段 4：配置导入导出功能
 
 - [ ] 15. 实现配置导出功能
+
+
   - 在 SettingsManager 中添加 `exportConfig(options)` 方法
   - 支持导出全部配置或单个面板配置
   - CEP 模式：使用文件系统保存

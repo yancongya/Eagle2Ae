@@ -123,7 +123,7 @@ class AEExtension {
         // 消息去重
         this.processedMessages = new Set();
         this.lastPollTime = 0;
-        
+
         // 防重复导入机制
         this.lastImportSignature = null;
         this.lastImportTime = 0;
@@ -149,7 +149,7 @@ class AEExtension {
         };
         this.settingsPanel = null;
         this.quickSettingsInitialized = false;
-        
+
         // 资源库大小更新定时器
         this.librarySizeTimer = null;
 
@@ -462,7 +462,7 @@ class AEExtension {
                 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg',
                 'audio/mpeg', 'audio/x-wav', 'audio/x-aiff'
             ];
-            
+
             if (importableTypes.some(type => file.type.startsWith(type.split('/')[0]))) {
                 return true;
             }
@@ -483,7 +483,7 @@ class AEExtension {
                 // 项目文件
                 'aep', 'aet'
             ];
-            
+
             return supportedExts.includes(ext);
         }
 
@@ -693,7 +693,7 @@ class AEExtension {
         try {
             const savedTheme = localStorage.getItem('aeTheme') || 'dark';
             this.applyTheme(savedTheme === 'light' ? 'light' : 'dark');
-        } catch (_) {}
+        } catch (_) { }
 
 
         // 安全绑定事件监听器
@@ -897,10 +897,10 @@ class AEExtension {
 
         // 发送AE状态
         this.sendAEStatus();
-        
+
         // 立即获取Eagle基本信息（不包括资源库大小）
         this.updateEagleBasicInfo();
-        
+
         // 延迟获取资源库大小
         this.scheduleLibrarySizeUpdate();
     }
@@ -943,7 +943,7 @@ class AEExtension {
 
             // 立即获取Eagle基本信息（不包括资源库大小）
             this.updateEagleBasicInfo();
-            
+
             // 延迟获取资源库大小
             this.scheduleLibrarySizeUpdate();
 
@@ -1318,7 +1318,7 @@ class AEExtension {
         const isClipboardImport = message.isClipboardImport || message.source === 'clipboard_import';
         const isSequenceImport = message.type === 'import_sequence';
         const isFolderImport = message.type === 'import_folder';
-        
+
         // 处理序列帧导入
         if (isSequenceImport && message.sequence) {
             // 确定使用的设置：合并Eagle设置和本地最新设置
@@ -1338,26 +1338,26 @@ class AEExtension {
                 effectiveSettings = localSettings;
                 this.log(`使用本地设置: ${effectiveSettings.mode} 模式，时间轴: ${effectiveSettings.timelineOptions.placement}`, 'info');
             }
-            
+
             return await this.handleSequenceImportToAE(message.sequence, effectiveSettings);
         }
-        
+
         // 处理文件夹导入
         if (isFolderImport && message.folder) {
             return await this.handleFolderImportToAE(message.folder);
         }
-        
+
         // 防重复导入机制（仅对Eagle导出请求生效，不影响拖拽和剪贴板导入）
         if (!isDragImport && !isClipboardImport && files.length > 0) {
             const fileSignature = this.generateFileSignature(files);
-            
+
             // 检查是否为重复请求（10秒内相同文件列表）
-            if (this.lastImportSignature === fileSignature && 
+            if (this.lastImportSignature === fileSignature &&
                 (timestamp - this.lastImportTime) < 10000) {
                 this.log('检测到重复导入请求，已忽略', 'warning');
                 return { success: false, error: '重复请求已忽略', importedCount: 0 };
             }
-            
+
             // 更新防重复记录
             this.lastImportSignature = fileSignature;
             this.lastImportTime = timestamp;
@@ -1420,7 +1420,7 @@ class AEExtension {
 
                 // 获取当前设置以检查是否需要添加到合成
                 const currentSettings = this.settingsManager.getSettings();
-                
+
                 // 检查是否需要添加到合成
                 if (currentSettings.addToComposition) {
                     this.logWarning('💡 建议操作：');
@@ -1431,18 +1431,18 @@ class AEExtension {
                     // 根据导入类型显示不同的提示文本
                     const dialogTitle = isDragImport ? '请选择合成' : '导入确认';
                     let dialogMessage;
-                    
+
                     if (isDragImport) {
                         dialogMessage = '请选择合成后操作\n\n文件将被导入到选中的合成中。';
                     } else {
                         dialogMessage = '未检测到活动合成，是否仍要继续导入？\n\n注意：导入可能会失败或导入到错误的位置。';
                     }
-                    
+
                     // 使用ExtendScript的Panel样式确认对话框
                     // 正确转义字符串中的特殊字符
                     const escapedTitle = dialogTitle.replace(/"/g, '\\"').replace(/\n/g, '\\n');
                     const escapedMessage = dialogMessage.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-                    
+
                     if (isDragImport) {
                         // 拖拽导入时显示警告对话框，只有确定按钮
                         const warningScript = `showPanelWarningDialog("${escapedTitle}", "${escapedMessage}");`;
@@ -1453,7 +1453,7 @@ class AEExtension {
                         // 非拖拽导入时显示确认对话框
                         const confirmScript = `showPanelConfirmDialog("${escapedTitle}", "${escapedMessage}", ["继续导入", "取消"]);`;
                         const dialogResult = this.csInterface.evalScript(confirmScript);
-                        
+
                         // 解析对话框结果（0=继续导入，1=取消）
                         const shouldContinue = parseInt(dialogResult) === 0;
                         if (!shouldContinue) {
@@ -1596,7 +1596,7 @@ class AEExtension {
     executeExtendScript(functionName, params) {
         return new Promise((resolve, reject) => {
             const script = `${functionName}(${JSON.stringify(params)})`;
-            
+
             console.log(`🚀 [ExtendScript] 准备执行: ${functionName}`);
             console.log(`📝 [ExtendScript] 脚本内容: ${script}`);
             console.log(`📥 [ExtendScript] 参数: ${JSON.stringify(params)}`);
@@ -1606,21 +1606,21 @@ class AEExtension {
                 console.log(`📊 [ExtendScript] 返回结果类型: ${typeof result}`);
                 console.log(`📏 [ExtendScript] 返回结果长度: ${result ? result.length : 'null'}`);
                 const __isEn = ((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en');
-                
+
                 // 检查返回结果是否为空或undefined
                 if (result === undefined || result === null) {
                     console.error(`❌ [ExtendScript] 返回结果为空`);
                     reject(new Error(__isEn ? 'ExtendScript error: Empty result' : 'ExtendScript执行错误: 返回结果为空'));
                     return;
                 }
-                
+
                 // 检查返回结果是否为字符串
                 if (typeof result !== 'string') {
                     console.error(`❌ [ExtendScript] 返回结果不是字符串: ${typeof result}`);
                     reject(new Error(__isEn ? `ExtendScript error: Invalid return type (${typeof result})` : `ExtendScript执行错误: 返回结果类型错误 (${typeof result})`));
                     return;
                 }
-                
+
                 // 检查是否为空字符串
                 if (result.trim() === '') {
                     console.error(`❌ [ExtendScript] 返回空字符串`);
@@ -1637,7 +1637,7 @@ class AEExtension {
                     console.error(`❌ [ExtendScript] JSON解析失败:`, error);
                     console.error(`❌ [ExtendScript] 原始结果: "${result}"`);
                     console.error(`❌ [ExtendScript] 解析错误详情: ${error.message}`);
-                    
+
                     // 尝试分析返回结果的内容
                     if (result.includes('Error:') || result.includes('error:')) {
                         reject(new Error(__isEn ? `ExtendScript error: ${result}` : `ExtendScript执行错误: ${result}`));
@@ -1656,7 +1656,7 @@ class AEExtension {
         this.log('测试ExtendScript连接...', 'info');
 
         // 检查是否为demo模式，如果是则直接返回成功
-        if (window.__DEMO_MODE_ACTIVE__ || 
+        if (window.__DEMO_MODE_ACTIVE__ ||
             (window.demoMode && window.demoMode.state && window.demoMode.state.currentMode !== 'normal')) {
             this.log(`🎭 ${window.i18n.getText('logs.demoExtendScriptTestSkipped') || 'Demo Mode: ExtendScript connection test skipped'}`, 'info');
             this.log(window.i18n.getText('logs.extendScriptConnectedReady') || 'ExtendScript connected: AE script environment ready', 'success');
@@ -3543,13 +3543,13 @@ class AEExtension {
         // 检查是否为demo模式，如果是则直接显示虚拟数据
         if (this.isDemoMode()) {
             this.log('🎭 演示模式：使用虚拟图层数据', 'info');
-            
+
             try {
                 // 获取虚拟图层检测结果
                 const demoAPIs = window.demoMode?.demoAPIs;
                 if (demoAPIs && typeof demoAPIs.detectSelectedLayers === 'function') {
                     const result = await demoAPIs.detectSelectedLayers();
-                    
+
                     if (result.success) {
                         // 直接显示虚拟检测总结
                         this.displayDetectionSummary(result);
@@ -3597,11 +3597,11 @@ class AEExtension {
                 // 这种情况下，ExtendScript端的checkSystemStateAndHandle已经显示了弹窗
                 // 我们只需要记录日志，不再重复显示弹窗
                 this.log(`检测失败: ${result.error || '系统状态检测失败'}`, 'error');
-                
+
                 // 如果错误信息表明是状态检测失败，说明ExtendScript端已经处理了弹窗
                 if (result.error && (
-                    result.error.includes('状态检测失败') || 
-                    result.error.includes('NO_COMPOSITION') || 
+                    result.error.includes('状态检测失败') ||
+                    result.error.includes('NO_COMPOSITION') ||
                     result.error.includes('NO_LAYERS_SELECTED')
                 )) {
                     this.log('ExtendScript端已显示相应的错误提示弹窗', 'info');
@@ -3612,7 +3612,7 @@ class AEExtension {
             } else {
                 // result为空或格式不正确，可能是ExtendScript连接问题
                 this.log('检测失败: ExtendScript返回结果异常', 'error');
-                
+
                 // 显示CEP端的错误提示
                 const showDialogScript = `
                     showPanelWarningDialog(
@@ -3629,7 +3629,7 @@ class AEExtension {
         } catch (error) {
             this.log(`检测过程出错: ${error.message}`, 'error');
             this.log('建议：1. 检查是否选择了合成 2. 检查是否选中了图层', 'warning');
-            
+
             // 显示通用错误弹窗
             const showDialogScript = `
                 showPanelWarningDialog(
@@ -3671,7 +3671,7 @@ class AEExtension {
             if (log.includes('MaterialLayer')) {
                 // 替换MaterialLayer为更友好的显示
                 log = log.replace(/MaterialLayer/g, '📦素材');
-                
+
                 // 根据素材类型添加对应图标
                 Object.keys(materialIcons).forEach(type => {
                     const typePattern = new RegExp(`${type}素材`, 'gi');
@@ -3680,7 +3680,7 @@ class AEExtension {
                     }
                 });
             }
-            
+
             // 处理其他图层类型的图标
             log = log.replace(/ShapeLayer/g, '🔷形状图层');
             log = log.replace(/TextLayer/g, '📝文本图层');
@@ -3690,7 +3690,7 @@ class AEExtension {
             log = log.replace(/CameraLayer/g, '📷摄像机图层');
             log = log.replace(/LightLayer/g, '💡灯光图层');
             log = log.replace(/AdjustmentLayer/g, '⚙️调整图层');
-            
+
             return log;
         });
     }
@@ -3701,10 +3701,10 @@ class AEExtension {
      */
     displayDetectionSummary(result) {
         const { compName, selectedLayers = [], logs = [] } = result;
-        
+
         // 基本信息
         this.log(`🔍 检测完成: ${compName}`, 'success');
-        
+
         if (selectedLayers.length === 0) {
             this.log('⚠️ 没有选中任何图层', 'warning');
             return;
@@ -3712,26 +3712,26 @@ class AEExtension {
 
         // 统计各种类型
         const stats = this.calculateLayerStatistics(selectedLayers);
-        
+
         // 先显示详细分布信息
         // 显示素材分布（只显示存在的类型）
         if (stats.materialTypes.length > 0) {
             this.log(`📦 素材分布: ${stats.materialTypes.join(', ')}`, 'info');
         }
-        
+
         // 显示其他图层类型（只显示存在的类型）
         if (stats.otherTypes.length > 0) {
             this.log(`🔧 其他图层: ${stats.otherTypes.join(', ')}`, 'info');
         }
-        
+
         // 显示不可导出原因统计（只显示存在的类型）
         if (stats.nonExportableReasons.length > 0) {
             this.log(`❌ 不可导出: ${stats.nonExportableReasons.join(', ')}`, 'warning');
         }
-        
+
         // 最后显示总结信息
         this.log(`📊 总结: 共检测 ${stats.total} 个图层，${stats.exportable} 个可导出，${stats.nonExportable} 个不可导出`, 'info');
-        
+
         // 显示详细总结弹窗
         this.showDetectionSummaryDialog(selectedLayers, stats);
     }
@@ -3746,11 +3746,11 @@ class AEExtension {
             design: 0, image: 0, video: 0, audio: 0, animation: 0,
             vector: 0, raw: 0, document: 0, sequence: 0
         };
-        
+
         const otherStats = {
             shape: 0, text: 0, solid: 0, precomp: 0, camera: 0, light: 0, adjustment: 0, other: 0
         };
-        
+
         const nonExportableStats = {
             solid: 0, precomp: 0, camera: 0, light: 0, adjustment: 0, sequence: 0, other: 0
         };
@@ -3834,11 +3834,11 @@ class AEExtension {
         if (materialStats.raw > 0) materialTypes.push(`🔬原始:${materialStats.raw}`);
         if (materialStats.document > 0) materialTypes.push(`📄文档:${materialStats.document}`);
         if (materialStats.sequence > 0) materialTypes.push(`🎯序列:${materialStats.sequence}`);
-        
+
         const otherTypes = [];
         if (otherStats.shape > 0) otherTypes.push(`🔷形状:${otherStats.shape}`);
         if (otherStats.text > 0) otherTypes.push(`📝文本:${otherStats.text}`);
-        
+
         const nonExportableReasons = [];
         if (nonExportableStats.solid > 0) nonExportableReasons.push(`🟦纯色:${nonExportableStats.solid}`);
         if (nonExportableStats.precomp > 0) nonExportableReasons.push(`📁预合成:${nonExportableStats.precomp}`);
@@ -3928,7 +3928,7 @@ class AEExtension {
                 canExport: layer.exportable || false,
                 source: layer.sourceInfo || null
             };
-            
+
             // 添加调试日志
             console.log(`[数据转换调试] 图层: ${layer.name}, 有tooltipInfo: ${!!(layer.tooltipInfo)}, 有sourceInfo: ${!!(layer.sourceInfo)}`);
             if (layer.tooltipInfo) {
@@ -3937,7 +3937,7 @@ class AEExtension {
             if (layer.sourceInfo) {
                 console.log(`[数据转换调试] sourceInfo.originalPath: ${layer.sourceInfo.originalPath}`);
             }
-            
+
             return result;
         });
     }
@@ -3970,47 +3970,47 @@ class AEExtension {
         try {
             // 创建弹窗HTML
             const dialogHtml = this.createSummaryDialogHtml(selectedLayers, stats);
-            
+
             // 创建弹窗容器
             const dialogOverlay = document.createElement('div');
             dialogOverlay.className = 'demo-dialog-overlay';
             dialogOverlay.innerHTML = dialogHtml;
-            
+
             // 添加样式
             this.addDialogStyles();
-            
+
             // 添加到页面
             document.body.appendChild(dialogOverlay);
-            
+
             // 绑定关闭事件
             const closeBtn = dialogOverlay.querySelector('.demo-dialog-close');
             const confirmBtn = dialogOverlay.querySelector('.demo-dialog-confirm');
             const closeBtnFooter = dialogOverlay.querySelector('.demo-dialog-close-btn');
             const exportPathsBtn = dialogOverlay.querySelector('.demo-dialog-export-paths');
-            
+
             const closeDialog = () => {
                 document.body.removeChild(dialogOverlay);
                 this.log('📋 演示模式检测总结弹窗已关闭', 'info');
             };
-            
+
             if (closeBtn) closeBtn.onclick = closeDialog;
             if (confirmBtn) confirmBtn.onclick = closeDialog;
             if (closeBtnFooter) closeBtnFooter.onclick = closeDialog;
-            
+
             // 绑定导出路径清单事件
             if (exportPathsBtn) {
                 exportPathsBtn.onclick = () => {
                     this.exportPathSummary(selectedLayers, stats);
                 };
             }
-            
+
             // 绑定图层操作按钮事件
             this.bindLayerActionButtons(dialogOverlay, selectedLayers);
-            
+
             dialogOverlay.onclick = (e) => {
                 if (e.target === dialogOverlay) closeDialog();
             };
-            
+
         } catch (error) {
             this.log(`显示JavaScript弹窗时出错: ${error.message}`, 'error');
             // 降级到简单alert
@@ -4027,13 +4027,13 @@ class AEExtension {
     createSummaryDialogHtml(selectedLayers, stats) {
         // 生成三行总结信息（模拟JSX版本）
         const summaryLines = this.generateSummaryLines(selectedLayers, stats);
-        
+
         // 生成图层详情列表
         const layerDetailsHtml = this.generateLayerDetailsList(selectedLayers);
-        
+
         // 检查是否有路径汇总数据
         const hasPathSummary = stats.pathSummaryAvailable || (stats.materialStats && Object.keys(stats.materialStats.pathSummary || {}).length > 0);
-        
+
         return `
             <div class="demo-dialog">
                 <div class="demo-dialog-header">
@@ -4072,7 +4072,7 @@ class AEExtension {
      */
     addDialogStyles() {
         if (document.getElementById('demo-dialog-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'demo-dialog-styles';
         style.textContent = `
@@ -4287,13 +4287,13 @@ class AEExtension {
     generateSummaryLines(selectedLayers, stats) {
         const exportableLayers = selectedLayers.filter(layer => layer.exportable);
         const nonExportableLayers = selectedLayers.filter(layer => !layer.exportable);
-        
+
         const lines = [];
-        
+
         // 第一行：可导出图层（使用▶符号装饰）
         let exportableLine = '▶ 可导出: ';
         const exportableParts = [];
-        
+
         // 统计可导出图层类型
         const exportableStats = this.calculateLayerTypeStats(exportableLayers);
         if (exportableStats.design > 0) exportableParts.push(`设计:${exportableStats.design}`);
@@ -4301,33 +4301,33 @@ class AEExtension {
         if (exportableStats.video > 0) exportableParts.push(`视频:${exportableStats.video}`);
         if (exportableStats.text > 0) exportableParts.push(`文本:${exportableStats.text}`);
         if (exportableStats.shape > 0) exportableParts.push(`形状:${exportableStats.shape}`);
-        
+
         exportableLine += exportableParts.length > 0 ? exportableParts.join(', ') : '无';
         lines.push(exportableLine);
-        
+
         // 第二行：不可导出（使用✖符号装饰）
         let nonExportableLine = '✖ 不可导出: ';
         const nonExportableParts = [];
-        
+
         // 统计不可导出图层类型
         const nonExportableStats = this.calculateLayerTypeStats(nonExportableLayers);
         if (nonExportableStats.solid > 0) nonExportableParts.push(`纯色:${nonExportableStats.solid}`);
         if (nonExportableStats.text > 0) nonExportableParts.push(`文本:${nonExportableStats.text}`);
         if (nonExportableStats.precomp > 0) nonExportableParts.push(`预合成:${nonExportableStats.precomp}`);
         if (nonExportableStats.other > 0) nonExportableParts.push(`其他:${nonExportableStats.other}`);
-        
+
         nonExportableLine += nonExportableParts.length > 0 ? nonExportableParts.join(', ') : '无';
         lines.push(nonExportableLine);
-        
+
         // 第三行：总结（使用●符号装饰）
         const actualExportableCount = exportableLayers.length;
         const actualNonExportableCount = nonExportableLayers.length;
         const summaryLine = `● 总结: 共检测 ${selectedLayers.length} 个图层，${actualExportableCount} 个可导出，${actualNonExportableCount} 个不可导出`;
         lines.push(summaryLine);
-        
+
         return lines;
     }
-    
+
     /**
      * 计算图层类型统计
      * @param {Array} layers - 图层数组
@@ -4338,7 +4338,7 @@ class AEExtension {
             text: 0, shape: 0, solid: 0, precomp: 0,
             design: 0, image: 0, video: 0, audio: 0, other: 0
         };
-        
+
         layers.forEach(layer => {
             if (layer.sourceInfo && layer.sourceInfo.materialType) {
                 const materialType = layer.sourceInfo.materialType;
@@ -4368,10 +4368,10 @@ class AEExtension {
                 stats.other++;
             }
         });
-        
+
         return stats;
     }
-    
+
     /**
      * 生成图层详情列表HTML
      * @param {Array} selectedLayers - 检测到的图层信息
@@ -4380,22 +4380,22 @@ class AEExtension {
     generateLayerDetailsList(selectedLayers) {
         const exportableLayers = selectedLayers.filter(layer => layer.exportable);
         const nonExportableLayers = selectedLayers.filter(layer => !layer.exportable);
-        
+
         let html = '';
-        
+
         // 显示可导出图层
         exportableLayers.forEach(layer => {
             html += this.generateLayerRowWithButtons(layer, true);
         });
-        
+
         // 显示不可导出图层
         nonExportableLayers.forEach(layer => {
             html += this.generateLayerRowWithButtons(layer, false);
         });
-        
+
         return html;
     }
-    
+
     /**
      * 生成带功能按钮的图层行HTML
      * @param {Object} layer - 图层对象
@@ -4409,13 +4409,13 @@ class AEExtension {
         const tooltipText = this.getLayerTooltipText(layer);
         const prefix = exportable ? '[√]' : '[×]';
         const layerId = `layer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // 判断图层类型以显示相应按钮
         const isDesign = this.isDesignFile(layer);
         const isMaterial = this.isMaterialFile(layer);
-        
+
         let buttonsHtml = '';
-        
+
         if (isDesign) {
             // 设计文件：显示导出按钮
             buttonsHtml += `<button class="layer-action-btn export-btn" title="导出设计文件" data-layer-id="${layerId}" data-action="export">📤</button>`;
@@ -4423,10 +4423,10 @@ class AEExtension {
             // 素材文件：显示打开文件夹按钮
             buttonsHtml += `<button class="layer-action-btn folder-btn" title="打开文件所在文件夹" data-layer-id="${layerId}" data-action="open-folder">📁</button>`;
         }
-        
+
         // 移除扩展功能按钮，简化界面
         // buttonsHtml += `<button class="layer-action-btn extension-btn" title="扩展功能（预留）" data-layer-id="${layerId}" data-action="extension" disabled>⚙️</button>`;
-        
+
         return `
             <div class="layer-item-row" data-layer-id="${layerId}">
                 <div class="layer-item-text" title="${tooltipText}">${prefix}${categoryIcon}【${category}】${fileName}</div>
@@ -4434,7 +4434,7 @@ class AEExtension {
             </div>
         `;
     }
-    
+
     /**
      * 判断是否为设计文件
      * @param {Object} layer - 图层对象
@@ -4445,20 +4445,20 @@ class AEExtension {
         if (layer.tooltipInfo && layer.tooltipInfo.categoryType === 'design') {
             return true;
         }
-        
+
         // 检查sourceInfo中的分类信息
         if (layer.sourceInfo && layer.sourceInfo.categoryType === 'design') {
             return true;
         }
-        
+
         // 检查materialType
         if (layer.sourceInfo && layer.sourceInfo.materialType === 'design') {
             return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * 判断是否为素材文件
      * @param {Object} layer - 图层对象
@@ -4469,20 +4469,20 @@ class AEExtension {
         if (layer.tooltipInfo && layer.tooltipInfo.categoryType === 'material') {
             return true;
         }
-        
+
         // 检查sourceInfo中的分类信息
         if (layer.sourceInfo && layer.sourceInfo.categoryType === 'material') {
             return true;
         }
-        
+
         // 检查materialType（除了design之外的都是素材）
         if (layer.sourceInfo && layer.sourceInfo.materialType && layer.sourceInfo.materialType !== 'design') {
             return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * 获取图层分类名称
      * @param {Object} layer - 图层对象
@@ -4492,7 +4492,7 @@ class AEExtension {
         if (layer.sourceInfo && layer.sourceInfo.categoryDisplayName) {
             return layer.sourceInfo.categoryDisplayName;
         }
-        
+
         if (layer.sourceInfo && layer.sourceInfo.materialType) {
             switch (layer.sourceInfo.materialType) {
                 case 'design': return '设计文件';
@@ -4502,7 +4502,7 @@ class AEExtension {
                 default: return '素材文件';
             }
         }
-        
+
         if (layer.type) {
             switch (layer.type) {
                 case 'SolidLayer': return '纯色图层';
@@ -4513,10 +4513,10 @@ class AEExtension {
                 default: return '其他';
             }
         }
-        
+
         return '未知';
     }
-    
+
     /**
      * 获取图层文件名（与JSX版本保持一致）
      * @param {Object} layer - 图层对象
@@ -4524,15 +4524,15 @@ class AEExtension {
      */
     getLayerFileName(layer) {
         let fileName = layer.name || '未命名图层';
-        
+
         // 检查图层名称是否已经包含扩展名
         const hasExtension = fileName.includes('.') && fileName.lastIndexOf('.') > 0;
-        
+
         // 如果图层名称没有扩展名，且有源文件信息，则添加扩展名
         // 兼容JSX版本的数据结构（layer.source.file.name）和当前版本（layer.sourceInfo.fileName）
         if (!hasExtension) {
             let sourceName = null;
-            
+
             // 优先使用JSX版本的数据结构
             if (layer.source && layer.source.file && layer.source.file.name) {
                 sourceName = layer.source.file.name;
@@ -4541,7 +4541,7 @@ class AEExtension {
             else if (layer.sourceInfo && layer.sourceInfo.fileName) {
                 sourceName = layer.sourceInfo.fileName;
             }
-            
+
             if (sourceName) {
                 const extension = sourceName.substring(sourceName.lastIndexOf('.'));
                 if (extension && extension.length > 1) {
@@ -4549,10 +4549,10 @@ class AEExtension {
                 }
             }
         }
-        
+
         return fileName;
     }
-    
+
     /**
      * 获取图层分类图标
      * @param {Object} layer - 图层对象
@@ -4562,7 +4562,7 @@ class AEExtension {
         if (layer.sourceInfo && layer.sourceInfo.categoryType === 'design') {
             return '🎨';
         }
-        
+
         if (layer.sourceInfo && layer.sourceInfo.materialType) {
             const icons = {
                 'image': '🖼️',
@@ -4576,7 +4576,7 @@ class AEExtension {
             };
             return icons[layer.sourceInfo.materialType] || '📦';
         }
-        
+
         // 其他图层类型的图标
         if (layer.type) {
             switch (layer.type) {
@@ -4588,10 +4588,10 @@ class AEExtension {
                 default: return '❓';
             }
         }
-        
+
         return '📦';
     }
-    
+
     /**
      * 获取图层悬浮提示文本
      * @param {Object} layer - 图层对象
@@ -4599,7 +4599,7 @@ class AEExtension {
      */
     getLayerTooltipText(layer) {
         const tooltipLines = [];
-        
+
         // 基本状态信息
         if (layer.tooltipInfo) {
             // 使用ExtendScript传递的悬浮提示信息
@@ -4610,12 +4610,12 @@ class AEExtension {
                 const status = layer.exportable ? '可导出' : '不可导出';
                 tooltipLines.push(`${info.materialCategory || '素材文件'} - ${status}`);
             }
-            
+
             // 优先显示路径信息
             if (info.originalPath) {
                 tooltipLines.push(`路径: ${info.originalPath}`);
             }
-            
+
             // 添加详细文件信息
             if (info.fileSize) {
                 tooltipLines.push(`大小: ${info.fileSize}`);
@@ -4629,30 +4629,30 @@ class AEExtension {
             if (info.duration) {
                 tooltipLines.push(`时长: ${info.duration}`);
             }
-            
+
             // 对于不可导出的图层，在最后添加原因说明
             if (!layer.exportable && layer.reason) {
                 tooltipLines.push(`导出说明: ${layer.reason}`);
             }
-            
+
             return tooltipLines.join('\n');
         }
-        
+
         // 回退到基本信息
         if (layer.sourceInfo && layer.sourceInfo.originalPath) {
             const categoryName = layer.sourceInfo.categoryDisplayName || '文件';
             const status = layer.exportable ? '可导出' : '不可导出';
             tooltipLines.push(`${categoryName} - ${status}`);
             tooltipLines.push(`路径: ${layer.sourceInfo.originalPath}`);
-            
+
             // 对于不可导出的图层，添加原因说明
             if (!layer.exportable && layer.reason) {
                 tooltipLines.push(`导出说明: ${layer.reason}`);
             }
-            
+
             return tooltipLines.join('\n');
         }
-        
+
         // 非文件图层的提示
         if (layer.exportable) {
             return '可导出图层';
@@ -4660,7 +4660,7 @@ class AEExtension {
             return layer.reason || '不可导出图层';
         }
     }
-    
+
     /**
      * 导出路径汇总清单
      * @param {Array} selectedLayers - 检测到的图层信息
@@ -4669,7 +4669,7 @@ class AEExtension {
     async exportPathSummary(selectedLayers, stats) {
         try {
             this.log('📁 开始导出路径汇总清单...', 'info');
-            
+
             // 检查是否为Demo模式
             if (this.isDemoMode()) {
                 // Demo模式：显示虚拟导出结果
@@ -4678,28 +4678,28 @@ class AEExtension {
                 this.log('🎭 演示模式：路径汇总清单预览已显示', 'info');
                 return;
             }
-            
+
             // 真实模式：调用ExtendScript导出功能
             const pathSummary = stats.materialStats?.pathSummary || {};
             if (Object.keys(pathSummary).length === 0) {
                 this.log('⚠️ 没有可导出的路径信息', 'warning');
                 return;
             }
-            
+
             const result = await this.executeExtendScript('exportPathSummary', { pathSummary });
-            
+
             if (result.success) {
                 this.log(`✅ 路径汇总清单导出成功: ${result.message}`, 'success');
                 this.log(`📁 文件路径: ${result.filePath}`, 'info');
             } else {
                 this.log(`❌ 路径汇总清单导出失败: ${result.message}`, 'error');
             }
-            
+
         } catch (error) {
             this.log(`导出路径汇总清单时出错: ${error.message}`, 'error');
         }
     }
-    
+
     /**
      * 生成路径汇总报告
      * @param {Object} pathSummary - 路径汇总对象
@@ -4709,7 +4709,7 @@ class AEExtension {
         let report = '\n=== 路径汇总清单 ===\n';
         const designPaths = [];
         const materialPaths = [];
-        
+
         // 分类整理路径
         for (const path in pathSummary) {
             const pathInfo = pathSummary[path];
@@ -4719,7 +4719,7 @@ class AEExtension {
                 materialPaths.push(pathInfo);
             }
         }
-        
+
         // 设计文件路径
         if (designPaths.length > 0) {
             report += `\n【设计文件】(${designPaths.length}个路径):\n`;
@@ -4729,7 +4729,7 @@ class AEExtension {
                 report += `   使用图层: ${info.layers.join(', ')}\n\n`;
             });
         }
-        
+
         // 素材文件路径
         if (materialPaths.length > 0) {
             report += `\n【素材文件】(${materialPaths.length}个路径):\n`;
@@ -4740,10 +4740,10 @@ class AEExtension {
                 report += `   使用图层: ${info.layers.join(', ')}\n\n`;
             });
         }
-        
+
         return report;
     }
-    
+
     /**
      * 获取素材类型图标
      * @param {string} materialType - 素材类型
@@ -4762,7 +4762,7 @@ class AEExtension {
         };
         return icons[materialType] || '📦';
     }
-    
+
     /**
      * 显示路径汇总预览（Demo模式）
      * @param {string} reportContent - 报告内容
@@ -4785,39 +4785,39 @@ class AEExtension {
                 </div>
             </div>
         `;
-        
+
         // 创建弹窗容器
         const dialogOverlay = document.createElement('div');
         dialogOverlay.className = 'demo-dialog-overlay';
         dialogOverlay.innerHTML = previewHtml;
-        
+
         // 添加预览样式
         this.addPathSummaryPreviewStyles();
-        
+
         // 添加到页面
         document.body.appendChild(dialogOverlay);
-        
+
         // 绑定关闭事件
         const closeBtn = dialogOverlay.querySelector('.demo-dialog-close');
         const confirmBtn = dialogOverlay.querySelector('.demo-dialog-confirm');
-        
+
         const closeDialog = () => {
             document.body.removeChild(dialogOverlay);
         };
-        
+
         if (closeBtn) closeBtn.onclick = closeDialog;
         if (confirmBtn) confirmBtn.onclick = closeDialog;
         dialogOverlay.onclick = (e) => {
             if (e.target === dialogOverlay) closeDialog();
         };
     }
-    
+
     /**
      * 添加路径汇总预览样式
      */
     addPathSummaryPreviewStyles() {
         if (document.getElementById('path-summary-preview-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'path-summary-preview-styles';
         style.textContent = `
@@ -4883,17 +4883,17 @@ class AEExtension {
             // 获取用户的导出设置
             const exportSettings = this.getExportSettingsFromUI();
             this.log(`📋 使用导出设置: 模式=${exportSettings.mode}, 自动复制=${exportSettings.autoCopy}, 阅后即焚=${exportSettings.burnAfterReading}`, 'info');
-            
+
             // 验证导出路径
             let exportPath = '';
             let needsProjectInfo = false;
-            
+
             switch (exportSettings.mode) {
                 case 'desktop':
                     exportPath = 'desktop'; // JSX脚本会处理桌面路径
                     this.log('📁 使用桌面导出模式', 'info');
                     break;
-                    
+
                 case 'project_adjacent':
                     needsProjectInfo = true;
                     const projectInfo = await this.getProjectInfo();
@@ -4906,7 +4906,7 @@ class AEExtension {
                     exportPath = projectDir + folderName;
                     this.log(`📁 使用项目旁导出: ${exportPath}`, 'info');
                     break;
-                    
+
                 case 'custom_folder':
                     exportPath = exportSettings.customExportPath;
                     if (!exportPath || exportPath.trim() === '') {
@@ -4920,7 +4920,7 @@ class AEExtension {
                     }
                     this.log(`📁 使用指定文件夹导出: ${exportPath}`, 'info');
                     break;
-                    
+
                 default:
                     this.log('❌ 未知的导出模式，使用桌面导出作为回退', 'warning');
                     exportPath = 'desktop';
@@ -4942,7 +4942,7 @@ class AEExtension {
                 fileManagement: currentSettings.fileManagement,
                 timelineOptions: currentSettings.timelineOptions
             };
-            
+
             this.log(`🚀 开始导出图层到路径: ${exportPath}`, 'info');
             this.log(`⚙️ 导出选项: 时间戳前缀=${exportSettings.addTimestamp}, 合成名前缀=${exportSettings.createSubfolders}`, 'info');
 
@@ -4974,12 +4974,12 @@ class AEExtension {
                             this.log(`❌ 文件路径无效: ${layer.layerName || '未知图层'}`, 'warning');
                         }
                     }
-                    
+
                     if (validFiles.length === 0) {
                         this.log('❌ 没有有效的导出文件，无法导入到Eagle', 'error');
                         return;
                     }
-                    
+
                     // 自动复制到剪贴板（如果启用）
                     if (exportSettings.autoCopy) {
                         this.log('📋 自动复制功能已启用，正在复制文件到剪贴板...', 'info');
@@ -4990,7 +4990,7 @@ class AEExtension {
                             this.log(`📋 复制到剪贴板失败: ${copyError.message}`, 'warning');
                         }
                     }
-                    
+
                     // 自动导入到Eagle
                     this.log('正在将导出的文件导入到Eagle...', 'info');
                     try {
@@ -5000,33 +5000,33 @@ class AEExtension {
                             name: layer.layerName || layer.name,
                             filePath: layer.filePath
                         }));
-                        
+
                         this.log(`📤 准备导入 ${filesToImport.length} 个文件到Eagle:`, 'debug');
                         filesToImport.forEach((file, index) => {
                             this.log(`  ${index + 1}. ${file.name} -> ${file.path}`, 'debug');
                         });
-                        
+
                         // 如果启用阅后即焚，标记文件需要在导入后删除
                         const importData = {
                             files: filesToImport
                         };
-                        
+
                         if (exportSettings.burnAfterReading) {
                             importData.burnAfterReading = true;
                             importData.tempFiles = filesToImport.map(f => f.path);
                             this.log('🔥 阅后即焚模式已启用，文件将在导入Eagle后自动删除', 'info');
                         }
-                        
+
                         await this.sendToEagle({
                             type: 'importFiles',
                             data: importData
                         });
 
                         this.log('📤 导入请求已发送到Eagle，等待处理结果...', 'info');
-                        
+
                         // 注意：实际的导入结果会通过eagle_import_result消息异步返回
                         // 这里不需要等待同步响应
-                        
+
                     } catch (importError) {
                         this.log(`发送Eagle导入请求失败: ${importError.message}`, 'warning');
                         this.log('💡 文件已导出，可手动拖拽到Eagle中', 'info');
@@ -5063,16 +5063,16 @@ class AEExtension {
         try {
             if (result.success) {
                 this.log(`✅ Eagle导入成功: ${result.importedCount} 个文件已导入`, 'success');
-                
+
                 if (result.failedCount > 0) {
                     this.log(`⚠️ ${result.failedCount} 个文件导入失败`, 'warning');
                 }
-                
+
                 // 处理阅后即焚结果
                 if (result.burnAfterReading && result.deletedTempFiles > 0) {
                     this.log(`🔥 阅后即焚完成: 已自动删除 ${result.deletedTempFiles} 个临时文件`, 'success');
                 }
-                
+
                 // 播放成功音效
                 try {
                     if (this.soundPlayer && typeof this.soundPlayer.playConnectionSuccess === 'function') {
@@ -5081,7 +5081,7 @@ class AEExtension {
                 } catch (soundError) {
                     // 忽略音效播放错误
                 }
-                
+
             } else {
                 this.log(`❌ Eagle导入失败: ${result.error || '未知错误'}`, 'error');
                 this.log('💡 文件已导出，可手动拖拽到Eagle中', 'info');
@@ -5397,14 +5397,14 @@ class AEExtension {
             try {
                 // 构造脚本调用
                 const scriptCall = `${functionName}(${JSON.stringify(data)})`;
-                
+
                 this.csInterface.evalScript(scriptCall, (result) => {
                     try {
                         if (result === 'EvalScript error.') {
                             reject(new Error(`AE脚本执行失败: ${functionName}`));
                             return;
                         }
-                        
+
                         // 尝试解析JSON结果
                         const parsedResult = JSON.parse(result);
                         resolve(parsedResult);
@@ -5643,18 +5643,18 @@ class AEExtension {
             // 获取并显示项目信息
             const projectInfo = await this.getProjectInfo();
             this.updateProjectUI(projectInfo);
-            
+
             // 更新AE状态显示为已就绪
             const aeStatusElement = document.getElementById('ae-status');
             if (aeStatusElement) {
                 aeStatusElement.textContent = '已就绪';
                 aeStatusElement.className = 'status-ready';
             }
-            
+
             this.log(window.i18n.getText('logs.aeProjectInfoUpdated') || 'AE project information updated', 'info');
         } catch (error) {
             this.log(`${window.i18n?.getText('logs.aeInfoUpdateFailed') || 'Failed to update AE info'}: ${error.message}`, 'warning');
-            
+
             // 设置默认状态
             const aeStatusElement = document.getElementById('ae-status');
             if (aeStatusElement) {
@@ -5805,7 +5805,7 @@ class AEExtension {
         if (this.librarySizeTimer) {
             clearTimeout(this.librarySizeTimer);
         }
-        
+
         // 延迟3秒后获取资源库大小
         this.librarySizeTimer = setTimeout(async () => {
             try {
@@ -5814,7 +5814,7 @@ class AEExtension {
                 this.log(`获取资源库大小失败: ${error.message}`, 'warning');
             }
         }, 3000);
-        
+
         this.log('已安排延迟获取资源库大小', 'info');
     }
 
@@ -5923,17 +5923,17 @@ class AEExtension {
         newLogs.forEach(log => {
             // 生成消息的唯一键（忽略时间戳，只看消息内容）
             const messageKey = this.generateLogKey(log.message);
-            
+
             // 检查是否是重复消息
             if (this.logDuplicateTracker.has(messageKey)) {
                 const existing = this.logDuplicateTracker.get(messageKey);
-                
+
                 // 如果在时间窗口内，增加计数
                 if (now - existing.firstSeen < duplicateWindow) {
                     existing.count++;
                     existing.lastSeen = now;
                     existing.lastTimestamp = log.timestamp;
-                    
+
                     // 更新现有日志的显示
                     this.updateDuplicateLogDisplay(existing);
                     return; // 不添加新的日志条目
@@ -5955,13 +5955,13 @@ class AEExtension {
                     logIndex: this.eagleLogs.length + processedLogs.length
                 });
             }
-            
+
             // 检查是否已存在相同ID的日志
             const logId = log.id || `${log.timestamp}_${log.message}`;
             const existingIds = new Set(this.eagleLogs.map(existingLog =>
                 existingLog.id || `${existingLog.timestamp}_${existingLog.message}`
             ));
-            
+
             if (!existingIds.has(logId)) {
                 processedLogs.push(log);
             }
@@ -5999,17 +5999,17 @@ class AEExtension {
         newLogs.forEach(logData => {
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry ${logData.type} ${logData.source || 'eagle'}`;
-            
+
             // 生成消息键用于重复检测
             const messageKey = this.generateLogKey(logData.message);
             const duplicateInfo = this.logDuplicateTracker?.get(messageKey);
-            
+
             // 如果有重复计数，显示计数信息
             let displayMessage = logData.message;
             if (duplicateInfo && duplicateInfo.count > 1) {
                 displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
             }
-            
+
             logEntry.innerHTML = `<span class="log-time">${logData.time}</span>${displayMessage}`;
             logEntry.setAttribute('data-message-key', messageKey);
             logOutput.appendChild(logEntry);
@@ -6034,39 +6034,39 @@ class AEExtension {
             .replace(/\d+\.\d+\s*(GB|MB|KB)/g, 'SIZE') // 标准化文件大小
             .replace(/\d+/g, 'NUM') // 标准化其他数字
             .trim();
-        
+
         // 特殊处理剪切板内容
         if (key.includes('剪切板文本内容')) {
             return '剪切板文本内容';
         }
-        
+
         return key;
     }
 
     // 更新重复日志的显示
     updateDuplicateLogDisplay(duplicateInfo) {
         if (this.currentLogView !== 'eagle') return;
-        
+
         const logOutput = document.getElementById('log-output');
         if (!logOutput) return;
-        
+
         // 查找对应的日志条目
         const messageKey = this.generateLogKey(duplicateInfo.originalLog.message);
         // 转义CSS选择器中的特殊字符
         const escapedKey = messageKey.replace(/["\\]/g, '\\$&');
         const logEntries = logOutput.querySelectorAll(`[data-message-key="${escapedKey}"]`);
-        
+
         if (logEntries.length > 0) {
             // 更新最后一个匹配的日志条目
             const lastEntry = logEntries[logEntries.length - 1];
             const timeSpan = lastEntry.querySelector('.log-time');
             const timeText = timeSpan ? timeSpan.outerHTML : '';
-            
+
             let displayMessage = duplicateInfo.originalLog.message;
             if (duplicateInfo.count > 1) {
                 displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
             }
-            
+
             lastEntry.innerHTML = timeText + displayMessage;
         } else {
             // 如果找不到对应的条目，可能是因为选择器问题，使用遍历方式查找
@@ -6076,12 +6076,12 @@ class AEExtension {
                 if (entry.getAttribute('data-message-key') === messageKey) {
                     const timeSpan = entry.querySelector('.log-time');
                     const timeText = timeSpan ? timeSpan.outerHTML : '';
-                    
+
                     let displayMessage = duplicateInfo.originalLog.message;
                     if (duplicateInfo.count > 1) {
                         displayMessage += ` <span class="log-count">(×${duplicateInfo.count})</span>`;
                     }
-                    
+
                     entry.innerHTML = timeText + displayMessage;
                     break;
                 }
@@ -6112,13 +6112,13 @@ class AEExtension {
         // 检查是否是重复消息
         if (this.logDuplicateTracker.has(messageKey)) {
             const existing = this.logDuplicateTracker.get(messageKey);
-            
+
             // 如果在时间窗口内，增加计数
             if (now - existing.firstSeen < duplicateWindow) {
                 existing.count++;
                 existing.lastSeen = now;
                 existing.lastTimestamp = logData.timestamp;
-                
+
                 // 更新现有日志的显示
                 this.updateDuplicateLogDisplay(existing);
                 return; // 不添加新的日志条目
@@ -6151,7 +6151,7 @@ class AEExtension {
             const logOutput = document.getElementById('log-output');
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry ${type} eagle`;
-            
+
             logEntry.innerHTML = `<span class="log-time">${timestamp}</span>${message}`;
             logEntry.setAttribute('data-message-key', messageKey);
             logOutput.appendChild(logEntry);
@@ -6203,7 +6203,7 @@ class AEExtension {
         const isLight = theme === 'light';
 
         root.classList.toggle('theme-light', isLight);
-        try { localStorage.setItem('aeTheme', isLight ? 'light' : 'dark'); } catch (_) {}
+        try { localStorage.setItem('aeTheme', isLight ? 'light' : 'dark'); } catch (_) { }
 
         if (btn) {
             btn.setAttribute('aria-pressed', String(isLight));
@@ -6295,6 +6295,8 @@ class AEExtension {
             });
         }
 
+        // 预设文件管理按钮会在每次打开设置面板时初始化
+
         // 导入模式切换
         const importModeRadios = document.querySelectorAll('input[name="import-mode"]');
         importModeRadios.forEach(radio => {
@@ -6339,7 +6341,7 @@ class AEExtension {
                     this.settingsManager.saveExportSettings(exportSettings);
                 }
             });
-         });
+        });
 
 
 
@@ -6427,7 +6429,7 @@ class AEExtension {
             radio.addEventListener('change', () => {
                 if (radio.checked) {
                     this.log(`高级设置导入行为已更改为: ${radio.value}`, 'info');
-                    
+
                     // 根据导入行为更新设置
                     if (radio.value === 'no_import') {
                         // 不导入合成
@@ -6437,9 +6439,9 @@ class AEExtension {
                         this.settingsManager.updateField('addToComposition', true, false);
                         this.settingsManager.updateField('timelineOptions.placement', radio.value, false);
                     }
-                    
+
                     this.updateSettingsUI();
-                    
+
                     // 同步到快速设置面板
                     if (this.quickSettingsInitialized) {
                         const quickRadio = document.querySelector(`input[name="import-behavior"][value="${radio.value}"]`);
@@ -6448,7 +6450,7 @@ class AEExtension {
                             this.log(`已同步到快速设置面板: ${radio.value}`, 'info');
                         }
                     }
-                    
+
                     // 显示设置说明
                     const descriptions = {
                         'no_import': '素材将仅复制到项目文件夹，不导入到合成',
@@ -6492,7 +6494,7 @@ class AEExtension {
                         }
                         this.log('高级设置已切换到不导入合成模式', 'info');
                     }
-                    
+
                     // 同步到快速设置面板
                     if (this.quickSettingsInitialized) {
                         const quickNoImportBtn = document.getElementById('no-import-comp-btn');
@@ -6659,11 +6661,21 @@ class AEExtension {
 
     // 显示设置面板
     showSettingsPanel() {
+        console.log('[Settings] ========== 打开设置面板 ==========');
         const settingsPanel = document.getElementById('settings-panel');
         settingsPanel.style.display = 'flex';
         this.loadSettingsToUI();
         // 立即更新阅后即焚的tooltip
         this.updateBurnAfterReadingTooltip();
+        
+        // 初始化预设文件管理按钮（两种模式通用）
+        // 每次打开面板都重新初始化，确保事件绑定正确
+        console.log('[Settings] 准备初始化预设文件按钮（300ms 后）');
+        setTimeout(() => {
+            console.log('[Settings] 现在调用 initPresetFileButtons()');
+            this.initPresetFileButtons();
+        }, 300);
+        
         this.log('打开导入设置面板', 'info');
     }
 
@@ -6718,7 +6730,7 @@ class AEExtension {
         } else {
             advancedImportBehaviorValue = settings.timelineOptions.placement;
         }
-        
+
         const advancedImportBehaviorRadio = document.querySelector(`input[name="advanced-import-behavior"][value="${advancedImportBehaviorValue}"]`);
         if (advancedImportBehaviorRadio) {
             advancedImportBehaviorRadio.checked = true;
@@ -6745,7 +6757,7 @@ class AEExtension {
         if (timelinePlacementRadio) {
             timelinePlacementRadio.checked = true;
         }
-        
+
         // 同步到快速设置的导入行为选项
         if (settings.addToComposition) {
             // 如果启用了添加到合成，则根据时间轴位置设置对应选项
@@ -6884,8 +6896,8 @@ class AEExtension {
 
         // 自定义文件夹配置显示/隐藏
         const customFolderConfig = document.getElementById('custom-folder-config');
+        const isCustomFolderVisible = uiState.customFolderVisible(settings);
         if (customFolderConfig) {
-            const isCustomFolderVisible = uiState.customFolderVisible(settings);
             customFolderConfig.style.display = isCustomFolderVisible ? 'block' : 'none';
         }
 
@@ -6917,7 +6929,7 @@ class AEExtension {
         try {
             // 获取当前保存的设置作为基础
             const currentSettings = this.settingsManager.getSettings();
-            
+
             const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || currentSettings.mode;
 
             // 注意：这些元素可能在模态框中，不一定总是存在
@@ -6929,7 +6941,7 @@ class AEExtension {
 
             // 如果关键元素不存在，使用当前保存的设置值
             const addToCompValue = addToComposition ? addToComposition.checked : currentSettings.addToComposition;
-            
+
             // 检查文件管理相关元素（可能不存在，使用当前设置或默认值）
             const keepOriginalName = document.getElementById('keep-original-name');
             const addTimestamp = document.getElementById('add-timestamp');
@@ -7413,7 +7425,7 @@ class AEExtension {
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, async (e) => {
                 dropZone.classList.add('drag-over');
-                
+
                 // 文件夹选择器的拖拽区域不需要预检查，避免与全局拖拽系统冲突
                 // 只显示简单的拖拽提示
                 if (eventName === 'dragover') {
@@ -8254,7 +8266,7 @@ class AEExtension {
     updateLayerOperationButtonsVisual(importBehavior) {
         const detectButton = document.querySelector('.layer-operation-button[onclick*="detectLayers"]');
         const exportButton = document.querySelector('.layer-operation-button[onclick*="exportLayers"]');
-        
+
         if (detectButton && exportButton) {
             if (importBehavior === 'no_import') {
                 // 当选择"不导入合成"时，添加dimmed类使按钮变灰
@@ -8297,7 +8309,7 @@ class AEExtension {
                 const noImportRadio = document.querySelector('input[name="import-behavior"][value="no_import"]');
                 if (noImportRadio) {
                     noImportRadio.checked = true;
-                    
+
                     // 恢复noImportSubMode的视觉状态
                     const noImportBtn = document.getElementById('no-import-comp-btn');
                     const noImportTextSpan = noImportBtn ? noImportBtn.querySelector('.behavior-text') : null;
@@ -8352,7 +8364,7 @@ class AEExtension {
             // 同步导入行为选项
             const quickImportBehavior = document.querySelector('input[name="import-behavior"]:checked');
             const advancedAddToComp = document.getElementById('add-to-composition');
-            
+
             if (quickImportBehavior && advancedAddToComp) {
                 if (quickImportBehavior.value === 'no_import') {
                     // 选择了"不导入合成"
@@ -8440,7 +8452,7 @@ class AEExtension {
         const advancedCheckedRadio = document.querySelector('input[name="timeline-placement"]:checked');
         const quickCheckedValue = quickCheckedRadio ? quickCheckedRadio.value : 'none';
         const advancedCheckedValue = advancedCheckedRadio ? advancedCheckedRadio.value : 'none';
-        
+
         // 根据设置确定期望的快速选项值
         const expectedQuickValue = settings.addToComposition ? settings.timelineOptions.placement : 'no_import';
 
@@ -8490,7 +8502,7 @@ class AEExtension {
         if (advancedAddToComp) {
             advancedAddToComp.checked = settings.addToComposition;
         }
-        
+
         const advancedRadios = document.querySelectorAll('input[name="timeline-placement"]');
         advancedRadios.forEach(radio => {
             radio.checked = (radio.value === settings.timelineOptions.placement);
@@ -8542,7 +8554,7 @@ class AEExtension {
     getExportSettingsFromUI() {
         const checkedRadio = document.querySelector('input[name="export-mode"]:checked');
         const exportMode = checkedRadio?.value || 'project_adjacent';
-        
+
         // 调试日志：记录导出模式选择过程
         this.log(`🔍 导出模式选择调试:`, 'debug');
         this.log(`  - 找到选中的单选按钮: ${checkedRadio ? '是' : '否'}`, 'debug');
@@ -8557,13 +8569,13 @@ class AEExtension {
 
         // 直接读取导入模式的设置
         const importSettings = this.settingsManager.getSettings();
-        
+
         // 项目旁导出使用导入模式的项目旁复制设置
         let projectAdjacentFolder = importSettings.projectAdjacentFolder || 'Eagle_Assets';
-        
+
         // 指定文件夹导出路径获取逻辑修复
         let customExportPath = '';
-        
+
         // 优先从SettingsManager的customFolderPath读取
         if (importSettings.customFolderPath && importSettings.customFolderPath.trim() !== '') {
             customExportPath = importSettings.customFolderPath;
@@ -8584,7 +8596,7 @@ class AEExtension {
                 this.log(`⚠️ 未找到指定文件夹路径设置，将使用默认路径`, 'warning');
             }
         }
-        
+
         if (!projectAdjacentFolder && typeof window.projectAdjacentSettings !== 'undefined') {
             projectAdjacentFolder = window.projectAdjacentSettings.folderName || 'Eagle_Assets';
         }
@@ -8673,6 +8685,64 @@ class AEExtension {
     }
 
     /**
+     * 从 localStorage 获取 UI 面板组设置
+     * @returns {Object} UI 设置对象
+     */
+    getUISettingsFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('uiSettings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('无法读取 uiSettings:', e);
+        }
+
+        // 返回默认值
+        return {
+            theme: true,
+            language: true,
+            log: true,
+            projectInfo: true,
+            logPanel: true,
+            header: true,
+            fullscreen: false
+        };
+    }
+
+    /**
+     * 从 localStorage 获取项目旁复制设置
+     * @returns {Object} 项目旁设置对象
+     */
+    getProjectAdjacentSettings() {
+        try {
+            const saved = localStorage.getItem('ae_extension_project_adjacent_settings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('无法读取 projectAdjacentSettings:', e);
+        }
+        return null;
+    }
+
+    /**
+     * 从 localStorage 获取自定义文件夹设置
+     * @returns {Object} 自定义文件夹设置对象
+     */
+    getCustomFolderSettings() {
+        try {
+            const saved = localStorage.getItem('ae_extension_custom_folder_settings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('无法读取 customFolderSettings:', e);
+        }
+        return null;
+    }
+
+    /**
      * 静默保存预设到JSON（无弹窗与打开文件夹）
      * @returns {Promise<boolean>} 是否保存成功
      */
@@ -8681,12 +8751,60 @@ class AEExtension {
             const settings = this.settingsManager.getSettings();
             const preferences = this.settingsManager.getPreferences();
 
+            // 收集所有配置，包括之前遗漏的
             const exportPayload = {
                 importSettings: settings,
                 userPreferences: preferences,
+
+                // 新增：UI 面板组设置
+                uiSettings: this.getUISettingsFromLocalStorage(),
+
+                // 新增：语言设置
+                language: localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN',
+
+                // 新增：主题设置
+                aeTheme: localStorage.getItem('aeTheme') || 'dark',
+
+                // 新增：项目旁设置
+                projectAdjacentSettings: this.getProjectAdjacentSettings(),
+
+                // 新增：自定义文件夹设置
+                customFolderSettings: this.getCustomFolderSettings(),
+
                 exportedAt: new Date().toISOString()
             };
 
+            // Demo 模式：保存到虚拟文件系统
+            if (window.__DEMO_MODE_ACTIVE__) {
+                try {
+                    const jsonContent = JSON.stringify(exportPayload, null, 2);
+
+                    // 保存到虚拟文件系统
+                    if (window.demoFileSystem) {
+                        const result = window.demoFileSystem.writeFile(
+                            'Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json',
+                            jsonContent
+                        );
+
+                        if (result.success) {
+                            this.log(`💾 预设已保存到虚拟文件系统 (${result.size} bytes)`, 'info');
+                            return true;
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } else {
+                        // 降级：保存到 localStorage
+                        localStorage.setItem('eagle2ae_preset_json', jsonContent);
+                        this.log('💾 预设已保存到浏览器存储 (Demo 模式)', 'info');
+                        return true;
+                    }
+                } catch (e) {
+                    this.log(`⚠️ Demo 模式保存预设失败: ${e.message}`, 'warning');
+                    return false;
+                }
+            }
+
+            // CEP 模式：保存到文件系统
             const params = {
                 fileName: 'Eagle2Ae-Presets.json',
                 overwrite: true,
@@ -8721,34 +8839,137 @@ class AEExtension {
     async loadPresetsFromDisk() {
         try {
             this.log(`🔎 ${window.i18n?.getText('logs.tryingToLoadLocalPresets') || 'Trying to load local presets...'}`, 'info');
-            const params = { fileName: 'Eagle2Ae-Presets.json' };
-            const baseFolder = this.getPresetsBaseFolderPath();
-            if (baseFolder) {
-                params.baseFolderFsPath = baseFolder;
+
+            let parsed = null;
+
+            // Demo 模式：从虚拟文件系统加载
+            if (window.__DEMO_MODE_ACTIVE__) {
+                try {
+                    let content = null;
+
+                    // 尝试从虚拟文件系统读取
+                    if (window.demoFileSystem) {
+                        const result = window.demoFileSystem.readFile('Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json');
+                        if (result.success) {
+                            content = result.content;
+                            this.log(`✅ 从虚拟文件系统加载预设 (${result.size} bytes)`, 'info');
+                        }
+                    }
+
+                    // 降级：从 localStorage 读取
+                    if (!content) {
+                        content = localStorage.getItem('eagle2ae_preset_json');
+                        if (content) {
+                            this.log('✅ 从浏览器存储加载预设 (Demo 模式)', 'info');
+                        }
+                    }
+
+                    if (content) {
+                        parsed = JSON.parse(content);
+                    } else {
+                        this.log('ℹ️ Demo 模式：未找到保存的预设', 'info');
+                        return;
+                    }
+                } catch (e) {
+                    this.log(`⚠️ Demo 模式加载预设失败: ${e.message}`, 'warning');
+                    return;
+                }
             } else {
-                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
-            }
-            const result = await this.executeExtendScript('readImportSettingsFromJSON', params);
+                // CEP 模式：从文件系统加载
+                const params = { fileName: 'Eagle2Ae-Presets.json' };
+                const baseFolder = this.getPresetsBaseFolderPath();
+                if (baseFolder) {
+                    params.baseFolderFsPath = baseFolder;
+                } else {
+                    params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+                }
+                const result = await this.executeExtendScript('readImportSettingsFromJSON', params);
 
-            if (!result || !result.success) {
-                const msg = result && result.error ? result.error : '未找到预设文件';
-                this.log(`ℹ️ 本地预设不可用：${msg}`, 'info');
-                return;
+                if (!result || !result.success) {
+                    const msg = result && result.error ? result.error : '未找到预设文件';
+                    this.log(`ℹ️ 本地预设不可用：${msg}`, 'info');
+                    return;
+                }
+
+                // 解析 JSON
+                parsed = typeof result.jsonData === 'string' ? JSON.parse(result.jsonData) : result.jsonData;
             }
 
-            // 解析JSON并合并到设置管理器
-            const parsed = typeof result.jsonData === 'string' ? JSON.parse(result.jsonData) : result.jsonData;
+            // 应用配置到设置管理器
+
+            // 应用导入设置
             if (parsed && parsed.importSettings) {
                 this.settingsManager.saveSettings(parsed.importSettings);
             }
+
+            // 应用用户偏好
             if (parsed && parsed.userPreferences) {
                 this.settingsManager.savePreferences(parsed.userPreferences);
+            }
+
+            // 新增：应用 UI 面板组设置
+            if (parsed && parsed.uiSettings) {
+                try {
+                    localStorage.setItem('uiSettings', JSON.stringify(parsed.uiSettings));
+                    this.log('✅ 已恢复 UI 面板组设置', 'info');
+                } catch (e) {
+                    console.warn('无法保存 uiSettings:', e);
+                }
+            }
+
+            // 新增：应用语言设置
+            if (parsed && parsed.language) {
+                try {
+                    localStorage.setItem('language', parsed.language);
+                    localStorage.setItem('lang', parsed.language);
+                    // 如果 i18n 系统已加载，切换语言
+                    if (window.i18n && typeof window.i18n.setLanguage === 'function') {
+                        window.i18n.setLanguage(parsed.language);
+                    }
+                    this.log(`✅ 已恢复语言设置: ${parsed.language}`, 'info');
+                } catch (e) {
+                    console.warn('无法应用语言设置:', e);
+                }
+            }
+
+            // 新增：应用主题设置
+            if (parsed && parsed.aeTheme) {
+                try {
+                    localStorage.setItem('aeTheme', parsed.aeTheme);
+                    // 如果主题切换函数存在，应用主题
+                    if (typeof this.applyTheme === 'function') {
+                        this.applyTheme(parsed.aeTheme);
+                    }
+                    this.log(`✅ 已恢复主题设置: ${parsed.aeTheme}`, 'info');
+                } catch (e) {
+                    console.warn('无法应用主题设置:', e);
+                }
+            }
+
+            // 新增：应用项目旁设置
+            if (parsed && parsed.projectAdjacentSettings) {
+                try {
+                    localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(parsed.projectAdjacentSettings));
+                    this.log('✅ 已恢复项目旁复制设置', 'info');
+                } catch (e) {
+                    console.warn('无法保存项目旁设置:', e);
+                }
+            }
+
+            // 新增：应用自定义文件夹设置
+            if (parsed && parsed.customFolderSettings) {
+                try {
+                    localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(parsed.customFolderSettings));
+                    this.log('✅ 已恢复自定义文件夹设置', 'info');
+                } catch (e) {
+                    console.warn('无法保存自定义文件夹设置:', e);
+                }
             }
 
             // 应用到UI
             this.updateSettingsUI();
             this.loadQuickSettings();
-            this.log('✅ 已加载并应用本地预设', 'success');
+            this.log('✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）', 'success');
         } catch (error) {
             this.log(`⚠️ ${(window.i18n?.getText('logs.loadLocalPresetsFailedPrefix') || 'Failed to load local presets:')} ${error.message}`, 'warning');
         }
@@ -8806,6 +9027,12 @@ class AEExtension {
      * 打开当前预设目录（如果不存在则创建）
      */
     async handleOpenPresetsFolder() {
+        // Demo 模式：显示虚拟文件系统信息
+        if (window.__DEMO_MODE_ACTIVE__) {
+            this.handleViewDemoFiles();
+            return;
+        }
+
         try {
             const params = {};
             const base = this.getPresetsBaseFolderPath();
@@ -8832,6 +9059,12 @@ class AEExtension {
      * @returns {Promise<void>}
      */
     async ensurePresetsFolderReady() {
+        // Demo 模式：虚拟文件系统不需要创建目录
+        if (window.__DEMO_MODE_ACTIVE__) {
+            this.log('📁 Demo 模式：使用虚拟文件系统', 'info');
+            return;
+        }
+
         try {
             const params = {};
             const base = this.getPresetsBaseFolderPath();
@@ -8871,6 +9104,192 @@ class AEExtension {
             }
         } catch (e) {
             this.log(`⚠️ 选择预设目录异常：${e.message}`, 'warning');
+        }
+    }
+
+    /**
+     * 初始化预设文件管理按钮（两种模式通用）
+     */
+    initPresetFileButtons() {
+        console.log('[Preset] 开始初始化预设文件管理按钮');
+        console.log('[Preset] 当前模式:', window.__DEMO_MODE_ACTIVE__ ? 'Demo' : 'CEP');
+        
+        // 下载预设按钮
+        const downloadPresetBtn = document.getElementById('download-preset-btn');
+        console.log('[Preset] 查找 download-preset-btn:', downloadPresetBtn);
+        
+        if (downloadPresetBtn) {
+            console.log('[Preset] ✓ 找到下载预设按钮');
+            console.log('[Preset] 按钮样式:', {
+                display: downloadPresetBtn.style.display,
+                visibility: downloadPresetBtn.style.visibility,
+                pointerEvents: downloadPresetBtn.style.pointerEvents
+            });
+            
+            // 直接绑定，不使用 cloneNode（避免可能的问题）
+            downloadPresetBtn.onclick = (e) => {
+                console.log('[Preset] ★★★ 下载预设按钮被点击 ★★★', e);
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleDownloadPreset();
+            };
+            console.log('[Preset] ✓ 下载预设按钮事件已绑定');
+        } else {
+            console.error('[Preset] ✗ 找不到 download-preset-btn 元素');
+        }
+
+        // 打开预设文件按钮
+        const openPresetBtn = document.getElementById('open-preset-btn');
+        console.log('[Preset] 查找 open-preset-btn:', openPresetBtn);
+        
+        if (openPresetBtn) {
+            console.log('[Preset] ✓ 找到打开预设按钮');
+            console.log('[Preset] 按钮样式:', {
+                display: openPresetBtn.style.display,
+                visibility: openPresetBtn.style.visibility,
+                pointerEvents: openPresetBtn.style.pointerEvents
+            });
+            
+            // 直接绑定，不使用 cloneNode
+            openPresetBtn.onclick = (e) => {
+                console.log('[Preset] ★★★ 打开预设按钮被点击 ★★★', e);
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleOpenPreset();
+            };
+            console.log('[Preset] ✓ 打开预设按钮事件已绑定');
+        } else {
+            console.error('[Preset] ✗ 找不到 open-preset-btn 元素');
+        }
+
+        console.log('[Preset] ========== 预设文件管理按钮初始化完成 ==========');
+    }
+
+    /**
+     * 下载预设文件（两种模式自适应）
+     */
+    handleDownloadPreset() {
+        console.log('[Preset] handleDownloadPreset 被调用');
+        console.log('[Preset] Demo 模式:', window.__DEMO_MODE_ACTIVE__);
+        console.log('[Preset] demoFileSystem:', window.demoFileSystem);
+        
+        if (window.__DEMO_MODE_ACTIVE__) {
+            // Demo 模式：从虚拟文件系统下载
+            if (!window.demoFileSystem) {
+                console.error('[Preset] 虚拟文件系统未加载！');
+                this.log('⚠️ 虚拟文件系统未加载', 'warning');
+                return;
+            }
+
+            console.log('[Preset] 开始下载预设文件...');
+            const success = window.demoFileSystem.downloadFile(
+                'Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json',
+                'Eagle2Ae-Presets.json'
+            );
+
+            if (success) {
+                console.log('[Preset] 下载成功！');
+                this.log('✅ 预设文件已下载', 'success');
+            } else {
+                console.error('[Preset] 下载失败！');
+                this.log('⚠️ 预设文件下载失败', 'warning');
+            }
+        } else {
+            // CEP 模式：另存为文件
+            try {
+                const presetPath = this.getPresetsFilePath();
+                const destPath = window.cep.fs.showSaveDialogEx(
+                    '另存为预设文件',
+                    presetPath,
+                    ['json'],
+                    'Eagle2Ae-Presets.json'
+                );
+
+                if (destPath.data) {
+                    const content = window.cep.fs.readFile(presetPath);
+                    if (content.err === 0) {
+                        const result = window.cep.fs.writeFile(destPath.data, content.data);
+                        if (result.err === 0) {
+                            this.log('✅ 预设文件已另存为: ' + destPath.data, 'success');
+                        } else {
+                            this.log('⚠️ 保存文件失败', 'warning');
+                        }
+                    } else {
+                        this.log('⚠️ 读取预设文件失败', 'warning');
+                    }
+                }
+            } catch (error) {
+                console.error('[Preset] 另存为失败:', error);
+                this.log('⚠️ 另存为失败', 'warning');
+            }
+        }
+    }
+
+    /**
+     * 打开预设文件（两种模式自适应）
+     */
+    handleOpenPreset() {
+        console.log('[Preset] handleOpenPreset 被调用');
+        console.log('[Preset] Demo 模式:', window.__DEMO_MODE_ACTIVE__);
+        console.log('[Preset] demoFileSystem:', window.demoFileSystem);
+        
+        if (window.__DEMO_MODE_ACTIVE__) {
+            // Demo 模式：在新标签页打开
+            if (!window.demoFileSystem) {
+                console.error('[Preset] 虚拟文件系统未加载！');
+                this.log('⚠️ 虚拟文件系统未加载', 'warning');
+                return;
+            }
+
+            console.log('[Preset] 读取预设文件...');
+            const result = window.demoFileSystem.readFile('Eagle2Ae-Ae/presets/Eagle2Ae-Presets.json');
+            
+            if (!result.success) {
+                console.error('[Preset] 读取失败:', result.error);
+                this.log('⚠️ 无法读取预设文件', 'warning');
+                return;
+            }
+
+            try {
+                // 解析并格式化 JSON
+                const presets = JSON.parse(result.content);
+                const formattedJson = JSON.stringify(presets, null, 2);
+                
+                // 创建 Blob 对象
+                const blob = new Blob([formattedJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                // 在新标签页打开
+                window.open(url, '_blank');
+                
+                // 延迟释放 URL
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                
+                console.log('[Preset] 预设文件已在新标签页打开');
+                this.log('✅ 预设文件已在新标签页打开', 'success');
+            } catch (error) {
+                console.error('[Preset] 打开预设文件失败:', error);
+                this.log('⚠️ 打开预设文件失败', 'warning');
+            }
+        } else {
+            // CEP 模式：用系统默认程序打开本地文件
+            try {
+                const presetPath = this.getPresetsFilePath();
+                
+                // 检查文件是否存在
+                const fileExists = window.cep.fs.stat(presetPath);
+                if (fileExists.err !== 0) {
+                    this.log('⚠️ 预设文件不存在', 'warning');
+                    return;
+                }
+
+                // 使用系统默认程序打开文件
+                window.cep.util.openURLInDefaultBrowser('file:///' + presetPath.replace(/\\/g, '/'));
+                this.log('✅ 已打开预设文件', 'success');
+            } catch (error) {
+                console.error('[Preset] 打开文件失败:', error);
+                this.log('⚠️ 打开文件失败', 'warning');
+            }
         }
     }
 
@@ -9144,10 +9563,10 @@ class AEExtension {
             document.addEventListener('dragover', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // 添加基础视觉反馈
                 document.body.classList.add('drag-over');
-                
+
                 // 进行项目内文件预检查
                 await this.handleDragPreview(e);
             });
@@ -9182,11 +9601,11 @@ class AEExtension {
             if (this.dragPreviewTimeout) {
                 clearTimeout(this.dragPreviewTimeout);
             }
-            
+
             this.dragPreviewTimeout = setTimeout(async () => {
                 await this.performDragPreviewCheck(event);
             }, 200); // 200ms 防抖延迟
-            
+
         } catch (error) {
             this.log(`拖拽预检查失败: ${error.message}`, 'error');
         }
@@ -9196,27 +9615,27 @@ class AEExtension {
     async performDragPreviewCheck(event) {
         try {
             this.log('🔍 开始拖拽预检查...', 'debug');
-            
+
             // 尝试获取拖拽的文件信息
             let files = Array.from(event.dataTransfer.files);
             this.log(`📁 从dataTransfer.files获取到 ${files.length} 个文件`, 'debug');
-            
+
             // 检查文件路径信息
             if (files.length > 0) {
                 files.forEach((file, index) => {
                     this.log(`📄 文件 ${index + 1}: ${file.name}, 路径: ${file.path || '无路径信息'}`, 'debug');
                 });
             }
-            
+
             // 如果files为空，尝试从items获取文件信息
             if (files.length === 0 && event.dataTransfer.items) {
                 const items = Array.from(event.dataTransfer.items);
                 const fileItems = items.filter(item => item.kind === 'file');
-                
+
                 if (fileItems.length > 0) {
                     // 显示检测中的提示
                     this.updateDragHint(`🔍 正在检测 ${fileItems.length} 个文件...`, 'default');
-                    
+
                     // 尝试获取文件对象（这在某些浏览器中可能不可用）
                     try {
                         files = fileItems.map(item => item.getAsFile()).filter(file => file !== null);
@@ -9227,7 +9646,7 @@ class AEExtension {
                     }
                 }
             }
-            
+
             if (files.length === 0) {
                 // 如果仍然无法获取文件信息，显示默认提示
                 this.updateDragHint('拖拽文件到此处');
@@ -9236,28 +9655,28 @@ class AEExtension {
 
             // 检查是否为项目内文件
             const projectFileCheck = await this.isProjectInternalFile(files);
-            
+
             if (projectFileCheck.hasProjectFiles) {
                 // 项目内文件，显示警告提示
                 const projectFileCount = projectFileCheck.projectFiles.length;
                 const externalFileCount = projectFileCheck.externalFiles.length;
-                
+
                 let hintText = `⚠️ 检测到 ${projectFileCount} 个项目内文件`;
                 if (externalFileCount > 0) {
                     hintText += `，${externalFileCount} 个外部文件`;
                 }
                 hintText += '\n项目内文件无法导入';
-                
+
                 this.updateDragHint(hintText, 'warning');
                 document.body.classList.add('drag-project-files');
             } else {
-                 // 外部文件，显示正常提示
-                 const fileCount = files.length;
-                 this.updateDragHint(`✅ 准备导入 ${fileCount} 个文件`, 'success');
-                 document.body.classList.remove('drag-project-files');
-                 document.body.classList.add('drag-success');
-             }
-            
+                // 外部文件，显示正常提示
+                const fileCount = files.length;
+                this.updateDragHint(`✅ 准备导入 ${fileCount} 个文件`, 'success');
+                document.body.classList.remove('drag-project-files');
+                document.body.classList.add('drag-success');
+            }
+
         } catch (error) {
             this.log(`拖拽预检查执行失败: ${error.message}`, 'error');
             this.updateDragHint('拖拽文件到此处');
@@ -9271,7 +9690,7 @@ class AEExtension {
             dragHintElement.textContent = text;
             dragHintElement.className = `drag-hint-text drag-hint-${type}`;
         }
-        
+
         // 同时更新主拖拽区域的文本
         const dragTextElement = document.querySelector('.drag-text');
         if (dragTextElement) {
@@ -9288,14 +9707,14 @@ class AEExtension {
                 clearTimeout(this.dragPreviewTimeout);
                 this.dragPreviewTimeout = null;
             }
-            
+
             // 重置提示文本
             this.updateDragHint('拖拽文件到此处');
-            
+
             // 移除特殊样式
-             document.body.classList.remove('drag-project-files');
-             document.body.classList.remove('drag-success');
-            
+            document.body.classList.remove('drag-project-files');
+            document.body.classList.remove('drag-success');
+
         } catch (error) {
             this.log(`重置拖拽状态失败: ${error.message}`, 'error');
         }
@@ -9312,7 +9731,7 @@ class AEExtension {
         try {
             const files = Array.from(event.dataTransfer.files);
             const items = Array.from(event.dataTransfer.items);
-            
+
             if (files.length === 0 && items.length === 0) {
                 this.log('拖拽中没有检测到文件', 'warning');
                 this.showDropMessage('未检测到文件', 'warning');
@@ -9323,7 +9742,7 @@ class AEExtension {
 
             // 检查是否包含文件夹
             const hasDirectories = items.some(item => item.webkitGetAsEntry && item.webkitGetAsEntry()?.isDirectory);
-            
+
             if (hasDirectories) {
                 // 处理文件夹拖拽（可能包含序列帧）
                 await this.handleDirectoryDrop(items, files);
@@ -9340,9 +9759,9 @@ class AEExtension {
     // 处理文件夹拖拽
     async handleDirectoryDrop(items, files) {
         this.log('检测到文件夹拖拽，开始处理...', 'info');
-        
+
         const allFiles = [];
-        
+
         // 递归读取文件夹内容
         for (const item of items) {
             const entry = item.webkitGetAsEntry();
@@ -9351,37 +9770,37 @@ class AEExtension {
                 allFiles.push(...entryFiles);
             }
         }
-        
+
         // 添加直接拖拽的文件
         allFiles.push(...files);
-        
+
         if (allFiles.length === 0) {
             this.showDropMessage('文件夹中没有找到可导入的文件', 'warning');
             return;
         }
-        
+
         this.log(`文件夹中找到 ${allFiles.length} 个文件`, 'info');
-        
+
         // 首先检查是否包含项目文件
         const projectFileCheck = await this.isProjectInternalFile(allFiles);
-        
+
         if (projectFileCheck.hasProjectFiles) {
             // 显示项目内文件警告
             this.showProjectInternalFileWarning(projectFileCheck);
             return;
         }
-        
+
         // 分析文件类型和序列帧
         const analysis = this.analyzeDroppedFiles(allFiles);
-        
+
         // 显示导入选项对话框（跳过项目文件检查，因为上面已经检查过了）
         await this.showFileImportDialog(allFiles, analysis, true);
     }
-    
+
     // 递归读取文件夹内容
     async readDirectoryEntry(entry) {
         const files = [];
-        
+
         if (entry.isFile) {
             return new Promise((resolve) => {
                 entry.file((file) => {
@@ -9393,7 +9812,7 @@ class AEExtension {
             });
         } else if (entry.isDirectory) {
             const reader = entry.createReader();
-            
+
             // 修复：循环读取所有文件，因为readEntries可能不会一次性返回所有文件
             const allEntries = [];
             let entries;
@@ -9404,22 +9823,22 @@ class AEExtension {
                 allEntries.push(...entries);
                 this.log(`读取目录 ${entry.fullPath}: 本次获取 ${entries.length} 个条目，累计 ${allEntries.length} 个`, 'debug');
             } while (entries.length > 0);
-            
+
             this.log(`目录 ${entry.fullPath} 总共包含 ${allEntries.length} 个条目`, 'debug');
-            
+
             for (const childEntry of allEntries) {
                 const childFiles = await this.readDirectoryEntry(childEntry);
                 files.push(...childFiles);
             }
         }
-        
+
         return files;
     }
-    
+
     // 分析拖拽的文件
     analyzeDroppedFiles(files) {
         this.log(`开始分析拖拽文件，总数: ${files.length}`, 'info');
-        
+
         const analysis = {
             total: files.length,
             categories: {
@@ -9433,26 +9852,26 @@ class AEExtension {
             sequences: [],
             folders: new Set()
         };
-        
+
         // 按文件夹分组
         const folderGroups = {};
         const folderFullPaths = {}; // 存储文件夹的完整路径映射
-        
+
         files.forEach(file => {
             const category = this.getFileCategory(file);
             analysis.categories[category].push(file);
-            
+
             // 提取文件夹路径
             const path = file.fullPath || file.relativePath || file.webkitRelativePath || '';
             const folderPath = path.substring(0, path.lastIndexOf('/'));
-            
+
             if (folderPath) {
                 analysis.folders.add(folderPath);
                 if (!folderGroups[folderPath]) {
                     folderGroups[folderPath] = [];
                 }
                 folderGroups[folderPath].push(file);
-                
+
                 // 尝试获取完整的文件夹路径
                 if (file.originalFile && file.originalFile.path) {
                     // 从完整文件路径中提取文件夹路径
@@ -9470,10 +9889,10 @@ class AEExtension {
                 }
             }
         });
-        
+
         this.log(`文件分类统计: 图像${analysis.categories.image.length}, 视频${analysis.categories.video.length}, 音频${analysis.categories.audio.length}, 设计${analysis.categories.design.length}, 项目${analysis.categories.project.length}, 未知${analysis.categories.unknown.length}`, 'info');
         this.log(`检测到 ${analysis.folders.size} 个文件夹`, 'info');
-        
+
         // 检测序列帧
         let totalSequenceFiles = 0;
         for (const [folderPath, folderFiles] of Object.entries(folderGroups)) {
@@ -9482,7 +9901,7 @@ class AEExtension {
             if (sequence) {
                 // 使用完整路径或回退到相对路径
                 const fullFolderPath = folderFullPaths[folderPath] || folderPath;
-                
+
                 analysis.sequences.push({
                     folder: fullFolderPath, // 使用完整路径
                     files: sequence.files,
@@ -9498,31 +9917,31 @@ class AEExtension {
                 this.log(`❌ 文件夹 ${folderPath} 未识别为序列帧`, 'debug');
             }
         }
-        
+
         this.log(`序列帧检测完成: 发现 ${analysis.sequences.length} 个序列帧文件夹，共 ${totalSequenceFiles} 个序列帧文件`, 'info');
-        
+
         return analysis;
     }
-    
+
     // 检测图片序列帧
     detectImageSequence(files) {
         // 只检测图片文件
         const imageFiles = files.filter(file => this.getFileCategory(file) === 'image');
-        
+
         this.log(`检测序列帧: 图像文件数 ${imageFiles.length}`, 'debug');
-        
+
         if (imageFiles.length < 2) return null; // 至少需要2个文件才算序列帧
-        
+
         // 按文件名排序
         imageFiles.sort((a, b) => a.name.localeCompare(b.name));
-        
+
         // 尝试找到数字模式
         const patterns = [];
-        
+
         for (const file of imageFiles) {
             const name = file.name;
             const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
-            
+
             // 查找数字模式 - 支持多种数字格式，优先匹配最后一个数字序列
             const numberMatches = nameWithoutExt.match(/(.*?)(\d+)([^\d]*)$/); // 匹配最后一个数字序列
             if (numberMatches) {
@@ -9540,14 +9959,14 @@ class AEExtension {
                 this.log(`文件 ${file.name} 未匹配数字模式`, 'debug');
             }
         }
-        
+
         this.log(`找到 ${patterns.length} 个符合数字模式的文件`, 'debug');
-        
+
         if (patterns.length < 2) {
             this.log('数字模式文件数量不足，不构成序列', 'debug');
             return null;
         }
-        
+
         // 找到最一致的模式
         const patternGroups = {};
         patterns.forEach(p => {
@@ -9557,13 +9976,13 @@ class AEExtension {
             }
             patternGroups[key].push(p);
         });
-        
+
         this.log(`找到 ${Object.keys(patternGroups).length} 个不同的模式组`, 'debug');
-        
+
         // 找到最大的组
         let bestGroup = null;
         let maxSize = 0;
-        
+
         for (const [key, group] of Object.entries(patternGroups)) {
             this.log(`模式组 ${key}: ${group.length} 个文件`, 'debug');
             if (group.length > maxSize) {
@@ -9571,23 +9990,23 @@ class AEExtension {
                 bestGroup = group;
             }
         }
-        
+
         // 对于大量文件，降低要求；对于少量文件，保持较高要求
         const minGroupSize = imageFiles.length >= 10 ? Math.max(2, Math.floor(imageFiles.length * 0.8)) : 2;
         if (!bestGroup || bestGroup.length < minGroupSize) {
             this.log(`没有找到足够大的模式组，需要至少${minGroupSize}个文件，实际最大组${bestGroup ? bestGroup.length : 0}个`, 'debug');
             return null;
         }
-        
+
         this.log(`选择最佳模式组，包含 ${bestGroup.length} 个文件`, 'debug');
-        
+
         // 排序并检查连续性
         bestGroup.sort((a, b) => a.number - b.number);
-        
+
         const numbers = bestGroup.map(p => p.number);
         const start = numbers[0];
         const end = numbers[numbers.length - 1];
-        
+
         // 检测步长
         let step = 1;
         if (numbers.length > 1) {
@@ -9595,13 +10014,13 @@ class AEExtension {
             for (let i = 1; i < numbers.length; i++) {
                 diffs.push(numbers[i] - numbers[i - 1]);
             }
-            
+
             // 找到最常见的差值作为步长
             const diffCounts = {};
             diffs.forEach(diff => {
                 diffCounts[diff] = (diffCounts[diff] || 0) + 1;
             });
-            
+
             let maxCount = 0;
             for (const [diff, count] of Object.entries(diffCounts)) {
                 if (count > maxCount) {
@@ -9610,11 +10029,11 @@ class AEExtension {
                 }
             }
         }
-        
+
         // 构建模式字符串
         const firstPattern = bestGroup[0];
         const pattern = `${firstPattern.prefix}[${start}-${end}]${firstPattern.suffix}`;
-        
+
         const result = {
             files: bestGroup.map(p => p.file),
             pattern,
@@ -9627,17 +10046,17 @@ class AEExtension {
             suffix: firstPattern.suffix,
             numberLength: firstPattern.numberLength
         };
-        
+
         this.log(`✅ 检测到序列帧: ${pattern}, 范围: ${start}-${end}, 步长: ${step}, 文件数: ${bestGroup.length}`, 'info');
-        
+
         return result;
     }
-    
+
     // 处理普通文件拖拽
     async handleFilesDrop(files, dataTransfer) {
         // 首先检查是否为项目内文件
         const projectFileCheck = await this.isProjectInternalFile(files);
-        
+
         if (projectFileCheck.hasProjectFiles) {
             // 显示项目内文件警告
             this.showProjectInternalFileWarning(projectFileCheck);
@@ -9654,20 +10073,20 @@ class AEExtension {
                 requireActiveComposition: false, // 拖拽时不强制要求合成，后续会检查
                 showWarning: true
             });
-            
+
             if (!projectStatusValid) {
                 this.log('拖拽导入被阻止：项目状态不满足要求', 'warning');
                 return;
             }
-            
+
             // 分析文件类型
             const analysis = this.analyzeDroppedFiles(files);
-            
+
             // 显示导入选项对话框（跳过项目文件检查，因为上面已经检查过了）
             await this.showFileImportDialog(files, analysis, true);
         }
     }
-    
+
     // 显示文件导入对话框
     async showFileImportDialog(files, analysis, skipProjectCheck = false) {
         // 移除现有对话框
@@ -9675,30 +10094,30 @@ class AEExtension {
         if (existingDialog) {
             existingDialog.remove();
         }
-        
+
         // 检查是否包含项目文件或AE项目文件（仅在未跳过检查时执行）
         if (!skipProjectCheck) {
             try {
                 this.log('🔍 检查文件类型和项目状态...', 'info');
                 const projectFileCheck = await this.isProjectInternalFile(files);
-                
+
                 if (projectFileCheck.hasProjectFiles) {
                     this.log('⚠️ 检测到项目文件，显示警告并阻止导入', 'warning');
                     this.showProjectInternalFileWarning(projectFileCheck);
                     return; // 阻止继续显示导入对话框
                 }
-                
+
                 this.log('✅ 文件检查通过，继续显示导入对话框', 'info');
             } catch (error) {
                 this.log(`⚠️ 项目文件检查失败: ${error.message}，继续显示导入对话框`, 'warning');
                 // 检查失败时继续显示对话框，避免阻止正常功能
             }
         }
-        
+
         // 检测是否包含序列帧文件夹
         const hasSequences = analysis.sequences && analysis.sequences.length > 0;
         const folderCount = analysis.folders ? analysis.folders.size : 0;
-        
+
         // 生成检测统计信息
         let detectionInfo = '';
         if (hasSequences) {
@@ -9710,11 +10129,11 @@ class AEExtension {
         } else {
             detectionInfo = `检测到 ${files.length} 个文件`;
         }
-        
+
         // 确定要显示的文件列表
         let displayFiles = files;
         let totalDisplayFiles = files.length;
-        
+
         if (hasSequences) {
             // 对于序列帧，显示序列帧中的文件
             displayFiles = [];
@@ -9723,17 +10142,17 @@ class AEExtension {
             });
             totalDisplayFiles = analysis.sequences.reduce((sum, seq) => sum + seq.files.length, 0);
         }
-        
+
         // 生成文件信息HTML
         let fileInfoHtml = '';
-        
+
         if (hasSequences) {
             // 序列帧显示为单行
             analysis.sequences.forEach(seq => {
                 // 计算序列帧总大小
                 const totalSize = seq.files.reduce((sum, file) => sum + (file.size || 0), 0);
                 const sizeText = this.formatFileSize(totalSize);
-                
+
                 fileInfoHtml += `
                     <div class="file-item-simple">
                         <span class="file-icon">🎞️</span>
@@ -9759,21 +10178,21 @@ class AEExtension {
                 `;
             }).join('');
         }
-        
+
         // 如果文件数量超过5个，显示省略提示（仅对非序列帧）
-        const moreFilesHtml = (!hasSequences && totalDisplayFiles > 5) ? 
+        const moreFilesHtml = (!hasSequences && totalDisplayFiles > 5) ?
             `<div class="file-item-simple"><span class="file-name">... 还有 ${totalDisplayFiles - Math.min(5, displayFiles.length)} 个文件</span></div>` : '';
-        
+
         // 获取当前设置并确定导入模式和行为
         const settings = this.settingsManager.getSettings();
-        
+
         // 导入模式映射
         const importModeText = {
             'direct': '直接导入',
             'project_adjacent': '项目旁复制',
             'custom_folder': '自定义文件夹'
         }[settings.mode] || settings.mode;
-        
+
         // 根据是否自动添加到合成来确定导入行为
         let importBehavior;
         if (settings.addToComposition) {
@@ -9787,9 +10206,9 @@ class AEExtension {
             // 如果不自动添加到合成，显示"不导入合成"
             importBehavior = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
         }
-        
+
         let importMode = importModeText;
-        
+
         // 检查是否是序列帧或文件夹，并根据情况调整导入行为显示
         // 只有当用户没有明确设置导入行为时，才显示特殊的序列帧/文件夹导入提示
         if (hasSequences && settings.mode === ImportModes.DIRECT) { // 假设直接导入模式下，序列帧导入是特殊行为
@@ -9797,11 +10216,11 @@ class AEExtension {
         } else if (folderCount > 0 && settings.mode === ImportModes.DIRECT) { // 假设直接导入模式下，文件夹导入是特殊行为
             importBehavior = '文件夹导入';
         }
-        
+
         // 创建对话框
         const dialog = document.createElement('div');
         dialog.className = 'eagle-confirm-dialog';
-        
+
         dialog.innerHTML = `
             <div class="eagle-confirm-content">
                 <div class="eagle-confirm-header">
@@ -9824,9 +10243,9 @@ class AEExtension {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(dialog);
-        
+
         // 绑定事件
         document.getElementById('drag-confirm-yes').onclick = async () => {
             dialog.remove();
@@ -9845,18 +10264,18 @@ class AEExtension {
                 this.showErrorDialog('导入失败', error.message);
             }
         };
-        
+
         document.getElementById('drag-confirm-no').onclick = () => {
             dialog.remove();
         };
-        
+
         // 样式已统一使用剪贴板导入确认面板的样式
     }
-    
+
     // 处理导入操作
     async handleImportAction(files, analysis, action) {
         let filesToImport = [];
-        
+
         switch (action) {
             case 'all':
                 filesToImport = files;
@@ -9880,28 +10299,28 @@ class AEExtension {
             default:
                 filesToImport = files;
         }
-        
+
         if (filesToImport.length === 0) {
             this.showDropMessage('没有文件需要导入', 'warning');
             return;
         }
-        
+
         this.log(`开始导入 ${filesToImport.length} 个文件 (${action} 模式)`, 'info');
-        
+
         // 普通文件导入
         await this.handleNonEagleDragImport(filesToImport);
     }
-    
+
     // 处理序列帧导入
     async handleSequenceImport(sequences) {
         let successCount = 0;
         let totalSequences = sequences.length;
-        
+
         for (const sequence of sequences) {
             try {
                 this.log(`导入序列帧文件夹: ${sequence.folder} (${sequence.pattern})`, 'info');
                 this.log(`序列帧范围: ${sequence.start}-${sequence.end}, 步长: ${sequence.step}, 文件数: ${sequence.files.length}`, 'info');
-                
+
                 // 构造序列帧导入消息
                 const message = {
                     type: 'import_sequence',
@@ -9924,7 +10343,7 @@ class AEExtension {
                     timestamp: Date.now(),
                     isDragImport: true
                 };
-                
+
                 // 调用序列帧导入处理
                 const result = await this.handleImportFiles(message);
                 if (result && result.success) {
@@ -9938,7 +10357,7 @@ class AEExtension {
                         throw new Error(errorMessage);
                     }
                 }
-                
+
             } catch (error) {
                 this.log(`❌ 序列帧导入失败: ${sequence.folder} - ${error.message}`, 'error');
                 // 如果只有一个序列帧且失败，重新抛出异常以触发弹窗
@@ -9947,18 +10366,18 @@ class AEExtension {
                 }
             }
         }
-        
+
         if (successCount === totalSequences) {
             this.showDropMessage(`✅ 所有序列帧文件夹导入完成 (${successCount}/${totalSequences})`, 'success');
         } else {
             this.showDropMessage(`⚠️ 序列帧导入完成 (${successCount}/${totalSequences})`, 'warning');
         }
     }
-    
+
     // 处理文件夹导入
     async handleFolderImport(analysis, allFiles) {
         const folderGroups = {};
-        
+
         // 按文件夹分组文件
         allFiles.forEach(file => {
             const path = file.fullPath || file.relativePath || file.webkitRelativePath || '';
@@ -9970,15 +10389,15 @@ class AEExtension {
                 folderGroups[folderPath].push(file);
             }
         });
-        
+
         let successCount = 0;
         let totalFolders = Object.keys(folderGroups).length;
-        
+
         // 逐个文件夹导入
         for (const [folderPath, folderFiles] of Object.entries(folderGroups)) {
             try {
                 this.log(`导入文件夹: ${folderPath} (${folderFiles.length} 个文件)`, 'info');
-                
+
                 // 构造文件夹导入消息
                 const message = {
                     type: 'import_folder',
@@ -9997,7 +10416,7 @@ class AEExtension {
                     timestamp: Date.now(),
                     isDragImport: true
                 };
-                
+
                 // 调用文件夹导入处理
                 const result = await this.handleImportFiles(message);
                 if (result && result.success) {
@@ -10011,148 +10430,148 @@ class AEExtension {
                         throw new Error(errorMessage);
                     }
                 }
-                
+
             } catch (error) {
-            this.log(`❌ 文件夹导入失败: ${folderPath} - ${error.message}`, 'error');
-        }
-    }
-    
-    if (successCount === totalFolders) {
-        this.showDropMessage(`✅ 所有文件夹导入完成 (${successCount}/${totalFolders})`, 'success');
-    } else {
-        this.showDropMessage(`⚠️ 文件夹导入完成 (${successCount}/${totalFolders})`, 'warning');
-    }
-}
-
-// 处理序列帧导入到AE
-async handleSequenceImportToAE(sequence, settings = null) {
-    try {
-        this.log(`🎞️ 开始导入序列帧: ${sequence.folder}`, 'info');
-        this.log(`📊 序列帧信息: ${sequence.pattern}, 范围: ${sequence.start}-${sequence.end}, 文件数: ${sequence.totalFiles}`, 'info');
-        
-        // 获取项目信息
-        await this.refreshProjectInfo();
-        const projectInfo = await this.getProjectInfo();
-        
-        // 智能合成选择逻辑
-        if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
-            if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
-                // 多个合成可用，弹出选择对话框
-                const selectedComp = await this.showCompositionSelectionDialog(projectInfo.availableComps);
-                if (!selectedComp) {
-                    throw new Error('用户取消了合成选择');
-                }
-                // 设置选择的合成为活动合成
-                await this.executeExtendScript('setActiveComposition', { compName: selectedComp.name });
-                // 重新获取项目信息
-                await this.refreshProjectInfo();
-                const updatedProjectInfo = await this.getProjectInfo();
-                if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
-                    throw new Error('设置活动合成失败');
-                }
-            } else {
-                throw new Error('没有活动合成，请先选择或创建一个合成');
+                this.log(`❌ 文件夹导入失败: ${folderPath} - ${error.message}`, 'error');
             }
         }
-        
-        // 使用传入的设置或默认设置
-        const effectiveSettings = settings || this.settingsManager.getSettings();
-        
-        // 构造序列帧导入参数
-        const sequenceData = {
-            type: 'sequence',
-            folder: sequence.folder,
-            pattern: sequence.pattern,
-            start: sequence.start,
-            end: sequence.end,
-            step: sequence.step || 1,
-            files: sequence.files,
-            totalFiles: sequence.totalFiles,
-            // 添加导入设置
-            settings: effectiveSettings
-        };
-        
-        // 调用AE脚本导入序列帧
-        const result = await this.callAEScript('importSequence', sequenceData);
-        
-        if (result && result.success) {
-            this.log(`✅ 序列帧导入成功: ${sequence.folder}`, 'success');
-            return { success: true, importedCount: 1, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
-        } else {
-            throw new Error(result ? result.error : '序列帧导入失败');
-        }
-        
-    } catch (error) {
-        this.log(`❌ 序列帧导入失败: ${error.message}`, 'error');
-        return { success: false, error: error.message, importedCount: 0 };
-    }
-}
 
-// 处理文件夹导入到AE
-async handleFolderImportToAE(folder) {
-    try {
-        this.log(`📁 开始导入文件夹: ${folder.path}`, 'info');
-        this.log(`📊 文件夹信息: ${folder.totalFiles} 个文件`, 'info');
-        
-        // 获取项目信息
-        await this.refreshProjectInfo();
-        const projectInfo = await this.getProjectInfo();
-        
-        if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
-            // 检查是否需要用户选择合成
-            if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
-                // 弹出合成选择对话框
-                const selectedComp = await this.showCompositionSelectionDialog(projectInfo.activeComp.availableComps);
-                if (!selectedComp) {
-                    throw new Error('用户取消了合成选择');
-                }
-                
-                // 设置选中的合成为活动合成
-                const setResult = await this.executeExtendScript(`setActiveComposition('${selectedComp}')`);
-                if (!setResult || !setResult.success) {
-                    throw new Error('设置活动合成失败: ' + (setResult ? setResult.error : '未知错误'));
-                }
-                
-                // 重新获取项目信息
-                await this.refreshProjectInfo();
-                const updatedProjectInfo = await this.getProjectInfo();
-                if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
-                    throw new Error('设置活动合成后仍无法获取合成信息');
-                }
-            } else {
-                throw new Error('没有活动合成，请先选择或创建一个合成');
-            }
-        }
-        
-        // 构造文件夹导入参数
-        const folderData = {
-            type: 'folder',
-            path: folder.path,
-            files: folder.files,
-            totalFiles: folder.totalFiles
-        };
-        
-        // 调用AE脚本导入文件夹
-        const result = await this.callAEScript('importFolder', folderData);
-        
-        if (result && result.success) {
-            this.log(`✅ 文件夹导入成功: ${folder.path}`, 'success');
-            return { success: true, importedCount: folder.totalFiles, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
+        if (successCount === totalFolders) {
+            this.showDropMessage(`✅ 所有文件夹导入完成 (${successCount}/${totalFolders})`, 'success');
         } else {
-            throw new Error(result ? result.error : '文件夹导入失败');
+            this.showDropMessage(`⚠️ 文件夹导入完成 (${successCount}/${totalFolders})`, 'warning');
         }
-        
-    } catch (error) {
-        this.log(`❌ 文件夹导入失败: ${error.message}`, 'error');
-        return { success: false, error: error.message, importedCount: 0 };
     }
-}
-    
+
+    // 处理序列帧导入到AE
+    async handleSequenceImportToAE(sequence, settings = null) {
+        try {
+            this.log(`🎞️ 开始导入序列帧: ${sequence.folder}`, 'info');
+            this.log(`📊 序列帧信息: ${sequence.pattern}, 范围: ${sequence.start}-${sequence.end}, 文件数: ${sequence.totalFiles}`, 'info');
+
+            // 获取项目信息
+            await this.refreshProjectInfo();
+            const projectInfo = await this.getProjectInfo();
+
+            // 智能合成选择逻辑
+            if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
+                if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
+                    // 多个合成可用，弹出选择对话框
+                    const selectedComp = await this.showCompositionSelectionDialog(projectInfo.availableComps);
+                    if (!selectedComp) {
+                        throw new Error('用户取消了合成选择');
+                    }
+                    // 设置选择的合成为活动合成
+                    await this.executeExtendScript('setActiveComposition', { compName: selectedComp.name });
+                    // 重新获取项目信息
+                    await this.refreshProjectInfo();
+                    const updatedProjectInfo = await this.getProjectInfo();
+                    if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
+                        throw new Error('设置活动合成失败');
+                    }
+                } else {
+                    throw new Error('没有活动合成，请先选择或创建一个合成');
+                }
+            }
+
+            // 使用传入的设置或默认设置
+            const effectiveSettings = settings || this.settingsManager.getSettings();
+
+            // 构造序列帧导入参数
+            const sequenceData = {
+                type: 'sequence',
+                folder: sequence.folder,
+                pattern: sequence.pattern,
+                start: sequence.start,
+                end: sequence.end,
+                step: sequence.step || 1,
+                files: sequence.files,
+                totalFiles: sequence.totalFiles,
+                // 添加导入设置
+                settings: effectiveSettings
+            };
+
+            // 调用AE脚本导入序列帧
+            const result = await this.callAEScript('importSequence', sequenceData);
+
+            if (result && result.success) {
+                this.log(`✅ 序列帧导入成功: ${sequence.folder}`, 'success');
+                return { success: true, importedCount: 1, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
+            } else {
+                throw new Error(result ? result.error : '序列帧导入失败');
+            }
+
+        } catch (error) {
+            this.log(`❌ 序列帧导入失败: ${error.message}`, 'error');
+            return { success: false, error: error.message, importedCount: 0 };
+        }
+    }
+
+    // 处理文件夹导入到AE
+    async handleFolderImportToAE(folder) {
+        try {
+            this.log(`📁 开始导入文件夹: ${folder.path}`, 'info');
+            this.log(`📊 文件夹信息: ${folder.totalFiles} 个文件`, 'info');
+
+            // 获取项目信息
+            await this.refreshProjectInfo();
+            const projectInfo = await this.getProjectInfo();
+
+            if (!projectInfo.activeComp || !projectInfo.activeComp.name) {
+                // 检查是否需要用户选择合成
+                if (projectInfo.activeComp && projectInfo.activeComp.needsSelection) {
+                    // 弹出合成选择对话框
+                    const selectedComp = await this.showCompositionSelectionDialog(projectInfo.activeComp.availableComps);
+                    if (!selectedComp) {
+                        throw new Error('用户取消了合成选择');
+                    }
+
+                    // 设置选中的合成为活动合成
+                    const setResult = await this.executeExtendScript(`setActiveComposition('${selectedComp}')`);
+                    if (!setResult || !setResult.success) {
+                        throw new Error('设置活动合成失败: ' + (setResult ? setResult.error : '未知错误'));
+                    }
+
+                    // 重新获取项目信息
+                    await this.refreshProjectInfo();
+                    const updatedProjectInfo = await this.getProjectInfo();
+                    if (!updatedProjectInfo.activeComp || !updatedProjectInfo.activeComp.name) {
+                        throw new Error('设置活动合成后仍无法获取合成信息');
+                    }
+                } else {
+                    throw new Error('没有活动合成，请先选择或创建一个合成');
+                }
+            }
+
+            // 构造文件夹导入参数
+            const folderData = {
+                type: 'folder',
+                path: folder.path,
+                files: folder.files,
+                totalFiles: folder.totalFiles
+            };
+
+            // 调用AE脚本导入文件夹
+            const result = await this.callAEScript('importFolder', folderData);
+
+            if (result && result.success) {
+                this.log(`✅ 文件夹导入成功: ${folder.path}`, 'success');
+                return { success: true, importedCount: folder.totalFiles, targetComp: projectInfo.activeComp ? projectInfo.activeComp.name : 'Unknown' };
+            } else {
+                throw new Error(result ? result.error : '文件夹导入失败');
+            }
+
+        } catch (error) {
+            this.log(`❌ 文件夹导入失败: ${error.message}`, 'error');
+            return { success: false, error: error.message, importedCount: 0 };
+        }
+    }
+
     // 检查文件是否已在当前AE项目中导入或是否为AE项目文件
     async isProjectInternalFile(files) {
         try {
             this.log(`🔍 开始检查 ${files.length} 个文件的项目状态`, 'info');
-            
+
             // 快速提取文件路径数组
             const filePaths = [];
             for (const file of files) {
@@ -10161,7 +10580,7 @@ async handleFolderImportToAE(folder) {
                     filePaths.push(filePath);
                 }
             }
-            
+
             if (filePaths.length === 0) {
                 this.log('❌ 无法获取任何文件路径，允许导入', 'warning');
                 return {
@@ -10170,32 +10589,32 @@ async handleFolderImportToAE(folder) {
                     externalFiles: files
                 };
             }
-            
+
             // 首先快速检查是否有AE项目文件（这个检查很快）
             const aeProjectCheck = await this.executeExtendScript('checkAEProjectFiles', filePaths);
-            
+
             if (aeProjectCheck && aeProjectCheck.success && aeProjectCheck.aeProjectFiles.length > 0) {
                 this.log(`⚠️ 检测到 ${aeProjectCheck.aeProjectFiles.length} 个AE项目文件，禁止导入`, 'warning');
-                
+
                 // 使用哈希表快速匹配AE项目文件
                 const aeProjectPathsSet = new Set();
                 aeProjectCheck.aeProjectFiles.forEach(path => {
                     aeProjectPathsSet.add(path.toLowerCase().replace(/\\/g, '/'));
                 });
-                
+
                 const projectFiles = [];
                 const externalFiles = [];
-                
+
                 for (const file of files) {
                     const currentPath = file.path || file.webkitRelativePath || file.name;
                     const normalizedCurrent = currentPath.toLowerCase().replace(/\\/g, '/');
-                    
+
                     // 检查是否为AE项目文件
-                    const isAEProject = aeProjectPathsSet.has(normalizedCurrent) || 
-                        Array.from(aeProjectPathsSet).some(projectPath => 
+                    const isAEProject = aeProjectPathsSet.has(normalizedCurrent) ||
+                        Array.from(aeProjectPathsSet).some(projectPath =>
                             normalizedCurrent.includes(projectPath) || projectPath.includes(normalizedCurrent)
                         );
-                    
+
                     if (isAEProject) {
                         projectFiles.push({
                             name: file.name,
@@ -10206,17 +10625,17 @@ async handleFolderImportToAE(folder) {
                         externalFiles.push(file);
                     }
                 }
-                
+
                 return {
                     hasProjectFiles: true,
                     projectFiles: projectFiles,
                     externalFiles: externalFiles
                 };
             }
-            
+
             // 如果没有AE项目文件，检查是否已在项目中导入
             this.log('📡 检查文件是否已在项目中...', 'info');
-            
+
             // 对于大量文件，进行分批处理以提高性能
             let checkResult;
             if (filePaths.length > 100) {
@@ -10224,17 +10643,17 @@ async handleFolderImportToAE(folder) {
                 const batchSize = 50;
                 const allImportedFiles = [];
                 const allExternalFiles = [];
-                
+
                 for (let i = 0; i < filePaths.length; i += batchSize) {
                     const batch = filePaths.slice(i, i + batchSize);
                     const batchResult = await this.executeExtendScript('checkProjectImportedFiles', batch);
-                    
+
                     if (batchResult && batchResult.success) {
                         allImportedFiles.push(...(batchResult.importedFiles || []));
                         allExternalFiles.push(...(batchResult.externalFiles || []));
                     }
                 }
-                
+
                 checkResult = {
                     success: true,
                     importedFiles: allImportedFiles,
@@ -10243,7 +10662,7 @@ async handleFolderImportToAE(folder) {
             } else {
                 checkResult = await this.executeExtendScript('checkProjectImportedFiles', filePaths);
             }
-            
+
             if (!checkResult || !checkResult.success) {
                 const errorMsg = checkResult?.error || '未知错误';
                 this.log(`💥 项目文件检查失败: ${errorMsg}`, 'error');
@@ -10254,25 +10673,25 @@ async handleFolderImportToAE(folder) {
                     externalFiles: files
                 };
             }
-            
+
             const importedFiles = checkResult.importedFiles || [];
-            
+
             if (importedFiles.length > 0) {
                 this.log(`检测到 ${importedFiles.length} 个已在项目中的文件`, 'warning');
-                
+
                 // 使用哈希表快速匹配已导入文件
                 const importedPathsSet = new Set();
                 importedFiles.forEach(path => {
                     importedPathsSet.add(path.toLowerCase().replace(/\\/g, '/'));
                 });
-                
+
                 const projectFiles = [];
                 const externalFiles = [];
-                
+
                 for (const file of files) {
                     const currentPath = file.path || file.webkitRelativePath || file.name;
                     const normalizedCurrent = currentPath.toLowerCase().replace(/\\/g, '/');
-                    
+
                     if (importedPathsSet.has(normalizedCurrent)) {
                         projectFiles.push({
                             name: file.name,
@@ -10282,14 +10701,14 @@ async handleFolderImportToAE(folder) {
                         externalFiles.push(file);
                     }
                 }
-                
+
                 return {
                     hasProjectFiles: true,
                     projectFiles: projectFiles,
                     externalFiles: externalFiles
                 };
             }
-            
+
             this.log('✅ 所有文件都不在项目中，允许导入', 'info');
             return {
                 hasProjectFiles: false,
@@ -10314,24 +10733,24 @@ async handleFolderImportToAE(folder) {
      */
     showProjectInternalFileWarning(projectFileCheck) {
         const { projectFiles, externalFiles } = projectFileCheck;
-        
+
         // 检查是否有AE项目文件
         const aeProjectFiles = projectFiles.filter(file => file.type === 'ae_project');
         const normalProjectFiles = projectFiles.filter(file => file.type !== 'ae_project');
-        
+
         let message = '';
         let title = '';
-        
+
         if (aeProjectFiles.length > 0) {
             // 如果有AE项目文件，显示专门的警告
             title = 'AE项目文件导入限制';
             message = '检测到After Effects项目文件，无法导入：\n\n';
-            
+
             message += 'AE项目文件：\n';
             aeProjectFiles.forEach(file => {
                 message += `• ${file.name}\n`;
             });
-            
+
             message += '\n⚠️ AE项目文件(.aep/.aet/.aepx)不能作为素材导入到当前项目中。\n';
             message += '如需使用其他项目的内容，请：\n';
             message += '1. 打开该项目文件\n';
@@ -10341,15 +10760,15 @@ async handleFolderImportToAE(folder) {
             // 普通项目内文件警告
             title = '项目内文件导入限制';
             message = '检测到项目内文件，无法导入：\n\n';
-            
+
             message += '项目内文件：\n';
             normalProjectFiles.forEach(file => {
                 message += `• ${file.name}\n`;
             });
-            
+
             message += '\n\n提示：请从项目外部拖拽文件进行导入。';
         }
-        
+
         // 如果还有其他外部文件，显示它们
         if (externalFiles.length > 0) {
             message += '\n\n外部文件：\n';
@@ -10358,7 +10777,7 @@ async handleFolderImportToAE(folder) {
             });
             message += '\n只有外部文件可以导入到项目中。';
         }
-        
+
         // 显示警告对话框
         try {
             const escapedTitle = title.replace(/"/g, '\\"');
@@ -10369,10 +10788,10 @@ async handleFolderImportToAE(folder) {
             // 降级到简单alert
             alert(`${title}\n\n${message}`);
         }
-        
+
         // 记录日志
         this.log(`阻止导入项目内文件: ${projectFiles.map(f => f.name).join(', ')}`, 'info');
-        
+
         // 重置拖拽状态
         this.resetDragPreviewState();
     }
@@ -10385,25 +10804,25 @@ async handleFolderImportToAE(folder) {
                 const path = file.path || file.webkitRelativePath || '';
                 const pathLower = path.toLowerCase();
                 return pathLower.includes('eagle') ||
-                       pathLower.includes('.eaglepack') ||
-                       pathLower.includes('library.library') ||
-                       (pathLower.includes('images') && pathLower.includes('library'));
+                    pathLower.includes('.eaglepack') ||
+                    pathLower.includes('library.library') ||
+                    (pathLower.includes('images') && pathLower.includes('library'));
             });
 
             // 方法2：检查自定义数据类型
             const hasEagleData = dataTransfer.types.some(type => {
                 const typeLower = type.toLowerCase();
                 return typeLower.includes('eagle') ||
-                       typeLower.includes('x-eagle') ||
-                       typeLower.includes('application/x-eagle');
+                    typeLower.includes('x-eagle') ||
+                    typeLower.includes('application/x-eagle');
             });
 
             // 方法3：检查拖拽来源信息
             const plainText = dataTransfer.getData('text/plain') || '';
             const plainTextLower = plainText.toLowerCase();
             const hasEagleMetadata = plainTextLower.includes('eagle') ||
-                                   plainTextLower.includes('.eaglepack') ||
-                                   plainTextLower.includes('library.library');
+                plainTextLower.includes('.eaglepack') ||
+                plainTextLower.includes('library.library');
 
             const isEagle = hasEaglePath || hasEagleData || hasEagleMetadata;
 
@@ -10430,7 +10849,7 @@ async handleFolderImportToAE(folder) {
                 requireActiveComposition: false, // 拖拽时不强制要求合成，后续会检查
                 showWarning: true
             });
-            
+
             if (!projectStatusValid) {
                 this.log('拖拽导入被阻止：项目状态不满足要求', 'warning');
                 return;
@@ -10440,7 +10859,7 @@ async handleFolderImportToAE(folder) {
             const fileData = files.map(file => {
                 // 尝试获取完整路径信息
                 let fullPath = file.path || file.webkitRelativePath || file.name;
-                
+
                 // 如果是拖拽导入且有完整路径信息，尝试提取目录路径
                 if (file.path && file.path.includes('\\')) {
                     // Windows路径格式，保持完整路径
@@ -10449,7 +10868,7 @@ async handleFolderImportToAE(folder) {
                     // 相对路径，需要结合其他信息构建完整路径
                     fullPath = file.webkitRelativePath;
                 }
-                
+
                 return {
                     name: file.name,
                     path: fullPath,
@@ -11128,7 +11547,7 @@ async handleFolderImportToAE(folder) {
 
             // 获取当前设置
             const currentSettings = this.settingsManager.getSettings();
-            
+
             // 根据是否自动添加到合成来确定导入行为
             let importBehavior;
             if (currentSettings.addToComposition) {
@@ -11402,13 +11821,13 @@ async handleFolderImportToAE(folder) {
     // 生成文件签名（用于防重复导入）
     generateFileSignature(files) {
         if (!files || files.length === 0) return '';
-        
+
         // 基于文件路径和大小生成签名
         const signature = files
             .map(file => `${file.path || file.name}:${file.size || 0}`)
             .sort() // 排序确保顺序一致
             .join('|');
-        
+
         return this.simpleHash(signature);
     }
 
@@ -11416,13 +11835,13 @@ async handleFolderImportToAE(folder) {
     simpleHash(str) {
         let hash = 0;
         if (str.length === 0) return hash.toString();
-        
+
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // 转换为32位整数
         }
-        
+
         return Math.abs(hash).toString(36);
     }
 
@@ -11439,7 +11858,7 @@ async handleFolderImportToAE(folder) {
             (window.location && window.location.search && window.location.search.includes('demo=true'))
         );
     }
-    
+
     /**
      * 绑定图层操作按钮事件
      * @param {HTMLElement} dialog - 弹窗元素
@@ -11450,25 +11869,25 @@ async handleFolderImportToAE(folder) {
         dialog.addEventListener('click', (event) => {
             const button = event.target.closest('.layer-action-btn');
             if (!button) return;
-            
+
             const action = button.getAttribute('data-action');
             const layerRow = button.closest('.layer-item-row');
             if (!layerRow) return;
-            
+
             // 通过按钮在DOM中的位置找到对应的图层数据
             const allLayerRows = dialog.querySelectorAll('.layer-item-row');
             const rowIndex = Array.from(allLayerRows).indexOf(layerRow);
-            
+
             if (rowIndex < 0 || rowIndex >= selectedLayers.length) {
                 this.log('未找到对应的图层数据', 'error');
                 return;
             }
-            
+
             const layer = selectedLayers[rowIndex];
-            
+
             event.preventDefault();
             event.stopPropagation();
-            
+
             switch (action) {
                 case 'export':
                     this.handleLayerExport(layer);
@@ -11484,7 +11903,7 @@ async handleFolderImportToAE(folder) {
             }
         });
     }
-    
+
     /**
      * 处理图层导出
      * @param {Object} layer - 图层对象
@@ -11492,7 +11911,7 @@ async handleFolderImportToAE(folder) {
     async handleLayerExport(layer) {
         try {
             this.log(`开始导出: ${layer.name} (${layer.layerType || 'unknown'})`, 'info');
-            
+
             // 检查是否为Demo模式
             if (this.isDemoMode()) {
                 this.log(`🎭 演示模式：模拟导出图层 ${layer.name}`, 'info');
@@ -11501,10 +11920,10 @@ async handleFolderImportToAE(folder) {
                 }
                 return;
             }
-            
+
             // 获取当前导出设置
             const exportSettings = this.getExportSettingsFromUI();
-            
+
             // 构造单个图层导出参数
             const exportParams = {
                 exportSettings: {
@@ -11526,12 +11945,12 @@ async handleFolderImportToAE(folder) {
                 this.log('检测到合成图层，准备导出当前时间帧（JSX端将使用 activeItem.time）', 'info');
                 exportParams.exportType = 'composition_frame';
             }
-            
+
             // 调用ExtendScript导出功能
             this.log(`调用 JSX exportSelectedLayers，参数: ${JSON.stringify(exportParams)}`, 'debug');
             const result = await this.executeExtendScript('exportSelectedLayers', exportParams);
             this.log(`JSX 返回: ${JSON.stringify(result)}`, 'debug');
-            
+
             if (result && result.success) {
                 this.log(`✅ 图层导出成功: ${layer.name}`, 'success');
                 const exportPath = result.exportPath || '';
@@ -11549,7 +11968,7 @@ async handleFolderImportToAE(folder) {
             this.log(`导出图层过程出错: ${error.message}`, 'error');
         }
     }
-    
+
     /**
      * 处理打开文件夹
      * @param {Object} layer - 图层对象
@@ -11557,7 +11976,7 @@ async handleFolderImportToAE(folder) {
     handleLayerOpenFolder(layer) {
         try {
             let filePath = null;
-            
+
             // 尝试从不同位置获取文件路径
             if (layer.tooltipInfo && layer.tooltipInfo.originalPath) {
                 filePath = layer.tooltipInfo.originalPath;
@@ -11568,24 +11987,24 @@ async handleFolderImportToAE(folder) {
             } else if (layer.originalPath) {
                 filePath = layer.originalPath;
             }
-            
+
             if (!filePath) {
                 this.log(`无法获取文件路径: ${layer.name}`, 'warning');
                 alert(`无法获取文件路径: ${layer.name}`);
                 return;
             }
-            
+
             // 获取文件夹路径（去掉文件名）
             let folderPath = filePath.substring(0, Math.max(filePath.lastIndexOf('\\'), filePath.lastIndexOf('/')));
-            
+
             if (!folderPath || folderPath === filePath) {
                 this.log(`无法解析文件夹路径: ${filePath}`, 'warning');
                 alert(`无法解析文件夹路径: ${filePath}`);
                 return;
             }
-            
+
             this.log(`打开文件夹: ${folderPath}`, 'info');
-            
+
             // 调用ExtendScript的打开文件夹功能
             this.executeExtendScript('openFileFolder', { folderPath: folderPath })
                 .then(result => {
@@ -11602,13 +12021,13 @@ async handleFolderImportToAE(folder) {
                     // 降级到显示路径
                     alert(`无法自动打开文件夹，请手动打开以下路径：\n${folderPath}`);
                 });
-            
+
         } catch (error) {
             this.log(`打开文件夹失败: ${error.message}`, 'error');
             alert(`打开文件夹失败: ${error.message}`);
         }
     }
-    
+
     /**
      * 显示合成选择对话框
      * @param {Array} availableComps - 可用合成列表
@@ -11621,18 +12040,18 @@ async handleFolderImportToAE(folder) {
             if (existingDialog) {
                 existingDialog.remove();
             }
-            
+
             // 创建对话框HTML
             const dialog = document.createElement('div');
             dialog.className = 'eagle-confirm-dialog';
-            
+
             // 生成合成列表HTML
             let compsHtml = '';
             availableComps.forEach((comp, index) => {
                 const sizeText = `${comp.width}×${comp.height}`;
                 const durationText = `${Math.round(comp.duration)}s`;
                 const frameRateText = `${comp.frameRate}fps`;
-                
+
                 compsHtml += `
                     <div class="comp-item" data-index="${index}">
                         <div class="comp-info">
@@ -11643,7 +12062,7 @@ async handleFolderImportToAE(folder) {
                     </div>
                 `;
             });
-            
+
             dialog.innerHTML = `
                 <div class="dialog-content">
                     <div class="dialog-header">
@@ -11800,12 +12219,12 @@ async handleFolderImportToAE(folder) {
                     }
                 </style>
             `;
-            
+
             document.body.appendChild(dialog);
-            
+
             let selectedIndex = -1;
             const confirmBtn = dialog.querySelector('.dialog-confirm');
-            
+
             // 处理合成选择
             dialog.querySelectorAll('.comp-item').forEach((item, index) => {
                 item.addEventListener('click', () => {
@@ -11817,13 +12236,13 @@ async handleFolderImportToAE(folder) {
                     confirmBtn.disabled = false;
                 });
             });
-            
+
             // 处理按钮点击
             const closeDialog = (result = null) => {
                 dialog.remove();
                 resolve(result);
             };
-            
+
             dialog.querySelector('.dialog-close').addEventListener('click', () => closeDialog());
             dialog.querySelector('.dialog-cancel').addEventListener('click', () => closeDialog());
             dialog.querySelector('.dialog-confirm').addEventListener('click', () => {
@@ -11831,7 +12250,7 @@ async handleFolderImportToAE(folder) {
                     closeDialog(availableComps[selectedIndex]);
                 }
             });
-            
+
             // 点击背景关闭
             dialog.addEventListener('click', (e) => {
                 if (e.target === dialog) {
@@ -11848,7 +12267,7 @@ async handleFolderImportToAE(folder) {
     handleLayerExtension(layer) {
         // 预留扩展功能，暂时显示图层详情
         this.log(`扩展功能（预留）: ${layer.name}`, 'info');
-        
+
         // 可以在这里添加更多功能，比如：
         // - 复制图层信息到剪贴板
         // - 显示图层详细属性
@@ -11899,7 +12318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     aeExtension.log('快速设置已切换到不导入合成模式', 'info');
                 }
-                
+
                 // 同步到高级设置面板
                 const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
                 const advancedTextSpan = advancedNoImportBtn ? advancedNoImportBtn.querySelector('span') : null;

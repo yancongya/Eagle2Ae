@@ -4113,6 +4113,12 @@
                         <button id="export-presets-btn" class="preset-button"
                             data-i18n-title="tooltips.openPresetDirectory"
                             data-i18n="common.openPresetDirectory">打开预设目录</button>
+                        <button id="download-preset-btn" class="preset-button" title="下载/另存为预设文件">
+                            下载预设文件
+                        </button>
+                        <button id="open-preset-btn" class="preset-button" title="打开预设文件">
+                            打开预设文件
+                        </button>
                         <button id="choose-presets-dir-btn" class="preset-button icon"
                             data-i18n-title="tooltips.customPresetDirectory">⚙</button>
                     </div>
@@ -4982,6 +4988,7 @@
     <script src="js/nodejs-test.js"></script>
 
     <!-- 演示模式脚本 -->
+    <script src="js/demo/demo-file-system.js"></script>
     <script src="js/demo/demo-apis.js"></script>
     <script src="js/demo/demo-network-interceptor.js"></script>
     <script src="js/demo/demo-ui.js"></script>
@@ -5585,6 +5592,11 @@
                         try {
                             localStorage.setItem('language', newLang);
                             localStorage.setItem('lang', newLang);
+                            
+                            // 触发预设自动保存
+                            if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
+                                window.eagleToAeApp.savePresetsSilently();
+                            }
                         } catch (_) { }
                         // 重新加载翻译并更新页面
                         await window.i18n.loadTranslations();
@@ -5650,6 +5662,11 @@
                     // 保存主题到 localStorage
                     try {
                         localStorage.setItem('aeTheme', newTheme);
+                        
+                        // 触发预设自动保存
+                        if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
+                            window.eagleToAeApp.savePresetsSilently();
+                        }
                     } catch (e) {
                         console.warn('无法保存主题设置:', e);
                     }
@@ -5914,6 +5931,11 @@
                             try {
                                 localStorage.setItem('uiSettings', JSON.stringify(uiSettings));
                                 console.log(`[UI Settings] 设置已保存: ${key} = ${uiSettings[key]}`);
+                                
+                                // 触发预设自动保存
+                                if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
+                                    window.eagleToAeApp.savePresetsSilently();
+                                }
                             } catch (e) {
                                 console.warn('[UI Settings] 无法保存设置:', e);
                             }
@@ -6046,9 +6068,19 @@
                         mutations.forEach((mutation) => {
                             if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                                 const isVisible = settingsPanel.style.display !== 'none';
-                                if (isVisible && window.i18n && window.i18n.updatePageTexts) {
+                                if (isVisible) {
                                     // 设置面板显示时，更新翻译
-                                    setTimeout(() => window.i18n.updatePageTexts(), 50);
+                                    if (window.i18n && window.i18n.updatePageTexts) {
+                                        setTimeout(() => window.i18n.updatePageTexts(), 50);
+                                    }
+                                    
+                                    // 初始化预设文件管理按钮
+                                    if (window.aeExtension && window.aeExtension.initPresetFileButtons) {
+                                        console.log('[HTML] 设置面板打开，初始化预设文件按钮');
+                                        setTimeout(() => {
+                                            window.aeExtension.initPresetFileButtons();
+                                        }, 300);
+                                    }
                                 }
                             }
                         });

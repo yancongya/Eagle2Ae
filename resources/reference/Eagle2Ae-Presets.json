@@ -1,1 +1,64 @@
-{"importSettings":{"mode":"project_adjacent","projectAdjacentFolder":"Eagle_Assets","customFolderPath":"","addToComposition":true,"noImportSubMode":"normal","timelineOptions":{"enabled":true,"placement":"timeline_start"},"fileManagement":{"keepOriginalName":true,"addTimestamp":false,"createTagFolders":false,"deleteFromEagle":false},"soundSettings":{"enabled":true,"volume":60},"exportSettings":{"mode":"project_adjacent","projectAdjacentFolder":"Eagle_Assets","customExportPath":"","autoCopy":true,"burnAfterReading":false,"addTimestamp":false,"createSubfolders":false}},"userPreferences":{"lastUsedMode":"project_adjacent","favoriteFolder":"","autoSaveSettings":true,"showWelcomeWizard":true,"theme":"ae_native","communicationPort":8080,"lastUsedExportMode":"project_adjacent","favoriteExportFolder":""},"exportedAt":"2025-10-23T12:22:53.038Z"}
+{
+  "importSettings": {
+    "mode": "custom_folder",
+    "projectAdjacentFolder": "Eagle_Assets",
+    "customFolderPath": "[已选择] sound",
+    "addToComposition": true,
+    "noImportSubMode": "normal",
+    "timelineOptions": {
+      "enabled": false,
+      "placement": "current_time"
+    },
+    "fileManagement": {
+      "keepOriginalName": true,
+      "addTimestamp": false,
+      "createTagFolders": false,
+      "deleteFromEagle": false
+    },
+    "soundSettings": {
+      "enabled": true,
+      "volume": 60
+    },
+    "exportSettings": {
+      "mode": "desktop",
+      "projectAdjacentFolder": "Eagle_Assets",
+      "customExportPath": "[已选择] sound",
+      "autoCopy": true,
+      "addTimestamp": false,
+      "createSubfolders": false,
+      "burnAfterReading": true
+    }
+  },
+  "userPreferences": {
+    "lastUsedMode": "project_adjacent",
+    "favoriteFolder": "",
+    "autoSaveSettings": true,
+    "showWelcomeWizard": true,
+    "theme": "ae_native",
+    "communicationPort": 8080,
+    "lastUsedExportMode": "project_adjacent",
+    "favoriteExportFolder": ""
+  },
+  "uiSettings": {
+    "theme": false,
+    "language": true,
+    "log": true,
+    "projectInfo": true,
+    "logPanel": true,
+    "header": true,
+    "fullscreen": false
+  },
+  "language": "en-US",
+  "aeTheme": "dark",
+  "projectAdjacentSettings": {
+    "folderName": "Eagle_Assets"
+  },
+  "customFolderSettings": {
+    "folderPath": "[已选择] sound",
+    "recentFolders": [
+      "[已选择] sound"
+    ],
+    "directoryHandle": {}
+  },
+  "exportedAt": "2025-10-24T03:33:57.232Z"
+}
