@@ -6,108 +6,8 @@
     <title>Eagle2AE</title>
     <link rel="icon" type="image/png" href="public/logo.png">
 
-    <!-- Node.js 初始化脚本 -->
-    <script type="text/javascript">
-        // Node.js环境检测和初始化 (基于CEP官方文档)
-        (function () {
-            console.log('🔍 开始检测Node.js环境...');
-            console.log('CEP环境信息:', {
-                cep: typeof cep,
-                __adobe_cep__: typeof __adobe_cep__,
-                cep_node: typeof cep_node,
-                require: typeof require,
-                process: typeof process
-            });
-
-            // 初始化标志
-            window.__NODE_JS_AVAILABLE__ = false;
-
-            // 方法1: 检查cep_node对象 (CEP 8+官方推荐方式)
-            if (typeof cep_node !== 'undefined') {
-                console.log('✅ 检测到 cep_node 对象 (CEP 8+)');
-                try {
-                    // 根据官方文档，cep_node包含: Buffer, global, process, require
-                    window.require = cep_node.require;
-                    window.Buffer = cep_node.Buffer;
-                    window.process = cep_node.process;
-                    window.global = cep_node.global;
-
-                    // 测试require是否工作
-                    const os = window.require('os');
-                    if (os) {
-                        console.log('✅ Node.js环境已通过cep_node初始化');
-                        console.log('Node.js版本:', window.process.version);
-                        console.log('平台:', os.platform());
-                        window.__NODE_JS_AVAILABLE__ = true;
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('⚠️ cep_node初始化失败:', error.message);
-                }
-            }
-
-            // 方法2: 检查CEP对象的process属性 (CEP提供的原生API)
-            if (typeof cep !== 'undefined' && cep.process) {
-                console.log('✅ 检测到 cep.process (CEP原生API)');
-                try {
-                    window.process = cep.process;
-
-                    // CEP可能提供fs等API
-                    if (cep.fs) {
-                        window.cepfs = cep.fs;
-                        console.log('✅ cep.fs可用');
-                    }
-
-                    console.log('✅ Node.js环境已通过cep对象初始化');
-                    console.log('平台:', window.process.platform || 'unknown');
-                    window.__NODE_JS_AVAILABLE__ = true;
-                    return;
-                } catch (error) {
-                    console.warn('⚠️ cep对象初始化失败:', error.message);
-                }
-            }
-
-            // 方法3: 检查全局require (传统方式)
-            if (typeof require !== 'undefined') {
-                console.log('✅ 检测到全局require函数');
-                try {
-                    window.require = require;
-                    const testModule = require('os');
-                    if (testModule) {
-                        console.log('✅ Node.js环境已通过全局require初始化');
-                        window.__NODE_JS_AVAILABLE__ = true;
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('⚠️ 全局require测试失败:', error.message);
-                }
-            }
-
-            // 方法4: 检查全局process对象
-            if (typeof process !== 'undefined' && process.versions) {
-                console.log('✅ 检测到全局process对象');
-                try {
-                    window.process = process;
-                    console.log('✅ Node.js环境已通过全局process初始化');
-                    console.log('Node.js版本:', process.version);
-                    window.__NODE_JS_AVAILABLE__ = true;
-                    return;
-                } catch (error) {
-                    console.warn('⚠️ 全局process初始化失败:', error.message);
-                }
-            }
-
-            // 所有方法都失败
-            console.error('❌ Node.js环境不可用');
-            console.log('🔍 可能的原因:');
-            console.log('1. manifest.xml中缺少--enable-nodejs参数');
-            console.log('2. CEP版本不支持Node.js');
-            console.log('3. 需要启用CEP调试模式');
-            console.log('4. After Effects版本过新，Node.js集成方式已改变');
-
-            window.__NODE_JS_AVAILABLE__ = false;
-        })();
-    </script>
+    <!-- 移除 Node.js 检测，提供静默默认值 -->
+    <script type="text/javascript">window.__NODE_JS_AVAILABLE__ = false;</script>
     <style>
         * {
             margin: 0;
@@ -171,9 +71,10 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 60px;
+            height: 30px; /* 默认较小的激活区域 */
             z-index: 999;
             pointer-events: none;
+            transition: height 0.2s ease;
         }
 
         .header-hover-trigger.active {
@@ -185,6 +86,19 @@
             transform: translateY(0);
             opacity: 1;
             pointer-events: auto;
+            /* 非钉固情况下的磨砂玻璃背景（深色主题） */
+            background: rgba(34, 34, 34, 0.15);
+            border-color: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px) saturate(150%);
+            -webkit-backdrop-filter: blur(10px) saturate(150%);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        /* 亮色主题下的磨砂玻璃样式 */
+        html.theme-light .header.collapsed.hover {
+            background: rgba(255, 255, 255, 0.35);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         }
 
         .title {
@@ -570,10 +484,12 @@
         /* 占满模式 */
         .content.fullscreen-mode {
             gap: 0;
-            /* 不强制设置 margin-top 为 0，让动态脚本根据标题栏状态设置 */
-            padding: 12px;
+            /* 保持上下贴齐，左右更小的响应式间距 */
+            padding: 0 clamp(8px, 1.2vw, 16px);
+            margin: 0;
             height: 100vh;
             box-sizing: border-box;
+            width: 100vw;
         }
 
         .content.fullscreen-mode .section {
@@ -588,13 +504,13 @@
             flex: 1;
             min-height: 0;
             margin: 0;
-            padding: clamp(12px, 3vh, 32px);
+            /* 贴齐页面边缘：移除内边距与边框，但保留背景填充 */
+            padding: 0;
             overflow: auto;
             box-sizing: border-box;
-            /* 保留外框样式 */
             background: #2a2a2a;
-            border: 1px solid #555;
-            border-radius: 6px;
+            border: none;
+            border-radius: 0;
         }
 
         .content.fullscreen-mode #import-mode-section .section-title {
@@ -637,7 +553,7 @@
         @media (max-height: 500px) {
             .content.fullscreen-mode #import-mode-section {
                 gap: 6px;
-                padding: 8px;
+                padding: 0;
             }
 
             .content.fullscreen-mode #import-mode-section .import-mode-selection,
@@ -665,7 +581,7 @@
         @media (max-height: 350px) {
             .content.fullscreen-mode #import-mode-section {
                 gap: 4px;
-                padding: 6px;
+                padding: 0;
             }
 
             .content.fullscreen-mode #import-mode-section .import-mode-selection,
@@ -4090,6 +4006,30 @@
         html.vt-lang::view-transition-new(root) {
             animation-duration: 0.3s;
         }
+
+        /* Floating panel tooltip */
+        .panel-float-tooltip {
+            position: fixed;
+            right: 16px;
+            bottom: 14px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-line;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease;
+            z-index: 2000;
+        }
+        .panel-float-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
     <script>
         // Configuration for the title link URL
@@ -4461,6 +4401,11 @@
     </div>
 
     <script src="js/CSInterface.js"></script>
+    <script>
+      // 统一控制调试输出的开关（可用 localStorage 覆盖）
+      window.__DEBUG_I18N__ = localStorage.getItem('debug_i18n') === '1';
+      window.__DEBUG_IFRAME_SYNC__ = localStorage.getItem('debug_iframe') === '1';
+    </script>
     <!-- 移除了顺序排列间隔设置弹窗，因为不再支持顺序排列 -->
 
     <!-- 项目旁复制模式设置弹窗 -->
@@ -5357,8 +5302,11 @@
     <script src="js/services/PortDiscovery.js"></script>
     <script src="js/utils/SoundPlayer.js"></script>
     <script src="js/utils/LogManager.js"></script>
-    <script src="js/cep-debug.js"></script>
-    <script src="js/nodejs-test.js"></script>
+    <!-- 移除无效的 Node/CEP 调试脚本引用 -->
+
+    <!-- 先加载国际化系统与演示文案，确保 demo-apis 可用 -->
+    <script src="js/i18n/i18n.js"></script>
+    <script src="js/demo/demo-i18n.js"></script>
 
     <!-- 演示模式脚本 -->
     <script src="js/demo/demo-file-system.js"></script>
@@ -5485,7 +5433,9 @@
     "uiToggleLanguage": "点击切换语言按钮的显示/隐藏",
     "uiToggleLog": "点击切换日志按钮的显示/隐藏",
     "uiToggleProjectInfo": "点击切换项目信息面板的显示/隐藏",
-    "uiToggleLogPanel": "点击切换日志面板的显示/隐藏"
+    "uiToggleLogPanel": "点击切换日志面板的显示/隐藏",
+    "panelIdPrefix": "当前面板 ID:",
+    "presetFilenamePrefix": "当前预设文件名:"
   }
 }
 </script>
@@ -5605,16 +5555,16 @@
     "uiToggleLanguage": "Click to toggle language button visibility",
     "uiToggleLog": "Click to toggle log button visibility",
     "uiToggleProjectInfo": "Click to toggle project info panel visibility",
-    "uiToggleLogPanel": "Click to toggle log panel visibility"
+    "uiToggleLogPanel": "Click to toggle log panel visibility",
+    "panelIdPrefix": "Current Panel ID:",
+    "presetFilenamePrefix": "Current Preset Filename:"
   }
 }
 </script>
 
-    <!-- 国际化系统必须在main.js之前加载 -->
-    <script src="js/i18n/i18n.js"></script>
+    <!-- 国际化辅助与主逻辑 -->
     <script src="js/i18n/helpers.js"></script>
     <script src="js/main.js"></script>
-    <script src="js/demo/demo-i18n.js"></script>
 
     <script>
         // 初始化 CSInterface 用于弹窗中的文件夹选择
@@ -5751,66 +5701,10 @@
             };
         }
 
-        // 页面加载完成
+        // 页面加载完成（已移除 Node.js 环境检测）
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('📄 页面加载完成');
-
-            // 延迟执行Node.js检测，确保CEP环境完全初始化
-            setTimeout(function () {
-                console.log('🔄 重新检测Node.js环境...');
-
-                // 尝试多种方式检测Node.js
-                let nodeDetected = false;
-
-                // 方法1: 检查window.cep_node
-                if (window.cep_node && window.cep_node.require) {
-                    console.log('✅ 通过cep_node检测到Node.js');
-                    window.require = window.cep_node.require;
-                    window.process = window.cep_node.process;
-                    window.Buffer = window.cep_node.Buffer;
-                    nodeDetected = true;
-                }
-
-                // 方法2: 检查全局require
-                if (!nodeDetected && typeof require !== 'undefined') {
-                    console.log('✅ 检测到全局require');
-                    try {
-                        const testOs = require('os');
-                        if (testOs) {
-                            window.require = require;
-                            nodeDetected = true;
-                        }
-                    } catch (e) {
-                        console.warn('全局require测试失败:', e.message);
-                    }
-                }
-
-                // 方法3: 尝试通过eval执行Node.js代码
-                if (!nodeDetected) {
-                    try {
-                        eval('if (typeof require !== "undefined") { window.require = require; window.__NODE_EVAL_SUCCESS__ = true; }');
-                        if (window.__NODE_EVAL_SUCCESS__) {
-                            console.log('✅ 通过eval检测到Node.js');
-                            nodeDetected = true;
-                        }
-                    } catch (e) {
-                        console.warn('eval检测失败:', e.message);
-                    }
-                }
-
-                // 更新全局标志
-                window.__NODE_JS_AVAILABLE__ = nodeDetected;
-
-                if (nodeDetected) {
-                    console.log('🎉 Node.js环境检测成功！');
-                    if (window.process && window.process.version) {
-                        console.log('Node.js版本:', window.process.version);
-                    }
-                } else {
-                    console.error('❌ Node.js环境检测失败');
-                    console.log('请检查manifest.xml配置和After Effects版本');
-                }
-            }, 1000); // 延迟1秒执行
+            // 保持安静，不再进行 Node.js 环境检测与日志输出
+            window.__NODE_JS_AVAILABLE__ = false;
         });
 
         // 标题乱码转场动画
@@ -6141,19 +6035,19 @@
 
             if (event.data && event.data.type === 'LANGUAGE_UPDATE') {
                 const newLang = event.data.language;
-                console.log('[Iframe Sync] 收到语言更新消息:', newLang);
+            if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] 收到语言更新消息:', newLang);
                 if (!newLang) return;
 
                 // 如果 i18n 未初始化，跳过
                 if (!window.i18n) {
-                    console.log('[Iframe Sync] i18n 未初始化，跳过');
+                if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] i18n 未初始化，跳过');
                     return;
                 }
 
                 // 即使语言相同，也要确保翻译已经应用到页面上
                 // 因为 iframe 初始加载时翻译可能还没完成
                 if (window.i18n.currentLang === newLang) {
-                    console.log('[Iframe Sync] 语言相同，但强制更新页面文本以确保翻译已应用');
+                if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] 语言相同，但强制更新页面文本以确保翻译已应用');
                     // 直接调用 updatePageTexts，不需要重新加载翻译
                     if (window.i18n.updatePageTexts) {
                         window.i18n.updatePageTexts();
@@ -6168,7 +6062,7 @@
                 // 更新语言的函数
                 const updateLanguage = async () => {
                     if (window.i18n) {
-                        console.log('[Iframe Sync] 开始更新语言:', newLang);
+                if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] 开始更新语言:', newLang);
                         // 更新当前语言
                         window.i18n.currentLang = newLang;
                         // 保存到 localStorage（使用面板特定的键）
@@ -6188,11 +6082,11 @@
                         } catch (_) { }
                         // 重新加载翻译并更新页面
                         await window.i18n.loadTranslations();
-                        console.log('[Iframe Sync] 翻译加载完成，准备更新页面文本');
+                        if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] 翻译加载完成，准备更新页面文本');
                         // 确保 UI 设置按钮也被更新
                         setTimeout(() => {
                             if (window.i18n && window.i18n.updatePageTexts) {
-                                console.log('[Iframe Sync] 调用 updatePageTexts');
+                    if (window.__DEBUG_IFRAME_SYNC__) console.debug('[Iframe Sync] 调用 updatePageTexts');
                                 window.i18n.updatePageTexts();
                             }
                         }, 100);
@@ -6313,6 +6207,20 @@
                 var header = document.querySelector('.header');
                 var content = document.querySelector('.content');
                 if (!header || !content) return;
+
+                // 独显/占满模式下：如果标题栏仍可见，则仍需为内容预留高度
+                if (content.classList.contains('fullscreen-mode')) {
+                    var isHeaderCollapsed = header.classList.contains('collapsed');
+                    if (!isHeaderCollapsed) {
+                        var top = parseFloat(getComputedStyle(header).top) || 12;
+                        var spacing = 4; // 与常规模式保持一致的下间距
+                        content.style.marginTop = (top + header.offsetHeight + spacing) + 'px';
+                    } else {
+                        // 标题栏折叠或隐藏时，内容贴齐顶部
+                        content.style.marginTop = '0px';
+                    }
+                    return;
+                }
 
                 // 检查标题栏是否折叠
                 if (header.classList.contains('collapsed')) {
@@ -6470,7 +6378,18 @@
                             contentContainer.classList.remove('fullscreen-mode');
                             console.log('[UI Settings] 占满模式已禁用');
                         }
+                        // 切换占满模式后，重新计算内容区与标题栏的间距
+                        if (window.adjustContentOffset) {
+                            setTimeout(() => window.adjustContentOffset(), 50);
+                        }
                     }
+                    
+                    // 更新激活区域高度（延迟执行以确保DOM更新完成）
+                    setTimeout(() => {
+                        if (typeof updateHoverTriggerHeight === 'function') {
+                            updateHoverTriggerHeight();
+                        }
+                    }, 100);
                 }
 
                 // 为每个按钮添加点击事件
@@ -6576,17 +6495,129 @@
                     console.warn('[UI Settings] 无法加载设置:', e);
                 }
 
+                // 自适应激活区域高度函数
+                function updateHoverTriggerHeight() {
+                    if (headerHoverTrigger && mainPanelElements.header) {
+                        const headerRect = mainPanelElements.header.getBoundingClientRect();
+                        const headerHeight = headerRect.height;
+                        const headerTop = parseFloat(getComputedStyle(mainPanelElements.header).top) || 12;
+                        
+                        // 计算合适的激活区域高度：标题栏高度 + 顶部间距 + 小的缓冲区域
+                        const triggerHeight = Math.max(30, Math.min(50, headerHeight + headerTop + 8));
+                        
+                        headerHoverTrigger.style.height = triggerHeight + 'px';
+                        console.log(`[自适应激活区域] 标题栏高度: ${headerHeight}px, 激活区域高度: ${triggerHeight}px`);
+                    }
+                }
+
                 // 标题栏悬浮事件监听
                 if (headerHoverTrigger && mainPanelElements.header) {
-                    headerHoverTrigger.addEventListener('mouseenter', () => {
+                    // 初始化自适应高度
+                    setTimeout(updateHoverTriggerHeight, 100);
+                    
+                    // 监听窗口大小变化，重新计算激活区域高度
+                    window.addEventListener('resize', updateHoverTriggerHeight);
+                    
+                    // 左右滑动触发（多次来回滑动才出现）：
+                    // 需要在顶部悬浮后，完成若干次方向反转且每段位移达到阈值，才显示标题栏
+                    const HORIZONTAL_SWIPE_THRESHOLD = 24; // 单段位移阈值（像素）
+                    const REQUIRED_SWIPE_COUNT = 2;        // 需要完成的“来回”次数（方向反转且位移达阈值）
+                    const MAX_SEGMENT_DURATION_MS = 250;   // 每一段滑动需在此时间内完成，才视为“快速”
+                    let hoverPending = false;
+                    let hoverActivated = false;
+                    let startX = 0;
+                    let lastX = 0;
+                    let currentDirection = 0; // 1: 右, -1: 左, 0: 未定义
+                    let segmentDistance = 0;   // 当前段累计位移
+                    let swipeCount = 0;        // 已完成的来回计数
+                    let segmentStartTime = 0;  // 当前段开始时间
+                    let lastTime = 0;          // 上一次采样时间
+                    let hideHoverTimeoutId = null; // 延迟隐藏定时器
+
+                    const resetHoverSwipeState = () => {
+                        hoverPending = false;
+                        hoverActivated = false;
+                        startX = 0;
+                        lastX = 0;
+                        currentDirection = 0;
+                        segmentDistance = 0;
+                        swipeCount = 0;
+                        segmentStartTime = 0;
+                        lastTime = 0;
+                        if (hideHoverTimeoutId) {
+                            clearTimeout(hideHoverTimeoutId);
+                            hideHoverTimeoutId = null;
+                        }
+                    };
+
+                    headerHoverTrigger.addEventListener('mouseenter', (e) => {
                         if (!uiSettings.header) {
-                            mainPanelElements.header.classList.add('hover');
+                            hoverPending = true;
+                            hoverActivated = false;
+                            swipeCount = 0;
+                            currentDirection = 0;
+                            segmentDistance = 0;
+                            startX = e.clientX;
+                            lastX = startX;
+                            segmentStartTime = performance.now();
+                            lastTime = segmentStartTime;
+                            // 取消延迟隐藏，避免误收起
+                            if (hideHoverTimeoutId) {
+                                clearTimeout(hideHoverTimeoutId);
+                                hideHoverTimeoutId = null;
+                            }
+                        }
+                    });
+
+                    headerHoverTrigger.addEventListener('mousemove', (e) => {
+                        if (!uiSettings.header && hoverPending && !hoverActivated) {
+                            const now = performance.now();
+                            const dt = now - lastTime;
+                            const dx = e.clientX - lastX;
+                            if (dt <= 0 || dx === 0) { lastTime = now; lastX = e.clientX; return; }
+                            const dir = dx > 0 ? 1 : -1;
+                            const adx = Math.abs(dx);
+
+                            if (currentDirection === 0) {
+                                // 初次确定方向
+                                currentDirection = dir;
+                                segmentDistance = adx;
+                                segmentStartTime = now;
+                            } else if (dir === currentDirection) {
+                                // 同向累积位移
+                                segmentDistance += adx;
+                            } else {
+                                // 方向反转：上一段结束，判断是否“快速且达阈值”
+                                const segmentDuration = now - segmentStartTime;
+                                if (segmentDistance >= HORIZONTAL_SWIPE_THRESHOLD && segmentDuration <= MAX_SEGMENT_DURATION_MS) {
+                                    swipeCount += 1;
+                                    // 达到所需来回次数，激活标题栏
+                                    if (swipeCount >= REQUIRED_SWIPE_COUNT) {
+                                        mainPanelElements.header.classList.add('hover');
+                                        hoverActivated = true;
+                                    }
+                                }
+                                // 开启新段
+                                currentDirection = dir;
+                                segmentDistance = adx;
+                                segmentStartTime = now;
+                            }
+
+                            lastX = e.clientX;
+                            lastTime = now;
                         }
                     });
 
                     headerHoverTrigger.addEventListener('mouseleave', () => {
                         if (!uiSettings.header) {
-                            mainPanelElements.header.classList.remove('hover');
+                            // 延迟0.3秒后收起，如果期间重新进入则取消
+                            if (hideHoverTimeoutId) {
+                                clearTimeout(hideHoverTimeoutId);
+                            }
+                            hideHoverTimeoutId = setTimeout(() => {
+                                mainPanelElements.header.classList.remove('hover');
+                                resetHoverSwipeState();
+                            }, 300);
                         }
                     });
 
@@ -6594,12 +6625,23 @@
                     mainPanelElements.header.addEventListener('mouseenter', () => {
                         if (!uiSettings.header) {
                             mainPanelElements.header.classList.add('hover');
+                            // 取消延迟隐藏，保持展开
+                            if (hideHoverTimeoutId) {
+                                clearTimeout(hideHoverTimeoutId);
+                                hideHoverTimeoutId = null;
+                            }
                         }
                     });
 
                     mainPanelElements.header.addEventListener('mouseleave', () => {
                         if (!uiSettings.header) {
-                            mainPanelElements.header.classList.remove('hover');
+                            // 延迟0.3秒后收起标题栏
+                            if (hideHoverTimeoutId) {
+                                clearTimeout(hideHoverTimeoutId);
+                            }
+                            hideHoverTimeoutId = setTimeout(() => {
+                                mainPanelElements.header.classList.remove('hover');
+                            }, 300);
                         }
                     });
                 }
@@ -6624,13 +6666,13 @@
                     }, 200);
                     setTimeout(() => {
                         if (window.i18n && window.i18n.updatePageTexts) {
-                            console.log('[UI Settings] 第二次 i18n 更新');
+        if (window.__DEBUG_I18N__) console.debug('[UI Settings] 第二次 i18n 更新');
                             window.i18n.updatePageTexts();
                         }
                     }, 500);
                     setTimeout(() => {
                         if (window.i18n && window.i18n.updatePageTexts) {
-                            console.log('[UI Settings] 第三次 i18n 更新');
+        if (window.__DEBUG_I18N__) console.debug('[UI Settings] 第三次 i18n 更新');
                             window.i18n.updatePageTexts();
                         }
                     }, 1000);
@@ -6690,6 +6732,79 @@
             }, 500);
         })();
     </script>
-</body>
+    <!-- 悬浮面板后显示的浮层提示（200ms 延迟显示） -->
+    <div id="panel-float-tooltip" class="panel-float-tooltip" style="display:none;"></div>
+    <script>
+        (function initFloatingPanelTooltip() {
+            const tooltip = document.getElementById('panel-float-tooltip');
+            let hoverTimer = null;
+
+            function updateTooltipContent() {
+                let panelId = 'panel1';
+                let presetName = 'Eagle2Ae1.Presets';
+                try {
+                    if (window.eagleToAeApp) {
+                        panelId = typeof window.eagleToAeApp.getPanelId === 'function'
+                            ? window.eagleToAeApp.getPanelId()
+                            : (window.eagleToAeApp.panelId || 'panel1');
+                        presetName = typeof window.eagleToAeApp.getPresetFileName === 'function'
+                            ? window.eagleToAeApp.getPresetFileName()
+                            : (`Eagle2Ae${(panelId || 'panel1').replace('panel','')}.Presets`);
+                    }
+                } catch(_) {}
+                const idPrefix = (window.i18n?.getText('tooltips.panelIdPrefix')) || 'Current Panel ID:';
+                const presetPrefix = (window.i18n?.getText('tooltips.presetFilenamePrefix')) || 'Current Preset Filename:';
+                tooltip.textContent = `${idPrefix} ${panelId}\n${presetPrefix} ${presetName}`;
+            }
+
+            function attachHover() {
+                const panel = document.querySelector('.panel');
+                if (!panel || !tooltip) return false;
+
+                panel.addEventListener('mouseenter', () => {
+                    hoverTimer = setTimeout(() => {
+                        updateTooltipContent();
+                        tooltip.style.display = 'block';
+                        requestAnimationFrame(() => {
+                            tooltip.classList.add('visible');
+                        });
+                    }, 200);
+                });
+
+                const hide = () => {
+                    if (hoverTimer) {
+                        clearTimeout(hoverTimer);
+                        hoverTimer = null;
+                    }
+                    tooltip.classList.remove('visible');
+                    // 等过渡结束再隐藏，避免抖动
+                    setTimeout(() => {
+                        if (!tooltip.classList.contains('visible')) {
+                            tooltip.style.display = 'none';
+                        }
+                    }, 200);
+                };
+
+                panel.addEventListener('mouseleave', hide);
+
+                // 如果面板内有滚动或点击，也认为是用户交互，及时隐藏
+                panel.addEventListener('wheel', hide, { passive: true });
+                panel.addEventListener('click', hide);
+                return true;
+            }
+
+            function waitAndInit() {
+                if (attachHover()) return;
+                setTimeout(waitAndInit, 100);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', waitAndInit);
+            } else {
+                waitAndInit();
+            }
+        })();
+    </script>
+  </body>
 
 </html>

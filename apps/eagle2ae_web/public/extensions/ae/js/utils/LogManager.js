@@ -20,6 +20,72 @@ class LogManager {
     }
 
     /**
+     * 读取日志语言模式
+     * 可选值：'current' | 'zh-CN' | 'en-US' | 'both'
+     */
+    getLogLanguageMode() {
+        try {
+            return localStorage.getItem('logLanguageMode') || 'current';
+        } catch (_) {
+            return 'current';
+        }
+    }
+
+    /**
+     * 简单模板替换：将 {key} 用 params[key] 替换
+     * @param {string} text
+     * @param {Object} params
+     */
+    formatTemplate(text, params = {}) {
+        if (!text || typeof text !== 'string') return text;
+        return text.replace(/\{([a-zA-Z0-9_]+)\}/g, (m, k) => {
+            const v = params[k];
+            return v === undefined || v === null ? m : String(v);
+        });
+    }
+
+    /**
+     * 组合i18n消息，支持双语模式
+     * @param {string} key - i18n键，例如 'logs.testingConnectionToEagle'
+     * @param {Object} params - 模板参数，例如 {total: 7}
+     */
+    composeI18nMessage(key, params = {}) {
+        const mode = this.getLogLanguageMode();
+        const zh = window.i18n?.getTextForLang(key, 'zh-CN') || window.i18n?.getText(key);
+        const en = window.i18n?.getTextForLang(key, 'en-US');
+        const zhMsg = zh ? this.formatTemplate(zh, params) : null;
+        const enMsg = en ? this.formatTemplate(en, params) : null;
+
+        switch (mode) {
+            case 'both':
+                if (zhMsg && enMsg) return `${zhMsg} / ${enMsg}`;
+                return zhMsg || enMsg || key;
+            case 'en-US':
+                return enMsg || zhMsg || key;
+            case 'zh-CN':
+                return zhMsg || enMsg || key;
+            case 'current':
+            default:
+                // 使用当前语言；如果未找到，回退到中文或英文
+                const cur = window.i18n?.getText(key);
+                const curMsg = cur ? this.formatTemplate(cur, params) : null;
+                return curMsg || zhMsg || enMsg || key;
+        }
+    }
+
+    /**
+     * 记录i18n日志（支持双语）
+     * @param {string} key - i18n键
+     * @param {string} level - 日志级别
+     * @param {Object} params - 模板参数
+     * @param {Object} options - 其他选项
+     */
+    logI18n(key, level = 'info', params = {}, options = {}) {
+        const message = this.composeI18nMessage(key, params);
+        this.log(message, level, options);
+    }
+
+    /**
      * 设置日志级别
      * @param {string} level - debug, info, success, warning, error
      */
@@ -216,6 +282,13 @@ class LogManager {
             lastLogElement._logEntry.count = count;
         }
     }
+
+    // 便捷方法：各级别的 i18n 日志
+    infoI18n(key, params = {}, options = {}) { this.logI18n(key, 'info', params, options); }
+    successI18n(key, params = {}, options = {}) { this.logI18n(key, 'success', params, options); }
+    warningI18n(key, params = {}, options = {}) { this.logI18n(key, 'warning', params, options); }
+    errorI18n(key, params = {}, options = {}) { this.logI18n(key, 'error', params, options); }
+    debugI18n(key, params = {}, options = {}) { this.logI18n(key, 'debug', params, options); }
 
     /**
      * 显示分组消息

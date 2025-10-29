@@ -11,6 +11,74 @@ class DemoAPIs {
         this.init();
     }
     
+    // 简单的异步延迟函数
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // 生成随机的网络延迟（ping）数值
+    generateRandomPing() {
+        try {
+            return 15 + Math.floor(Math.random() * 60); // 15-75ms
+        } catch (e) {
+            return 42;
+        }
+    }
+
+    // 分发导入进度事件（演示用，可供UI监听）
+    dispatchProgressEvent(percent) {
+        try {
+            if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+                const evt = new CustomEvent('demoImportProgress', { detail: { percent } });
+                window.dispatchEvent(evt);
+            }
+        } catch (e) {
+            // 静默失败，不影响演示流程
+        }
+    }
+
+    // 获取图层类型的图标（用于日志展示）
+    getLayerTypeIcon(type) {
+        const map = {
+            MaterialLayer: '📦',
+            SolidLayer: '🟦',
+            TextLayer: '📝',
+            ShapeLayer: '🔷',
+            PrecompLayer: '📁',
+            AdjustmentLayer: '⚙️',
+            CameraLayer: '📷',
+            LightLayer: '💡',
+            NullLayer: '⭕'
+        };
+        return map[type] || '❓';
+    }
+
+    // 获取素材类型图标（design/image/video/audio/vector 等）
+    getMaterialTypeIcon(materialType) {
+        const map = {
+            design: '🎨',
+            image: '🖼️',
+            video: '🎞️',
+            audio: '🔊',
+            vector: '📐',
+            animation: '🎬',
+            raw: '🔬',
+            document: '📄',
+            sequence: '🎯'
+        };
+        return (map[materialType] || '📦') + ' ';
+    }
+
+    // 获取素材类型的本地化名称（来自 demo-i18n 注入的 labels）
+    getMaterialTypeName(materialType) {
+        try {
+            const label = this.t?.demo?.labels?.[materialType];
+            return label || materialType;
+        } catch (e) {
+            return materialType;
+        }
+    }
+    
     init() {
         console.log(this.t.demo.logs.apiSimulatorInit);
         this.state.isConnected = false;
@@ -78,6 +146,15 @@ class DemoAPIs {
         console.log(this.t.demo.logs.sendMessage.replace('{type}', type), data);
         await this.delay(100);
         return { success: true, messageId: this.generateMessageId(), timestamp: Date.now(), response: this.t.demo.logs.responseMessage.replace('{type}', type) };
+    }
+
+    // 生成模拟消息ID
+    generateMessageId() {
+        try {
+            return 'msg_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+        } catch (e) {
+            return 'msg_' + Date.now();
+        }
     }
     
     async detectSelectedLayers() {

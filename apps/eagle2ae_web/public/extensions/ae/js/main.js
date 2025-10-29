@@ -676,9 +676,17 @@ class AEExtension {
             if (this.enablePortDiscovery) {
                 try {
                     this.portDiscovery = new PortDiscovery(this.log.bind(this));
-                    this.log('端口发现服务已初始化', 'info');
+                    if (this.logManager?.infoI18n) {
+                        this.logManager.infoI18n('logs.portDiscoveryServiceInitialized');
+                    } else {
+                        this.log('端口发现服务已初始化', 'info');
+                    }
                 } catch (portError) {
-                    this.log(`端口发现服务初始化失败: ${portError.message}`, 'error');
+                    if (this.logManager?.errorI18n) {
+                        this.logManager.errorI18n('logs.portDiscoveryInitFailedPrefix', { msg: portError.message });
+                    } else {
+                        this.log(`端口发现服务初始化失败: ${portError.message}`, 'error');
+                    }
                 }
             } else {
                 this.log(window.i18n.getText('logs.portDiscoveryDisabledUsingConfigPort') || 'Port discovery disabled; using configured port for faster startup', 'info');
@@ -691,7 +699,11 @@ class AEExtension {
             try {
                 this.setupQuickSettings(); // 尝试正常初始化
             } catch (quickError) {
-                this.log(`快速设置正常初始化失败: ${quickError.message}`, 'warning');
+                if (this.logManager?.warningI18n) {
+                    this.logManager.warningI18n('logs.quickSettingsNormalInitFailedPrefix', { msg: quickError.message });
+                } else {
+                    this.log(`快速设置正常初始化失败: ${quickError.message}`, 'warning');
+                }
                 // 即使失败也继续，因为我们有自动修复机制
             }
 
@@ -746,7 +758,11 @@ class AEExtension {
                     this.checkAndCleanupTempFolderOnStartup();
                 }, 15000); // 延长到15秒，确保连接完全稳定
             } catch (otherError) {
-                this.log(`其他初始化失败: ${otherError.message}`, 'error');
+                if (this.logManager?.errorI18n) {
+                    this.logManager.errorI18n('logs.otherInitFailedPrefix', { msg: otherError.message });
+                } else {
+                    this.log(`其他初始化失败: ${otherError.message}`, 'error');
+                }
             }
 
             // 初始化完成
@@ -908,7 +924,11 @@ class AEExtension {
         try {
             this.setupSettingsPanel();
         } catch (error) {
-            this.log(`设置面板初始化失败: ${error.message}`, 'error');
+            if (this.logManager?.errorI18n) {
+                this.logManager.errorI18n('logs.panelInitFailedPrefix', { msg: error.message });
+            } else {
+                this.log(`设置面板初始化失败: ${error.message}`, 'error');
+            }
         }
     }
 
@@ -949,12 +969,20 @@ class AEExtension {
     // 测试连接到Eagle（WebSocket优先）
     async testConnection() {
         if (this.connectionState === ConnectionState.CONNECTING) {
-            this.log('连接正在进行中...', 'warning');
+            this.logManager?.warningI18n('common.connecting');
             return;
         }
 
         this.setConnectionState(ConnectionState.CONNECTING);
-        this.log(`${window.i18n.getText('logs.testingConnectionToEagle') || 'Testing connection to Eagle...'}`, 'info');
+        // 双语日志：测试连接到 Eagle（降级为 debug，默认不刷屏）
+        if (this.logManager?.debugI18n) {
+            this.logManager.debugI18n('logs.testingConnectionToEagle');
+        } else {
+            // 兼容无 logManager 时的控制台打印（仅在显式开启时）
+            if (localStorage.getItem('debug_connection') === '1') {
+                console.debug('[AE Extension]', '正在测试连接到Eagle...');
+            }
+        }
 
         // 优先尝试WebSocket连接
         if (this.useWebSocket) {
@@ -962,9 +990,9 @@ class AEExtension {
                 await this.connectWebSocket();
                 return;
             } catch (error) {
-                this.log(`WebSocket连接失败: ${error.message}`, 'warning');
+                this.logManager?.warning(`WebSocket连接失败: ${error.message}`);
                 if (this.fallbackToHttp) {
-                    this.log('回退到HTTP轮询模式...', 'info');
+            this.logManager?.infoI18n('logs.fallbackToHttpPolling');
                     await this.connectHttp();
                 } else {
                     throw error;
@@ -987,7 +1015,8 @@ class AEExtension {
 
         // 连接成功
         this.setConnectionState(ConnectionState.CONNECTED);
-        this.log(`✅ ${window.i18n.getText('logs.websocketConnected') || 'WebSocket connected!'}`, 'success');
+        // 双语日志：WebSocket 连接成功
+        this.logManager.successI18n('logs.websocketConnected');
 
         // 播放连接成功音效
         this.playConnectionSound('linked');
@@ -1027,7 +1056,10 @@ class AEExtension {
 
             // 连接成功
             this.setConnectionState(ConnectionState.CONNECTED);
-            this.log(`${window.i18n.getText('logs.httpConnected') || 'HTTP connection successful!'} ${window.i18n.getText('logs.latency') || 'Latency'}: ${pingTime}ms`, 'success');
+            // 双语日志：HTTP连接成功 + 延迟
+            this.logManager.successI18n('logs.httpConnected');
+            const latencyLabel = this.logManager.composeI18nMessage('logs.latency');
+            this.log(`${latencyLabel}: ${pingTime}ms`, 'info');
 
             // 播放连接成功音效
             this.playConnectionSound('linked');
@@ -1482,7 +1514,8 @@ class AEExtension {
 
         try {
             // 导入前刷新项目信息，确保导入到正确的合成
-            this.log(`🔄 ${window.i18n.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...'}`, 'info');
+            // 使用双语日志输出导入前刷新项目状态
+            this.logManager?.infoI18n('logs.refreshProjectStateBeforeImport');
 
             let currentProjectInfo = null;
             try {
@@ -1511,7 +1544,11 @@ class AEExtension {
 
             // 显示当前导入目标信息并进行安全检查
             if (currentProjectInfo.activeComp && currentProjectInfo.activeComp.name) {
-                this.log(`📍 ${(window.i18n?.getText('logs.importTargetPrefix') || 'Import target')}: ${(window.i18n?.getText('demo.compName.connected') || ((((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en')) ? 'Jumps Over the Wall' : (currentProjectInfo.activeComp?.name || '佛跳墙')))}`, 'info');
+                const targetName = window.i18n?.getText('demo.compName.connected')
+                  || (((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en')
+                        ? 'Jumps Over the Wall'
+                        : (currentProjectInfo.activeComp?.name || '佛跳墙'));
+                this.logManager?.infoI18n('logs.importTargetWithName', { name: targetName });
             } else {
                 this.logWarning('⚠️ 未检测到活动合成，请确保已选择要导入的合成');
 
@@ -1634,7 +1671,8 @@ class AEExtension {
                         setTimeout(() => {
                             this.logEagle(`🏷️ 智能标签分析完成`, 'info');
                             this.logEagle(`💾 文件已保存到 "AE导入" 文件夹`, 'success');
-                            this.log(`📍 ${window.i18n?.getText('logs.importTargetPrefix') || 'Import target'}: ${window.i18n?.getText('demo.compName.connected') || 'Jumps Over the Wall'}`, 'info');
+                            const compNameForLog = window.i18n?.getText('demo.compName.connected') || 'Jumps Over the Wall';
+                            this.logManager?.infoI18n('logs.importTargetWithName', { name: compNameForLog });
                         }, 1000);
                         setTimeout(() => {
                             this.log(`🎉 导入完成！共 ${result.importedCount} 个文件已添加到合成`, 'success');
@@ -3635,11 +3673,12 @@ class AEExtension {
 
     // 检测图层
     async detectLayers() {
-        this.log('开始检测选中的图层...', 'info');
+        // 开始检测选中图层（双语）
+        this.logManager?.infoI18n('logs.startDetectSelectedLayers');
 
         // 检查是否为demo模式，如果是则直接显示虚拟数据
         if (this.isDemoMode()) {
-            this.log('🎭 演示模式：使用虚拟图层数据', 'info');
+            this.logManager?.infoI18n('logs.demoModeUsingVirtualLayerData');
 
             try {
                 // 获取虚拟图层检测结果
@@ -3651,13 +3690,13 @@ class AEExtension {
                         // 直接显示虚拟检测总结
                         this.displayDetectionSummary(result);
                     } else {
-                        this.log('虚拟图层检测失败', 'error');
+                        this.logManager?.errorI18n('logs.virtualLayerDetectionFailed');
                     }
                 } else {
-                    this.log('演示模式API未找到', 'error');
+                    this.logManager?.errorI18n('logs.demoModeApiNotFound');
                 }
             } catch (error) {
-                this.log(`演示模式检测出错: ${error.message}`, 'error');
+                this.logManager?.errorI18n('logs.demoModeDetectionErrorPrefix', { msg: error.message });
             }
             return;
         }
@@ -3800,7 +3839,7 @@ class AEExtension {
         const { compName, selectedLayers = [], logs = [] } = result;
 
         // 基本信息
-        this.log(`🔍 检测完成: ${compName}`, 'success');
+        this.logManager?.successI18n('logs.detectionCompletedWithName', { name: compName });
 
         if (selectedLayers.length === 0) {
             this.log('⚠️ 没有选中任何图层', 'warning');
@@ -3813,21 +3852,29 @@ class AEExtension {
         // 先显示详细分布信息
         // 显示素材分布（只显示存在的类型）
         if (stats.materialTypes.length > 0) {
-            this.log(`📦 素材分布: ${stats.materialTypes.join(', ')}`, 'info');
+            const prefix = this.logManager?.composeI18nMessage('logs.materialDistributionPrefix') || 'Material distribution:';
+            this.log(`${prefix} ${stats.materialTypes.join(', ')}`, 'info');
         }
 
         // 显示其他图层类型（只显示存在的类型）
         if (stats.otherTypes.length > 0) {
-            this.log(`🔧 其他图层: ${stats.otherTypes.join(', ')}`, 'info');
+            const prefix = this.logManager?.composeI18nMessage('logs.otherLayersPrefix') || 'Other layers:';
+            this.log(`${prefix} ${stats.otherTypes.join(', ')}`, 'info');
         }
 
         // 显示不可导出原因统计（只显示存在的类型）
         if (stats.nonExportableReasons.length > 0) {
-            this.log(`❌ 不可导出: ${stats.nonExportableReasons.join(', ')}`, 'warning');
+            const prefix = this.logManager?.composeI18nMessage('summaryDialog.nonExportablePrefix') || 'Not exportable:';
+            this.log(`${prefix} ${stats.nonExportableReasons.join(', ')}`, 'warning');
         }
 
         // 最后显示总结信息
-        this.log(`📊 总结: 共检测 ${stats.total} 个图层，${stats.exportable} 个可导出，${stats.nonExportable} 个不可导出`, 'info');
+        const summary = this.logManager?.composeI18nMessage('summaryDialog.summaryTemplate', {
+            total: stats.total,
+            exportable: stats.exportable,
+            nonExportable: stats.nonExportable
+        }) || `Summary: total ${stats.total}, exportable ${stats.exportable}, non-exportable ${stats.nonExportable}`;
+        this.log(summary, 'info');
 
         // 显示详细总结弹窗
         this.showDetectionSummaryDialog(selectedLayers, stats);
@@ -3920,30 +3967,31 @@ class AEExtension {
             }
         });
 
-        // 生成显示数组
+        // 生成显示数组（使用 i18n 类别标签）
         const materialTypes = [];
-        if (materialStats.design > 0) materialTypes.push(`🎨设计:${materialStats.design}`);
-        if (materialStats.image > 0) materialTypes.push(`🖼️图片:${materialStats.image}`);
-        if (materialStats.video > 0) materialTypes.push(`🎬视频:${materialStats.video}`);
-        if (materialStats.audio > 0) materialTypes.push(`🎵音频:${materialStats.audio}`);
-        if (materialStats.animation > 0) materialTypes.push(`🎞️动图:${materialStats.animation}`);
-        if (materialStats.vector > 0) materialTypes.push(`📐矢量:${materialStats.vector}`);
-        if (materialStats.raw > 0) materialTypes.push(`🔬原始:${materialStats.raw}`);
-        if (materialStats.document > 0) materialTypes.push(`📄文档:${materialStats.document}`);
-        if (materialStats.sequence > 0) materialTypes.push(`🎯序列:${materialStats.sequence}`);
+        const t = (k, fb) => (window.i18n?.getText(`categories.${k}`) || fb);
+        if (materialStats.design > 0) materialTypes.push(`🎨${t('design','Design')}:${materialStats.design}`);
+        if (materialStats.image > 0) materialTypes.push(`🖼️${t('image','Image')}:${materialStats.image}`);
+        if (materialStats.video > 0) materialTypes.push(`🎬${t('video','Video')}:${materialStats.video}`);
+        if (materialStats.audio > 0) materialTypes.push(`🎵${t('audio','Audio')}:${materialStats.audio}`);
+        if (materialStats.animation > 0) materialTypes.push(`🎞️${t('animation','Animation')}:${materialStats.animation}`);
+        if (materialStats.vector > 0) materialTypes.push(`📐${t('vector','Vector')}:${materialStats.vector}`);
+        if (materialStats.raw > 0) materialTypes.push(`🔬${t('raw','Raw')}:${materialStats.raw}`);
+        if (materialStats.document > 0) materialTypes.push(`📄${t('document','Document')}:${materialStats.document}`);
+        if (materialStats.sequence > 0) materialTypes.push(`🎯${t('sequence','Sequence')}:${materialStats.sequence}`);
 
         const otherTypes = [];
-        if (otherStats.shape > 0) otherTypes.push(`🔷形状:${otherStats.shape}`);
-        if (otherStats.text > 0) otherTypes.push(`📝文本:${otherStats.text}`);
+        if (otherStats.shape > 0) otherTypes.push(`🔷${t('shape','Shape')}:${otherStats.shape}`);
+        if (otherStats.text > 0) otherTypes.push(`📝${t('text','Text')}:${otherStats.text}`);
 
         const nonExportableReasons = [];
-        if (nonExportableStats.solid > 0) nonExportableReasons.push(`🟦纯色:${nonExportableStats.solid}`);
-        if (nonExportableStats.precomp > 0) nonExportableReasons.push(`📁预合成:${nonExportableStats.precomp}`);
-        if (nonExportableStats.camera > 0) nonExportableReasons.push(`📷摄像机:${nonExportableStats.camera}`);
-        if (nonExportableStats.light > 0) nonExportableReasons.push(`💡灯光:${nonExportableStats.light}`);
-        if (nonExportableStats.adjustment > 0) nonExportableReasons.push(`⚙️调整:${nonExportableStats.adjustment}`);
-        if (nonExportableStats.sequence > 0) nonExportableReasons.push(`🎯序列帧:${nonExportableStats.sequence}`);
-        if (nonExportableStats.other > 0) nonExportableReasons.push(`❓其他:${nonExportableStats.other}`);
+        if (nonExportableStats.solid > 0) nonExportableReasons.push(`🟦${t('solid','Solid')}:${nonExportableStats.solid}`);
+        if (nonExportableStats.precomp > 0) nonExportableReasons.push(`📁${t('precomp','Pre-comp')}:${nonExportableStats.precomp}`);
+        if (nonExportableStats.camera > 0) nonExportableReasons.push(`📷${t('camera','Camera')}:${nonExportableStats.camera}`);
+        if (nonExportableStats.light > 0) nonExportableReasons.push(`💡${t('light','Light')}:${nonExportableStats.light}`);
+        if (nonExportableStats.adjustment > 0) nonExportableReasons.push(`⚙️${t('adjustment','Adjustment')}:${nonExportableStats.adjustment}`);
+        if (nonExportableStats.sequence > 0) nonExportableReasons.push(`🎯${t('sequence','Sequence')}:${nonExportableStats.sequence}`);
+        if (nonExportableStats.other > 0) nonExportableReasons.push(`❓${t('other','Other')}:${nonExportableStats.other}`);
 
         return {
             total: totalCount,
@@ -3970,6 +4018,7 @@ class AEExtension {
                 try {
                     // 动态加载模块（相对扩展根路径）
                     const script = document.createElement('script');
+                    // 纠正为相对于 /public/extensions/ae/index.html 的路径
                     script.src = './js/ui/summary-dialog.js';
                     await new Promise((resolve, reject) => {
                         script.onload = resolve;
@@ -3985,11 +4034,20 @@ class AEExtension {
                 try {
                     const dlg = new window.SummaryDialog();
                     const userChoice = await dlg.show(detectionResults);
-                    this.log(`📋 检测总结面板已显示（Web），用户选择: ${userChoice ? '确定' : '关闭'}`, 'info');
+        const choiceText = userChoice ? (window.i18n?.getText('common.confirm') || 'Confirm')
+                                      : (window.i18n?.getText('summaryDialog.close') || 'Close');
+        this.logManager?.infoI18n('logs.detectSummaryPanelShownWeb', { choice: choiceText });
                     return;
                 } catch (webErr) {
                     this.log(`Web面板显示失败，回退到JSX: ${webErr && webErr.message ? webErr.message : webErr}`, 'warning');
                 }
+            }
+
+            // 在非 CEP 环境（无 CSInterface）下，使用纯 JavaScript 弹窗作为降级回退
+            if (typeof window.__adobe_cep__ === 'undefined' || typeof window.CSInterface === 'undefined') {
+                this.log('非 CEP 环境，使用 JavaScript 弹窗作为回退显示总结', 'info');
+                this.showJavaScriptSummaryDialog(selectedLayers, stats);
+                return;
             }
 
             // 回退路径：调用JSX脚本（保留兼容性）
@@ -7043,19 +7101,23 @@ class AEExtension {
             this.updateRecentFoldersDropdown();
         }
 
-        // 时间轴选项启用/禁用
+        // 时间轴选项启用/禁用（元素可能不存在，需防护）
         const timelineOptions = document.getElementById('timeline-options');
-        const timelineInputs = timelineOptions.querySelectorAll('input, select');
-        const timelineEnabled = uiState.timelineOptionsEnabled(settings);
+        if (timelineOptions) {
+            const timelineInputs = timelineOptions.querySelectorAll('input, select');
+            const timelineEnabled = uiState.timelineOptionsEnabled(settings);
 
-        timelineOptions.style.opacity = timelineEnabled ? '1' : '0.5';
-        timelineInputs.forEach(input => {
-            input.disabled = !timelineEnabled;
-        });
+            timelineOptions.style.opacity = timelineEnabled ? '1' : '0.5';
+            timelineInputs.forEach(input => {
+                input.disabled = !timelineEnabled;
+            });
+        }
 
-        // 序列配置显示/隐藏
+        // 序列配置显示/隐藏（元素可能不存在，需防护）
         const sequenceConfig = document.getElementById('sequence-config');
-        sequenceConfig.style.display = uiState.sequenceIntervalVisible(settings) ? 'block' : 'none';
+        if (sequenceConfig) {
+            sequenceConfig.style.display = uiState.sequenceIntervalVisible(settings) ? 'block' : 'none';
+        }
 
         // 更新导出设置UI状态
         this.updateExportSettingsUI();
@@ -7929,18 +7991,18 @@ class AEExtension {
     // 使用动态端口发现更新Eagle URL
     async updateEagleUrlWithDiscovery() {
         if (!this.portDiscovery) {
-            this.log('端口发现服务未初始化，使用配置端口', 'warning');
+            this.logManager?.warningI18n('logs.usingConfigPortSkipDiscovery');
             const preferences = this.settingsManager.getPreferences();
             this.updateEagleUrl(preferences.communicationPort);
             return;
         }
 
         try {
-            this.log('🔍 开始动态端口发现...', 'info');
+            this.logManager?.info('🔍 开始动态端口发现...');
             const discoveredPort = await this.portDiscovery.getEaglePort();
 
             if (discoveredPort !== this.currentPort) {
-                this.log(`🎯 发现新端口: ${this.currentPort} -> ${discoveredPort}`, 'info');
+                this.logManager?.info(`🎯 发现新端口: ${this.currentPort} -> ${discoveredPort}`);
                 this.updateEagleUrl(discoveredPort);
 
                 // 更新设置中的端口（但不保存，避免覆盖用户配置）
@@ -7949,11 +8011,11 @@ class AEExtension {
                     communicationPortInput.value = discoveredPort;
                 }
             } else {
-                this.log(`端口未变化: ${discoveredPort}`, 'info');
+                this.logManager?.info(`端口未变化: ${discoveredPort}`);
             }
 
         } catch (error) {
-            this.log(`动态端口发现失败: ${error.message}`, 'error');
+            this.logManager?.error(`动态端口发现失败: ${error.message}`);
             // 回退到配置端口
             const preferences = this.settingsManager.getPreferences();
             this.updateEagleUrl(preferences.communicationPort);
@@ -7982,10 +8044,9 @@ class AEExtension {
         setTimeout(() => {
             const refreshState = window.i18n?.getText('logs.refreshProjectStateBeforeImport') || 'Refreshing project state before import...';
             this.log(refreshState, 'info');
-            const importTargetPrefix = window.i18n?.getText('logs.importTargetPrefix') || 'Import target';
             const __isEn = ((window.i18n?.currentLang || localStorage.getItem('lang') || '') + '').toLowerCase().includes('en');
             const compName = __isEn ? 'Jumps Over the Wall' : '佛跳墙';
-            this.log(`${importTargetPrefix}: ${compName}`, 'info');
+            this.logManager?.infoI18n('logs.importTargetWithName', { name: compName });
         }, 3000);
 
         setTimeout(() => {
@@ -8217,13 +8278,21 @@ class AEExtension {
         // 如果没有找到元素，说明DOM结构有问题
         if (quickImportModeRadios.length === 0) {
             this.log('⚠️ 未找到快速导入模式选项，检查DOM结构', 'error');
-            this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
+            if (this.logManager?.errorI18n) {
+                this.logManager.errorI18n('logs.quickSettingsInitSetUninitialized');
+            } else {
+                this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
+            }
             this.quickSettingsInitialized = false;
             return;
         }
         if (importBehaviorRadios.length === 0) {
             this.log('⚠️ 未找到导入行为选项，检查DOM结构', 'error');
-            this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
+            if (this.logManager?.errorI18n) {
+                this.logManager.errorI18n('logs.quickSettingsInitSetUninitialized');
+            } else {
+                this.log('⚠️ 快速设置初始化失败，设置为未初始化状态', 'error');
+            }
             this.quickSettingsInitialized = false;
             return;
         }
@@ -8946,9 +9015,10 @@ class AEExtension {
                             throw new Error(result.error);
                         }
                     } else {
-                        // 降级：保存到 localStorage
-                        localStorage.setItem('eagle2ae_preset_json', jsonContent);
-                        this.log('💾 预设已保存到浏览器存储 (Demo 模式)', 'info');
+                        // 降级：保存到 localStorage（使用面板隔离键，避免多面板互相覆盖）
+                        const fallbackKey = this.getPanelStorageKey('eagle2ae_preset_json');
+                        localStorage.setItem(fallbackKey, jsonContent);
+                        this.log('💾 预设已保存到浏览器存储 (Demo 模式, per-panel)', 'info');
                         return true;
                     }
                 } catch (e) {
@@ -9010,51 +9080,32 @@ class AEExtension {
                         const result = window.demoFileSystem.readFile(demoFileName);
                         if (result.success) {
                             content = result.content;
-                            this.log(
-                                window.i18n?.getText('logs.vfsLoadedPresetsWithSize', { size: result.size })
-                                || `✅ 从虚拟文件系统加载预设 (${result.size} bytes)`,
-                                'info'
-                            );
+                            this.logManager?.successI18n('logs.vfsLoadedPresetsWithSize', { size: result.size });
                         }
                     }
 
-                    // 降级：从 localStorage 读取
+                    // 降级：从 localStorage 读取（使用面板隔离键，避免多面板互相覆盖）
                     if (!content) {
-                        content = localStorage.getItem('eagle2ae_preset_json');
+                        const fallbackKey = this.getPanelStorageKey('eagle2ae_preset_json');
+                        content = localStorage.getItem(fallbackKey);
                         if (content) {
-                            this.log(
-                                window.i18n?.getText('logs.loadedPresetsFromBrowserStorageDemo')
-                                || '✅ 从浏览器存储加载预设 (Demo 模式)',
-                                'info'
-                            );
+                            this.logManager?.successI18n('logs.loadedPresetsFromBrowserStorageDemo');
                         }
                     }
 
                     if (content) {
                         parsed = JSON.parse(content);
                     } else {
-                        this.log(
-                            window.i18n?.getText('logs.demoNoSavedPresetsFound')
-                            || 'ℹ️ Demo 模式：未找到保存的预设',
-                            'info'
-                        );
+                        this.logManager?.infoI18n('logs.demoNoSavedPresetsFound');
 
                         // 🔥 如果预设文件不存在，创建默认预设文件
                         const fileNameToCreate = this.getPresetFileName();
                         console.log(`[${this.panelId}] 📝 预设文件不存在，正在创建: ${fileNameToCreate}`);
-                        this.log(
-                            window.i18n?.getText('logs.creatingDefaultPresetFileWithName', { file: fileNameToCreate })
-                            || `📝 正在创建默认预设文件: ${fileNameToCreate}`,
-                            'info'
-                        );
+                        this.logManager?.infoI18n('logs.creatingDefaultPresetFileWithName', { file: fileNameToCreate });
                         const saveResult = await this.savePresetsSilently();
                         
                         if (saveResult) {
-                            this.log(
-                                window.i18n?.getText('logs.defaultPresetFileCreatedWithName', { file: this.getPresetFileName() })
-                                || `✅ 默认预设文件已创建: ${this.getPresetFileName()}`,
-                                'success'
-                            );
+                            this.logManager?.successI18n('logs.defaultPresetFileCreatedWithName', { file: this.getPresetFileName() });
                             // 应用默认配置到界面（添加 DOM 检查）
                             try {
                                 const quickSettingsContainer = document.querySelector('.quick-settings-container');
@@ -9062,32 +9113,18 @@ class AEExtension {
                                     this.updateSettingsUI();
                                     this.loadQuickSettings();
                                 } else {
-                                    this.log(
-                                        window.i18n?.getText('logs.domNotReadySkipUIUpdate')
-                                        || '⚠️ DOM 未就绪，跳过 UI 更新',
-                                        'warning'
-                                    );
+                                    this.logManager?.warningI18n('logs.domNotReadySkipUiUpdate');
                                 }
                             } catch (uiError) {
-                                this.log(
-                                    `${window.i18n?.getText('logs.uiUpdateFailedPrefix') || '⚠️ UI 更新失败:'} ${uiError.message}`,
-                                    'warning'
-                                );
+                                this.logManager?.warningI18n('logs.uiUpdateFailedWithMsg', { msg: uiError.message });
                             }
                         } else {
-                            this.log(
-                                window.i18n?.getText('logs.createDefaultPresetFailed')
-                                || '⚠️ 创建默认预设文件失败',
-                                'warning'
-                            );
+                            this.logManager?.warningI18n('logs.createDefaultPresetFailed');
                         }
                         return;
                     }
                 } catch (e) {
-                    this.log(
-                        `${window.i18n?.getText('logs.demoLoadPresetsFailedPrefix') || '⚠️ Demo 模式加载预设失败:'} ${e.message}`,
-                        'warning'
-                    );
+                    this.logManager?.warningI18n('logs.demoLoadPresetsFailedWithMsg', { msg: e.message });
                     return;
                 }
             } else {
@@ -9104,19 +9141,16 @@ class AEExtension {
 
                 if (!result || !result.success) {
                     const msg = result && result.error ? result.error : '未找到预设文件';
-                    this.log(
-                        `${window.i18n?.getText('logs.localPresetsUnavailablePrefix') || 'ℹ️ 本地预设不可用：'} ${msg}`,
-                        'info'
-                    );
+                    this.logManager?.infoI18n('logs.localPresetsUnavailableWithMsg', { msg });
 
                     // 🔥 如果预设文件不存在，创建默认预设文件
                     const fileNameToCreate = this.getPresetFileName();
                     console.log(`[${this.panelId}] 📝 预设文件不存在，正在创建: ${fileNameToCreate}`);
-                    this.log(`📝 正在创建默认预设文件: ${fileNameToCreate}`, 'info');
+                    this.logManager?.infoI18n('logs.creatingDefaultPresetFileWithName', { file: fileNameToCreate });
                     const saveResult = await this.savePresetsSilently();
                     
                     if (saveResult) {
-                        this.log(`✅ 默认预设文件已创建: ${this.getPresetFileName()}`, 'success');
+                        this.logManager?.successI18n('logs.defaultPresetFileCreatedWithName', { file: this.getPresetFileName() });
                         // 应用默认配置到界面（添加 DOM 检查）
                         try {
                             const quickSettingsContainer = document.querySelector('.quick-settings-container');
@@ -9124,24 +9158,13 @@ class AEExtension {
                                 this.updateSettingsUI();
                                 this.loadQuickSettings();
                             } else {
-                                this.log(
-                                    window.i18n?.getText('logs.domNotReadySkipUIUpdate')
-                                    || '⚠️ DOM 未就绪，跳过 UI 更新',
-                                    'warning'
-                                );
+                                this.logManager?.warningI18n('logs.domNotReadySkipUiUpdate');
                             }
                         } catch (uiError) {
-                            this.log(
-                                `${window.i18n?.getText('logs.uiUpdateFailedPrefix') || '⚠️ UI 更新失败:'} ${uiError.message}`,
-                                'warning'
-                            );
+                            this.logManager?.warningI18n('logs.uiUpdateFailedWithMsg', { msg: uiError.message });
                         }
                     } else {
-                        this.log(
-                            window.i18n?.getText('logs.createDefaultPresetFailed')
-                            || '⚠️ 创建默认预设文件失败',
-                            'warning'
-                        );
+                        this.logManager?.warningI18n('logs.createDefaultPresetFailed');
                     }
                     return;
                 }
@@ -9166,11 +9189,7 @@ class AEExtension {
             if (parsed && parsed.uiSettings) {
                 try {
                     this.setPanelLocalStorage('uiSettings', JSON.stringify(parsed.uiSettings));
-                    this.log(
-                        window.i18n?.getText('logs.uiPanelsRestored')
-                        || '✅ 已恢复 UI 面板组设置',
-                        'info'
-                    );
+                    this.logManager?.successI18n('logs.uiPanelsRestored');
                 } catch (e) {
                     console.warn('无法保存 uiSettings:', e);
                 }
@@ -9185,11 +9204,7 @@ class AEExtension {
                     if (window.i18n && typeof window.i18n.setLanguage === 'function') {
                         window.i18n.setLanguage(parsed.language);
                     }
-                    this.log(
-                        window.i18n?.getText('logs.languageRestoredWithName', { lang: parsed.language })
-                        || `✅ 已恢复语言设置: ${parsed.language}`,
-                        'info'
-                    );
+                    this.logManager?.successI18n('logs.languageRestoredWithName', { lang: parsed.language });
                 } catch (e) {
                     console.warn('无法应用语言设置:', e);
                 }
@@ -9203,11 +9218,7 @@ class AEExtension {
                     if (typeof this.applyTheme === 'function') {
                         this.applyTheme(parsed.userPreferences.theme);
                     }
-                    this.log(
-                        window.i18n?.getText('logs.themeRestoredWithName', { theme: parsed.userPreferences.theme })
-                        || `✅ 已恢复主题设置: ${parsed.userPreferences.theme}`,
-                        'info'
-                    );
+                    this.logManager?.successI18n('logs.themeRestoredWithName', { theme: parsed.userPreferences.theme });
                 } catch (e) {
                     console.warn('无法应用主题设置:', e);
                 }
@@ -9217,11 +9228,7 @@ class AEExtension {
             if (parsed && parsed.projectAdjacentSettings) {
                 try {
                     localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(parsed.projectAdjacentSettings));
-                    this.log(
-                        window.i18n?.getText('logs.projectAdjacentSettingsRestored')
-                        || '✅ 已恢复项目旁复制设置',
-                        'info'
-                    );
+                    this.logManager?.successI18n('logs.projectAdjacentSettingsRestored');
                 } catch (e) {
                     console.warn('无法保存项目旁设置:', e);
                 }
@@ -9231,11 +9238,7 @@ class AEExtension {
             if (parsed && parsed.customFolderSettings) {
                 try {
                     localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(parsed.customFolderSettings));
-                    this.log(
-                        window.i18n?.getText('logs.customFolderSettingsRestored')
-                        || '✅ 已恢复自定义文件夹设置',
-                        'info'
-                    );
+                    this.logManager?.successI18n('logs.customFolderSettingsRestored');
                 } catch (e) {
                     console.warn('无法保存自定义文件夹设置:', e);
                 }
@@ -9248,17 +9251,9 @@ class AEExtension {
                 if (quickSettingsContainer) {
                     this.updateSettingsUI();
                     this.loadQuickSettings();
-                    this.log(
-                        window.i18n?.getText('logs.loadedAndAppliedLocalPresetsWithUI')
-                        || '✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）',
-                        'success'
-                    );
+                    this.logManager?.successI18n('logs.loadedAndAppliedLocalPresets');
                 } else {
-                    this.log(
-                        window.i18n?.getText('logs.domNotReadySkipUIUpdateWithConfig')
-                        || '⚠️ DOM 未就绪，跳过 UI 更新（配置已加载到内存）',
-                        'warning'
-                    );
+                    this.logManager?.warningI18n('logs.domNotReadySkipUiUpdateConfigLoaded');
                 }
             } catch (uiError) {
                 this.log(
@@ -9383,7 +9378,8 @@ class AEExtension {
     async ensurePresetsFolderReady() {
         // Demo 模式：虚拟文件系统不需要创建目录
         if (window.__DEMO_MODE_ACTIVE__) {
-            this.log('📁 Demo 模式：使用虚拟文件系统', 'info');
+            const msg = (window.i18n?.getText('logs.demoModeUsingVirtualFileSystem')) || 'Demo Mode: Using virtual file system';
+            this.log(msg, 'info');
             return;
         }
 
@@ -9498,8 +9494,9 @@ class AEExtension {
         if (window.__DEMO_MODE_ACTIVE__) {
             // Demo 模式：从虚拟文件系统下载
             if (!window.demoFileSystem) {
-                console.error('[Preset] 虚拟文件系统未加载！');
-                this.log('⚠️ 虚拟文件系统未加载', 'warning');
+                console.error('[Preset] Demo virtual file system not loaded!');
+                const msg = (window.i18n?.getText('logs.demoFsNotLoaded')) || 'Virtual file system not loaded';
+                this.log(msg, 'warning');
                 return;
             }
 
@@ -9560,8 +9557,9 @@ class AEExtension {
         if (window.__DEMO_MODE_ACTIVE__) {
             // Demo 模式：在新标签页打开
             if (!window.demoFileSystem) {
-                console.error('[Preset] 虚拟文件系统未加载！');
-                this.log('⚠️ 虚拟文件系统未加载', 'warning');
+                console.error('[Preset] Demo virtual file system not loaded!');
+                const msg = (window.i18n?.getText('logs.demoFsNotLoaded')) || 'Virtual file system not loaded';
+                this.log(msg, 'warning');
                 return;
             }
 

@@ -191,6 +191,72 @@ class DemoI18nHelper {
     };
   }
 
+  // 将演示相关的日志与标签注入到全局 i18n.translations
+  installIntoI18n() {
+    try {
+      const lang = window.i18n?.currentLang || localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN';
+      const layerDetection = this.demoTranslations[lang]?.layerDetection || this.demoTranslations['zh-CN']?.layerDetection || {};
+
+      const labels = layerDetection.materialTypes || {};
+      const lm = layerDetection.logMessages || {};
+
+      // 构造 Demo 日志文案（覆盖 demo-apis.js 期望的键）
+      const logs = (lang === 'en-US') ? {
+        apiSimulatorInit: 'Demo API simulator initialized',
+        testConnection: 'Testing connection (demo)...',
+        connectionFailed: 'Connection failed (demo)',
+        noResponseMessage: 'No response message (demo)',
+        mockWSDisconnect: 'Mock WebSocket disconnected (demo)',
+        disconnected: 'Disconnected (demo)',
+        getProjectInfo: 'Get project info (demo)',
+        getEagleFiles: 'Get Eagle files (demo)',
+        importFiles: 'Import files (demo)',
+        importFailed: 'Import failed (demo)',
+        sendMessage: 'Send message type: {type}',
+        responseMessage: 'Response message type: {type}',
+        detectLayers: 'Detect layers (demo)',
+        layerDataNotFound: 'Layer data not found (demo)',
+        compName: lm.compName || 'Composition Name',
+        compNameLog: (lm.compName || 'Composition Name') + ': {name}',
+        detectedLayersLog: (lm.detectedLayers || 'Detected layers selected:') + ' {count}',
+        exportable: lm.exportable || 'exportable',
+        notExportable: lm.notExportable || 'not exportable',
+        detectionResult: lm.detectionResult || 'Detection Result',
+        materialStats: lm.materialStats || 'Material Stats',
+        typeDistribution: lm.typeDistribution || 'Type Distribution'
+      } : {
+        apiSimulatorInit: '演示API模拟器初始化',
+        testConnection: '正在测试连接(演示)...',
+        connectionFailed: '连接失败(演示)',
+        noResponseMessage: '无响应消息(演示)',
+        mockWSDisconnect: '模拟WebSocket断开(演示)',
+        disconnected: '已断开(演示)',
+        getProjectInfo: '获取项目信息(演示)',
+        getEagleFiles: '获取Eagle文件(演示)',
+        importFiles: '导入文件(演示)',
+        importFailed: '导入失败(演示)',
+        sendMessage: '发送消息类型: {type}',
+        responseMessage: '响应消息类型: {type}',
+        detectLayers: '检测图层(演示)',
+        layerDataNotFound: '未找到图层数据(演示)',
+        compName: lm.compName || '合成名称',
+        compNameLog: (lm.compName || '合成名称') + ': {name}',
+        detectedLayersLog: (lm.detectedLayers || '检测到 个选中图层:') + ' {count}',
+        exportable: lm.exportable || '可导出',
+        notExportable: lm.notExportable || '不可导出',
+        detectionResult: lm.detectionResult || '检测结果',
+        materialStats: lm.materialStats || '素材统计',
+        typeDistribution: lm.typeDistribution || '类型分布'
+      };
+
+      window.i18n = window.i18n || {};
+      window.i18n.translations = window.i18n.translations || {};
+      window.i18n.translations.demo = { logs, labels };
+    } catch (e) {
+      console.warn('Failed to install demo translations into i18n:', e);
+    }
+  }
+
   getDemoText(key) {
     const lang = window.i18n?.currentLang || 'zh-CN';
     try {
@@ -491,6 +557,30 @@ class DemoI18nHelper {
 // 全局初始化Demo国际化辅助类
 window.DemoI18nHelper = new DemoI18nHelper();
 
+// 初次加载时注入 demo 文案，确保 demo-apis 可用
+if (window.DemoI18nHelper) {
+  try {
+    window.DemoI18nHelper.installIntoI18n();
+  } catch (e) {
+    console.warn('Initial demo i18n injection failed:', e);
+  }
+}
+
+// 等待 i18n 完成翻译加载后再次注入，避免被 loadTranslations 覆盖
+try {
+  if (window.i18n?.ready && typeof window.i18n.ready.then === 'function') {
+    window.i18n.ready.then(() => {
+      try {
+        window.DemoI18nHelper?.installIntoI18n();
+      } catch (e) {
+        console.warn('Re-inject demo i18n after i18n.ready failed:', e);
+      }
+    });
+  }
+} catch (e) {
+  console.warn('Hook i18n.ready for demo injection failed:', e);
+}
+
 // 监听语言变化事件，当语言变化时更新演示模式数据
 document.addEventListener('DOMContentLoaded', function() {
   // 监听语言变化事件
@@ -510,6 +600,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       // 更新演示模式数据（如果存在）
+      try {
+        // 语言切换时重新注入 demo 文案
+        window.DemoI18nHelper?.installIntoI18n();
+      } catch (e) {
+        console.warn('Failed to refresh demo i18n on language switch:', e);
+      }
+
       if (window.DemoI18nHelper && window.demoMode && window.demoMode.config) {
         // 重新加载配置以确保使用正确的语言数据
         window.demoMode.config = window.demoMode.getDefaultConfig();
@@ -522,6 +619,15 @@ document.addEventListener('DOMContentLoaded', function() {
           } catch (e) {
             console.warn('刷新 AE/Eagle 文本失败:', e);
           }
+        }
+
+        // 语言切换后同步 DemoAPIs 的翻译引用，确保日志/标签立即生效
+        try {
+          if (window.demoMode.demoAPIs) {
+            window.demoMode.demoAPIs.t = window.i18n?.translations || window.demoMode.demoAPIs.t;
+          }
+        } catch (e) {
+          console.warn('刷新 DemoAPIs 文案失败:', e);
         }
       }
       

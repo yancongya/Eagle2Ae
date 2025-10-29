@@ -27,6 +27,15 @@
         style.id = 'e2a-summary-dialog-styles';
         style.textContent = "\n.e2a-modal{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:center;justify-content:center;}\n.e2a-dialog{background:#1e1e1e;color:#eee;border:1px solid #333;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.5);width:380px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;}\n.e2a-header{padding:8px 12px;border-bottom:1px solid #2a2a2a;font-weight:600;display:flex;align-items:center;justify-content:space-between;}\n.e2a-title{font-size:14px}\n.e2a-body{padding:8px 8px 0 8px;overflow:auto;}\n.e2a-summary{border:1px solid #2a2a2a;border-radius:6px;padding:6px;margin-bottom:8px}\n.e2a-summary-line{font-size:12px;margin:2px 0}\n.e2a-list{border:1px solid #2a2a2a;border-radius:6px;padding:6px;margin-bottom:8px}\n.e2a-row{display:flex;align-items:center;gap:6px;margin:2px 0}\n.e2a-row-text{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}\n.e2a-row-text.link{color:#6aa8ff;text-decoration:underline;}\n.e2a-row-text.link:hover{color:#8fc1ff}\n.e2a-row-text.link:focus{outline:1px dashed #6aa8ff;outline-offset:2px}\n.e2a-footer{padding:8px;border-top:1px solid #2a2a2a;display:flex;gap:8px;justify-content:center}\n.e2a-btn{background:#2b2b2b;border:1px solid #3a3a3a;border-radius:4px;color:#eee;padding:5px 12px;font-size:12px;cursor:pointer}\n.e2a-btn:hover{background:#343434}\n.e2a-detail{min-width:420px;max-width:90vw}\n";
         document.head.appendChild(style);
+        // Append responsive rules for small screens
+        style.textContent += "\n/* Responsive tweaks for small screens */\n@media (max-width: 480px){\n  .e2a-dialog{width:340px;max-width:96vw;}\n  .e2a-header{padding:6px 10px;}\n  .e2a-title{font-size:13px;}\n  .e2a-body{padding:6px 6px 0;}\n  .e2a-summary,.e2a-list{padding:5px;}\n  .e2a-summary-line{font-size:11px;}\n  .e2a-row{gap:4px;}\n  .e2a-row-text{font-size:12px;}\n  .e2a-footer{padding:6px;gap:6px;}\n  .e2a-btn{padding:4px 10px;font-size:12px;}\n  .e2a-detail{min-width:320px;}\n}\n@media (max-width: 360px){\n  .e2a-dialog{width:300px;max-width:96vw;}\n  .e2a-title{font-size:12px;}\n  .e2a-summary-line{font-size:10.5px;}\n  .e2a-row-text{font-size:11px;}\n  .e2a-btn{padding:3px 8px;font-size:11px;}\n  .e2a-detail{min-width:280px;}\n}\n@media (max-width: 320px){\n  .e2a-dialog{width:280px;max-width:96vw;}\n  .e2a-btn{padding:0;width:28px;height:28px;font-size:0;display:flex;align-items:center;justify-content:center;}\n  .e2a-btn[data-action=ok]::before{content:\"✔\";font-size:16px;line-height:1;}\n  .e2a-btn[data-action=close]::before{content:\"❌\";font-size:16px;line-height:1;}\n  .e2a-detail{min-width:240px;}\n}\n";
+
+        // Add fluid, smooth responsive scaling (overrides stepwise feels)
+        style.textContent += "\n/* Fluid responsive scaling */\n.e2a-dialog{\n  width: clamp(280px, 62vw, 380px);\n  --fs-title: clamp(12px, 1.6vw, 14px);\n  --fs-line: clamp(10px, 1.3vw, 12px);\n  --fs-row: clamp(10px, 1.3vw, 12px);\n  --pad-outer: clamp(6px, 1.2vw, 8px);\n  --pad-inner: clamp(4px, 1vw, 6px);\n  --gap: clamp(4px, 1vw, 8px);\n  --btn-px: clamp(8px, 2.2vw, 12px);\n  --btn-py: clamp(3px, 1vw, 6px);\n  --btn-fs: clamp(11px, 1.4vw, 12px);\n}\n.e2a-header{padding: var(--pad-outer) calc(var(--pad-outer) + 4px);}\n.e2a-title{font-size: var(--fs-title);}\n.e2a-body{padding: var(--pad-outer) var(--pad-outer) 0 var(--pad-outer); min-width: 0;}\n.e2a-summary,.e2a-list{padding: var(--pad-inner);}\n.e2a-summary{min-width: 0;}\n.e2a-summary-line{font-size: var(--fs-line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}\n.e2a-row{gap: var(--gap);}\n.e2a-row-text{font-size: var(--fs-row); min-width: 0;}\n.e2a-footer{padding: var(--pad-outer); gap: var(--gap);}\n.e2a-btn{padding: var(--btn-py) var(--btn-px); font-size: var(--btn-fs);}\n.e2a-detail{min-width: clamp(240px, 56vw, 420px);}\n";
+        // Ensure button sizing overrides apply in all cases
+        style.textContent += "\n/* Fluid override for buttons */\n.e2a-btn{ padding: var(--btn-py) var(--btn-px) !important; font-size: var(--btn-fs) !important; box-sizing: border-box; }\n";
+        // Icon-only mode on very small screens: hide text span, show symbols
+        style.textContent += "\n@media (max-width: 360px){\n  .e2a-btn{ width: 28px; height: 28px; padding: 0 !important; font-size: 0 !important; display: inline-flex; align-items: center; justify-content: center; }\n  .e2a-btn .e2a-btn-text{ display: none !important; }\n  .e2a-btn[data-action=ok]::before{ content: \"✔\"; font-size: 16px; line-height: 1; }\n  .e2a-btn[data-action=close]::before{ content: \"❌\"; font-size: 16px; line-height: 1; }\n}\n";
     }
 
     function generateSummaryLines(detectionResults) {
@@ -266,7 +275,7 @@
             '<div class="e2a-header"><div class="e2a-title">' + t('summaryDialog.detailTitle', '图层详细信息') + '</div></div>'+
             '<div class="e2a-body"></div>'+
             '<div class="e2a-footer">'+
-                '<button class="e2a-btn" data-action="close">' + t('summaryDialog.close', '关闭') + '</button>'+
+                '<button class="e2a-btn" data-action="close" aria-label="' + t('summaryDialog.close', '关闭') + '" title="' + t('summaryDialog.close', '关闭') + '"><span class="e2a-btn-text">' + t('summaryDialog.close', '关闭') + '</span></button>'+
             '</div>';
         overlay.appendChild(dialog);
         var body = dialog.querySelector('.e2a-body');
@@ -300,8 +309,8 @@
                     '<div class="e2a-list" aria-label="' + t('summaryDialog.listAriaLabel', '图层详情') + '"></div>'+
                 '</div>'+
                 '<div class="e2a-footer">'+
-                    '<button class="e2a-btn" data-action="ok">' + t('common.confirm', '确定') + '</button>'+
-                    '<button class="e2a-btn" data-action="close">' + t('summaryDialog.close', '关闭') + '</button>'+
+                    '<button class="e2a-btn" data-action="ok" aria-label="' + t('common.confirm', '确定') + '" title="' + t('common.confirm', '确定') + '"><span class="e2a-btn-text">' + t('common.confirm', '确定') + '</span></button>'+
+                    '<button class="e2a-btn" data-action="close" aria-label="' + t('summaryDialog.close', '关闭') + '" title="' + t('summaryDialog.close', '关闭') + '"><span class="e2a-btn-text">' + t('summaryDialog.close', '关闭') + '</span></button>'+
                 '</div>';
             overlay.appendChild(dialog);
 

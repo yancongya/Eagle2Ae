@@ -10,6 +10,8 @@ class I18n {
     } catch (_) {}
 
     this.translations = {};
+    // 预加载多语言字典以支持双语日志组合
+    this.allTranslations = {};
     this.ready = this.loadTranslations();
     this.initLanguageToggle();
   }
@@ -65,6 +67,8 @@ class I18n {
     try {
       // 加载当前语言的翻译（支持HTTP与CEP本地文件）
       this.translations = await this.loadJson(`js/i18n/${this.currentLang}.json`);
+      // 缓存到多语言字典
+      this.allTranslations[this.currentLang] = this.translations;
       console.log('[i18n] 翻译加载成功，keys:', Object.keys(this.translations));
       this.updatePageTexts();
       // 切换后补充动态内容刷新，确保占位文案即时本地化
@@ -86,6 +90,8 @@ class I18n {
             localStorage.setItem('language', 'zh-CN');
             localStorage.setItem('lang', 'zh-CN');
           } catch (_) {}
+          // 缓存到多语言字典
+          this.allTranslations['zh-CN'] = this.translations;
           this.updatePageTexts();
           this.updateLanguageButton();
           // 回退后同样刷新动态内容
@@ -101,6 +107,19 @@ class I18n {
         }
       }
     }
+
+    // 额外预加载另一种语言以支持双语显示（不阻塞主流程）
+    try {
+      const otherLang = this.currentLang === 'zh-CN' ? 'en-US' : 'zh-CN';
+      if (!this.allTranslations[otherLang]) {
+        this.loadJson(`js/i18n/${otherLang}.json`).then(data => {
+          this.allTranslations[otherLang] = data;
+          console.log('[i18n] 已预加载另一语言字典:', otherLang);
+        }).catch(err => console.warn('[i18n] 预加载另一语言失败:', otherLang, err));
+      }
+    } catch (e) {
+      console.warn('[i18n] 预加载另一语言异常:', e);
+    }
   }
 
   async switchLanguage(lang) {
@@ -109,6 +128,8 @@ class I18n {
         // 加载新语言的翻译（支持HTTP与CEP本地文件）
         this.translations = await this.loadJson(`js/i18n/${lang}.json`);
         this.currentLang = lang;
+        // 缓存到多语言字典
+        this.allTranslations[lang] = this.translations;
         
         // 保存语言设置到本地存储（同步两套键）
         try {
@@ -137,7 +158,11 @@ class I18n {
   }
 
   updatePageTexts() {
-    console.log('[i18n] updatePageTexts 被调用，当前语言:', this.currentLang, 'translations 已加载:', !!this.translations.common);
+    try {
+      if (window.__DEBUG_I18N__ || localStorage.getItem('debug_i18n') === '1') {
+        console.debug('[i18n] updatePageTexts 被调用，当前语言:', this.currentLang, 'translations 已加载:', !!this.translations.common);
+      }
+    } catch (_) {}
     // 暂时禁用可能被演示模式监控的元素更新，避免副作用
     // 只更新非连接状态相关的元素
     
@@ -170,10 +195,12 @@ class I18n {
       const text = this.getText(key);
       if (text) {
         element.textContent = text;
-        // 调试：记录 UI 设置按钮的更新
-        if (element.id && element.id.startsWith('ui-toggle-')) {
-          console.log('[i18n] 更新 UI 按钮:', element.id, '键:', key, '文本:', text);
-        }
+        // 调试：记录 UI 设置按钮的更新（仅在 debug 开启时输出）
+        try {
+          if ((window.__DEBUG_I18N__ || localStorage.getItem('debug_i18n') === '1') && element.id && element.id.startsWith('ui-toggle-')) {
+            console.debug('[i18n] 更新 UI 按钮:', element.id, '键:', key, '文本:', text);
+          }
+        } catch (_) {}
       }
     });
 
@@ -194,10 +221,12 @@ class I18n {
       const title = this.getText(key);
       if (title) {
         element.title = title;
-        // 调试：记录 UI 设置按钮的 title 更新
-        if (element.id && element.id.startsWith('ui-toggle-')) {
-          console.log('[i18n] 更新 UI 按钮 title:', element.id, '键:', key, 'title:', title);
-        }
+        // 调试：记录 UI 设置按钮的 title 更新（仅在 debug 开启时输出）
+        try {
+          if ((window.__DEBUG_I18N__ || localStorage.getItem('debug_i18n') === '1') && element.id && element.id.startsWith('ui-toggle-')) {
+            console.debug('[i18n] 更新 UI 按钮 title:', element.id, '键:', key, 'title:', title);
+          }
+        } catch (_) {}
       }
     });
 
@@ -236,6 +265,25 @@ class I18n {
       return value;
     } catch (error) {
       console.warn(`Translation key not found: ${key}`, error);
+      return null;
+    }
+  }
+
+  // 获取指定语言的翻译文本（用于双语日志组合）
+  getTextForLang(key, lang) {
+    try {
+      const dict = (this.allTranslations && this.allTranslations[lang]) || (lang === this.currentLang ? this.translations : null);
+      if (!dict) return null;
+      const keys = key.split('.');
+      let value = dict;
+      for (const k of keys) {
+        value = value[k];
+        if (value === undefined) {
+          return null;
+        }
+      }
+      return value;
+    } catch (error) {
       return null;
     }
   }

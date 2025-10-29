@@ -41,7 +41,11 @@ class Eagle2AeWebSocketClient {
 
         try {
             this.connectionState = 'connecting';
-            this.log('正在连接到Eagle WebSocket服务器...', 'info');
+            if (this.aeExtension?.logManager?.infoI18n) {
+                this.aeExtension.logManager.infoI18n('logs.connectingToEagleWebSocket');
+            } else {
+                this.log('正在连接到Eagle WebSocket服务器...', 'info');
+            }
 
             this.ws = new WebSocket(this.url);
             
@@ -67,7 +71,11 @@ class Eagle2AeWebSocketClient {
 
         } catch (error) {
             this.connectionState = 'disconnected';
-            this.log(`WebSocket连接失败: ${error.message}`, 'error');
+            if (this.aeExtension?.logManager?.errorI18n) {
+                this.aeExtension.logManager.errorI18n('logs.websocketConnectFailedPrefix', { msg: error.message });
+            } else {
+                this.log(`WebSocket连接失败: ${error.message}`, 'error');
+            }
             this.stats.errors++;
             throw error;
         }
@@ -86,7 +94,11 @@ class Eagle2AeWebSocketClient {
         }
         
         this.connectionState = 'disconnected';
-        this.log('已断开WebSocket连接', 'info');
+        if (this.aeExtension?.logManager?.infoI18n) {
+            this.aeExtension.logManager.infoI18n('logs.websocketDisconnected');
+        } else {
+            this.log('已断开WebSocket连接', 'info');
+        }
     }
 
     /**
@@ -116,7 +128,11 @@ class Eagle2AeWebSocketClient {
     handleConnectionOpen() {
         this.connectionState = 'connected';
         this.reconnectAttempts = 0;
-        this.log('✅ WebSocket连接已建立', 'success');
+        if (this.aeExtension?.logManager?.successI18n) {
+            this.aeExtension.logManager.successI18n('logs.websocketConnected');
+        } else {
+            this.log('✅ WebSocket连接已建立', 'success');
+        }
         
         // 发送握手消息
         this.sendHandshake();
@@ -138,7 +154,11 @@ class Eagle2AeWebSocketClient {
             const message = JSON.parse(event.data);
             this.stats.messagesReceived++;
             
-            this.log(`收到消息: ${message.type}`, 'debug');
+            if (this.aeExtension?.logManager?.debugI18n) {
+                this.aeExtension.logManager.debugI18n('logs.websocketMessageReceivedWithType', { type: message.type });
+            } else {
+                this.log(`收到消息: ${message.type}`, 'debug');
+            }
             
             // 处理响应消息
             if (message.data && message.data.originalId && this.pendingRequests.has(message.data.originalId)) {
@@ -159,11 +179,19 @@ class Eagle2AeWebSocketClient {
             if (handler) {
                 handler(message);
             } else {
-                this.log(`未知消息类型: ${message.type}`, 'warning');
+                if (this.aeExtension?.logManager?.warningI18n) {
+                    this.aeExtension.logManager.warningI18n('logs.websocketUnknownMessageType', { type: message.type });
+                } else {
+                    this.log(`未知消息类型: ${message.type}`, 'warning');
+                }
             }
 
         } catch (error) {
-            this.log(`处理消息时出错: ${error.message}`, 'error');
+            if (this.aeExtension?.logManager?.errorI18n) {
+                this.aeExtension.logManager.errorI18n('logs.websocketHandleMessageErrorPrefix', { msg: error.message });
+            } else {
+                this.log(`处理消息时出错: ${error.message}`, 'error');
+            }
             this.stats.errors++;
         }
     }
@@ -175,7 +203,11 @@ class Eagle2AeWebSocketClient {
         this.connectionState = 'disconnected';
         this.stopHeartbeat();
         
-        this.log(`WebSocket连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`, 'warning');
+        if (this.aeExtension?.logManager?.warningI18n) {
+            this.aeExtension.logManager.warningI18n('logs.websocketClosedWithCodeAndReason', { code: event.code, reason: event.reason });
+        } else {
+            this.log(`WebSocket连接已关闭 (代码: ${event.code}, 原因: ${event.reason})`, 'warning');
+        }
         
         // 通知AE扩展连接断开
         if (this.aeExtension) {
@@ -192,7 +224,11 @@ class Eagle2AeWebSocketClient {
      * 处理连接错误
      */
     handleConnectionError(error) {
-        this.log(`WebSocket连接错误: ${error.message || 'Unknown error'}`, 'error');
+        if (this.aeExtension?.logManager?.errorI18n) {
+            this.aeExtension.logManager.errorI18n('logs.websocketErrorPrefix', { msg: error.message || 'Unknown error' });
+        } else {
+            this.log(`WebSocket连接错误: ${error.message || 'Unknown error'}`, 'error');
+        }
         this.stats.errors++;
     }
 
@@ -202,8 +238,12 @@ class Eagle2AeWebSocketClient {
     scheduleReconnect() {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // 指数退避
-        
-        this.log(`${delay/1000}秒后尝试重连 (第${this.reconnectAttempts}次)...`, 'info');
+        const seconds = Math.floor(delay / 1000);
+        if (this.aeExtension?.logManager?.infoI18n) {
+            this.aeExtension.logManager.infoI18n('logs.websocketReconnectScheduledWithDelayAttempt', { seconds, attempt: this.reconnectAttempts });
+        } else {
+            this.log(`${seconds}秒后尝试重连 (第${this.reconnectAttempts}次)...`, 'info');
+        }
         
         setTimeout(() => {
             if (this.connectionState === 'disconnected') {
@@ -213,7 +253,11 @@ class Eagle2AeWebSocketClient {
                     if (this.reconnectAttempts < this.maxReconnectAttempts) {
                         this.scheduleReconnect();
                     } else {
-                        this.log('达到最大重连次数，停止重连', 'error');
+                        if (this.aeExtension?.logManager?.errorI18n) {
+                            this.aeExtension.logManager.errorI18n('logs.websocketMaxReconnectReached');
+                        } else {
+                            this.log('达到最大重连次数，停止重连', 'error');
+                        }
                     }
                 });
             }
@@ -307,12 +351,20 @@ class Eagle2AeWebSocketClient {
     setupMessageHandlers() {
         // 连接管理
         this.messageHandlers.set('connection.handshake', (message) => {
-            this.log(`收到握手消息，服务器版本: ${message.data.serverVersion}`, 'info');
+            if (this.aeExtension?.logManager?.infoI18n) {
+                this.aeExtension.logManager.infoI18n('logs.websocketHandshakeServerVersion', { version: message.data.serverVersion });
+            } else {
+                this.log(`收到握手消息，服务器版本: ${message.data.serverVersion}`, 'info');
+            }
         });
 
         this.messageHandlers.set('connection.pong', (message) => {
             const pingTime = Date.now() - this.lastPingTime;
-            this.log(`心跳响应: ${pingTime}ms`, 'debug');
+            if (this.aeExtension?.logManager?.debugI18n) {
+                this.aeExtension.logManager.debugI18n('logs.websocketHeartbeatResponseWithMs', { ms: pingTime });
+            } else {
+                this.log(`心跳响应: ${pingTime}ms`, 'debug');
+            }
         });
 
         // 文件操作
