@@ -230,7 +230,7 @@ class LogManager {
         groupElement.className = `log-group log-${group.level}`;
         
         const timestamp = new Date(group.timestamp).toLocaleTimeString();
-        const summary = `${groupKey} (${group.messages.length} 条消息)`;
+        const summary = `${groupKey} ${window.i18n.getText('logs.messageCount').replace('{count}', group.messages.length)}`;
         
         groupElement.innerHTML = `
             <div class="log-group-header" onclick="this.parentElement.classList.toggle('expanded')">

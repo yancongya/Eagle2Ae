@@ -212,7 +212,7 @@ class DemoMode {
                             sourceInfo: {
                                 type: 'File',
                                 fileName: currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg',
-                                originalPath: 'D:\\素材\\图片\\背景图片.jpg',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Images\\Background.jpg' : 'D:\\素材\\图片\\背景图片.jpg',
                                 materialType: 'image',
                                 materialCategory: currentLang === 'en-US' ? 'Image Material' : '图片素材',
                                 categoryType: 'material',
@@ -226,7 +226,7 @@ class DemoMode {
                             tooltipInfo: {
                                 categoryType: 'material',
                                 categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
-                                originalPath: 'D:\\素材\\图片\\背景图片.jpg',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Images\\Background.jpg' : 'D:\\素材\\图片\\背景图片.jpg',
                                 materialType: 'image',
                                 materialCategory: currentLang === 'en-US' ? 'Image Material' : '图片素材',
                                 fileSize: '2.1MB',
@@ -245,7 +245,7 @@ class DemoMode {
                             sourceInfo: {
                                 type: 'File',
                                 fileName: currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd',
-                                originalPath: 'D:\\素材\\设计\\Logo设计.psd',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Logo.psd' : 'D:\\素材\\设计\\Logo设计.psd',
                                 materialType: 'design',
                                 materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 categoryType: 'design',
@@ -259,7 +259,7 @@ class DemoMode {
                             tooltipInfo: {
                                 categoryType: 'design',
                                 categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
-                                originalPath: 'D:\\素材\\设计\\Logo设计.psd',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Logo.psd' : 'D:\\素材\\设计\\Logo设计.psd',
                                 materialType: 'design',
                                 materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileSize: '15.8MB',
@@ -278,7 +278,7 @@ class DemoMode {
                             sourceInfo: {
                                 type: 'File',
                                 fileName: currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4',
-                                originalPath: 'D:\\素材\\视频\\动画视频.mp4',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Video\\Animation.mp4' : 'D:\\素材\\视频\\动画视频.mp4',
                                 materialType: 'video',
                                 materialCategory: currentLang === 'en-US' ? 'Video Material' : '视频素材',
                                 categoryType: 'material',
@@ -292,7 +292,7 @@ class DemoMode {
                             tooltipInfo: {
                                 categoryType: 'material',
                                 categoryDisplayName: currentLang === 'en-US' ? 'Material File' : '素材文件',
-                                originalPath: 'D:\\素材\\视频\\动画视频.mp4',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Video\\Animation.mp4' : 'D:\\素材\\视频\\动画视频.mp4',
                                 materialType: 'video',
                                 materialCategory: currentLang === 'en-US' ? 'Video Material' : '视频素材',
                                 fileSize: '15.2MB',
@@ -310,7 +310,7 @@ class DemoMode {
                             sourceInfo: {
                                 type: 'File',
                                 fileName: currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai',
-                                originalPath: 'D:\\素材\\设计\\图标设计.ai',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Icon.ai' : 'D:\\素材\\设计\\图标设计.ai',
                                 materialType: 'design',
                                 materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 categoryType: 'design',
@@ -324,7 +324,7 @@ class DemoMode {
                             tooltipInfo: {
                                 categoryType: 'design',
                                 categoryDisplayName: currentLang === 'en-US' ? 'Design File' : '设计文件',
-                                originalPath: 'D:\\素材\\设计\\图标设计.ai',
+                                originalPath: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Icon.ai' : 'D:\\素材\\设计\\图标设计.ai',
                                 materialType: 'design',
                                 materialCategory: currentLang === 'en-US' ? 'Design File' : '设计文件',
                                 fileSize: '8.7MB',
@@ -396,29 +396,29 @@ class DemoMode {
                         designFiles: 2,
                         materialFiles: 2,
                         pathSummary: {
-                            'D:\\素材\\图片\\背景图片.jpg': {
-                                path: 'D:\\素材\\图片\\背景图片.jpg',
+                            [currentLang === 'en-US' ? 'D:\\Materials\\Images\\Background.jpg' : 'D:\\素材\\图片\\背景图片.jpg']: {
+                                path: currentLang === 'en-US' ? 'D:\\Materials\\Images\\Background.jpg' : 'D:\\素材\\图片\\背景图片.jpg',
                                 fileName: currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg',
                                 categoryType: 'material',
                                 materialType: 'image',
                                 layers: [currentLang === 'en-US' ? 'Background.jpg' : '背景图片.jpg']
                             },
-                            'D:\\素材\\设计\\Logo设计.psd': {
-                                path: 'D:\\素材\\设计\\Logo设计.psd',
+                            [currentLang === 'en-US' ? 'D:\\Materials\\Design\\Logo.psd' : 'D:\\素材\\设计\\Logo设计.psd']: {
+                                path: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Logo.psd' : 'D:\\素材\\设计\\Logo设计.psd',
                                 fileName: currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd',
                                 categoryType: 'design',
                                 materialType: 'design',
                                 layers: [currentLang === 'en-US' ? 'Logo.psd' : 'Logo设计.psd']
                             },
-                            'D:\\素材\\视频\\动画视频.mp4': {
-                                path: 'D:\\素材\\视频\\动画视频.mp4',
+                            [currentLang === 'en-US' ? 'D:\\Materials\\Video\\Animation.mp4' : 'D:\\素材\\视频\\动画视频.mp4']: {
+                                path: currentLang === 'en-US' ? 'D:\\Materials\\Video\\Animation.mp4' : 'D:\\素材\\视频\\动画视频.mp4',
                                 fileName: currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4',
                                 categoryType: 'material',
                                 materialType: 'video',
                                 layers: [currentLang === 'en-US' ? 'Animation.mp4' : '动画视频.mp4']
                             },
-                            'D:\\素材\\设计\\图标设计.ai': {
-                                path: 'D:\\素材\\设计\\图标设计.ai',
+                            [currentLang === 'en-US' ? 'D:\\Materials\\Design\\Icon.ai' : 'D:\\素材\\设计\\图标设计.ai']: {
+                                path: currentLang === 'en-US' ? 'D:\\Materials\\Design\\Icon.ai' : 'D:\\素材\\设计\\图标设计.ai',
                                 fileName: currentLang === 'en-US' ? 'Icon.ai' : '图标设计.ai',
                                 categoryType: 'design',
                                 materialType: 'design',

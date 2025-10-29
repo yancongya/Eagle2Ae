@@ -1,7 +1,8 @@
 // Eagle2Ae - 设置管理器
 
 class SettingsManager {
-    constructor() {
+    constructor(panelId = 'panel1') {
+        this.panelId = panelId;
         this.settings = null;
         this.preferences = null;
         this.recentFolders = [];
@@ -14,13 +15,29 @@ class SettingsManager {
         const constants = window.ImportSettingsConstants || require('../constants/ImportSettings.js');
         this.ImportModes = constants.ImportModes;
         this.ExportModes = constants.ExportModes;
-        this.STORAGE_KEYS = constants.STORAGE_KEYS;
         this.DEFAULT_IMPORT_SETTINGS = constants.DEFAULT_IMPORT_SETTINGS;
         this.DEFAULT_USER_PREFERENCES = constants.DEFAULT_USER_PREFERENCES;
         this.VALIDATION_RULES = constants.VALIDATION_RULES;
         this.UI_STATE_RULES = constants.UI_STATE_RULES;
 
+        // 🔥 为每个面板生成独立的存储键
+        this.STORAGE_KEYS = this.generateStorageKeys(panelId, constants.STORAGE_KEYS);
+
         this.init();
+    }
+
+    /**
+     * 为指定面板生成独立的存储键
+     * @param {string} panelId - 面板ID (panel1, panel2, panel3)
+     * @param {Object} baseKeys - 基础存储键
+     * @returns {Object} 带面板前缀的存储键
+     */
+    generateStorageKeys(panelId, baseKeys) {
+        const keys = {};
+        for (const [key, value] of Object.entries(baseKeys)) {
+            keys[key] = `${panelId}_${value}`;
+        }
+        return keys;
     }
 
     // 初始化设置管理器

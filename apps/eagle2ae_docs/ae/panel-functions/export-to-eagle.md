@@ -287,19 +287,14 @@ function exportForEagle(options) {
 
 ### 4.5 Eagle通信处理
 
-数据加工完成后，系统通过WebSocket或HTTP与Eagle插件通信：
+数据加工完成后，系统通过HTTP轮询与Eagle插件通信：
 
 ```javascript
 // 发送导入请求到Eagle
 async sendToEagle(message) {
     try {
-        if (this.websocketClient && this.websocketClient.isConnected()) {
-            // 使用WebSocket发送
-            return await this.websocketClient.send(message);
-        } else {
-            // 使用HTTP发送
-            return await this.httpClient.post('/api/import', message);
-        }
+        // 使用HTTP发送
+        return await this.httpClient.post('/api/import', message);
     } catch (error) {
         this.log(`❌ 发送到Eagle失败: ${error.message}`, 'error');
         return { success: false, error: error.message };

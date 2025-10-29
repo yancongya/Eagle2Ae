@@ -604,6 +604,7 @@ class ConfigManager {
      * 迁移主题值
      */
     migrateTheme(oldTheme) {
+        // 统一主题值：ae_native -> light, 其他 -> dark
         if (oldTheme === 'ae_native' || oldTheme === 'light') {
             return 'light';
         }
@@ -696,13 +697,13 @@ class ConfigManager {
                 volume: 60
             },
             exportSettings: {
-                mode: 'desktop',
+                mode: 'project_adjacent',
                 projectAdjacentFolder: 'Eagle_Assets',
                 customExportPath: '',
                 autoCopy: true,
-                burnAfterReading: true,
                 addTimestamp: false,
-                createSubfolders: false
+                createSubfolders: false,
+                burnAfterReading: false
             }
         };
     }
@@ -717,9 +718,15 @@ class ConfigManager {
         }
         
         return {
+            lastUsedMode: 'project_adjacent',
             favoriteFolder: '',
+            autoSaveSettings: true,
+            showWelcomeWizard: true,
+            theme: 'dark',
+            communicationPort: 8080,
+            lastUsedExportMode: 'project_adjacent',
             favoriteExportFolder: '',
-            communicationPort: 8080
+            language: 'zh-CN'
         };
     }
 

@@ -2,7 +2,7 @@
 
 ## 概述
 
-Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 After Effects 扩展，采用模块化架构设计，实现了前端界面与 ExtendScript 后端的分离，以及与 Eagle 插件的高效通信。
+Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 After Effects 扩展，采用模块化架构设计，实现了前端界面与 ExtendScript 后端的分离，以及与 Eagle 插件的高效通信。扩展支持多面板实例，每个面板可以独立配置和运行。
 
 ## 整体架构
 
@@ -12,16 +12,17 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           After Effects                                    │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                      Eagle2Ae CEP 扩展 v2.1.1                      │    │
+│  │                    Eagle2Ae CEP 扩展 v2.1.1                         │    │
 │  │                                                                     │    │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │    │
 │  │  │   前端界面   │  │   通信模块   │  │   文件处理   │  │   设置管理   │  │    │
-│  │  │ (HTML/JS)   │  │(双协议支持) │  │   (多模式)   │  │   (JSON)    │  │    │
+│  │  │ (HTML/JS)   │  │(HTTP轮询)   │  │   (多模式)   │  │   (JSON)    │  │    │
 │  │  │             │  │             │  │             │  │             │  │    │
-│  │  │ • 用户交互   │  │ • WebSocket │  │ • 直接导入   │  │ • 用户偏好   │  │    │
-│  │  │ • 状态显示   │  │ • HTTP轮询  │  │ • 项目旁复制 │  │ • 导入配置   │  │    │
-│  │  │ • 日志面板   │  │ • 端口广播  │  │ • 自定义路径 │  │ • 缓存管理   │  │    │
-│  │  │ • 拖拽支持   │  │ • 自动重连  │  │ • 静默模式   │  │             │  │    │
+│  │  │ • 用户交互   │  │ • HTTP轮询  │  │ • 直接导入   │  │ • 用户偏好   │  │    │
+│  │  │ • 状态显示   │  │ • 端口管理  │  │ • 项目旁复制 │  │ • 导入配置   │  │    │
+│  │  │ • 日志面板   │  │ • 消息去重  │  │ • 自定义路径 │  │ • 缓存管理   │  │    │
+│  │  │ • 拖拽支持   │  │ • 连接监控  │  │ • 静默模式   │  │ • 预设管理   │  │    │
+│  │  │ • 多面板支持 │  │ • 日志同步  │  │ • 合成检查   │  │ • 多实例配置 │  │    │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  │    │
 │  │         │                │                │                │         │    │
 │  │         └────────────────┼────────────────┼────────────────┘         │    │
@@ -33,6 +34,10 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
 │  │  │  │ 轮询管理器   │  │ 连接监控器   │  │ 日志管理器   │  │ 音效播放 │  │  │    │
 │  │  │  │PollingMgr   │  │ConnectionMon│  │ LogManager  │  │SoundPlay│  │  │    │
 │  │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────┘  │  │    │
+│  │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │  │    │
+│  │  │  │ 设置管理器   │  │ 文件处理器   │  │ 项目状态检测 │               │  │    │
+│  │  │  │SettingsMgr  │  │FileHandler  │  │ProjectStatus│               │  │    │
+│  │  │  └─────────────┘  └─────────────┘  └─────────────┘               │  │    │
 │  │  └─────────────────────────────────────────────────────────────────┘  │    │
 │  │                                    │                                   │    │
 │  │                                    ▼                                   │    │
@@ -57,14 +62,9 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
-                                      ▼ (双协议通信)
+                                      ▼ (HTTP通信)
                     ┌─────────────────────────────────────┐
                     │            通信协议选择              │
-                    │                                     │
-                    │  WebSocket (ws://localhost:8080)   │
-                    │  ├─ 实时双向通信                     │
-                    │  ├─ 自动重连机制                     │
-                    │  └─ 心跳检测                        │
                     │                                     │
                     │  HTTP 轮询 (http://localhost:8080)  │
                     │  ├─ 兼容性更好                       │
@@ -77,11 +77,11 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
 │                            Eagle 插件                                      │
 │                                                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ WebSocket   │  │ HTTP 服务器  │  │ 文件管理器   │  │    数据库接口        │ │
-│  │ 服务器       │  │             │  │             │  │                     │ │
-│  │             │  │ • 轮询端点   │  │ • 文件监控   │  │ • Eagle 数据库       │ │
-│  │ • 实时通信   │  │ • 状态检查   │  │ • 路径解析   │  │ • 标签管理          │ │
-│  │ • 消息路由   │  │ • 端口广播   │  │ • 元数据提取 │  │ • 搜索功能          │ │
+│  │ HTTP 服务器  │  │ 文件管理器   │  │    数据库接口│  │   预设管理器        │ │
+│  │             │  │             │  │             │  │                     │ │
+│  │ • 轮询端点   │  │ • 文件监控   │  │ • Eagle 数据库│ │ • 预设存储          │ │
+│  │ • 状态检查   │  │ • 路径解析   │  │ • 标签管理   │  │ • 配置同步          │ │
+│  │ • 消息路由   │  │ • 元数据提取 │  │ • 搜索功能   │  │                     │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -96,25 +96,19 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
   - 日志面板 (AE日志、Eagle日志切换)
   - 剪贴板粘贴支持 (Ctrl+V/Cmd+V)
   - 拖拽文件导入
-- **特点**: 响应式设计、实时状态更新、多语言支持
+  - 多面板支持 (最多3个独立面板)
+- **特点**: 响应式设计、实时状态更新、多语言支持、多实例配置
 
 #### 2. 通信模块 (Communication Module)
-- **双协议支持**:
-  - **WebSocket模式**: `Eagle2AeWebSocketClient`
-    - 实时双向通信
-    - 自动重连机制 (最大5次)
-    - 心跳检测 (30秒间隔)
-    - 消息处理器映射
-  - **HTTP轮询模式**: `PollingManager`
-    - 500ms轮询间隔
-    - 兼容性更好
-    - 防火墙友好
-    - 消息去重机制
+- **HTTP轮询模式**: `PollingManager`
+  - 500ms轮询间隔
+  - 兼容性更好
+  - 防火墙友好
+  - 消息去重机制
 - **端口管理**:
-  - 动态端口分配 (8080-8089)
-  - 端口广播机制
-  - 自动端口发现
-- **特点**: 故障转移、负载均衡、统计监控
+  - 固定端口配置 (默认8080)
+  - 客户端ID标识 (每个面板实例独立)
+- **特点**: 稳定可靠、日志同步、连接监控
 
 #### 3. AEExtension 主控制器
 - **核心职责**: 统一管理所有子模块
@@ -122,9 +116,10 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
   - `PollingManager`: HTTP轮询管理
   - `ConnectionMonitor`: 连接质量监控
   - `LogManager`: 日志管理和分类
-  - `SettingsManager`: 用户设置管理
+  - `SettingsManager`: 用户设置管理 (支持多面板独立配置)
   - `FileHandler`: 文件处理核心逻辑
   - `SoundPlayer`: 音效播放支持
+  - `ProjectStatusChecker`: 项目状态检测
 - **生命周期管理**: 初始化、运行、清理
 - **错误处理**: 统一异常捕获和处理
 
@@ -138,6 +133,7 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
   - 临时文件处理 (剪贴板导入)
   - 合成状态检查
   - 文件名处理和标签支持
+  - 防重复导入机制
 - **错误处理**: 详细的错误信息和用户反馈
 
 #### 5. CSInterface 桥接层
@@ -174,70 +170,74 @@ Eagle2Ae-Ae 是基于 Adobe CEP (Common Extensibility Platform) 框架开发的 
 ├── FileList.js           // 文件列表组件
 ├── ImportSettings.js     // 导入设置组件
 ├── LogPanel.js           // 日志面板组件
-└── StatusBar.js          // 状态栏组件
+├── StatusBar.js          // 状态栏组件
+└── PresetManager.js      // 预设管理组件
 ```
 
 #### 状态管理
 ```javascript
 /**
- * 应用状态管理
+ * 应用状态管理 (每个面板实例独立)
  */
 const AppState = {
     connection: {
         status: 'disconnected', // connected, connecting, disconnected
-        url: 'ws://localhost:8080',
+        url: 'http://localhost:8080',
         retryCount: 0
     },
     files: [],
     settings: {
         importMode: 'footage',
         createComposition: true,
-        organizeFolders: true
+        organizeFolders: true,
+        panelId: 'panel1' // 面板ID标识
     },
-    logs: []
+    logs: [],
+    presets: [] // 预设列表
 };
 ```
 
 ### 通信模块设计
 
-#### WebSocket 客户端
+#### 轮询管理器
 ```javascript
 /**
- * WebSocket 通信管理器
+ * HTTP轮询管理器
  */
-class WebSocketClient {
-    constructor(url, options = {}) {
-        this.url = url;
-        this.options = {
-            reconnectInterval: 3000,
-            maxReconnectAttempts: 5,
-            ...options
-        };
-        this.ws = null;
-        this.reconnectCount = 0;
-        this.messageQueue = [];
+class PollingManager {
+    constructor(callback, interval = 500) {
+        this.callback = callback;
+        this.interval = interval;
+        this.isActive = false;
+        this.pollInterval = null;
     }
 
     /**
-     * 建立连接
+     * 启动轮询
      */
-    connect() {
-        // 连接实现
+    start() {
+        if (!this.isActive) {
+            this.isActive = true;
+            this.pollInterval = setInterval(this.callback, this.interval);
+        }
     }
 
     /**
-     * 发送消息
-     * @param {Object} message - 消息对象
+     * 停止轮询
      */
-    send(message) {
-        // 发送实现
+    stop() {
+        if (this.isActive) {
+            this.isActive = false;
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
     }
 
     /**
-     * 自动重连
+     * 检查是否正在运行
      */
-    reconnect() {
-        // 重连实现
+    isRunning() {
+        return this.isActive;
     }
 }
 ```
@@ -251,7 +251,8 @@ const MessageFormat = {
     type: 'string',      // 消息类型: 'file_transfer', 'status', 'error'
     data: 'object',      // 消息数据
     timestamp: 'number', // 时间戳
-    id: 'string'        // 消息ID (用于响应匹配)
+    clientId: 'string',  // 客户端ID (用于多面板识别)
+    id: 'string'         // 消息ID (用于响应匹配)
 };
 ```
 
@@ -313,6 +314,28 @@ var ProjectManager = {
      */
     createComposition: function(items, settings) {
         // 实现合成创建逻辑
+    }
+};
+```
+
+#### 项目状态检测器
+```javascript
+/**
+ * 项目状态检测器
+ */
+var ProjectStatusChecker = {
+    /**
+     * 获取项目信息
+     */
+    getProjectInfo: function() {
+        // 实现项目信息获取逻辑
+    },
+    
+    /**
+     * 检查项目状态
+     */
+    checkProjectStatus: function() {
+        // 实现项目状态检查逻辑
     }
 };
 ```
@@ -412,16 +435,25 @@ Eagle2Ae-Ae/
 │   └── manifest.xml        # CEP 扩展配置
 ├── js/
 │   ├── main.js            # 主应用逻辑
-│   ├── websocket-client.js # WebSocket 客户端
 │   ├── services/          # 服务层
-│   └── utils/             # 工具函数
+│   │   ├── ProjectStatusChecker.js # 项目状态检测器
+│   │   ├── LogManager.js           # 日志管理器
+│   │   ├── SettingsManager.js      # 设置管理器
+│   │   ├── FileHandler.js          # 文件处理器
+│   │   ├── SoundPlayer.js          # 音效播放器
+│   │   ├── PresetManager.js        # 预设管理器
+│   │   └── utils/                 # 工具函数
+│   └── vendor/            # 第三方库
 ├── jsx/
 │   ├── hostscript.jsx     # 主 JSX 脚本
-│   └── dialog-warning.jsx # 对话框脚本
+│   ├── dialog-warning.jsx # 警告对话框
+│   ├── dialog-summary.jsx # 总结对话框
+│   └── utils/             # JSX工具函数
 ├── public/
 │   ├── css/               # 样式文件
 │   ├── images/            # 图片资源
-│   └── sounds/            # 音频资源
+│   ├── sounds/            # 音频资源
+│   └── presets/           # 预设文件
 └── index.html             # 主界面
 ```
 
@@ -447,6 +479,7 @@ Eagle2Ae-Ae/
 | 日期 | 版本 | 更新内容 | 作者 |
 |------|------|----------|------|
 | 2024-01-05 | 1.0 | 初始架构设计文档 | 开发团队 |
+| 2025-10-28 | 2.1.1 | 更新架构文档，反映多面板支持、预设管理等新功能 | 开发团队 |
 
 ---
 

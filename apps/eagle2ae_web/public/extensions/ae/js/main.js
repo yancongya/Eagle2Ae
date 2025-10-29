@@ -146,8 +146,8 @@ class AEExtension {
         // 配置日志管理器
         this.setupLogManager();
 
-        // 设置管理
-        this.settingsManager = new SettingsManager();
+        // 设置管理（传入面板ID以支持多面板独立配置）
+        this.settingsManager = new SettingsManager(this.panelId);
 
         // 临时文件夹状态缓存
         this.tempFolderStatusCache = {
@@ -169,6 +169,11 @@ class AEExtension {
 
         // 音效播放器
         this.soundPlayer = new SoundPlayer();
+
+        // 🔥 暴露localStorage辅助函数到window对象，供index.html使用
+        window.getPanelStorageKey = this.getPanelStorageKey.bind(this);
+        window.getPanelLocalStorage = this.getPanelLocalStorage.bind(this);
+        window.setPanelLocalStorage = this.setPanelLocalStorage.bind(this);
 
         // 异步初始化
         this.asyncInit();
@@ -271,6 +276,33 @@ class AEExtension {
     getPresetFileName() {
         const panelNumber = this.panelId.replace('panel', '');
         return `Eagle2Ae${panelNumber}.Presets`;
+    }
+
+    /**
+     * 获取带面板前缀的localStorage键
+     * @param {string} key - 原始键名
+     * @returns {string} 带面板前缀的键名
+     */
+    getPanelStorageKey(key) {
+        return `${this.panelId}_${key}`;
+    }
+
+    /**
+     * 获取面板特定的localStorage值
+     * @param {string} key - 键名
+     * @returns {string|null} 值
+     */
+    getPanelLocalStorage(key) {
+        return localStorage.getItem(this.getPanelStorageKey(key));
+    }
+
+    /**
+     * 设置面板特定的localStorage值
+     * @param {string} key - 键名
+     * @param {string} value - 值
+     */
+    setPanelLocalStorage(key, value) {
+        localStorage.setItem(this.getPanelStorageKey(key), value);
     }
 
     // 启动端口广播服务
@@ -756,7 +788,7 @@ class AEExtension {
 
         // 应用已保存的主题（默认暗色）
         try {
-            const savedTheme = localStorage.getItem('aeTheme') || 'dark';
+            const savedTheme = this.getPanelLocalStorage('aeTheme') || 'dark';
             this.applyTheme(savedTheme === 'light' ? 'light' : 'dark');
         } catch (_) { }
 
@@ -6268,7 +6300,7 @@ class AEExtension {
         const isLight = theme === 'light';
 
         root.classList.toggle('theme-light', isLight);
-        try { localStorage.setItem('aeTheme', isLight ? 'light' : 'dark'); } catch (_) { }
+        try { this.setPanelLocalStorage('aeTheme', isLight ? 'light' : 'dark'); } catch (_) { }
 
         if (btn) {
             btn.setAttribute('aria-pressed', String(isLight));
@@ -6278,7 +6310,7 @@ class AEExtension {
     }
 
     toggleTheme() {
-        const current = (() => { try { return localStorage.getItem('aeTheme'); } catch (_) { return null; } })() || 'dark';
+        const current = this.getPanelLocalStorage('aeTheme') || 'dark';
         const next = current === 'light' ? 'dark' : 'light';
         this.applyTheme(next);
     }
@@ -6369,6 +6401,14 @@ class AEExtension {
                 if (radio.checked) {
                     this.log(`高级导入模式已更改为: ${radio.value}`, 'info');
 
+                    // 先保存到设置，避免UI刷新把选择回滚
+                    try {
+                        this.settingsManager.updateField('mode', radio.value, false);
+                    } catch (e) {
+                        // 若settingsManager尚未初始化，忽略错误但继续刷新UI
+                        this.log(`更新导入模式到设置失败: ${e.message}`, 'debug');
+                    }
+
                     // 显示相应的模态框
                     if (radio.value === 'project_adjacent') {
                         this.showProjectAdjacentModal();
@@ -6376,12 +6416,12 @@ class AEExtension {
                         this.showCustomFolderModal();
                     }
 
+                    // 刷新UI与样式
                     this.updateSettingsUI();
-                    // 实时同步到快速设置
-                    if (this.quickSettingsInitialized) {
-                        this.settingsManager.updateField('mode', radio.value, false);
+                    this.updateModeButtonStyles();
 
-                        // 同步到快速设置面板
+                    // 实时同步到快速设置面板（如果已初始化）
+                    if (this.quickSettingsInitialized) {
                         const quickRadio = document.querySelector(`input[name="quick-import-mode"][value="${radio.value}"]`);
                         if (quickRadio) {
                             quickRadio.checked = true;
@@ -6399,6 +6439,8 @@ class AEExtension {
                 if (radio.checked) {
                     this.log(`导出模式已更改为: ${radio.value}`, 'info');
 
+                    // 刷新按钮选中样式（CEP兼容，紫色高亮）
+                    this.updateModeButtonStyles();
                     this.updateExportSettingsUI();
 
                     // 实时保存导出设置
@@ -6506,6 +6548,8 @@ class AEExtension {
                     }
 
                     this.updateSettingsUI();
+                    // 刷新按钮选中样式（CEP兼容）
+                    this.updateModeButtonStyles();
 
                     // 同步到快速设置面板
                     if (this.quickSettingsInitialized) {
@@ -6600,6 +6644,8 @@ class AEExtension {
                     // 移除了sequence模态框逻辑
 
                     this.updateSettingsUI();
+                    // 刷新按钮选中样式（CEP兼容）
+                    this.updateModeButtonStyles();
                     // 实时同步时间轴选项
                     if (this.quickSettingsInitialized) {
                         this.settingsManager.updateField('timelineOptions.placement', radio.value, false);
@@ -6620,6 +6666,27 @@ class AEExtension {
                     }
                 }
             });
+        });
+
+        // 通用：监听设置面板内的相关单选组变化，统一刷新高亮与互斥
+        document.addEventListener('change', (evt) => {
+            const target = evt.target;
+            if (!target || target.tagName !== 'INPUT') return;
+            if (target.type !== 'radio') return;
+
+            const namesNeedingRefresh = new Set([
+                'import-mode',
+                'quick-import-mode',
+                'import-behavior',
+                'advanced-import-behavior',
+                'timeline-placement',
+                'export-mode'
+            ]);
+
+            const name = target.getAttribute('name');
+            if (namesNeedingRefresh.has(name)) {
+                this.updateModeButtonStyles();
+            }
         });
 
         // 文件管理选项
@@ -6730,6 +6797,8 @@ class AEExtension {
         const settingsPanel = document.getElementById('settings-panel');
         settingsPanel.style.display = 'flex';
         this.loadSettingsToUI();
+        // 刷新按钮选中样式（打开面板后确保正确高亮）
+        this.updateModeButtonStyles();
         // 立即更新阅后即焚的tooltip
         this.updateBurnAfterReadingTooltip();
 
@@ -6871,6 +6940,9 @@ class AEExtension {
 
         // 更新UI状态
         this.updateSettingsUI();
+
+        // 统一刷新选中样式，覆盖程序设值带来的视觉不同步
+        this.updateModeButtonStyles();
 
         this.log('高级设置已加载并同步到快速设置', 'success');
     }
@@ -8211,6 +8283,8 @@ class AEExtension {
 
                     // 更新图层操作按钮的视觉状态
                     this.updateLayerOperationButtonsVisual(behavior);
+                    // 刷新按钮选中样式（CEP兼容）
+                    this.updateModeButtonStyles();
 
                     if (behavior === 'no_import') {
                         this.updateQuickSetting('addToComposition', false);
@@ -8252,6 +8326,8 @@ class AEExtension {
                     noImportRadio.checked = true;
                 }
             }
+            // 刷新按钮选中样式（CEP兼容）
+            this.updateModeButtonStyles();
             this.updateQuickSettingsVisibility();
         });
 
@@ -8264,6 +8340,8 @@ class AEExtension {
                     currentRadio.checked = true;
                 }
             }
+            // 刷新按钮选中样式（CEP兼容）
+            this.updateModeButtonStyles();
         });
 
         // 先标记为已初始化，这样事件监听器中的updateQuickSetting才能正常工作
@@ -8451,15 +8529,33 @@ class AEExtension {
         }
     }
 
-    // 更新模式按钮样式
+    // 更新模式按钮样式（仅依据DOM选中状态应用高亮，不再强行覆盖radio状态）
     updateModeButtonStyles() {
-        const modeButtons = document.querySelectorAll('.mode-button, .import-behavior-button');
+        // 应用样式类（CEP 兼容：导出用紫色，其它用常规选中样式）
+        const modeButtons = document.querySelectorAll('.mode-button, .import-behavior-button, .import-mode-option, .import-behavior-option');
         modeButtons.forEach(button => {
             const radio = button.querySelector('input[type="radio"]');
-            if (radio && radio.checked) {
-                button.classList.add('checked');
-            } else {
+            if (!radio) {
                 button.classList.remove('checked');
+                button.classList.remove('checked-export');
+                return;
+            }
+
+            const groupName = radio.getAttribute('name');
+            const isChecked = !!radio.checked;
+
+            // 先清理旧样式
+            button.classList.remove('checked');
+            button.classList.remove('checked-export');
+
+            if (isChecked) {
+                if (groupName === 'export-mode') {
+                    // 导出路径设置使用紫色高亮
+                    button.classList.add('checked-export');
+                } else {
+                    // 导入模式 / 导入行为使用常规选中样式
+                    button.classList.add('checked');
+                }
             }
         });
     }
@@ -8693,8 +8789,9 @@ class AEExtension {
 
     // 更新导出设置UI状态
     updateExportSettingsUI() {
-        // 导出设置现在通过弹窗管理，这里只需要确保UI状态正确
-        // 具体的显示/隐藏逻辑由弹窗处理
+        // 统一刷新按钮选中样式（CEP兼容）
+        this.updateModeButtonStyles();
+        // 其它显示/隐藏逻辑由弹窗处理
     }
 
 
@@ -8712,9 +8809,10 @@ class AEExtension {
             const preferences = this.settingsManager.getPreferences();
 
             const exportPayload = {
-                importSettings: settings, // 当前导入设置（包含导出设置）
-                userPreferences: preferences, // 用户偏好
-                exportedAt: new Date().toISOString() // 导出时间
+                importSettings: settings,
+                userPreferences: preferences,
+                uiSettings: this.getUISettingsFromLocalStorage(),
+                exportedAt: new Date().toISOString()
             };
             // 🔥 使用面板特定的文件名
             const fileName = this.getPresetFileName();
@@ -8727,7 +8825,7 @@ class AEExtension {
                 fileName: fileName,
                 targetSubFolder: targetSubFolder,
                 overwrite: true,
-                jsonData: JSON.stringify(exportPayload)
+                jsonData: JSON.stringify(exportPayload, null, 2)
             };
 
             const result = await this.executeExtendScript('exportImportSettingsToJSON', params);
@@ -8755,7 +8853,7 @@ class AEExtension {
      */
     getUISettingsFromLocalStorage() {
         try {
-            const saved = localStorage.getItem('uiSettings');
+            const saved = this.getPanelLocalStorage('uiSettings');
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -8781,7 +8879,7 @@ class AEExtension {
      */
     getProjectAdjacentSettings() {
         try {
-            const saved = localStorage.getItem('ae_extension_project_adjacent_settings');
+            const saved = this.getPanelLocalStorage('ae_extension_project_adjacent_settings');
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -8797,7 +8895,7 @@ class AEExtension {
      */
     getCustomFolderSettings() {
         try {
-            const saved = localStorage.getItem('ae_extension_custom_folder_settings');
+            const saved = this.getPanelLocalStorage('ae_extension_custom_folder_settings');
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -8819,26 +8917,11 @@ class AEExtension {
             const settings = this.settingsManager.getSettings();
             const preferences = this.settingsManager.getPreferences();
 
-            // 收集所有配置，包括之前遗漏的
+            // 收集所有配置
             const exportPayload = {
                 importSettings: settings,
                 userPreferences: preferences,
-
-                // 新增：UI 面板组设置
                 uiSettings: this.getUISettingsFromLocalStorage(),
-
-                // 新增：语言设置
-                language: localStorage.getItem('language') || localStorage.getItem('lang') || 'zh-CN',
-
-                // 新增：主题设置
-                aeTheme: localStorage.getItem('aeTheme') || 'dark',
-
-                // 新增：项目旁设置
-                projectAdjacentSettings: this.getProjectAdjacentSettings(),
-
-                // 新增：自定义文件夹设置
-                customFolderSettings: this.getCustomFolderSettings(),
-
                 exportedAt: new Date().toISOString()
             };
 
@@ -8879,7 +8962,7 @@ class AEExtension {
             const params = {
                 fileName: this.getPresetFileName(),
                 overwrite: true,
-                jsonData: JSON.stringify(exportPayload)
+                jsonData: JSON.stringify(exportPayload, null, 2)
             };
             const baseFolder = this.getPresetsBaseFolderPath();
             if (baseFolder) {
@@ -8927,7 +9010,11 @@ class AEExtension {
                         const result = window.demoFileSystem.readFile(demoFileName);
                         if (result.success) {
                             content = result.content;
-                            this.log(`✅ 从虚拟文件系统加载预设 (${result.size} bytes)`, 'info');
+                            this.log(
+                                window.i18n?.getText('logs.vfsLoadedPresetsWithSize', { size: result.size })
+                                || `✅ 从虚拟文件系统加载预设 (${result.size} bytes)`,
+                                'info'
+                            );
                         }
                     }
 
@@ -8935,23 +9022,39 @@ class AEExtension {
                     if (!content) {
                         content = localStorage.getItem('eagle2ae_preset_json');
                         if (content) {
-                            this.log('✅ 从浏览器存储加载预设 (Demo 模式)', 'info');
+                            this.log(
+                                window.i18n?.getText('logs.loadedPresetsFromBrowserStorageDemo')
+                                || '✅ 从浏览器存储加载预设 (Demo 模式)',
+                                'info'
+                            );
                         }
                     }
 
                     if (content) {
                         parsed = JSON.parse(content);
                     } else {
-                        this.log('ℹ️ Demo 模式：未找到保存的预设', 'info');
+                        this.log(
+                            window.i18n?.getText('logs.demoNoSavedPresetsFound')
+                            || 'ℹ️ Demo 模式：未找到保存的预设',
+                            'info'
+                        );
 
                         // 🔥 如果预设文件不存在，创建默认预设文件
                         const fileNameToCreate = this.getPresetFileName();
                         console.log(`[${this.panelId}] 📝 预设文件不存在，正在创建: ${fileNameToCreate}`);
-                        this.log(`📝 正在创建默认预设文件: ${fileNameToCreate}`, 'info');
+                        this.log(
+                            window.i18n?.getText('logs.creatingDefaultPresetFileWithName', { file: fileNameToCreate })
+                            || `📝 正在创建默认预设文件: ${fileNameToCreate}`,
+                            'info'
+                        );
                         const saveResult = await this.savePresetsSilently();
                         
                         if (saveResult) {
-                            this.log(`✅ 默认预设文件已创建: ${this.getPresetFileName()}`, 'success');
+                            this.log(
+                                window.i18n?.getText('logs.defaultPresetFileCreatedWithName', { file: this.getPresetFileName() })
+                                || `✅ 默认预设文件已创建: ${this.getPresetFileName()}`,
+                                'success'
+                            );
                             // 应用默认配置到界面（添加 DOM 检查）
                             try {
                                 const quickSettingsContainer = document.querySelector('.quick-settings-container');
@@ -8959,18 +9062,32 @@ class AEExtension {
                                     this.updateSettingsUI();
                                     this.loadQuickSettings();
                                 } else {
-                                    this.log('⚠️ DOM 未就绪，跳过 UI 更新', 'warning');
+                                    this.log(
+                                        window.i18n?.getText('logs.domNotReadySkipUIUpdate')
+                                        || '⚠️ DOM 未就绪，跳过 UI 更新',
+                                        'warning'
+                                    );
                                 }
                             } catch (uiError) {
-                                this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+                                this.log(
+                                    `${window.i18n?.getText('logs.uiUpdateFailedPrefix') || '⚠️ UI 更新失败:'} ${uiError.message}`,
+                                    'warning'
+                                );
                             }
                         } else {
-                            this.log(`⚠️ 创建默认预设文件失败`, 'warning');
+                            this.log(
+                                window.i18n?.getText('logs.createDefaultPresetFailed')
+                                || '⚠️ 创建默认预设文件失败',
+                                'warning'
+                            );
                         }
                         return;
                     }
                 } catch (e) {
-                    this.log(`⚠️ Demo 模式加载预设失败: ${e.message}`, 'warning');
+                    this.log(
+                        `${window.i18n?.getText('logs.demoLoadPresetsFailedPrefix') || '⚠️ Demo 模式加载预设失败:'} ${e.message}`,
+                        'warning'
+                    );
                     return;
                 }
             } else {
@@ -8987,7 +9104,10 @@ class AEExtension {
 
                 if (!result || !result.success) {
                     const msg = result && result.error ? result.error : '未找到预设文件';
-                    this.log(`ℹ️ 本地预设不可用：${msg}`, 'info');
+                    this.log(
+                        `${window.i18n?.getText('logs.localPresetsUnavailablePrefix') || 'ℹ️ 本地预设不可用：'} ${msg}`,
+                        'info'
+                    );
 
                     // 🔥 如果预设文件不存在，创建默认预设文件
                     const fileNameToCreate = this.getPresetFileName();
@@ -9004,13 +9124,24 @@ class AEExtension {
                                 this.updateSettingsUI();
                                 this.loadQuickSettings();
                             } else {
-                                this.log('⚠️ DOM 未就绪，跳过 UI 更新', 'warning');
+                                this.log(
+                                    window.i18n?.getText('logs.domNotReadySkipUIUpdate')
+                                    || '⚠️ DOM 未就绪，跳过 UI 更新',
+                                    'warning'
+                                );
                             }
                         } catch (uiError) {
-                            this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+                            this.log(
+                                `${window.i18n?.getText('logs.uiUpdateFailedPrefix') || '⚠️ UI 更新失败:'} ${uiError.message}`,
+                                'warning'
+                            );
                         }
                     } else {
-                        this.log(`⚠️ 创建默认预设文件失败`, 'warning');
+                        this.log(
+                            window.i18n?.getText('logs.createDefaultPresetFailed')
+                            || '⚠️ 创建默认预设文件失败',
+                            'warning'
+                        );
                     }
                     return;
                 }
@@ -9034,8 +9165,12 @@ class AEExtension {
             // 新增：应用 UI 面板组设置
             if (parsed && parsed.uiSettings) {
                 try {
-                    localStorage.setItem('uiSettings', JSON.stringify(parsed.uiSettings));
-                    this.log('✅ 已恢复 UI 面板组设置', 'info');
+                    this.setPanelLocalStorage('uiSettings', JSON.stringify(parsed.uiSettings));
+                    this.log(
+                        window.i18n?.getText('logs.uiPanelsRestored')
+                        || '✅ 已恢复 UI 面板组设置',
+                        'info'
+                    );
                 } catch (e) {
                     console.warn('无法保存 uiSettings:', e);
                 }
@@ -9050,21 +9185,29 @@ class AEExtension {
                     if (window.i18n && typeof window.i18n.setLanguage === 'function') {
                         window.i18n.setLanguage(parsed.language);
                     }
-                    this.log(`✅ 已恢复语言设置: ${parsed.language}`, 'info');
+                    this.log(
+                        window.i18n?.getText('logs.languageRestoredWithName', { lang: parsed.language })
+                        || `✅ 已恢复语言设置: ${parsed.language}`,
+                        'info'
+                    );
                 } catch (e) {
                     console.warn('无法应用语言设置:', e);
                 }
             }
 
             // 新增：应用主题设置
-            if (parsed && parsed.aeTheme) {
+            if (parsed && parsed.userPreferences && parsed.userPreferences.theme) {
                 try {
-                    localStorage.setItem('aeTheme', parsed.aeTheme);
+                    this.setPanelLocalStorage('aeTheme', parsed.userPreferences.theme);
                     // 如果主题切换函数存在，应用主题
                     if (typeof this.applyTheme === 'function') {
-                        this.applyTheme(parsed.aeTheme);
+                        this.applyTheme(parsed.userPreferences.theme);
                     }
-                    this.log(`✅ 已恢复主题设置: ${parsed.aeTheme}`, 'info');
+                    this.log(
+                        window.i18n?.getText('logs.themeRestoredWithName', { theme: parsed.userPreferences.theme })
+                        || `✅ 已恢复主题设置: ${parsed.userPreferences.theme}`,
+                        'info'
+                    );
                 } catch (e) {
                     console.warn('无法应用主题设置:', e);
                 }
@@ -9074,7 +9217,11 @@ class AEExtension {
             if (parsed && parsed.projectAdjacentSettings) {
                 try {
                     localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(parsed.projectAdjacentSettings));
-                    this.log('✅ 已恢复项目旁复制设置', 'info');
+                    this.log(
+                        window.i18n?.getText('logs.projectAdjacentSettingsRestored')
+                        || '✅ 已恢复项目旁复制设置',
+                        'info'
+                    );
                 } catch (e) {
                     console.warn('无法保存项目旁设置:', e);
                 }
@@ -9084,7 +9231,11 @@ class AEExtension {
             if (parsed && parsed.customFolderSettings) {
                 try {
                     localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(parsed.customFolderSettings));
-                    this.log('✅ 已恢复自定义文件夹设置', 'info');
+                    this.log(
+                        window.i18n?.getText('logs.customFolderSettingsRestored')
+                        || '✅ 已恢复自定义文件夹设置',
+                        'info'
+                    );
                 } catch (e) {
                     console.warn('无法保存自定义文件夹设置:', e);
                 }
@@ -9097,12 +9248,23 @@ class AEExtension {
                 if (quickSettingsContainer) {
                     this.updateSettingsUI();
                     this.loadQuickSettings();
-                    this.log('✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）', 'success');
+                    this.log(
+                        window.i18n?.getText('logs.loadedAndAppliedLocalPresetsWithUI')
+                        || '✅ 已加载并应用本地预设（包含 UI 设置、语言、主题等）',
+                        'success'
+                    );
                 } else {
-                    this.log('⚠️ DOM 未就绪，跳过 UI 更新（配置已加载到内存）', 'warning');
+                    this.log(
+                        window.i18n?.getText('logs.domNotReadySkipUIUpdateWithConfig')
+                        || '⚠️ DOM 未就绪，跳过 UI 更新（配置已加载到内存）',
+                        'warning'
+                    );
                 }
             } catch (uiError) {
-                this.log(`⚠️ UI 更新失败: ${uiError.message}`, 'warning');
+                this.log(
+                    `${window.i18n?.getText('logs.uiUpdateFailedPrefix') || '⚠️ UI 更新失败:'} ${uiError.message}`,
+                    'warning'
+                );
             }
         } catch (error) {
             this.log(`⚠️ ${(window.i18n?.getText('logs.loadLocalPresetsFailedPrefix') || 'Failed to load local presets:')} ${error.message}`, 'warning');

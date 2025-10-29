@@ -1,6 +1,26 @@
 (function(){
     'use strict';
 
+    function t(key, fallback) {
+        try {
+            var v = (window.i18n && typeof window.i18n.getText === 'function') ? window.i18n.getText(key) : null;
+            return v || fallback || key;
+        } catch (e) {
+            return fallback || key;
+        }
+    }
+
+    function getCategoryLabel(key) {
+        return t('categories.' + key, key);
+    }
+
+    function formatTemplate(template, params) {
+        return template
+            .replace('{total}', params.total)
+            .replace('{exportable}', params.exportable)
+            .replace('{nonExportable}', params.nonExportable);
+    }
+
     function ensureStylesInjected() {
         if (document.getElementById('e2a-summary-dialog-styles')) return;
         var style = document.createElement('style');
@@ -15,64 +35,67 @@
 
         // 直接基于数据统计导出/不可导出分类，避免策略差异导致“无”
         // 将“合成”归类为可导出
-        var exportableCounts = { 设计:0, 文本:0, 形状:0, 合成:0, 其他:0 };
-        var nonExportableCounts = { 设计:0, 视频:0, 图片:0, 音频:0, 矢量:0, 纯色:0, 调整:0, 其他:0 };
+        var exportableCounts = { design:0, text:0, shape:0, precomp:0, other:0 };
+        var nonExportableCounts = { design:0, video:0, image:0, audio:0, vector:0, solid:0, adjustment:0, other:0 };
 
         for (var i = 0; i < detectionResults.length; i++) {
             var layer = detectionResults[i];
             if (layer.canExport) {
                 if (layer.materialType === 'design') {
-                    exportableCounts['设计']++;
+                    exportableCounts['design']++;
                 } else if (layer.layerType === 'text') {
-                    exportableCounts['文本']++;
+                    exportableCounts['text']++;
                 } else if (layer.layerType === 'shape') {
-                    exportableCounts['形状']++;
+                    exportableCounts['shape']++;
                 } else if (layer.layerType === 'precomp') {
-                    exportableCounts['合成']++;
+                    exportableCounts['precomp']++;
                 } else {
-                    exportableCounts['其他']++;
+                    exportableCounts['other']++;
                 }
             } else {
                 switch (layer.materialType) {
-                    case 'design': nonExportableCounts['设计']++; break;
-                    case 'video': nonExportableCounts['视频']++; break;
-                    case 'image': nonExportableCounts['图片']++; break;
-                    case 'audio': nonExportableCounts['音频']++; break;
-                    case 'vector': nonExportableCounts['矢量']++; break;
+                    case 'design': nonExportableCounts['design']++; break;
+                    case 'video': nonExportableCounts['video']++; break;
+                    case 'image': nonExportableCounts['image']++; break;
+                    case 'audio': nonExportableCounts['audio']++; break;
+                    case 'vector': nonExportableCounts['vector']++; break;
                     default:
                         switch (layer.layerType) {
-                            case 'solid': nonExportableCounts['纯色']++; break;
-                            case 'adjustment': nonExportableCounts['调整']++; break;
-                            default: nonExportableCounts['其他']++; break;
+                            case 'solid': nonExportableCounts['solid']++; break;
+                            case 'adjustment': nonExportableCounts['adjustment']++; break;
+                            default: nonExportableCounts['other']++; break;
                         }
                 }
             }
         }
 
         var exportableParts = [];
-        if (exportableCounts['设计'] > 0) exportableParts.push('设计:' + exportableCounts['设计']);
-        if (exportableCounts['文本'] > 0) exportableParts.push('文本:' + exportableCounts['文本']);
-        if (exportableCounts['形状'] > 0) exportableParts.push('形状:' + exportableCounts['形状']);
-        if (exportableCounts['合成'] > 0) exportableParts.push('合成:' + exportableCounts['合成']);
-        if (exportableCounts['其他'] > 0) exportableParts.push('其他:' + exportableCounts['其他']);
-        var exportableLine = '▶ 可导出: ' + (exportableParts.length > 0 ? exportableParts.join(', ') : '无');
+        if (exportableCounts['design'] > 0) exportableParts.push(getCategoryLabel('design') + ':' + exportableCounts['design']);
+        if (exportableCounts['text'] > 0) exportableParts.push(getCategoryLabel('text') + ':' + exportableCounts['text']);
+        if (exportableCounts['shape'] > 0) exportableParts.push(getCategoryLabel('shape') + ':' + exportableCounts['shape']);
+        if (exportableCounts['precomp'] > 0) exportableParts.push(getCategoryLabel('precomp') + ':' + exportableCounts['precomp']);
+        if (exportableCounts['other'] > 0) exportableParts.push(getCategoryLabel('other') + ':' + exportableCounts['other']);
+        var exportableLine = t('summaryDialog.exportablePrefix', '▶ 可导出: ') + (exportableParts.length > 0 ? exportableParts.join(', ') : t('summaryDialog.none', '无'));
         lines.push(exportableLine);
 
         var nonExportableParts = [];
-        if (nonExportableCounts['设计'] > 0) nonExportableParts.push('设计:' + nonExportableCounts['设计']);
-        if (nonExportableCounts['视频'] > 0) nonExportableParts.push('视频:' + nonExportableCounts['视频']);
-        if (nonExportableCounts['图片'] > 0) nonExportableParts.push('图片:' + nonExportableCounts['图片']);
-        if (nonExportableCounts['音频'] > 0) nonExportableParts.push('音频:' + nonExportableCounts['音频']);
-        if (nonExportableCounts['矢量'] > 0) nonExportableParts.push('矢量:' + nonExportableCounts['矢量']);
-        if (nonExportableCounts['纯色'] > 0) nonExportableParts.push('纯色:' + nonExportableCounts['纯色']);
-        if (nonExportableCounts['调整'] > 0) nonExportableParts.push('调整:' + nonExportableCounts['调整']);
-        if (nonExportableCounts['其他'] > 0) nonExportableParts.push('其他:' + nonExportableCounts['其他']);
-        var nonExportableLine = '✖ 不可导出: ' + (nonExportableParts.length > 0 ? nonExportableParts.join(', ') : '无');
+        if (nonExportableCounts['design'] > 0) nonExportableParts.push(getCategoryLabel('design') + ':' + nonExportableCounts['design']);
+        if (nonExportableCounts['video'] > 0) nonExportableParts.push(getCategoryLabel('video') + ':' + nonExportableCounts['video']);
+        if (nonExportableCounts['image'] > 0) nonExportableParts.push(getCategoryLabel('image') + ':' + nonExportableCounts['image']);
+        if (nonExportableCounts['audio'] > 0) nonExportableParts.push(getCategoryLabel('audio') + ':' + nonExportableCounts['audio']);
+        if (nonExportableCounts['vector'] > 0) nonExportableParts.push(getCategoryLabel('vector') + ':' + nonExportableCounts['vector']);
+        if (nonExportableCounts['solid'] > 0) nonExportableParts.push(getCategoryLabel('solid') + ':' + nonExportableCounts['solid']);
+        if (nonExportableCounts['adjustment'] > 0) nonExportableParts.push(getCategoryLabel('adjustment') + ':' + nonExportableCounts['adjustment']);
+        if (nonExportableCounts['other'] > 0) nonExportableParts.push(getCategoryLabel('other') + ':' + nonExportableCounts['other']);
+        var nonExportableLine = t('summaryDialog.nonExportablePrefix', '✖ 不可导出: ') + (nonExportableParts.length > 0 ? nonExportableParts.join(', ') : t('summaryDialog.none', '无'));
         lines.push(nonExportableLine);
 
-        var summaryLine = '● 总结: 共检测 ' + stats.overall.totalLayers + ' 个图层，' +
-                          stats.overall.exportableLayers + ' 个可导出，' +
-                          stats.overall.nonExportableLayers + ' 个不可导出';
+        var summaryTemplate = t('summaryDialog.summaryTemplate', '● 总结: 共检测 {total} 个图层，{exportable} 个可导出，{nonExportable} 个不可导出');
+        var summaryLine = formatTemplate(summaryTemplate, {
+            total: stats.overall.totalLayers,
+            exportable: stats.overall.exportableLayers,
+            nonExportable: stats.overall.nonExportableLayers
+        });
         lines.push(summaryLine);
         return lines;
     }
@@ -111,34 +134,41 @@
         return stats;
     }
 
-    function getLayerCategory(layer) {
-        if (layer.materialType) {
+    function getLayerCategoryKey(layer) {
+        if (layer && layer.materialType) {
             switch (layer.materialType) {
-                case 'design': return '设计';
-                case 'video': return '视频';
-                case 'image': return '图片';
-                case 'audio': return '音频';
-                case 'vector': return '矢量';
-                default: return '素材';
+                case 'design': return 'design';
+                case 'video': return 'video';
+                case 'image': return 'image';
+                case 'audio': return 'audio';
+                case 'vector': return 'vector';
+                default: return 'material';
             }
         }
-        switch (layer.layerType) {
-            case 'solid': return '纯色';
-            case 'precomp': return '合成';
-            case 'text': return '文本';
-            case 'shape': return '形状';
-            case 'adjustment': return '调整';
-            case 'camera': return '摄像机';
-            case 'light': return '灯光';
-            case 'null': return '空对象';
-            default: return '其他';
+        if (layer && layer.layerType) {
+            switch (layer.layerType) {
+                case 'solid': return 'solid';
+                case 'precomp': return 'precomp';
+                case 'text': return 'text';
+                case 'shape': return 'shape';
+                case 'adjustment': return 'adjustment';
+                case 'camera': return 'camera';
+                case 'light': return 'light';
+                case 'null': return 'null';
+                default: return 'other';
+            }
         }
+        return 'other';
+    }
+
+    function getLayerCategory(layer) {
+        return getCategoryLabel(getLayerCategoryKey(layer));
     }
 
     function formatLayerText(layer) {
         var prefix = layer.canExport ? '[√]' : '[×]';
         var category = getLayerCategory(layer);
-        var fileName = layer.name || '未命名图层';
+        var fileName = layer.name || t('summaryDialog.unnamedLayer', '未命名图层');
         return prefix + '【' + category + '】' + fileName;
     }
 
@@ -190,38 +220,38 @@
         var isDesign = !!(layer && layer.materialType === 'design');
         var isComposition = !!(layer && layer.layerType === 'precomp');
         if (isMaterialLike) {
-            lines.push(category + (isDesign ? ' - 点击导出该图层' : ' - 点击打开所在文件夹'));
+            lines.push(category + (isDesign ? t('summaryDialog.tipExportDesign', ' - 点击导出该图层') : t('summaryDialog.tipOpenFolder', ' - 点击打开所在文件夹')));
         } else if (isComposition) {
-            lines.push(category + ' - 点击导出当前时间帧');
+            lines.push(category + t('summaryDialog.tipExportCurrentFrame', ' - 点击导出当前时间帧'));
         } else {
-            lines.push(category + (layer.canExport ? ' - 可导出' : ' - 不可导出'));
+            lines.push(category + (layer.canExport ? (' - ' + t('summaryDialog.statusExportable', '可导出')) : (' - ' + t('summaryDialog.statusNonExportable', '不可导出'))));
         }
 
         var pathAdded = false;
         if (layer.tooltipInfo && layer.tooltipInfo.originalPath) {
-            lines.push('路径: ' + layer.tooltipInfo.originalPath);
+            lines.push(t('summaryDialog.tipPathPrefix', '路径: ') + layer.tooltipInfo.originalPath);
             pathAdded = true;
-            if (layer.tooltipInfo.fileSize) lines.push('大小: ' + layer.tooltipInfo.fileSize);
-            if (layer.tooltipInfo.fileDate) lines.push('修改时间: ' + layer.tooltipInfo.fileDate);
-            if (layer.tooltipInfo.dimensions) lines.push('尺寸: ' + layer.tooltipInfo.dimensions);
-            if (layer.tooltipInfo.duration) lines.push('时长: ' + layer.tooltipInfo.duration);
+            if (layer.tooltipInfo.fileSize) lines.push(t('summaryDialog.tipSizePrefix', '大小: ') + layer.tooltipInfo.fileSize);
+            if (layer.tooltipInfo.fileDate) lines.push(t('summaryDialog.tipModifiedDatePrefix', '修改时间: ') + layer.tooltipInfo.fileDate);
+            if (layer.tooltipInfo.dimensions) lines.push(t('summaryDialog.tipDimensionsPrefix', '尺寸: ') + layer.tooltipInfo.dimensions);
+            if (layer.tooltipInfo.duration) lines.push(t('summaryDialog.tipDurationPrefix', '时长: ') + layer.tooltipInfo.duration);
         }
         if (!pathAdded && layer.sourceInfo && layer.sourceInfo.originalPath) {
-            lines.push('路径: ' + layer.sourceInfo.originalPath);
+            lines.push(t('summaryDialog.tipPathPrefix', '路径: ') + layer.sourceInfo.originalPath);
             pathAdded = true;
-            if (layer.sourceInfo.fileName) lines.push('文件名: ' + layer.sourceInfo.fileName);
-            if (layer.sourceInfo.width && layer.sourceInfo.height) lines.push('尺寸: ' + layer.sourceInfo.width + 'x' + layer.sourceInfo.height);
-            if (layer.sourceInfo.duration) lines.push('时长: ' + layer.sourceInfo.duration);
+            if (layer.sourceInfo.fileName) lines.push(t('summaryDialog.tipFileNamePrefix', '文件名: ') + layer.sourceInfo.fileName);
+            if (layer.sourceInfo.width && layer.sourceInfo.height) lines.push(t('summaryDialog.tipDimensionsPrefix', '尺寸: ') + layer.sourceInfo.width + 'x' + layer.sourceInfo.height);
+            if (layer.sourceInfo.duration) lines.push(t('summaryDialog.tipDurationPrefix', '时长: ') + layer.sourceInfo.duration);
         }
         if (!pathAdded && layer.originalPath) {
-            lines.push('路径: ' + layer.originalPath);
+            lines.push(t('summaryDialog.tipPathPrefix', '路径: ') + layer.originalPath);
             pathAdded = true;
         }
         if (!isMaterialLike && !layer.canExport && layer.reason) {
             if (!pathAdded && (layer.type === 'MaterialLayer' || layer.type === 'VideoLayer' || layer.type === 'ImageLayer')) {
-                lines.push('路径: 路径信息不可用');
+                lines.push(t('summaryDialog.tipPathPrefix', '路径: ') + t('summaryDialog.tipPathUnavailable', '路径信息不可用'));
             }
-            lines.push('导出说明: ' + layer.reason);
+            lines.push(t('summaryDialog.tipExportNotePrefix', '导出说明: ') + layer.reason);
         }
         return lines.join('\n');
     }
@@ -233,10 +263,10 @@
         var dialog = document.createElement('div');
         dialog.className = 'e2a-dialog e2a-detail';
         dialog.innerHTML = ''+
-            '<div class="e2a-header"><div class="e2a-title">图层详细信息</div></div>'+
+            '<div class="e2a-header"><div class="e2a-title">' + t('summaryDialog.detailTitle', '图层详细信息') + '</div></div>'+
             '<div class="e2a-body"></div>'+
             '<div class="e2a-footer">'+
-                '<button class="e2a-btn" data-action="close">关闭</button>'+
+                '<button class="e2a-btn" data-action="close">' + t('summaryDialog.close', '关闭') + '</button>'+
             '</div>';
         overlay.appendChild(dialog);
         var body = dialog.querySelector('.e2a-body');
@@ -267,11 +297,11 @@
                 '</div>'+
                 '<div class="e2a-body">'+
                     '<div class="e2a-summary"></div>'+
-                    '<div class="e2a-list" aria-label="图层详情"></div>'+
+                    '<div class="e2a-list" aria-label="' + t('summaryDialog.listAriaLabel', '图层详情') + '"></div>'+
                 '</div>'+
                 '<div class="e2a-footer">'+
-                    '<button class="e2a-btn" data-action="ok">确定</button>'+
-                    '<button class="e2a-btn" data-action="close">关闭</button>'+
+                    '<button class="e2a-btn" data-action="ok">' + t('common.confirm', '确定') + '</button>'+
+                    '<button class="e2a-btn" data-action="close">' + t('summaryDialog.close', '关闭') + '</button>'+
                 '</div>';
             overlay.appendChild(dialog);
 
@@ -329,13 +359,13 @@
                             }
                             // CEP 不可用或失败：回退提示路径
                             if (path) {
-                                alert('文件夹路径: \n' + path);
+                                alert(t('summaryDialog.tipFolderPathPrefix', '文件夹路径: ') + '\n' + path);
                                 return;
                             }
                         } else if (isComposition) {
                             // 合成：导出当前时间帧（复用现有导出通道）
                             if (tryExportDesignLayer(layer)) return;
-                            showDetailDialog("无法导出合成帧，请检查扩展状态\n" + label.title);
+                            showDetailDialog(t('summaryDialog.compExportFailed', '无法导出合成帧，请检查扩展状态') + "\n" + label.title);
                             return;
                         }
                         // 其他类型或没有路径：显示详情

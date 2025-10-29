@@ -3,8 +3,8 @@
     "mode": "project_adjacent",
     "projectAdjacentFolder": "Eagle_Assets",
     "customFolderPath": "",
-    "addToComposition": true,
-    "noImportSubMode": "normal",
+    "addToComposition": false,
+    "noImportSubMode": "pre_comp",
     "timelineOptions": {
       "enabled": true,
       "placement": "current_time"
@@ -55,5 +55,5 @@
   "aeTheme": "dark",
   "projectAdjacentSettings": null,
   "customFolderSettings": null,
-  "exportedAt": "2025-10-24T20:19:28.425Z"
+  "exportedAt": "2025-10-24T20:18:42.547Z"
 }

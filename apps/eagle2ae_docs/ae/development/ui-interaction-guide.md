@@ -2,7 +2,9 @@
 
 ## 概述
 
-本文档详细说明Eagle2Ae AE插件的用户界面交互流程、操作指南和最佳实践，包括最新的图层检测系统、弹窗交互机制以及Demo模式功能，帮助开发者理解用户操作逻辑和界面响应机制。
+本文档详细说明Eagle2Ae AE插件的用户界面交互流程、操作指南和最佳实践，包括多面板支持架构、HTTP轮询通信机制、图层检测系统、弹窗交互机制以及Demo模式功能，帮助开发者理解用户操作逻辑和界面响应机制。
+
+在多面板支持架构下，每个面板实例拥有独立的UI状态和交互逻辑，确保多面板环境下的用户体验一致性。
 
 ## 1. 插件启动和初始化流程
 
@@ -18,10 +20,34 @@ sequenceDiagram
     User->>UI: 打开插件面板
     UI->>Main: 初始化应用
     Main->>UI: 显示加载状态
-    Main->>Eagle: 尝试连接
+    Main->>Eagle: HTTP轮询连接
     Eagle-->>Main: 连接响应
     Main->>UI: 更新连接状态
     UI->>User: 显示就绪界面
+```
+
+### 1.2 多面板支持架构
+
+Eagle2Ae 扩展支持多面板架构，允许同时打开多个独立的面板实例。每个面板实例都有独立的状态管理、配置存储和通信通道，确保各面板之间的操作互不干扰。
+
+#### 面板识别机制
+```javascript
+// 面板识别机制
+class AEExtension {
+    constructor() {
+        // 识别当前面板 ID
+        this.panelId = this.getPanelId(); // 'panel1', 'panel2', 或 'panel3'
+        
+        // 面板独立设置管理器
+        this.settingsManager = new SettingsManager(this.panelId);
+        
+        // 面板独立状态检测器
+        this.projectStatusChecker = new ProjectStatusChecker(this.csInterface, this.log.bind(this), this.panelId);
+        
+        // 面板独立文件处理器
+        this.fileHandler = new FileHandler(this.settingsManager, this.csInterface, this.log.bind(this), this.panelId);
+    }
+}
 ```
 
 ### 1.2 初始化检查项
@@ -66,7 +92,7 @@ async function testConnection() {
     updateConnectionStatus('connecting');
     
     try {
-        // 2. 发送ping请求
+        // 2. 发送HTTP轮询ping请求
         const startTime = Date.now();
         const response = await sendPingRequest();
         const pingTime = Date.now() - startTime;
@@ -80,6 +106,66 @@ async function testConnection() {
     } catch (error) {
         // 5. 显示连接失败
         updateConnectionStatus('failed', error.message);
+    }
+}
+```
+
+### 2.3 HTTP轮询机制
+
+Eagle2Ae 扩展使用HTTP轮询机制与Eagle插件进行通信，每个面板实例都有独立的轮询通道：
+
+```javascript
+// HTTP轮询客户端
+class PollingClient {
+    constructor(eagleUrl, clientId, panelId) {
+        this.eagleUrl = eagleUrl;
+        this.clientId = clientId; // 面板唯一标识
+        this.panelId = panelId;   // 面板ID (panel1, panel2, panel3)
+        this.pollingInterval = 1000; // 1秒轮询间隔
+        this.isPolling = false;
+    }
+    
+    // 启动轮询
+    startPolling() {
+        this.isPolling = true;
+        this.poll();
+    }
+    
+    // 轮询消息
+    async poll() {
+        if (!this.isPolling) return;
+        
+        try {
+            // 携带客户端ID和面板ID进行轮询
+            const response = await fetch(
+                `${this.eagleUrl}/messages?clientId=${this.clientId}&panelId=${this.panelId}`
+            );
+            
+            if (response.ok) {
+                const messages = await response.json();
+                this.handleMessages(messages);
+            }
+        } catch (error) {
+            console.error('轮询错误:', error);
+        } finally {
+            // 继续下一次轮询
+            setTimeout(() => this.poll(), this.pollingInterval);
+        }
+    }
+    
+    // 处理接收到的消息
+    handleMessages(messages) {
+        messages.forEach(message => {
+            switch (message.type) {
+                case 'IMPORT_REQUEST':
+                    this.handleImportRequest(message);
+                    break;
+                case 'STATUS_UPDATE':
+                    this.handleStatusUpdate(message);
+                    break;
+                // 其他消息类型...
+            }
+        });
     }
 }
 ```

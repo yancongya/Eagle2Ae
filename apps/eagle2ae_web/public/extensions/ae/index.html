@@ -308,6 +308,12 @@
             line-height: 1;
         }
 
+        /* 图标按钮中的图片尺寸 */
+        .icon-btn .icon-image {
+            width: 16px;
+            height: 16px;
+        }
+
         /* 调试测试按钮特殊样式 */
         #debug-test-btn {
             background: #3d4a2d;
@@ -2534,9 +2540,16 @@
             border-color: #005a9e;
         }
 
+        /* CEP兼容：为导入模式按钮提供.checked选中态（深色主题） */
         .mode-button.checked {
             background: transparent;
-            border-color: #007acc;
+            border: 1px solid #2196f3;
+            color: #2196f3;
+            transition: all 0.3s ease;
+        }
+        .mode-button.checked .mode-text {
+            color: #2196f3;
+            transition: color 0.3s ease;
         }
 
         .mode-text {
@@ -2611,6 +2624,18 @@
         }
 
         .import-behavior-button:has(input[type="radio"]:checked) .behavior-text {
+            color: #ff9800;
+            transition: color 0.3s ease;
+        }
+
+        /* CEP兼容：使用JS添加.checked类以显示选中态（替代:has） */
+        .import-behavior-button.checked {
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
+        }
+        .import-behavior-button.checked .behavior-text {
             color: #ff9800;
             transition: color 0.3s ease;
         }
@@ -2803,6 +2828,56 @@
             background: transparent;
             border: 1px solid #ff9800;
             color: #ff9800;
+            transition: all 0.3s ease;
+        }
+
+        /* CEP兼容：高级设置使用.checked类显示选中态 */
+        .import-behavior-option.checked {
+            background: transparent;
+            border: 1px solid #ff9800;
+            color: #ff9800;
+            transition: all 0.3s ease;
+        }
+        .import-behavior-option.checked span {
+            color: #ff9800;
+            transition: color 0.3s ease;
+        }
+
+        /* CEP兼容：高级设置导入模式选中态（深色主题，匹配:has效果） */
+        .import-mode-option.checked {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+            transition: all 0.3s ease;
+        }
+        .import-mode-option.checked span {
+            color: #3498db;
+            transition: color 0.3s ease;
+        }
+
+        /* CEP兼容：亮色主题下导入模式选中态 */
+        html.theme-light .import-mode-option.checked {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+            transition: all 0.3s ease;
+        }
+        html.theme-light .import-mode-option.checked span {
+            color: #3498db;
+            transition: color 0.3s ease;
+        }
+
+        /* CEP兼容：导出模式选中态（紫色主题，与:has(input[name="export-mode"])匹配） */
+        .import-mode-option.checked-export {
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #9b59b6;
+            color: #9b59b6;
+            transition: all 0.3s ease;
+        }
+        html.theme-light .import-mode-option.checked-export {
+            background: rgba(155, 89, 182, 0.1);
+            border-color: #9b59b6;
+            color: #9b59b6;
             transition: all 0.3s ease;
         }
 
@@ -3736,6 +3811,18 @@
             color: #3498db;
         }
 
+        /* CEP兼容：亮色主题下的导入模式按钮选中态 */
+        html.theme-light .mode-button.checked {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+            color: #3498db;
+            transition: all 0.3s ease;
+        }
+        html.theme-light .mode-button.checked .mode-text {
+            color: #3498db;
+            transition: color 0.3s ease;
+        }
+
         html.theme-light .mode-button.active {
             background: #27ae60;
             border-color: #27ae60;
@@ -4425,8 +4512,9 @@
                     <div class="folder-path-section">
                         <input type="text" id="custom-folder-path-input" data-i18n-placeholder="common.selectFolder"
                             readonly>
-                        <button class="browse-button" onclick="browseFolderPath()"
-                            data-i18n="common.orClickSelect">浏览...</button>
+                        <button id="browse-folder-btn" class="icon-btn" onclick="browseFolderPath()" aria-label="选择目标文件夹" data-i18n-title="tooltips.browseFolder">
+                            <img src="public/icons/custom-folder.svg" alt="" class="icon-image" />
+                        </button>
                     </div>
                     <div class="recent-folders-section" id="recent-folders-section" style="display: none;">
                         <div class="recent-folders-title" data-i18n="common.recentlyUsedFolders">最近使用的文件夹</div>
@@ -4507,7 +4595,11 @@
         // 数据持久化功能
         function saveProjectAdjacentSettings() {
             try {
-                localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(projectAdjacentSettings));
+                if (window.setPanelLocalStorage) {
+                    window.setPanelLocalStorage('ae_extension_project_adjacent_settings', JSON.stringify(projectAdjacentSettings));
+                } else {
+                    localStorage.setItem('ae_extension_project_adjacent_settings', JSON.stringify(projectAdjacentSettings));
+                }
             } catch (e) {
                 console.warn('无法保存项目旁复制设置到本地存储:', e);
             }
@@ -4515,7 +4607,7 @@
 
         function loadProjectAdjacentSettings() {
             try {
-                const saved = localStorage.getItem('ae_extension_project_adjacent_settings');
+                const saved = window.getPanelLocalStorage ? window.getPanelLocalStorage('ae_extension_project_adjacent_settings') : localStorage.getItem('ae_extension_project_adjacent_settings');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     projectAdjacentSettings = { ...projectAdjacentSettings, ...parsed };
@@ -4527,7 +4619,11 @@
 
         function saveCustomFolderSettings() {
             try {
-                localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(customFolderSettings));
+                if (window.setPanelLocalStorage) {
+                    window.setPanelLocalStorage('ae_extension_custom_folder_settings', JSON.stringify(customFolderSettings));
+                } else {
+                    localStorage.setItem('ae_extension_custom_folder_settings', JSON.stringify(customFolderSettings));
+                }
             } catch (e) {
                 console.warn('无法保存指定文件夹设置到本地存储:', e);
             }
@@ -4535,7 +4631,7 @@
 
         function loadCustomFolderSettings() {
             try {
-                const saved = localStorage.getItem('ae_extension_custom_folder_settings');
+                const saved = window.getPanelLocalStorage ? window.getPanelLocalStorage('ae_extension_custom_folder_settings') : localStorage.getItem('ae_extension_custom_folder_settings');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     customFolderSettings = { ...customFolderSettings, ...parsed };
@@ -4652,6 +4748,18 @@
         function showCustomFolderModal() {
             const modal = document.getElementById('custom-folder-modal');
             const pathInput = document.getElementById('custom-folder-path-input');
+
+            // 优先从 SettingsManager 读取已保存的路径并同步到 customFolderSettings
+            try {
+                if (window.eagleToAeApp && window.eagleToAeApp.settingsManager) {
+                    const settings = window.eagleToAeApp.settingsManager.getSettings();
+                    if (settings && settings.customFolderPath && settings.customFolderPath.trim() !== '') {
+                        customFolderSettings.folderPath = settings.customFolderPath;
+                    }
+                }
+            } catch (e) {
+                console.warn('读取 SettingsManager 的自定义文件夹路径失败:', e);
+            }
 
             // 设置当前值
             pathInput.value = customFolderSettings.folderPath;
@@ -5151,38 +5259,60 @@
         // 更新指定文件夹按钮的悬浮提示
         function updateCustomFolderTooltip() {
             // 更新快速面板的指定文件夹按钮
-            const customFolderOption = document.querySelector('label[title*="复制文件到指定文件夹后导入"]');
+            const customFolderOption = document.querySelector('label[title*="复制文件到指定文件夹后导入"]') || document.querySelector('label[title*="Copy files to specified folder and then import"]');
             if (customFolderOption) {
-                const baseTooltip = '复制文件到指定文件夹后导入';
+                const baseTooltip = (window.i18n?.getText('tooltips.customFolder')) || 'Copy files to specified folder and then import';
                 const currentPath = customFolderSettings.folderPath;
                 if (currentPath && currentPath.trim() !== '') {
-                    customFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                    const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                    customFolderOption.title = `${baseTooltip}\n${prefix} ${currentPath}`;
                 } else {
-                    customFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                    const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                    const notSet = (window.i18n?.getText('tooltips.notSet')) || 'Not set';
+                    customFolderOption.title = `${baseTooltip}\n${prefix} ${notSet}`;
                 }
             }
 
             // 更新高级设置面板的指定文件夹按钮
             const advancedCustomFolderOption = document.querySelector('input[name="import-mode"][value="custom_folder"]');
             if (advancedCustomFolderOption && advancedCustomFolderOption.parentElement) {
-                const baseTooltip = '复制到指定文件夹后导入';
+                const baseTooltip = (window.i18n?.getText('tooltips.customFolder')) || 'Copy to specified folder then import';
                 const currentPath = customFolderSettings.folderPath;
                 if (currentPath && currentPath.trim() !== '') {
-                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                    const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n${prefix} ${currentPath}`;
                 } else {
-                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n当前路径: 未设置`;
+                    const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                    const notSet = (window.i18n?.getText('tooltips.notSet')) || 'Not set';
+                    advancedCustomFolderOption.parentElement.title = `${baseTooltip}\n${prefix} ${notSet}`;
+                }
+            }
+
+            // 更新弹窗中“选择文件夹”图标按钮的悬浮提示
+            const browseBtn = document.getElementById('browse-folder-btn');
+            if (browseBtn) {
+                const baseTooltip = (window.i18n?.getText('tooltips.browseFolder')) || 'Choose target folder';
+                const currentPath = customFolderSettings.folderPath;
+                const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                const notSet = (window.i18n?.getText('tooltips.notSet')) || 'Not set';
+                if (currentPath && currentPath.trim() !== '') {
+                    browseBtn.title = `${baseTooltip}\n${prefix} ${currentPath}`;
+                } else {
+                    browseBtn.title = `${baseTooltip}\n${prefix} ${notSet}`;
                 }
             }
 
             // 同时更新导出的指定文件夹按钮悬浮提示
             const exportCustomFolderOption = document.getElementById('export-custom-folder-option');
             if (exportCustomFolderOption) {
-                const baseTooltip = '导出到指定文件夹（与导入模式设置一致）';
+                const baseTooltip = (window.i18n?.getText('tooltips.customFolderExport')) || 'Export to specified folder (consistent with import mode settings)';
                 const currentPath = customFolderSettings.folderPath;
+                const prefix = (window.i18n?.getText('tooltips.currentPathPrefix')) || 'Current path:';
+                const notSet = (window.i18n?.getText('tooltips.notSet')) || 'Not set';
                 if (currentPath && currentPath.trim() !== '') {
-                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: ${currentPath}`;
+                    exportCustomFolderOption.title = `${baseTooltip}\n${prefix} ${currentPath}`;
                 } else {
-                    exportCustomFolderOption.title = `${baseTooltip}\n当前路径: 未设置`;
+                    exportCustomFolderOption.title = `${baseTooltip}\n${prefix} ${notSet}`;
                 }
             }
         }
@@ -6041,10 +6171,15 @@
                         console.log('[Iframe Sync] 开始更新语言:', newLang);
                         // 更新当前语言
                         window.i18n.currentLang = newLang;
-                        // 保存到 localStorage
+                        // 保存到 localStorage（使用面板特定的键）
                         try {
-                            localStorage.setItem('language', newLang);
-                            localStorage.setItem('lang', newLang);
+                            if (window.setPanelLocalStorage) {
+                                window.setPanelLocalStorage('language', newLang);
+                                window.setPanelLocalStorage('lang', newLang);
+                            } else {
+                                localStorage.setItem('language', newLang);
+                                localStorage.setItem('lang', newLang);
+                            }
                             
                             // 触发预设自动保存
                             if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
@@ -6112,9 +6247,13 @@
                         if (iconSpan) iconSpan.textContent = isLight ? '☀️' : '🌙';
                     }
 
-                    // 保存主题到 localStorage
+                    // 保存主题到 localStorage（使用面板特定的键）
                     try {
-                        localStorage.setItem('aeTheme', newTheme);
+                        if (window.setPanelLocalStorage) {
+                            window.setPanelLocalStorage('aeTheme', newTheme);
+                        } else {
+                            localStorage.setItem('aeTheme', newTheme);
+                        }
                         
                         // 触发预设自动保存
                         if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
@@ -6380,14 +6519,18 @@
                             // 应用设置到主面板
                             applyUISettings();
 
-                            // 保存设置到 localStorage
+                            // 保存设置到 localStorage（使用面板特定的键）
                             try {
-                                localStorage.setItem('uiSettings', JSON.stringify(uiSettings));
+                                if (window.setPanelLocalStorage) {
+                                    window.setPanelLocalStorage('uiSettings', JSON.stringify(uiSettings));
+                                } else {
+                                    localStorage.setItem('uiSettings', JSON.stringify(uiSettings));
+                                }
                                 console.log(`[UI Settings] 设置已保存: ${key} = ${uiSettings[key]}`);
                                 
                                 // 触发预设自动保存
-                                if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
-                                    window.eagleToAeApp.savePresetsSilently();
+                                if (window.eagle2ae && typeof window.eagle2ae.savePresetsSilently === 'function') {
+                                    window.eagle2ae.savePresetsSilently();
                                 }
                             } catch (e) {
                                 console.warn('[UI Settings] 无法保存设置:', e);
@@ -6398,9 +6541,9 @@
                     }
                 });
 
-                // 从 localStorage 加载设置
+                // 从 localStorage 加载设置（使用面板特定的键）
                 try {
-                    const saved = localStorage.getItem('uiSettings');
+                    const saved = window.getPanelLocalStorage ? window.getPanelLocalStorage('uiSettings') : localStorage.getItem('uiSettings');
                     if (saved) {
                         const savedSettings = JSON.parse(saved);
                         Object.assign(uiSettings, savedSettings);

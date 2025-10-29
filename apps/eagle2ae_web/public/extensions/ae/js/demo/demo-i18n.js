@@ -38,6 +38,12 @@ class DemoI18nHelper {
             'titleText': '标题文字',
             'precompEffects': '预合成-特效'
           },
+          'paths': {
+            'backgroundImage': 'D:\\素材\\图片\\背景图片.jpg',
+            'logoDesign': 'D:\\素材\\设计\\Logo设计.psd',
+            'animationVideo': 'D:\\素材\\视频\\动画视频.mp4',
+            'iconDesign': 'D:\\素材\\设计\\图标设计.ai'
+          },
           'materialTypes': {
             'design': '设计',
             'image': '图片', 
@@ -124,6 +130,12 @@ class DemoI18nHelper {
             'solidBackground': 'Solid Background',
             'titleText': 'Title Text',
             'precompEffects': 'Precomp-Effects'
+          },
+          'paths': {
+            'backgroundImage': 'D:\\Materials\\Images\\Background.jpg',
+            'logoDesign': 'D:\\Materials\\Design\\Logo.psd',
+            'animationVideo': 'D:\\Materials\\Video\\Animation.mp4',
+            'iconDesign': 'D:\\Materials\\Design\\Icon.ai'
           },
           'materialTypes': {
             'design': 'Design',

@@ -2,9 +2,17 @@
 
 ## 1. 系统概述
 
-项目状态检测器是Eagle2Ae的核心组件之一，负责在执行关键操作前检测After Effects项目和Eagle应用的状态，确保操作的可行性和安全性。
+项目状态检测器是Eagle2Ae的核心组件之一，负责在执行关键操作前检测After Effects项目和Eagle应用的状态，确保操作的可行性和安全性。在多面板支持架构下，每个面板实例都有独立的状态检测器实例，确保各面板状态检测的独立性和准确性。每个面板实例通过唯一的面板ID进行状态检测，避免面板间的干扰。
 
-### 1.1 主要功能
+### 1.1 多面板架构优势
+
+- **独立性**: 每个面板实例拥有独立的状态检测器，互不干扰
+- **准确性**: 针对每个面板的特定状态进行检测，提高准确性
+- **性能**: 各面板状态检测并行处理，提升整体性能
+- **隔离性**: 面板间状态缓存和日志相互隔离，避免数据污染
+- **通信独立性**: 每个面板实例通过独立的HTTP轮询通道与Eagle插件通信，确保消息路由的准确性
+
+### 1.2 主要功能
 
 - **项目状态检测**: 检测AE项目是否打开、合成是否存在
 - **连接状态检测**: 检测AE和Eagle的连接状态
@@ -15,13 +23,17 @@
 ### 1.2 架构设计
 
 ```
-项目状态检测器
+项目状态检测器（多面板架构）
+├── 面板管理器
+│   ├── 面板实例创建
+│   ├── 面板资源管理
+│   └── 面板生命周期控制
 ├── 核心检测引擎
 │   ├── AE项目检测
 │   ├── Eagle连接检测
 │   └── 环境状态检测
 ├── 缓存管理系统
-│   ├── 结果缓存
+│   ├── 结果缓存（面板隔离）
 │   ├── 过期管理
 │   └── 内存优化
 ├── 错误处理系统
@@ -30,7 +42,7 @@
 │   └── 恢复策略
 └── 集成接口
     ├── 对话框集成
-    ├── 日志集成
+    ├── 日志集成（面板隔离）
     └── 事件通知
 ```
 
@@ -42,9 +54,13 @@
 /**
  * 项目状态检测器
  * 负责检测AE项目状态、Eagle连接状态等
+ * 在多面板架构下，每个面板实例拥有独立的检测器实例
  */
 class ProjectStatusChecker {
-    constructor() {
+    constructor(csInterface, logger, panelId) {
+        this.csInterface = csInterface;
+        this.logger = logger;
+        this.panelId = panelId; // 面板ID (panel1, panel2, panel3)
         this.cache = new Map();
         this.cacheTimeout = 5000; // 5秒缓存
         this.isChecking = false;
@@ -159,6 +175,7 @@ class ProjectStatusChecker {
 ```javascript
 /**
  * 检测运行环境
+ * 在多面板架构下，环境检测包含面板ID信息
  */
 checkEnvironment() {
     const env = {
@@ -166,7 +183,8 @@ checkEnvironment() {
         isDemo: false,
         hasCSInterface: false,
         aeVersion: null,
-        cepVersion: null
+        cepVersion: null,
+        panelId: this.panelId // 添加面板ID信息
     };
     
     // 检测CEP环境
@@ -176,11 +194,11 @@ checkEnvironment() {
         
         try {
             // 获取AE版本信息
-            const hostInfo = csInterface.getHostEnvironment();
+            const hostInfo = this.csInterface.getHostEnvironment();
             env.aeVersion = hostInfo.appVersion;
             env.cepVersion = hostInfo.cepVersion;
         } catch (error) {
-            console.warn('[环境检测] 获取主机信息失败:', error);
+            this.logger.warn(`[${this.panelId}][环境检测] 获取主机信息失败:`, error);
         }
     } else {
         env.isDemo = true;
@@ -195,6 +213,7 @@ checkEnvironment() {
 ```javascript
 /**
  * 检测After Effects连接状态
+ * 在多面板架构下，每个面板实例独立检测AE连接状态
  */
 async checkAEConnection() {
     const status = {
@@ -202,7 +221,8 @@ async checkAEConnection() {
         responsive: false,
         version: null,
         error: null,
-        responseTime: null
+        responseTime: null,
+        panelId: this.panelId // 添加面板ID信息
     };
     
     // Demo模式直接返回模拟状态
@@ -212,7 +232,8 @@ async checkAEConnection() {
             responsive: true,
             version: 'Demo Mode',
             error: null,
-            responseTime: 0
+            responseTime: 0,
+            panelId: this.panelId
         };
     }
     
@@ -234,6 +255,7 @@ async checkAEConnection() {
         
     } catch (error) {
         status.error = error.message;
+        this.logger.error(`[${this.panelId}][AE连接检测] 连接失败:`, error);
     }
     
     return status;
@@ -241,6 +263,7 @@ async checkAEConnection() {
 
 /**
  * 执行ExtendScript脚本
+ * 在多面板架构下，使用面板特定的CSInterface实例
  */
 executeScript(script, timeout = 3000) {
     return new Promise((resolve, reject) => {
@@ -249,7 +272,7 @@ executeScript(script, timeout = 3000) {
         }, timeout);
         
         try {
-            csInterface.evalScript(script, (result) => {
+            this.csInterface.evalScript(script, (result) => {
                 clearTimeout(timer);
                 resolve(result);
             });
@@ -266,6 +289,7 @@ executeScript(script, timeout = 3000) {
 ```javascript
 /**
  * 检测AE项目状态
+ * 在多面板架构下，每个面板实例独立检测项目状态
  */
 async checkProjectState() {
     const status = {
@@ -274,7 +298,8 @@ async checkProjectState() {
         projectPath: null,
         isSaved: false,
         itemCount: 0,
-        error: null
+        error: null,
+        panelId: this.panelId // 添加面板ID信息
     };
     
     try {
@@ -303,6 +328,7 @@ async checkProjectState() {
         
     } catch (error) {
         status.error = error.message;
+        this.logger.error(`[${this.panelId}][项目状态检测] 检测失败:`, error);
     }
     
     return status;
@@ -314,6 +340,7 @@ async checkProjectState() {
 ```javascript
 /**
  * 检测合成状态
+ * 在多面板架构下，每个面板实例独立检测合成状态
  */
 async checkCompositionState() {
     const status = {
@@ -323,7 +350,8 @@ async checkCompositionState() {
         layerCount: 0,
         duration: 0,
         frameRate: 0,
-        error: null
+        error: null,
+        panelId: this.panelId // 添加面板ID信息
     };
     
     try {
@@ -369,6 +397,7 @@ async checkCompositionState() {
         
     } catch (error) {
         status.error = error.message;
+        this.logger.error(`[${this.panelId}][合成状态检测] 检测失败:`, error);
     }
     
     return status;
@@ -380,6 +409,7 @@ async checkCompositionState() {
 ```javascript
 /**
  * 检测Eagle应用连接状态
+ * 在多面板架构下，每个面板实例独立检测Eagle连接状态
  */
 async checkEagleConnection() {
     const status = {
@@ -387,7 +417,8 @@ async checkEagleConnection() {
         version: null,
         apiEndpoint: null,
         responseTime: null,
-        error: null
+        error: null,
+        panelId: this.panelId // 添加面板ID信息
     };
     
     try {
@@ -408,6 +439,7 @@ async checkEagleConnection() {
         
     } catch (error) {
         status.error = error.message;
+        this.logger.error(`[${this.panelId}][Eagle连接检测] 连接失败:`, error);
     }
     
     return status;
@@ -415,6 +447,7 @@ async checkEagleConnection() {
 
 /**
  * 测试Eagle API连接
+ * 在多面板架构下，每个面板实例独立测试Eagle API
  */
 async testEagleAPI() {
     // 这里应该实现实际的Eagle API测试逻辑
@@ -439,9 +472,13 @@ async testEagleAPI() {
 ```javascript
 /**
  * 缓存检测结果
+ * 在多面板架构下，缓存键包含面板ID以确保各面板缓存独立
  */
 cacheResult(key, result) {
-    this.cache.set(key, {
+    // 为多面板架构添加面板ID前缀
+    const cacheKey = this.panelId ? `${this.panelId}_${key}` : key;
+    
+    this.cache.set(cacheKey, {
         data: result,
         timestamp: Date.now(),
         expires: Date.now() + this.cacheTimeout
@@ -455,14 +492,17 @@ cacheResult(key, result) {
  * 获取缓存结果
  */
 getCachedResult(key) {
-    const cached = this.cache.get(key);
+    // 为多面板架构添加面板ID前缀
+    const cacheKey = this.panelId ? `${this.panelId}_${key}` : key;
+    
+    const cached = this.cache.get(cacheKey);
     
     if (cached && cached.expires > Date.now()) {
         return cached.data;
     }
     
     // 缓存过期，删除
-    this.cache.delete(key);
+    this.cache.delete(cacheKey);
     return null;
 }
 
@@ -486,6 +526,7 @@ cleanupExpiredCache() {
 /**
  * 智能缓存策略
  * 根据检测类型和结果动态调整缓存时间
+ * 在多面板架构下，每个面板实例独立管理缓存策略
  */
 getOptimalCacheTimeout(checkType, result) {
     const baseTimes = {
@@ -508,6 +549,22 @@ getOptimalCacheTimeout(checkType, result) {
         timeout = Math.min(timeout * 1.5, 30000);
     }
     
+    // 在多面板架构下，可以基于面板ID进一步优化缓存策略
+    if (this.panelId) {
+        // 为不同面板类型调整缓存时间
+        switch (this.panelId) {
+            case 'panel1':
+                timeout *= 1.0; // 主面板使用默认缓存时间
+                break;
+            case 'panel2':
+                timeout *= 0.8; // 辅助面板使用较短缓存时间
+                break;
+            case 'panel3':
+                timeout *= 1.2; // 特殊面板使用较长缓存时间
+                break;
+        }
+    }
+    
     return timeout;
 }
 ```
@@ -519,6 +576,7 @@ getOptimalCacheTimeout(checkType, result) {
 ```javascript
 /**
  * 错误类型定义
+ * 在多面板架构下，错误信息包含面板ID以便定位问题
  */
 const ERROR_TYPES = {
     // 连接错误
@@ -563,6 +621,7 @@ const ERROR_TYPES = {
 
 /**
  * 错误恢复策略
+ * 在多面板架构下，恢复策略可以针对不同面板进行优化
  */
 const RECOVERY_STRATEGIES = {
     CONNECTION_ERROR: [
@@ -597,6 +656,7 @@ const RECOVERY_STRATEGIES = {
 ```javascript
 /**
  * 生成操作建议
+ * 在多面板架构下，建议生成器可以针对不同面板提供定制化建议
  */
 generateRecommendations(result) {
     const recommendations = [];
@@ -609,7 +669,8 @@ generateRecommendations(result) {
                 type: 'error_recovery',
                 title: `解决${error.message}`,
                 actions: strategies,
-                priority: error.severity === 'high' ? 1 : 2
+                priority: error.severity === 'high' ? 1 : 2,
+                panelId: this.panelId // 添加面板ID信息
             });
         }
     });
@@ -622,7 +683,8 @@ generateRecommendations(result) {
                 type: 'warning_resolution',
                 title: `改善${warning.message}`,
                 actions: strategies,
-                priority: 3
+                priority: 3,
+                panelId: this.panelId // 添加面板ID信息
             });
         }
     });
@@ -638,7 +700,8 @@ generateRecommendations(result) {
                 '减少项目复杂度',
                 '增加系统内存'
             ],
-            priority: 4
+            priority: 4,
+            panelId: this.panelId // 添加面板ID信息
         });
     }
     
@@ -656,6 +719,7 @@ generateRecommendations(result) {
 ```javascript
 /**
  * 与对话框系统集成
+ * 在多面板架构下，对话框集成可以显示面板ID信息
  */
 async function showStatusErrorDialog(statusResult) {
     const primaryError = statusResult.errors[0];
@@ -665,9 +729,14 @@ async function showStatusErrorDialog(statusResult) {
     const dialogConfig = ERROR_DIALOG_MAP[primaryError.type];
     
     if (dialogConfig) {
+        // 在标题中添加面板ID信息
+        const title = statusResult.panelId ? 
+            `${dialogConfig.title} [${statusResult.panelId}]` : 
+            dialogConfig.title;
+            
         return await showSmartDialog(
             dialogConfig.type,
-            dialogConfig.title,
+            title,
             dialogConfig.message,
             dialogConfig.buttons
         );
@@ -676,13 +745,19 @@ async function showStatusErrorDialog(statusResult) {
 
 /**
  * 显示状态总结对话框
+ * 在多面板架构下，对话框显示面板ID信息
  */
 async function showStatusSummaryDialog(statusResult) {
     const summary = generateStatusSummary(statusResult);
     
+    // 在标题中添加面板ID信息
+    const title = statusResult.panelId ? 
+        `项目状态检查 [${statusResult.panelId}]` : 
+        '项目状态检查';
+    
     return await showSmartDialog(
         'info',
-        '项目状态检查',
+        title,
         summary,
         ['确定']
     );
@@ -690,11 +765,17 @@ async function showStatusSummaryDialog(statusResult) {
 
 /**
  * 生成状态总结
+ * 在多面板架构下，状态总结包含面板ID信息
  */
 function generateStatusSummary(statusResult) {
     const lines = [];
     
     lines.push(`检查时间: ${new Date(statusResult.timestamp).toLocaleTimeString()}`);
+    
+    // 添加面板ID信息
+    if (statusResult.panelId) {
+        lines.push(`面板ID: ${statusResult.panelId}`);
+    }
     
     if (statusResult.info.environment) {
         const env = statusResult.info.environment;
@@ -737,9 +818,11 @@ function generateStatusSummary(statusResult) {
 ```javascript
 /**
  * 日志记录器
+ * 在多面板架构下，日志包含面板ID信息
  */
 class StatusLogger {
-    constructor() {
+    constructor(panelId) {
+        this.panelId = panelId; // 面板ID (panel1, panel2, panel3)
         this.logs = [];
         this.maxLogs = 100;
     }
@@ -750,6 +833,7 @@ class StatusLogger {
     logStatusCheck(result) {
         const logEntry = {
             timestamp: result.timestamp,
+            panelId: this.panelId, // 添加面板ID
             hasErrors: result.hasErrors,
             errorCount: result.errors.length,
             warningCount: result.warnings.length,
@@ -777,11 +861,12 @@ class StatusLogger {
     outputToConsole(logEntry) {
         const timestamp = new Date(logEntry.timestamp).toLocaleTimeString();
         const status = logEntry.hasErrors ? '❌' : '✅';
+        const panelInfo = logEntry.panelId ? `[${logEntry.panelId}] ` : '';
         
-        console.log(`[${timestamp}] ${status} 项目状态检查 - AE:${logEntry.aeConnected ? '✓' : '✗'} Eagle:${logEntry.eagleConnected ? '✓' : '✗'} 项目:${logEntry.projectOpen ? '✓' : '✗'} 合成:${logEntry.compositionActive ? '✓' : '✗'}`);
+        console.log(`[${timestamp}] ${panelInfo}${status} 项目状态检查 - AE:${logEntry.aeConnected ? '✓' : '✗'} Eagle:${logEntry.eagleConnected ? '✓' : '✗'} 项目:${logEntry.projectOpen ? '✓' : '✗'} 合成:${logEntry.compositionActive ? '✓' : '✗'}`);
         
         if (logEntry.hasErrors) {
-            console.warn(`[${timestamp}] 发现 ${logEntry.errorCount} 个错误，${logEntry.warningCount} 个警告`);
+            console.warn(`[${timestamp}] ${panelInfo}发现 ${logEntry.errorCount} 个错误，${logEntry.warningCount} 个警告`);
         }
     }
     
@@ -794,6 +879,7 @@ class StatusLogger {
         const recent = this.logs.slice(-10); // 最近10次检查
         
         return {
+            panelId: this.panelId, // 添加面板ID
             totalChecks: this.logs.length,
             recentChecks: recent.length,
             successRate: recent.filter(log => !log.hasErrors).length / recent.length,
@@ -804,8 +890,8 @@ class StatusLogger {
     }
 }
 
-// 全局日志记录器实例
-const statusLogger = new StatusLogger();
+// 每个面板实例拥有独立的日志记录器
+// const statusLogger = new StatusLogger(panelId);
 ```
 
 ## 6. 使用示例
@@ -813,19 +899,19 @@ const statusLogger = new StatusLogger();
 ### 6.1 基本使用
 
 ```javascript
-// 创建检测器实例
-const checker = new ProjectStatusChecker();
+// 创建检测器实例（多面板架构下需要传递面板ID）
+const checker = new ProjectStatusChecker(csInterface, logger, panelId);
 
 // 执行检测
-async function performStatusCheck() {
+async function performStatusCheck(checker) {
     try {
         const result = await checker.checkProjectStatus();
         
-        // 记录日志
+        // 记录日志（包含面板ID信息）
         statusLogger.logStatusCheck(result);
         
         if (result.hasErrors) {
-            // 显示错误对话框
+            // 显示错误对话框（包含面板ID信息）
             await showStatusErrorDialog(result);
             return false;
         }
@@ -834,7 +920,7 @@ async function performStatusCheck() {
         return true;
         
     } catch (error) {
-        console.error('[状态检测] 检测失败:', error);
+        console.error(`[${checker.panelId}][状态检测] 检测失败:`, error);
         return false;
     }
 }
@@ -844,31 +930,35 @@ async function performStatusCheck() {
 
 ```javascript
 /**
- * 文件导入前的状态检查
+ * 文件导入前的状态检查（多面板架构下每个面板独立检查）
  */
-async function importFilesWithStatusCheck(files) {
-    // 1. 执行状态检查
-    const statusOK = await performStatusCheck();
+async function importFilesWithStatusCheck(files, panelId) {
+    // 1. 创建面板特定的状态检测器
+    const checker = new ProjectStatusChecker(csInterface, logger, panelId);
+    
+    // 2. 执行状态检查
+    const statusOK = await performStatusCheck(checker);
     if (!statusOK) {
         return; // 状态检查失败，终止操作
     }
     
-    // 2. 继续执行导入操作
+    // 3. 继续执行导入操作
     await importFiles(files);
 }
 
 /**
- * 图层检测前的状态检查
+ * 图层检测前的状态检查（多面板架构下每个面板独立检查）
  */
-async function detectLayersWithStatusCheck() {
-    const checker = new ProjectStatusChecker();
+async function detectLayersWithStatusCheck(panelId) {
+    // 创建面板特定的状态检测器
+    const checker = new ProjectStatusChecker(csInterface, logger, panelId);
     const result = await checker.checkProjectStatus();
     
     // 检查是否有合成
     if (!result.info.composition?.hasComposition) {
         await showSmartDialog(
             'warning',
-            '合成检查',
+            `合成检查 [${panelId}]`,
             '请先创建一个合成后重试',
             ['确定']
         );
@@ -885,10 +975,14 @@ async function detectLayersWithStatusCheck() {
 ```javascript
 /**
  * 状态监控器
+ * 在多面板架构下，每个面板实例拥有独立的监控器
  */
 class StatusMonitor {
-    constructor() {
-        this.checker = new ProjectStatusChecker();
+    constructor(panelId, csInterface, logger) {
+        this.panelId = panelId; // 面板ID (panel1, panel2, panel3)
+        this.csInterface = csInterface;
+        this.logger = logger;
+        this.checker = new ProjectStatusChecker(csInterface, logger, panelId);
         this.monitorInterval = null;
         this.isMonitoring = false;
     }
@@ -909,11 +1003,11 @@ class StatusMonitor {
                 this.handleStatusChange(result);
                 
             } catch (error) {
-                console.error('[状态监控] 监控检查失败:', error);
+                this.logger.error(`[状态监控][${this.panelId}] 监控检查失败:`, error);
             }
         }, interval);
         
-        console.log('[状态监控] 开始监控，间隔:', interval + 'ms');
+        this.logger.info(`[状态监控][${this.panelId}] 开始监控，间隔:`, interval + 'ms');
     }
     
     /**
@@ -925,7 +1019,7 @@ class StatusMonitor {
             this.monitorInterval = null;
         }
         this.isMonitoring = false;
-        console.log('[状态监控] 停止监控');
+        this.logger.info(`[状态监控][${this.panelId}] 停止监控`);
     }
     
     /**
@@ -935,13 +1029,13 @@ class StatusMonitor {
         // 这里可以实现状态变化的通知逻辑
         // 例如：AE连接断开时显示通知
         if (!result.info.aeConnection?.connected) {
-            console.warn('[状态监控] AE连接已断开');
+            this.logger.warn(`[状态监控][${this.panelId}] AE连接已断开`);
         }
     }
 }
 
-// 全局状态监控器
-const statusMonitor = new StatusMonitor();
+// 每个面板实例拥有独立的状态监控器
+// const statusMonitor = new StatusMonitor(panelId, csInterface, logger);
 ```
 
 ## 7. 性能优化
@@ -951,6 +1045,7 @@ const statusMonitor = new StatusMonitor();
 ```javascript
 /**
  * 并发检测控制
+ * 在多面板架构下，每个面板实例独立控制并发检测
  */
 async function waitForCurrentCheck() {
     return new Promise((resolve) => {
@@ -978,9 +1073,13 @@ async function waitForCurrentCheck() {
 /**
  * 批量检测优化
  * 将多个检测请求合并为一次检测
+ * 在多面板架构下，每个面板实例拥有独立的批量检测器
  */
 class BatchStatusChecker {
-    constructor() {
+    constructor(panelId, csInterface, logger) {
+        this.panelId = panelId; // 面板ID (panel1, panel2, panel3)
+        this.csInterface = csInterface;
+        this.logger = logger;
         this.pendingChecks = [];
         this.batchTimeout = null;
         this.batchDelay = 100; // 100ms内的请求合并
@@ -1013,7 +1112,8 @@ class BatchStatusChecker {
         if (checks.length === 0) return;
         
         try {
-            const checker = new ProjectStatusChecker();
+            // 创建面板特定的状态检测器
+            const checker = new ProjectStatusChecker(this.csInterface, this.logger, this.panelId);
             const result = await checker.checkProjectStatus();
             
             // 将结果返回给所有等待的请求
@@ -1030,8 +1130,8 @@ class BatchStatusChecker {
     }
 }
 
-// 全局批量检测器
-const batchChecker = new BatchStatusChecker();
+// 每个面板实例拥有独立的批量检测器
+// const batchChecker = new BatchStatusChecker(panelId, csInterface, logger);
 ```
 
 ---

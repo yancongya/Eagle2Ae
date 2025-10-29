@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-  <line x1="8" y1="21" x2="16" y2="21"/>
-  <line x1="12" y1="17" x2="12" y2="21"/>
-</svg>
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1761385741784" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="28643" xmlns:xlink="http://www.w3.org/1999/xlink" width="20" height="20"><path d="M853.333333 853.333333a42.666667 42.666667 0 0 1-42.666666 42.666667H213.333333a42.666667 42.666667 0 0 1-42.666666-42.666667v-384H42.666667l440.618666-400.554666a42.666667 42.666667 0 0 1 57.429334 0L981.333333 469.333333h-128v384zM341.333333 640v85.333333h341.333334v-85.333333H341.333333z" p-id="28644" fill="#36ab60"></path></svg>

@@ -286,31 +286,94 @@ Eagle2Ae-Ae/
 ├── CSXS/
 │   └── manifest.xml          # CEP 扩展配置文件
 ├── js/
-│   ├── main.js               # 主应用逻辑
-│   ├── websocket-client.js   # WebSocket 客户端
-│   ├── CSInterface.js        # CEP 接口库
-│   ├── services/             # 服务模块
-│   │   ├── FileHandler.js    # 文件处理服务
-│   │   ├── PortDiscovery.js  # 端口发现服务
-│   │   └── SettingsManager.js # 设置管理服务
-│   ├── utils/                # 工具函数
-│   │   ├── LogManager.js     # 日志管理器
-│   │   └── SoundPlayer.js    # 声音播放器
-│   ├── constants/            # 常量定义
+│   ├── constants/           # 常量定义
 │   │   └── ImportSettings.js # 导入设置常量
-│   └── demo/                 # 演示和测试代码
+│   ├── demo/                # 演示模式系统
+│   │   ├── demo-apis.js     # API模拟器
+│   │   ├── demo-config.json # 演示配置
+│   │   ├── demo-mode.js     # 主控制器
+│   │   ├── demo-network-interceptor.js # 网络拦截器
+│   │   ├── demo-override.js # 数据覆盖策略
+│   │   ├── demo-ui.js       # UI状态管理器
+│   │   └── easter-egg.js    # 彩蛋功能
+│   ├── i18n/                # 国际化支持
+│   ├── services/            # 服务层
+│   │   ├── FileHandler.js   # 文件处理服务
+│   │   ├── PortDiscovery.js # 端口发现服务
+│   │   ├── ProjectStatusChecker.js # 项目状态检测器
+│   │   └── SettingsManager.js # 设置管理服务
+│   ├── types/               # TypeScript类型定义
+│   ├── ui/                  # UI组件
+│   │   └── summary-dialog.js # 图层检测总结对话框
+│   ├── utils/               # 工具函数
+│   │   ├── ConfigManager.js # 配置管理器
+│   │   ├── LogManager.js    # 日志管理器
+│   │   └── SoundPlayer.js   # 声音播放器
+│   ├── main.js              # 主应用逻辑
+│   ├── polling-client.js    # HTTP轮询客户端
+│   └── CSInterface.js       # CEP接口库
 ├── jsx/
-│   ├── hostscript.jsx        # 主 JSX 脚本
-│   └── dialog-warning.jsx    # 警告对话框脚本
+│   ├── hostscript.jsx       # 主 JSX 脚本
+│   ├── dialog-warning.jsx   # 警告对话框脚本
+│   ├── dialog-summary.jsx   # 总结对话框脚本
+│   └── utils/               # JSX 工具函数
 └── public/
-    ├── logo.png              # 应用图标
-    ├── logo2.png             # 备用图标
-    └── sound/                # 音频文件
+    ├── logo.png             # 应用图标
+    ├── logo2.png            # 备用图标
+    └── sound/               # 音频文件
         ├── eagle.wav
         ├── linked.wav
         ├── rnd_okay.wav
         └── stop.wav
 ```
+
+### 3. 多面板支持配置
+
+Eagle2Ae 支持多面板实例，允许用户同时打开多个面板进行不同的操作。
+
+#### 多面板架构说明
+- **面板独立性**: 每个面板实例拥有独立的设置和状态管理器
+- **资源共享**: 多个面板共享同一个 ExtendScript 环境
+- **通信机制**: 面板间通过 HTTP 轮询与 Eagle 插件通信，支持多实例并发
+
+#### 面板识别机制
+```javascript
+// 在 main.js 中自动识别当前面板 ID
+getPanelId() {
+    // 从 Extension ID 中提取面板编号
+    if (this.csInterface && typeof this.csInterface.getExtensionID === 'function') {
+        const extensionId = this.csInterface.getExtensionID();
+        if (extensionId.includes('panel1')) {
+            return 'panel1';
+        } else if (extensionId.includes('panel2')) {
+            return 'panel2';
+        } else if (extensionId.includes('panel3')) {
+            return 'panel3';
+        }
+    }
+    return 'panel1'; // 默认返回 panel1
+}
+```
+
+#### 多面板设置管理
+```javascript
+// 使用面板前缀隔离不同面板的设置
+getPanelStorageKey(key) {
+    return `${this.panelId}_${key}`;
+}
+
+getPanelLocalStorage(key) {
+    return localStorage.getItem(this.getPanelStorageKey(key));
+}
+
+setPanelLocalStorage(key, value) {
+    localStorage.setItem(this.getPanelStorageKey(key), value);
+}
+```
+
+#### 多面板预设管理
+- 每个面板拥有独立的预设文件：`Eagle2Ae1.Presets`、`Eagle2Ae2.Presets`、`Eagle2Ae3.Presets`
+- 预设文件与面板 ID 一一对应，确保各面板设置的独立性
 
 ### 3. 配置文件检查
 
@@ -377,23 +440,6 @@ git pull origin main
 # 修改代码后刷新扩展面板 (F5 或重新打开)
 ```
 
-### 1.5. Demo演示模式
-
-#### Web环境演示
-- 直接在浏览器中打开 `index.html` 文件
-- 演示模式会自动启用，显示模拟的AE和Eagle数据
-- 适合产品演示、功能预览和用户培训
-- 完全离线运行，无需安装任何软件
-
-#### CEP环境演示（彩蛋功能）
-- 在After Effects中打开扩展
-- 连续快速点击顶部"Eagle2AE"标题5次
-- 看到彩虹动画效果后，演示模式启用
-- 再次连续点击5次可切换回正常模式
-- 适合开发调试和功能展示
-
-> 📖 **详细说明**: 查看 [Demo功能指南](./demo-guide.md) 了解演示模式的完整功能和配置方法
-
 ### 2. 调试工作流
 
 ```bash
@@ -407,6 +453,10 @@ git pull origin main
 # 3. 设置断点和调试
 # 在 Chrome DevTools 中设置断点
 # 在扩展中触发相应操作
+
+# 4. ExtendScript 调试
+# 使用 ExtendScript Toolkit 或 VS Code 调试 JSX 脚本
+# 在 JSX 中添加 $.writeln() 输出调试信息
 ```
 
 ### 3. 测试工作流
@@ -423,7 +473,25 @@ git pull origin main
 # 3. 性能测试
 # 测试大文件导入性能
 # 测试长时间运行稳定性
+
+# 4. 演示模式测试
+# 测试 Web 环境下的演示模式
+# 测试 CEP 环境下的彩蛋功能
 ```
+
+### 4. 演示模式开发
+
+#### Web环境演示开发
+- 直接在浏览器中打开 `index.html` 文件进行开发
+- 使用 `demo-mode.js` 中的模拟数据进行测试
+- 无需安装 After Effects 即可测试 UI 和交互
+
+#### CEP环境演示开发（彩蛋功能）
+- 在 After Effects 中打开扩展进行测试
+- 连续快速点击顶部"Eagle2AE"标题5次启用演示模式
+- 测试完整的演示功能和交互流程
+
+> 📖 **详细说明**: 查看 [Demo功能指南](./demo-guide.md) 了解演示模式的完整功能和配置方法
 
 ## 常见问题解决
 

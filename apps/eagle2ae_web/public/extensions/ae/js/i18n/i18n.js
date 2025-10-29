@@ -10,7 +10,7 @@ class I18n {
     } catch (_) {}
 
     this.translations = {};
-    this.loadTranslations();
+    this.ready = this.loadTranslations();
     this.initLanguageToggle();
   }
 

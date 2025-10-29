@@ -2,7 +2,9 @@
 
 ## 概述
 
-本文档详细描述了Eagle2Ae CEP扩展中的文件导入逻辑，涵盖从接收Eagle消息到在After Effects中创建素材的完整流程。重点介绍三种核心导入模式及其文件处理策略，以及新增的错误处理和恢复机制。
+本文档详细描述了Eagle2Ae CEP扩展中的文件导入逻辑，涵盖从通过HTTP轮询接收Eagle消息到在After Effects中创建素材的完整流程。重点介绍三种核心导入模式及其文件处理策略，以及新增的错误处理和恢复机制。同时介绍了导入行为设置和时间轴放置功能。
+
+在多面板支持架构下，每个面板实例都有独立的导入配置和处理流程，确保各面板可以独立进行文件导入操作。每个面板实例通过唯一的客户端ID与Eagle插件进行HTTP轮询通信，确保消息的正确路由和处理。
 
 ## 1. 导入系统架构
 
@@ -10,7 +12,7 @@
 
 ```mermaid
 graph TD
-    A[Eagle插件] -- WebSocket消息 --> B(main.js);
+    A[Eagle插件] -- HTTP轮询消息 --> B(main.js);
     B -- 获取设置 --> C(SettingsManager.js);
     B -- 调用文件处理器 --> D(FileHandler.js);
     D -- 根据导入模式处理文件 --> E{文件操作};
@@ -19,8 +21,8 @@ graph TD
     F -- app.project.importFile --> G[AE项目面板];
 ```
 
-- **`main.js`**: 接收来自Eagle的WebSocket消息，作为流程的起点。
-- **`SettingsManager.js`**: 提供当前用户设置，尤其是**导入模式 (`mode`)**。
+- **`main.js`**: 通过HTTP轮询机制定期向Eagle插件发送请求获取待处理的消息。每个面板实例使用唯一的客户端ID与Eagle插件通信，确保消息的正确路由。
+- **`SettingsManager.js`**: 提供当前用户设置，尤其是**导入模式 (`mode`)** 和**导入行为设置**。在多面板架构下，每个面板实例拥有独立的设置存储。
 - **`FileHandler.js`**: 根据导入模式，执行相应的文件操作（如复制、路径计算），并准备最终要导入AE的路径列表。
 - **`hostscript.jsx`**: 接收 `FileHandler.js` 处理后的文件路径列表，并调用After Effects的 `app.project.importFile()` 方法执行最终的导入。
 
