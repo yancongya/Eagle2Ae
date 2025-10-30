@@ -1,1 +1,55 @@
-{"importSettings":{"mode":"project_adjacent","projectAdjacentFolder":"Eagle_Assets","customFolderPath":"","addToComposition":true,"noImportSubMode":"normal","timelineOptions":{"enabled":true,"placement":"current_time"},"fileManagement":{"keepOriginalName":true,"addTimestamp":false,"createTagFolders":false,"deleteFromEagle":false},"soundSettings":{"enabled":true,"volume":60},"exportSettings":{"mode":"project_adjacent","projectAdjacentFolder":"Eagle_Assets","customExportPath":"","autoCopy":true,"addTimestamp":false,"createSubfolders":false}},"userPreferences":{"lastUsedMode":"project_adjacent","favoriteFolder":"","autoSaveSettings":true,"showWelcomeWizard":true,"theme":"ae_native","communicationPort":8080,"lastUsedExportMode":"project_adjacent","favoriteExportFolder":""},"uiSettings":{"theme":true,"language":true,"log":true,"projectInfo":true,"logPanel":true,"header":true,"fullscreen":false},"language":"en-US","aeTheme":"dark","projectAdjacentSettings":null,"customFolderSettings":null,"exportedAt":"2025-10-24T19:42:09.669Z"}
+{
+  "importSettings": {
+    "mode": "project_adjacent",
+    "projectAdjacentFolder": "Eagle_Assets",
+    "customFolderPath": "",
+    "addToComposition": false,
+    "noImportSubMode": "pre_comp",
+    "timelineOptions": {
+      "enabled": true,
+      "placement": "current_time"
+    },
+    "fileManagement": {
+      "keepOriginalName": true,
+      "addTimestamp": false,
+      "createTagFolders": false,
+      "deleteFromEagle": false
+    },
+    "soundSettings": {
+      "enabled": true,
+      "volume": 60
+    },
+    "exportSettings": {
+      "mode": "project_adjacent",
+      "projectAdjacentFolder": "Eagle_Assets",
+      "customExportPath": "",
+      "autoCopy": true,
+      "addTimestamp": false,
+      "createSubfolders": false,
+      "burnAfterReading": false
+    }
+  },
+  "userPreferences": {
+    "lastUsedMode": "project_adjacent",
+    "favoriteFolder": "",
+    "autoSaveSettings": true,
+    "showWelcomeWizard": true,
+    "theme": "dark",
+    "communicationPort": 8080,
+    "lastUsedExportMode": "project_adjacent",
+    "favoriteExportFolder": "",
+    "autoConnect": true,
+    "showNotifications": true,
+    "language": "zh-CN"
+  },
+  "uiSettings": {
+    "theme": true,
+    "language": true,
+    "log": true,
+    "projectInfo": true,
+    "logPanel": true,
+    "header": true,
+    "fullscreen": false
+  },
+  "exportedAt": "2025-10-30T02:49:47.765Z"
+}

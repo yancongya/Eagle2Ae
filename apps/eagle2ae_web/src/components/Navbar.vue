@@ -15,11 +15,11 @@
           {{ t('nav.home') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group" @dblclick.prevent="onAePreviewDblClick">
           {{ t('nav.aePreview') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group" @dblclick.prevent="onEaglePreviewDblClick">
           {{ t('nav.eaglePreview') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
@@ -80,13 +80,13 @@
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>
-          <router-link to="/ae-preview" class="mobile-nav-link">
+          <router-link to="/ae-preview" class="mobile-nav-link" @dblclick.prevent="onAePreviewDblClick">
             <span class="relative inline-block group">
               {{ t('nav.aePreview') }}
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>
-          <router-link to="/eagle-preview" class="mobile-nav-link">
+          <router-link to="/eagle-preview" class="mobile-nav-link" @dblclick.prevent="onEaglePreviewDblClick">
             <span class="relative inline-block group">
               {{ t('nav.eaglePreview') }}
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
@@ -118,7 +118,7 @@
 
 <script setup>
 import { useDark, useToggle, onClickOutside } from '@vueuse/core';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LanguageSwitcher from './LanguageSwitcher.vue';
@@ -129,6 +129,7 @@ const isDark = useDark({ storageKey: 'theme' });
  const toggleDark = useToggle(isDark);
  const isMobileOpen = ref(false);
  const router = useRouter();
+ const route = useRoute();
 
 const mobileMenuRef = ref(null);
 const mobileMenuButtonRef = ref(null);
@@ -154,15 +155,61 @@ const onToggleTheme = (e) => {
     detail: { x, y, newTheme: !isDark.value ? 'dark' : 'light' }
   }));
   
-  if (!supports) { toggleDark(); return; }
-  const transition = document.startViewTransition(() => { toggleDark(); });
+  // 在主题切换动画期间，关闭局部组件的颜色过渡，避免“迟”和“生硬”
+  const htmlEl = document.documentElement;
+  const THEME_CLASS = 'theme-animating';
+  const addAnimClass = () => htmlEl.classList.add(THEME_CLASS);
+  const removeAnimClass = () => htmlEl.classList.remove(THEME_CLASS);
+
+  if (!supports) {
+    addAnimClass();
+    toggleDark();
+    // 短暂关闭局部过渡，交由 CSS 立即切换
+    setTimeout(removeAnimClass, 160);
+    return;
+  }
+  const transition = document.startViewTransition(() => { 
+    addAnimClass();
+    toggleDark(); 
+  });
   const DURATION = 520;
   const EASING = 'ease-in-out';
   transition.ready.then(() => {
     const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
     document.documentElement.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] }, { duration: DURATION, easing: EASING, pseudoElement: '::view-transition-new(root)' });
-  }).catch(() => { toggleDark(); });
+  }).catch(() => { toggleDark(); }).finally(() => {
+    // 动画结束后恢复局部过渡
+    setTimeout(removeAnimClass, DURATION + 40);
+  });
 }
+
+// 双击导航“AE 预览”重置布局
+const onAePreviewDblClick = async (e) => {
+  try { e?.preventDefault?.(); } catch {}
+  if (route.name !== 'AE_Preview') {
+    await router.push({ name: 'AE_Preview' });
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('reset-ae-layout'));
+    });
+  } else {
+    window.dispatchEvent(new CustomEvent('reset-ae-layout'));
+  }
+  isMobileOpen.value = false;
+};
+
+// 双击导航“Eagle 预览”重置布局
+const onEaglePreviewDblClick = async (e) => {
+  try { e?.preventDefault?.(); } catch {}
+  if (route.name !== 'Eagle_Preview') {
+    await router.push({ name: 'Eagle_Preview' });
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('reset-eagle-layout'));
+    });
+  } else {
+    window.dispatchEvent(new CustomEvent('reset-eagle-layout'));
+  }
+  isMobileOpen.value = false;
+};
 
 // GSAP: Mobile menu enter/leave animations with item stagger
 const mobileEnter = (el, done) => {

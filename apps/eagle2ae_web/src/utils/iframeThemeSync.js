@@ -35,3 +35,51 @@ export function syncThemeToAllIframes(container, theme, clickPosition = null) {
     syncThemeToIframe(iframe, theme, clickPosition);
   });
 }
+
+/**
+ * 发送主题覆盖与锁定给单个 iframe
+ * @param {HTMLIFrameElement} iframe
+ * @param {string} theme - 'light' | 'dark'
+ * @param {boolean} lock - 是否锁定扩展侧主题切换
+ */
+export function sendThemeOverrideToIframe(iframe, theme, lock = true) {
+  if (!iframe || !iframe.contentWindow) return;
+  iframe.contentWindow.postMessage({
+    type: 'THEME_OVERRIDE',
+    theme,
+    lock: !!lock
+  }, '*');
+}
+
+/**
+ * 发送主题覆盖与锁定给容器内全部 iframe
+ * @param {HTMLElement} container
+ * @param {string} theme
+ * @param {boolean} lock
+ */
+export function sendThemeOverrideToAllIframes(container, theme, lock = true) {
+  if (!container) return;
+  const iframes = container.querySelectorAll('iframe');
+  if (!iframes || !iframes.length) return;
+  iframes.forEach(iframe => sendThemeOverrideToIframe(iframe, theme, lock));
+}
+
+/**
+ * 解除主题锁定
+ * @param {HTMLIFrameElement} iframe
+ */
+export function sendThemeUnlockToIframe(iframe) {
+  if (!iframe || !iframe.contentWindow) return;
+  iframe.contentWindow.postMessage({ type: 'THEME_UNLOCK' }, '*');
+}
+
+/**
+ * 解除容器内全部 iframe 的主题锁定
+ * @param {HTMLElement} container
+ */
+export function sendThemeUnlockToAllIframes(container) {
+  if (!container) return;
+  const iframes = container.querySelectorAll('iframe');
+  if (!iframes || !iframes.length) return;
+  iframes.forEach(iframe => sendThemeUnlockToIframe(iframe));
+}

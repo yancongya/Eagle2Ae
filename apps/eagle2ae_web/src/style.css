@@ -54,6 +54,31 @@ html.dark, html.dark body { background-color: #0a0a0a; }
   background-color: #0a0a0a !important;
 }
 
+/* Splitter colors follow theme (light/dark) */
+.splitpanes__splitter {
+  background-color: rgba(0, 0, 0, 0.08) !important; /* light subtle */
+  border-color: transparent !important;
+  opacity: 0.7;
+}
+.splitpanes__splitter:hover { opacity: 1; }
+.dark .splitpanes__splitter {
+  background-color: rgba(255, 255, 255, 0.16) !important; /* dark subtle */
+  border-color: transparent !important;
+  opacity: 0.85;
+}
+.dark .splitpanes__splitter:hover { opacity: 1; }
+
+/* If library draws inner handle line via pseudo-element, match theme */
+.splitpanes__splitter::before,
+.splitpanes__splitter::after {
+  background-color: currentColor !important;
+}
+.splitpanes.default-theme .splitpanes__splitter { color: rgba(0,0,0,0.5); }
+.dark .splitpanes.default-theme .splitpanes__splitter { color: rgba(255,255,255,0.5); }
+
+/* During theme view-transition, disable local splitter transitions to avoid laggy double-animations */
+.theme-animating .splitpanes__splitter { transition: none !important; }
+
 
 /* Ensure iframes don't introduce white while loading */
 .splitpanes__pane iframe {

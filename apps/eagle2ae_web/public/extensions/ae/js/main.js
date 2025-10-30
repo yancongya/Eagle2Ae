@@ -6352,6 +6352,10 @@ class AEExtension {
 
     // 新增：应用主题与切换
     applyTheme(theme) {
+        // 若宿主锁定，则强制使用宿主主题
+        if (window.__HOST_THEME_LOCK__ && window.__HOST_THEME_LOCK__.locked) {
+            theme = window.__HOST_THEME_LOCK__.value === 'light' ? 'light' : 'dark';
+        }
         const root = document.documentElement;
         const btn = document.getElementById('theme-toggle-btn');
         const iconSpan = btn ? btn.querySelector('.icon') : null;
@@ -6362,12 +6366,21 @@ class AEExtension {
 
         if (btn) {
             btn.setAttribute('aria-pressed', String(isLight));
-            btn.title = isLight ? '切换为暗色模式' : '切换为亮色模式';
+            const locked = !!(window.__HOST_THEME_LOCK__ && window.__HOST_THEME_LOCK__.locked);
+            btn.title = (isLight ? '切换为暗色模式' : '切换为亮色模式') + (locked ? '（已被宿主锁定）' : '');
+            btn.toggleAttribute('disabled', locked);
+            btn.style.pointerEvents = locked ? 'none' : '';
+            btn.style.opacity = locked ? '0.6' : '';
             if (iconSpan) iconSpan.textContent = isLight ? '☀️' : '🌙';
         }
     }
 
     toggleTheme() {
+        // 宿主锁定时禁止切换
+        if (window.__HOST_THEME_LOCK__ && window.__HOST_THEME_LOCK__.locked) {
+            try { console.debug('[AE] 主题已被宿主锁定，忽略切换'); } catch (_) {}
+            return;
+        }
         const current = this.getPanelLocalStorage('aeTheme') || 'dark';
         const next = current === 'light' ? 'dark' : 'light';
         this.applyTheme(next);
@@ -8994,10 +9007,33 @@ class AEExtension {
                 exportedAt: new Date().toISOString()
             };
 
-            // Demo 模式：保存到虚拟文件系统
+            // Demo 模式：优先保存到项目内 /public/config/presets（通过本地开发服务器 API）
             if (window.__DEMO_MODE_ACTIVE__) {
                 try {
                     const jsonContent = JSON.stringify(exportPayload, null, 2);
+
+                    // 优先通过开发服务器写入到 public/config/presets
+                    try {
+                        const resp = await fetch('/api/presets', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fileName: this.getPresetFileName(),
+                                jsonData: jsonContent
+                            })
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && data.success) {
+                                this.log('💾 预设已保存到 /public/config/presets (Demo)', 'info');
+                                return true;
+                            }
+                            throw new Error(data && data.error ? data.error : 'unknown error');
+                        }
+                        throw new Error(`HTTP ${resp.status}`);
+                    } catch (apiErr) {
+                        console.warn('[Demo] 保存到 /api/presets 失败，降级到本地方式:', apiErr.message);
+                    }
 
                     // 保存到虚拟文件系统
                     if (window.demoFileSystem) {
@@ -9068,10 +9104,22 @@ class AEExtension {
 
             let parsed = null;
 
-            // Demo 模式：从虚拟文件系统加载
+            // Demo 模式：优先从项目内 /public/config/presets 读取
             if (window.__DEMO_MODE_ACTIVE__) {
                 try {
                     let content = null;
+
+                    // 先尝试从静态目录读取（由 Vite 提供）
+                    try {
+                        const staticUrl = `/config/presets/${this.getPresetFileName()}`;
+                        const resp = await fetch(staticUrl, { cache: 'no-cache' });
+                        if (resp.ok) {
+                            content = await resp.text();
+                            this.log(`📥 已从 ${staticUrl} 加载预设`, 'info');
+                        }
+                    } catch (e) {
+                        // 忽略，继续尝试其它来源
+                    }
 
                     // 尝试从虚拟文件系统读取
                     if (window.demoFileSystem) {

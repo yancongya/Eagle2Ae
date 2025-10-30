@@ -5290,6 +5290,9 @@
         <div class="drag-text">拖拽文件到此处</div>
     </div>
 
+    <!-- 多面板日志过滤器 (必须最先加载) -->
+    <script src="js/utils/MultiPanelLogFilter.js"></script>
+    
     <!-- 演示模式数据覆盖策略 (必须在所有其他脚本之前) -->
     <script src="js/demo/demo-override.js"></script>
 
@@ -5301,6 +5304,7 @@
     <script src="js/services/ProjectStatusChecker.js"></script>
     <script src="js/services/PortDiscovery.js"></script>
     <script src="js/utils/SoundPlayer.js"></script>
+    <script src="js/utils/ConsoleDeduplicator.js"></script>
     <script src="js/utils/LogManager.js"></script>
     <!-- 移除无效的 Node/CEP 调试脚本引用 -->
 
@@ -6198,6 +6202,75 @@
                     // 不支持则直接更新
                     updateTheme();
                 }
+            }
+
+            // 处理宿主主题覆盖与锁定
+            if (event.data && event.data.type === 'THEME_OVERRIDE') {
+                const theme = event.data.theme === 'light' ? 'light' : 'dark';
+                const lock = !!event.data.lock;
+                // 保存锁定状态到全局
+                window.__HOST_THEME_LOCK__ = { locked: lock, value: theme };
+
+                const apply = () => {
+                    if (theme === 'dark') {
+                        document.documentElement.classList.remove('theme-light');
+                        document.documentElement.classList.add('dark');
+                        document.body.classList.remove('theme-light');
+                        document.body.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        document.documentElement.classList.add('theme-light');
+                        document.body.classList.remove('dark');
+                        document.body.classList.add('theme-light');
+                    }
+                    // 更新按钮与存储
+                    const themeBtn = document.getElementById('theme-toggle-btn');
+                    if (themeBtn) {
+                        const iconSpan = themeBtn.querySelector('.icon');
+                        const isLight = theme === 'light';
+                        themeBtn.title = (isLight ? '切换为暗色模式' : '切换为亮色模式') + (lock ? '（已被宿主锁定）' : '');
+                        if (iconSpan) iconSpan.textContent = isLight ? '☀️' : '🌙';
+                        // 锁定时禁用交互
+                        themeBtn.toggleAttribute('disabled', lock);
+                        themeBtn.style.pointerEvents = lock ? 'none' : '';
+                        themeBtn.style.opacity = lock ? '0.6' : '';
+                    }
+                    try {
+                        if (window.setPanelLocalStorage) {
+                            window.setPanelLocalStorage('aeTheme', theme);
+                        } else {
+                            localStorage.setItem('aeTheme', theme);
+                        }
+                        if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
+                            window.eagleToAeApp.savePresetsSilently();
+                        }
+                    } catch (_) {}
+                };
+                apply();
+            }
+
+            // 处理宿主解除锁定
+            if (event.data && event.data.type === 'THEME_UNLOCK') {
+                window.__HOST_THEME_LOCK__ = { locked: false, value: null };
+                const themeBtn = document.getElementById('theme-toggle-btn');
+                if (themeBtn) {
+                    themeBtn.removeAttribute('disabled');
+                    themeBtn.style.pointerEvents = '';
+                    themeBtn.style.opacity = '';
+                }
+                // 恢复为扩展自身保存的主题
+                try {
+                    const saved = (window.getPanelLocalStorage ? window.getPanelLocalStorage('aeTheme') : localStorage.getItem('aeTheme')) || 'dark';
+                    const evt = { data: { type: 'THEME_UPDATE', theme: saved } };
+                    // 直接复用主题更新逻辑
+                    if (typeof updateTheme === 'function') {
+                        // 若在闭包外不可见，直接设置类名
+                        document.documentElement.classList.toggle('theme-light', saved === 'light');
+                        document.documentElement.classList.toggle('dark', saved !== 'light');
+                        document.body.classList.toggle('theme-light', saved === 'light');
+                        document.body.classList.toggle('dark', saved !== 'light');
+                    }
+                } catch (_) {}
             }
         });
     </script>

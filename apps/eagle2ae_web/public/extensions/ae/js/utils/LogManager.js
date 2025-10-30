@@ -6,7 +6,7 @@ class LogManager {
         this.logs = [];
         this.maxLogs = 100; // 最大日志条数
         this.recentMessages = new Map(); // 用于去重
-        this.messageTimeout = 5000; // 5秒内的重复消息会被合并
+        this.messageTimeout = 2000; // 2秒内的重复消息会被合并（从5秒减少到2秒）
         this.logLevels = {
             'debug': 0,
             'info': 1,
@@ -17,6 +17,8 @@ class LogManager {
         this.currentLogLevel = 1; // 默认显示info及以上级别
         this.silentPatterns = []; // 静默模式的消息模式
         this.groupedMessages = new Map(); // 分组消息
+        this.lastLogTime = 0; // 最后一次日志时间
+        this.minLogInterval = 50; // 最小日志间隔（毫秒），防止短时间内大量日志
     }
 
     /**
@@ -124,6 +126,14 @@ class LogManager {
      * @param {Object} options - 选项
      */
     log(message, level = 'info', options = {}) {
+        const now = Date.now();
+        
+        // 防止短时间内大量日志（节流）
+        if (now - this.lastLogTime < this.minLogInterval && level === 'debug') {
+            return;
+        }
+        this.lastLogTime = now;
+        
         // 检查日志级别
         if (this.logLevels[level] < this.currentLogLevel) {
             return;
@@ -149,7 +159,7 @@ class LogManager {
         const logEntry = {
             message: processedMessage,
             level,
-            timestamp: Date.now(),
+            timestamp: now,
             count: options.count || 1
         };
 
