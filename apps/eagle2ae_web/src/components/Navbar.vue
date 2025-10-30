@@ -258,6 +258,20 @@ onMounted(() => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
   let animationFrame = null;
 
+  const el = navTitle.value;
+
+  // 步骤1: 计算两种文本状态下的最大宽度
+  el.textContent = normalText;
+  const normalWidth = el.getBoundingClientRect().width;
+  el.textContent = hoverText;
+  const hoverWidth = el.getBoundingClientRect().width;
+  const maxWidth = Math.ceil(Math.max(normalWidth, hoverWidth));
+
+  // 步骤2: 将最大宽度应用为元素的固定宽度，防止抖动
+  el.style.width = `${maxWidth}px`;
+  el.style.display = 'inline-block'; // 确保 width 属性生效
+  el.style.textAlign = 'center'; // 在固定宽度内容器居中
+
   const scrambleText = (fromText, toText, duration = 600) => {
     const startTime = Date.now();
     const textLength = Math.max(fromText.length, toText.length);
@@ -279,7 +293,8 @@ onMounted(() => {
             result += targetChar;
           } else if (charProgress > 0) {
             result += chars[Math.floor(Math.random() * chars.length)];
-          } else {
+          }
+          else {
             result += fromText[i] || '';
           }
         }
