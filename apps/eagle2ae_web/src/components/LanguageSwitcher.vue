@@ -220,9 +220,7 @@ const onMenuLeave = (el, done) => {
   background: transparent;
 }
 
-.ls-item.is-current .ls-item-label {
-  font-weight: 600;
-}
+.ls-label { white-space: nowrap; }
 
 .ls-check { color: rgb(37 99 235); /* blue-600 */ }
 

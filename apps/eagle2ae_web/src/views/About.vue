@@ -114,7 +114,7 @@ onMounted(async () => {
       anchors,
       { opacity: 0, y: 42, scale: 0.9, transformOrigin: '50% 100%' },
       { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: 'back.out(1.8)', stagger: 0.14, overwrite: 'auto' },
-      textTargets.length ? '+=0.12' : undefined
+      textTargets.length ? '>' : undefined
     )
   }
 })

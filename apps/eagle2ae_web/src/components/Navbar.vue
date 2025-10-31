@@ -10,32 +10,32 @@
       </div>
 
       <!-- Navigation Links -->
-      <div class="hidden md:flex items-center space-x-6">
-        <router-link to="/" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+      <div class="hidden md:flex items-center sm:space-x-2 space-x-4 md:space-x-6 lg:space-x-8">
+        <router-link to="/" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
           {{ t('nav.home') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group" @dblclick.prevent="onAePreviewDblClick">
+        <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onAePreviewDblClick">
           {{ t('nav.aePreview') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group" @dblclick.prevent="onEaglePreviewDblClick">
+        <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onEaglePreviewDblClick">
           {{ t('nav.eaglePreview') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/download" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <router-link to="/download" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
           {{ t('nav.download') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <router-link to="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
           {{ t('nav.about.title') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <router-link to="/other" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <router-link to="/other" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
           {{ t('nav.other') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
-        <a :href="t('links.docs')" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
+        <a :href="t('links.docs')" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
           {{ t('nav.docs') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </a>
