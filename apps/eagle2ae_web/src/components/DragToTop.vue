@@ -196,8 +196,9 @@ const spawnExplosion = (originX, originY, power = 1) => {
 // props 扩展：支持本地替换图片与爆炸碎片资源
 const props = defineProps({
   enabled: { type: Boolean, default: true },
-  logo1Src: { type: String, default: '/src/assets/logo.png' },
-  logo2Src: { type: String, default: '/src/assets/logo2.png' },
+  // 使用 public 目录下的静态资源，避免构建后 /src 路径失效
+  logo1Src: { type: String, default: '/logo.png' },
+  logo2Src: { type: String, default: '/logo_download.png' },
   explosionSprites: { type: Array, default: () => ['/explosion/frag-star.svg','/explosion/frag-ring.svg','/explosion/frag-triangle.svg','/explosion/frag-bolt.svg','/explosion/frag-shard.svg'] },
   explosionDurationMs: { type: Number, default: 7000 },
   explosionFadeOutMs: { type: Number, default: 900 }
@@ -252,14 +253,29 @@ const getExplosionPowerByDistance = (distance) => {
   return minPower + curved * (maxPower - minPower);
 };
 
-// 统一的滚动到顶部方法：完成后触发回调（若提供）
+// 统一的滚动到顶部方法（优先使用 Lenis），完成后触发回调（若提供）
 const scrollWindowToTop = (onComplete) => {
+  const animOpts = opts.value.scrollTopAnimation || {};
+  const duration = typeof animOpts.duration === 'number' ? animOpts.duration : 1.0;
+  // 优先使用 Lenis 平滑滚动，避免与 ScrollTrigger 冲突
+  if (window.__lenis && typeof window.__lenis.scrollTo === 'function') {
+    window.__lenis.scrollTo(0, { duration });
+    if (typeof onComplete === 'function') {
+      // Lenis 不提供完成回调，这里通过简单轮询判断到顶后触发
+      const poll = setInterval(() => {
+        if (window.scrollY === 0) {
+          clearInterval(poll);
+          onComplete();
+        }
+      }, 60);
+      setTimeout(() => clearInterval(poll), Math.max(1500, duration * 2000));
+    }
+    return;
+  }
+  // 退化到 GSAP ScrollTo 或原生 scrollTo
   const hasPlugin = !!(gsap && gsap.plugins && gsap.plugins.ScrollToPlugin);
   if (hasPlugin) {
-    const animOpts = opts.value.scrollTopAnimation || {};
-    const duration = typeof animOpts.duration === 'number' ? animOpts.duration : 1.0;
-    const ease = typeof animOpts.ease === 'string' ? animOpts.ease : 'power2.out';
-    gsap.to(window, { duration, scrollTo: 0, ease, onComplete });
+    gsap.to(window, { duration, scrollTo: 0, ease: 'power2.out', onComplete });
   } else {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof onComplete === 'function') {

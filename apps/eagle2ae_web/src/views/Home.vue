@@ -1,5 +1,5 @@
 <template>
-  <section class="min-h-screen bg-gray-100 dark:bg-gray-900">
+  <section class="min-h-[calc(100vh-var(--navbar-height,0px))] bg-gray-100 dark:bg-gray-900">
     <Hero ref="heroRef" @scroll-to-feature="scrollToFeatureById" />
     <div class="container mx-auto px-6">
       <FeatureDetail
@@ -9,6 +9,7 @@
         :id="f.id"
         :title="f.title"
         :description-lines="f.descriptionLines"
+        :footer-text="f.footerText"
         :image-urls="f.imageUrls"
         :is-image-left="i % 2 === 0"
         :is-last="i === features.length - 1"
@@ -30,7 +31,7 @@ import FeatureDetail from '@/components/FeatureDetail.vue';
 import Footer from '@/components/Footer.vue';
 
 // 大屏分页滚动：鼠标滚轮拦截，超过阈值后一次性滚动到下一锚点
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed, provide } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
@@ -62,6 +63,8 @@ const features = computed(() => {
 
       descriptionLines: featureMessages.dragDrop.desc,
 
+      footerText: featureMessages.dragDrop.footer || '',
+
       imageUrls: [
 
         '/images/features/feature-drag-import.png',
@@ -85,6 +88,8 @@ const features = computed(() => {
       title: featureMessages.formatSupport.title,
 
       descriptionLines: featureMessages.formatSupport.desc,
+
+      footerText: featureMessages.formatSupport.footer || '',
 
       imageUrls: [
 
@@ -110,6 +115,8 @@ const features = computed(() => {
 
       descriptionLines: featureMessages.smartOptions.desc,
 
+      footerText: featureMessages.smartOptions.footer || '',
+
       imageUrls: [
 
         '/images/features/feature-import-behavior.png',
@@ -133,6 +140,8 @@ const features = computed(() => {
       title: featureMessages.autoSync.title,
 
       descriptionLines: featureMessages.autoSync.desc,
+
+      footerText: featureMessages.autoSync.footer || '',
 
       imageUrls: [
 
@@ -158,6 +167,8 @@ const features = computed(() => {
 
       descriptionLines: featureMessages.presets.desc,
 
+      footerText: featureMessages.presets.footer || '',
+
       imageUrls: [
 
         '/images/features/feature-presets.png',
@@ -182,6 +193,8 @@ const features = computed(() => {
 
       descriptionLines: featureMessages.performance.desc,
 
+      footerText: featureMessages.performance.footer || '',
+
       imageUrls: [
 
         '/images/features/feature-import-mode.png',
@@ -202,12 +215,8 @@ const features = computed(() => {
 
 });
 
-// ===== 分页滚动（Wheel Threshold Paging） =====
-let snapTrigger; // 保留，分页启用时会 kill，移动端可回退使用
-let pagingEnabled = false;
-let isAnimating = false;
-let deltaYAcc = 0;
-let accDecayTimer = null;
+// ===== Lenis 驱动滚动（移除分页），使用 ScrollTrigger.snap 做柔和吸附 =====
+let snapTrigger = null;
 let anchors = [];
 let positions = [];
 let navHeight = 0;
@@ -237,49 +246,7 @@ const getCurrentIndexByViewport = () => {
   }
   return bestIdx;
 };
-let initialRevealAttempts = 0;
-const attemptInitialReveal = () => {
-  const MAX = 10;
-  const DELAY_MS = 80;
-  const tryReveal = () => {
-    collectAnchors();
-    const haveSections = anchors.length >= 2 && Array.isArray(featureRefs.value) && featureRefs.value.length > 0;
-    if (haveSections) {
-      revealCurrentSectionImmediately();
-    } else if (initialRevealAttempts < MAX) {
-      initialRevealAttempts++;
-      setTimeout(tryReveal, DELAY_MS);
-    }
-  };
-  tryReveal();
-};
-// 在刷新或首次渲染时，立即让当前可见段落进场，避免空白
-const revealCurrentSectionImmediately = () => {
-  // 优先使用视口检测，确保在子组件初始 gsap.set 之后也触发
-  const triggerVisibleEnter = () => {
-    const idxNow = getCurrentIndexByViewport();
-    if (idxNow === 0) return;
-    const refsNow = getCompRefs();
-    const compNow = refsNow[idxNow];
-    if (compNow && typeof compNow.playEnter === 'function') compNow.playEnter(0);
-  };
-  // 立即触发一次
-  triggerVisibleEnter();
-  // 在下一帧再次触发（确保 DOM/padding/图片尺寸稳定后）
-  requestAnimationFrame(() => triggerVisibleEnter());
-  // 在短延时后再触发一次（兜底处理子组件 nextTick 内的 gsap.set）
-  setTimeout(() => triggerVisibleEnter(), 120);
-};
-// 在滚动动画完成后，统一触发进/出场（可选延迟）
-const triggerEnterExitAfterScroll = (prevIdx, nextIdx, delay = 0) => {
-  const refs = getCompRefs();
-  const prevComp = refs[prevIdx];
-  const nextComp = refs[nextIdx];
-  const isPrevHero = prevIdx === 0;
-  const isNextHero = nextIdx === 0;
-  if (!isPrevHero && prevComp && typeof prevComp.playExit === 'function') prevComp.playExit(delay);
-  if (!isNextHero && nextComp && typeof nextComp.playEnter === 'function') nextComp.playEnter(delay);
-};
+// 移除 Home 统一进出场调度，改由各段自身 ScrollTrigger 控制
 
 const readNavHeight = () => {
   const navVar = getComputedStyle(document.documentElement).getPropertyValue('--navbar-height') || '0px';
@@ -313,138 +280,51 @@ const getCurrentIndex = () => {
   }
   return idx;
 };
-const scrollToIndex = (idx, prevIdx = getCurrentIndex()) => {
-  isAnimating = true;
-  let enterTriggered = false;
-  gsap.to(window, {
-    duration: 1.1,
-    ease: 'power2.inOut',
-    scrollTo: { y: positions[idx], autoKill: true },
-    onStart: () => {
-      const refs = getCompRefs();
-      const prevComp = refs[prevIdx];
-      const isPrevHero = prevIdx === 0;
-      // Hero 不参与退场
-      if (!isPrevHero && prevComp && typeof prevComp.playExit === 'function') prevComp.playExit(0);
-    },
-    onUpdate: function () {
-       if (!enterTriggered && this.progress() >= 0.5) {
-         enterTriggered = true;
-         const refs = getCompRefs();
-         const isNextHero = idx === 0;
-         if (!isNextHero) {
-           const nextComp = refs[idx];
-           if (nextComp && typeof nextComp.playEnter === 'function') nextComp.playEnter(0);
-         }
-       }
-     },
-    onComplete: () => {
-      isAnimating = false;
-      if (!enterTriggered) {
-        const refs = getCompRefs();
-        const isNextHero = idx === 0;
-        if (!isNextHero) {
-          const nextComp = refs[idx];
-          if (nextComp && typeof nextComp.playEnter === 'function') nextComp.playEnter(0);
-        }
-      }
-    }
-  });
-};
-const onWheel = (e) => {
-  if (!pagingEnabled) return;
-  // 拦截默认滚动，防止跟随页面滚动
-  e.preventDefault();
-  if (isAnimating) return;
-
-  deltaYAcc += e.deltaY;
-  // 若短时间内未继续滚动，重置累计量，避免误触发
-  if (accDecayTimer) clearTimeout(accDecayTimer);
-  accDecayTimer = setTimeout(() => { deltaYAcc = 0; }, 250);
-
-  const THRESHOLD = Math.max(220, Math.floor(window.innerHeight * 0.25)); // 至少220px或视口25%
-  if (Math.abs(deltaYAcc) >= THRESHOLD) {
-    const dir = deltaYAcc > 0 ? 1 : -1; // 下/上
-    deltaYAcc = 0;
-    const cur = getCurrentIndex();
-    const next = Math.min(positions.length - 1, Math.max(0, cur + dir));
-    if (next !== cur) scrollToIndex(next, cur);
+const scrollToIndex = (idx) => {
+  const y = positions[idx] ?? 0;
+  if (window.__lenis && typeof window.__lenis.scrollTo === 'function') {
+    window.__lenis.scrollTo(y, { duration: 1.0 });
+  } else {
+    gsap.to(window, { duration: 1.0, ease: 'power2.inOut', scrollTo: { y } });
   }
 };
 
-const enablePaging = () => {
-  pagingEnabled = true;
-  navHeight = readNavHeight();
-  collectAnchors();
-  // 禁用原 Snap，避免冲突
-  if (snapTrigger) { snapTrigger.kill(); snapTrigger = null; }
-  // 在 window 与 document 同步监听，确保各浏览器场景均可拦截滚轮
-  window.addEventListener('wheel', onWheel, { passive: false });
-  document.addEventListener('wheel', onWheel, { passive: false });
-};
-const disablePaging = () => {
-  pagingEnabled = false;
-  window.removeEventListener('wheel', onWheel);
-  document.removeEventListener('wheel', onWheel);
-  deltaYAcc = 0;
-  if (accDecayTimer) { clearTimeout(accDecayTimer); accDecayTimer = null; }
-};
+// 移除分页开启/关闭逻辑与 overscrollBehavior 改写
 
-// 仍保留 Snap 作为小屏（<1024px）的回退方案
+// 启用 ScrollTrigger 的 snap 按锚点吸附（与 Lenis 平滑滚动兼容）
 const buildSnap = () => {
-  if (window.innerWidth >= 1024) {
-    if (snapTrigger) { snapTrigger.kill(); snapTrigger = null; }
-    return;
-  }
-
-  // 计算当前锚点的 clamp 列表与 maxY
+  // 先计算一次当前 anchors 的像素位置
   const computeClamped = () => {
-    const navbarHeight = readNavHeight();
-    const hero = document.getElementById('hero-section');
-    const frs = Array.isArray(featureRefs.value) ? featureRefs.value : [];
-    const sections = frs.map(ref => ref?.$el || ref).filter(Boolean);
-    const anchorsSmall = [hero, ...sections];
-
-    const positionsSmall = anchorsSmall.map(el => {
-      const top = el.offsetTop;
-      return Math.max(0, top - navbarHeight);
-    });
     const maxYVal = document.documentElement.scrollHeight - window.innerHeight;
-    return { clamped: positionsSmall.map(y => Math.min(y, maxYVal)), maxY: maxYVal };
+    const clamped = positions.map(y => Math.min(y, maxYVal));
+    return { clamped, maxY: maxYVal };
   };
 
   if (snapTrigger) snapTrigger.kill();
   let { clamped } = computeClamped();
 
-  // 使用动态 end，避免刷新后端点不更新；刷新时仅更新数据，避免递归重建
   snapTrigger = ScrollTrigger.create({
     start: 0,
     end: () => document.documentElement.scrollHeight - window.innerHeight,
     snap: (value) => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (!clamped || clamped.length === 0) return value; // 安全兜底：无锚点则不更改
-      const y = value * max; // GSAP 传入的是进度(0-1)，需映射到像素
-      const nearest = clamped.reduce((prev, curr) => {
-        return Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev;
-      }, clamped[0]);
-      return nearest / max;
+      if (!clamped || clamped.length === 0) return value;
+      const y = value * max; // 进度 -> 像素
+      const nearest = clamped.reduce((prev, curr) => (
+        Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev
+      ), clamped[0]);
+      return nearest / max; // 像素 -> 进度
     },
     onRefresh: () => {
       const res = computeClamped();
-      clamped = res.clamped; // 更新数据，不递归重建
+      clamped = res.clamped;
     }
   });
 };
 const rebuild = () => {
   navHeight = readNavHeight();
   collectAnchors();
-  if (window.innerWidth >= 1024) {
-    enablePaging();
-  } else {
-    disablePaging();
-    buildSnap();
-  }
-  attemptInitialReveal();
+  buildSnap();
 };
 
 onMounted(async () => {
@@ -455,13 +335,16 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', rebuild);
-  disablePaging();
   if (snapTrigger) { snapTrigger.kill(); snapTrigger = null; }
 });
 const scrollToFeatureById = (id) => {
   const idxInFeatures = features.value.findIndex(f => f.id === id);
   const targetIdx = idxInFeatures >= 0 ? idxInFeatures + 1 : 1; // anchors: [Hero, ...features]，找不到则回退到第一个功能段
-  const prevIdx = getCurrentIndex();
-  scrollToIndex(targetIdx, prevIdx);
+  scrollToIndex(targetIdx);
 };
 </script>
+// 互斥：当前激活的详情区块
+const activeFeatureId = ref(null);
+const setActiveFeatureId = (id) => { activeFeatureId.value = id; };
+provide('activeFeatureId', activeFeatureId);
+provide('setActiveFeatureId', setActiveFeatureId);

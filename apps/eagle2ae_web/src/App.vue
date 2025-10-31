@@ -35,6 +35,7 @@ const routeContainer = ref(null);
 // ===== 全局导航高度变量：避免 fixed Navbar 遮挡 =====
 const pageLayerStyle = computed(() => ({
   paddingTop: 'var(--navbar-height, 0px)',
+  minHeight: 'calc(100vh - var(--navbar-height, 0px))',
   'view-transition-name': 'page'
 }));
 let __navbarResizeObserver;

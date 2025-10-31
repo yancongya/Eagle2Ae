@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900">
+  <main class="bg-white dark:bg-gray-900 flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
     <div ref="pageRef" :style="[{ 'view-transition-name': 'preview' }, wrapperStyle]" class="flex flex-col">
       <section class="flex-1 min-h-0 w-full">
         <!-- Mobile: single preview (Panel 1) -->
@@ -120,7 +120,7 @@ import { usePanelLoader } from '../composables/usePanelLoader.js';
 const route = useRoute();
 const { locale, t } = useI18n();
 const pageRef = ref(null);
-const wrapperStyle = computed(() => ({ height: '100vh' }));
+const wrapperStyle = computed(() => ({ height: 'calc(100vh - var(--navbar-height, 0px))' }));
 const isDark = useDark({ storageKey: 'theme' });
 
 // 面板标签文本：默认使用 manifest 中的面板名，若失败则使用简单回退

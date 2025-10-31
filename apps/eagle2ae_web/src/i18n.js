@@ -79,7 +79,8 @@ export const messages = {
             '可以电脑本地复制文件在扩展面板进行粘贴',
             '可以截图后在扩展面板进行粘贴',
             '能够智能识别粘贴到面板的文件类型'
-          ]
+          ],
+          footer: '支持从 Eagle 或本地拖拽/粘贴素材到面板，自动识别类型并导入。'
         },
         formatSupport: {
           title: '多种导入模式',
@@ -89,7 +90,8 @@ export const messages = {
             'PSD 文件可以按图层结构导入。 (图3)',
             '视频文件如 MP4, MOV 也能无缝拖入。 (图4)',
             '音频文件如 MP3, WAV 同样支持。 (图5)'
-          ]
+          ],
+          footer: '图片、矢量、PSD、视频、音频等主流格式均可直接导入。'
         },
         smartOptions: {
           title: '智能选项，定制导入行为',
@@ -99,7 +101,8 @@ export const messages = {
             '对于矢量文件，可选择保留图层样式。 (图3)',
             '导入时自动应用上次使用的设置。 (图4)',
             '所有选项都可以保存为预设，一键调用。 (图5)'
-          ]
+          ],
+          footer: '灵活的导入选项与预设，让导入行为可定制、可复用。'
         },
         autoSync: {
           title: '自动同步，保持最新版本',
@@ -109,7 +112,8 @@ export const messages = {
             '无需手动重新导入或替换文件。 (图3)',
             '同步功能支持所有已导入的素材类型。 (图4)',
             '确保你的 AE 项目始终使用最新的资源。 (图5)'
-          ]
+          ],
+          footer: '与 Eagle 保持联动，素材更新后一键同步至最新版本。'
         },
         presets: {
           title: '预设支持，协同更高效',
@@ -119,7 +123,8 @@ export const messages = {
             '确保整个团队工作流程的一致性。 (图3)',
             '预设可以导出和导入，方便迁移。 (图4)',
             '大大减少了重复配置导入选项的时间。 (图5)'
-          ]
+          ],
+          footer: '保存并共享预设，团队协作更高效、一致。'
         },
         performance: {
           title: '性能优化，导入更快更稳',
@@ -129,7 +134,8 @@ export const messages = {
             '智能缓存机制，加速重复导入过程。 (图3)',
             '减少内存占用，即使在大型项目中也能流畅运行。 (图4)',
             '导入过程稳定，减少未知错误和崩溃。 (图5)'
-          ]
+          ],
+          footer: '优化大批量导入与缓存机制，导入更快更稳。'
         }
       }
     }
@@ -198,12 +204,13 @@ export const messages = {
         dragDrop: {
           title: 'Drag & drop into AE, effortlessly',
           desc: [
-            'Drag assets from Eagle directly into AE—auto-detected and imported. (Img 1)',
-            'Supports multiple import modes, like footage or sequence. (Img 2)',
-            'Customize import behavior, such as composition size. (Img 3)',
-            'Layers are automatically named based on filenames for easy management. (Img 4)',
-            'Import presets can be saved and shared with your team. (Img 5)'
-          ]
+            'Drag assets directly from Eagle into the extension panel',
+            'Drag any material from your computer into the extension panel',
+            'Copy files locally on your computer and paste them in the extension panel',
+            'Paste screenshots directly into the extension panel',
+            'Intelligently recognizes file types pasted into the panel'
+          ],
+          footer: 'Support dragging/pasting assets from Eagle or local files to the panel, automatically recognizing types and importing.'
         },
         formatSupport: {
           title: 'Rich format support, seamless compatibility',
@@ -213,7 +220,8 @@ export const messages = {
             'PSD files can be imported with their layer structure. (Img 3)',
             'Video files like MP4, MOV can also be dragged in seamlessly. (Img 4)',
             'Audio files like MP3, WAV are also supported. (Img 5)'
-          ]
+          ],
+          footer: 'Import popular formats including images, vectors, PSD, video, and audio.'
         },
         smartOptions: {
           title: 'Smart options, customizable import behavior',
@@ -223,7 +231,8 @@ export const messages = {
             'For vector files, choose to preserve layer styles. (Img 3)',
             'Automatically applies the last used settings on import. (Img 4)',
             'All options can be saved as presets for one-click recall. (Img 5)'
-          ]
+          ],
+          footer: 'Flexible import options and presets make behavior customizable and reusable.'
         },
         autoSync: {
           title: 'Auto sync, always up to date',
@@ -233,7 +242,8 @@ export const messages = {
             'No need to manually re-import or replace files. (Img 3)',
             'The sync feature supports all imported asset types. (Img 4)',
             'Ensures your AE project always uses the latest resources. (Img 5)'
-          ]
+          ],
+          footer: 'Stay in sync with Eagle; one click updates assets to the latest version.'
         },
         presets: {
           title: 'Preset support, collaborate efficiently',
@@ -243,7 +253,8 @@ export const messages = {
             'Ensures consistency across the entire team\'s workflow. (Img 3)',
             'Presets can be exported and imported for easy migration. (Img 4)',
             'Greatly reduces time spent on re-configuring import options. (Img 5)'
-          ]
+          ],
+          footer: 'Save and share presets for consistent, efficient team collaboration.'
         },
         performance: {
           title: 'Optimized performance, faster and steadier import',
@@ -253,7 +264,8 @@ export const messages = {
             'Smart caching mechanism speeds up repeated import processes. (Img 3)',
             'Reduces memory usage for smooth operation even in large projects. (Img 4)',
             'Stable import process reduces unknown errors and crashes. (Img 5)'
-          ]
+          ],
+          footer: 'Optimized for bulk import and caching; faster, steadier importing.'
         }
       }
     }

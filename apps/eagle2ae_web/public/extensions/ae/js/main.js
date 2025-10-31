@@ -515,12 +515,126 @@ class AEExtension {
                             lastModified: file.lastModified || Date.now(),
                             isClipboardImport: true,
                             isTemporary: isTemp,
-                            hasOriginalName: !isTemp, // 如果不是临时文件，说明有原始名称
+                            hasOriginalName: !this.isGenericTempFilename(file.name),
                             file: file, // 保存原始文件对象
                             confirmed: false // 标记为未确认，防止在用户确认前写入磁盘
                         });
                         result.hasImages = true;
                     }
+                }
+            }
+
+            // 检查 DataTransferItem（部分环境仅提供 items 而非 files）
+            if ((!result.files.length) && clipboardData.items && clipboardData.items.length > 0) {
+                try {
+                    const items = Array.from(clipboardData.items);
+                    this.log(`检查 ${items.length} 个剪贴板条目(items)`, 'debug');
+
+                    for (const item of items) {
+                        if (item && item.kind === 'file') {
+                            const mime = item.type || '';
+                            if (mime && (mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/') || mime.startsWith('application/'))) {
+                                try {
+                                    const f = item.getAsFile ? item.getAsFile() : null;
+                                    if (!f) continue;
+
+                                    // 兜底文件名
+                                    let name = f.name || '';
+                                    if (!name) {
+                                        const major = (mime.split('/')[0] || 'file');
+                                        const ext = this.getExtensionFromMimeType(mime);
+                                        name = `clipboard_${major}.${ext}`;
+                                    }
+
+                                    const type = f.type || mime || '';
+                                    const category = this.getFileCategory({ type, name });
+                                    const isTemp = this.isTemporaryFileEnhanced(name);
+
+                                    const info = {
+                                        name,
+                                        path: name,
+                                        size: f.size,
+                                        type,
+                                        category,
+                                        lastModified: f.lastModified || Date.now(),
+                                        isClipboardImport: true,
+                                        isTemporary: isTemp,
+                                        hasOriginalName: !!f.name && !this.isGenericTempFilename(name),
+                                        file: f
+                                    };
+
+                                    result.files.push(info);
+
+                                    switch (category) {
+                                        case 'image': result.hasImages = true; break;
+                                        case 'video': result.hasVideos = true; break;
+                                        case 'audio': result.hasAudio = true; break;
+                                        case 'project': result.hasProjects = true; break;
+                                    }
+
+                                    if (!result.contentTypes.includes(category)) {
+                                        result.contentTypes.push(category);
+                                    }
+
+                                    this.log(`从 items 检测到 ${category} 文件: ${name}`, 'debug');
+                                } catch (itemErr) {
+                                    this.log(`处理剪贴板条目失败: ${itemErr.message}`, 'debug');
+                                }
+                            }
+                        }
+                    }
+                } catch (itemsErr) {
+                    this.log(`读取剪贴板 items 失败: ${itemsErr.message}`, 'debug');
+                }
+            }
+
+            // 解析 text/html（可能包含内嵌的 data:image/...;base64,xxx）
+            if (clipboardData.getData) {
+                try {
+                    const htmlData = clipboardData.getData('text/html') || '';
+                    if (htmlData && htmlData.includes('data:image/')) {
+                        const dataUrlRegex = /src=["'](data:image\/[a-zA-Z0-9.+-]+;base64,[^"']+)["']/g;
+                        let match;
+                        let index = 0;
+                        while ((match = dataUrlRegex.exec(htmlData)) !== null) {
+                            const dataUrl = match[1];
+                            try {
+                                const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+                                const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+                                const ext = this.getExtensionFromMimeType(mime);
+                                const b64 = dataUrl.split(',')[1];
+                                const binary = atob(b64);
+                                const len = binary.length;
+                                const bytes = new Uint8Array(len);
+                                for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+                                const blob = new Blob([bytes], { type: mime });
+                                const name = `clipboard_image_${Date.now()}_${index++}.${ext}`;
+                                const file = new File([blob], name, { type: mime });
+
+                                const category = 'image';
+                                const isTemp = this.isTemporaryFileEnhanced(name);
+                                result.files.push({
+                                    name,
+                                    path: name,
+                                    size: file.size,
+                                    type: mime,
+                                    category,
+                                    lastModified: Date.now(),
+                                    isClipboardImport: true,
+                                    isTemporary: isTemp,
+                                    hasOriginalName: false,
+                                    file
+                                });
+                                result.hasImages = true;
+                                if (!result.contentTypes.includes(category)) result.contentTypes.push(category);
+                                this.log(`从 HTML 中解析到内嵌图片: ${name}`, 'debug');
+                            } catch (htmlErr) {
+                                this.log(`解析 HTML dataURL 失败: ${htmlErr.message}`, 'debug');
+                            }
+                        }
+                    }
+                } catch (htmlReadErr) {
+                    this.log(`读取剪贴板 HTML 失败: ${htmlReadErr.message}`, 'debug');
                 }
             }
 
@@ -10020,7 +10134,15 @@ class AEExtension {
             }
 
             if (files.length === 0) {
-                // 如果仍然无法获取文件信息，显示默认提示
+                // 如果仍然无法获取文件信息，尝试根据类型判断是否为网页内容
+                const types = event.dataTransfer.types ? Array.from(event.dataTransfer.types) : [];
+                const hasWebContent = types.some(t => t === 'text/uri-list' || t === 'text/html' || t === 'text/plain');
+                if (hasWebContent) {
+                    // 预提示：网页内容（可能为图片 URL 或 HTML），放手后尝试导入图片
+                    this.updateDragHint('🌐 检测到网页内容，松手后尝试导入图片');
+                    return;
+                }
+                // 如果仍然无法获取任何信息，显示默认提示
                 this.updateDragHint('拖拽文件到此处');
                 return;
             }
@@ -10112,6 +10234,16 @@ class AEExtension {
 
             this.log(`检测到拖拽内容: ${files.length} 个文件, ${items.length} 个项目`, 'info');
 
+            // 如果没有实际文件，但包含可用的 URL/HTML 文本数据，则按网页图片导入处理
+            if (files.length === 0) {
+                const urls = await this.extractUrlsFromDataTransfer(event.dataTransfer);
+                if (urls.length > 0) {
+                    this.log(`🌐 检测到 ${urls.length} 个网页链接，尝试获取图片后导入`, 'info');
+                    await this.handleWebUrlDrop(urls);
+                    return;
+                }
+            }
+
             // 检查是否包含文件夹
             const hasDirectories = items.some(item => item.webkitGetAsEntry && item.webkitGetAsEntry()?.isDirectory);
 
@@ -10125,6 +10257,214 @@ class AEExtension {
         } catch (error) {
             this.log(`处理拖拽失败: ${error.message}`, 'error');
             this.showDropMessage('拖拽处理失败', 'error');
+        }
+    }
+
+    // 从 DataTransfer 中提取 URL（支持 text/uri-list、text/html、text/plain）
+    async extractUrlsFromDataTransfer(dataTransfer) {
+        try {
+            const urls = new Set();
+            const imageCandidates = new Set();
+            const types = dataTransfer.types ? Array.from(dataTransfer.types) : [];
+
+            // text/uri-list：一行一个 URL，# 开头为注释
+            if (types.includes('text/uri-list')) {
+                try {
+                    const text = dataTransfer.getData('text/uri-list') || '';
+                    text.split(/\r?\n/).forEach(line => {
+                        const v = line.trim();
+                        if (v && !v.startsWith('#') && (/^https?:\/\//i.test(v) || /^data:image\//i.test(v))) {
+                            urls.add(v);
+                            if (this.isImageUrl(v)) imageCandidates.add(v);
+                        }
+                    });
+                } catch (_) {}
+            }
+
+            // text/html：提取 img[src] 与 a[href]
+            if (types.includes('text/html')) {
+                try {
+                    const html = dataTransfer.getData('text/html') || '';
+                    this.parseUrlsFromHtml(html).forEach(u => {
+                        urls.add(u);
+                        if (this.isImageUrl(u)) imageCandidates.add(u);
+                    });
+                } catch (_) {}
+            }
+
+            // text/plain：从纯文本中识别 URL
+            if (types.includes('text/plain')) {
+                try {
+                    const txt = dataTransfer.getData('text/plain') || '';
+                    const matches = txt.match(/https?:\/\/\S+|data:image\/[^\s)"']+/gi) || [];
+                    matches.forEach(u => {
+                        // 去除末尾标点
+                        const cleaned = u.replace(/[)\]\}.,;:]+$/, '');
+                        urls.add(cleaned);
+                        if (this.isImageUrl(cleaned)) imageCandidates.add(cleaned);
+                    });
+                } catch (_) {}
+            }
+
+            // 如果检测到任何图片候选链接，则仅返回图片链接，避免对页面链接发起无效下载
+            if (imageCandidates.size > 0) {
+                return Array.from(imageCandidates);
+            }
+            return Array.from(urls);
+        } catch (error) {
+            this.log(`解析拖拽URL失败: ${error.message}`, 'debug');
+            return [];
+        }
+    }
+
+    // 解析 HTML 内容中的 URL
+    parseUrlsFromHtml(html) {
+        try {
+            const set = new Set();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            doc.querySelectorAll('img[src]').forEach(img => {
+                const src = img.getAttribute('src');
+                if (src && (/^https?:\/\//i.test(src) || /^data:image\//i.test(src))) set.add(src);
+            });
+            doc.querySelectorAll('a[href]').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && /^https?:\/\//i.test(href)) set.add(href);
+            });
+            // 提取 og:image
+            doc.querySelectorAll('meta[property="og:image"][content], meta[name="og:image"][content]').forEach(meta => {
+                const c = meta.getAttribute('content');
+                if (c && (/^https?:\/\//i.test(c) || /^data:image\//i.test(c))) set.add(c);
+            });
+            return Array.from(set);
+        } catch (_) {
+            return [];
+        }
+    }
+
+    // 处理来自网页的图片 URL 拖拽
+    async handleWebUrlDrop(urls) {
+        try {
+            const fileEntries = [];
+            for (const url of urls) {
+                try {
+                    const entry = await this.fetchUrlAsFile(url);
+                    if (entry) fileEntries.push(entry);
+                } catch (e) {
+                    this.log(`下载失败: ${url} - ${e.message}`, 'warning');
+                }
+            }
+
+            if (fileEntries.length === 0) {
+                this.showDropMessage('未能从网页内容中获取图片', 'warning');
+                return;
+            }
+
+            // 对齐剪贴板导入的预处理重命名逻辑
+            const processedFiles = fileEntries.map(file => {
+                const shouldTimestampRename = file.isTemporary && !file.hasOriginalName && this.isGenericTempFilename(file.name);
+                if (shouldTimestampRename) {
+                    const ext = this.getFileExtension(file.name);
+                    const newName = this.generateTimestampFilename(ext);
+                    return {
+                        ...file,
+                        displayName: newName,
+                        originalName: file.name,
+                        name: newName,
+                        isTemporary: true,
+                        wasRenamed: true
+                    };
+                }
+                return { ...file, displayName: file.name };
+            });
+
+            // 复用剪贴板确认弹窗逻辑
+            this.showClipboardConfirmDialog({
+                files: processedFiles,
+                hasImages: true,
+                hasFilePaths: false,
+                source: 'web_drag'
+            });
+        } catch (error) {
+            this.log(`网页图片导入失败: ${error.message}`, 'error');
+            this.showDropMessage('网页图片导入失败', 'error');
+        }
+    }
+
+    // 抓取 URL 为 File 对象（优先图片资源）
+    async fetchUrlAsFile(url) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        try {
+            const res = await fetch(url, { signal: controller.signal, credentials: 'omit' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            const mime = blob.type || '';
+            const isImageType = mime.startsWith('image/');
+            const looksLikeImage = this.isImageUrl(url);
+            if (!isImageType && !looksLikeImage) {
+                throw new Error('不是图片资源');
+            }
+
+            const filename = this.deriveFilenameFromUrl(url, mime);
+            const file = new File([blob], filename, { type: mime || 'application/octet-stream' });
+
+            return {
+                name: filename,
+                path: url,
+                size: file.size,
+                type: file.type,
+                lastModified: Date.now(),
+                isClipboardImport: true, // 复用剪贴板文件管道以写入磁盘
+                isTemporary: true,
+                // 如果从 URL 推导出的名字不是通用占位名，则视为有意义原名
+                hasOriginalName: !this.isGenericTempFilename(filename),
+                file,
+                confirmed: false
+            };
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    // URL 是否看起来像图片
+    isImageUrl(url) {
+        return /^data:image\//i.test(url) || /\.(png|jpe?g|gif|bmp|webp|tiff|svg)(?:[?#].*)?$/i.test(url);
+    }
+
+    // 从 URL 和 MIME 推导文件名
+    deriveFilenameFromUrl(url, mime) {
+        try {
+            if (/^data:image\//i.test(url)) {
+                // data URL：从 MIME 推导
+                let ext = 'png';
+                if (mime && mime.startsWith('image/')) {
+                    const t = mime.split('/')[1];
+                    ext = (t === 'jpeg') ? 'jpg' : (t || 'png');
+                }
+                return `web-image.${ext}`;
+            }
+            const u = new URL(url);
+            let name = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || 'web-image');
+            const hasExt = /\.(png|jpe?g|gif|bmp|webp|tiff|svg)$/i.test(name);
+            if (!hasExt) {
+                let ext = 'png';
+                if (mime && mime.startsWith('image/')) {
+                    const t = mime.split('/')[1];
+                    ext = (t === 'jpeg') ? 'jpg' : (t || 'png');
+                } else if (this.isImageUrl(url)) {
+                    const seg = name.split('.').pop();
+                    if (seg && seg.length <= 5) ext = seg;
+                }
+                if (!name.includes('.')) {
+                    name = `${name}.${ext}`;
+                } else {
+                    name = `${name}.${ext}`;
+                }
+            }
+            return name;
+        } catch (_) {
+            return 'web-image.png';
         }
     }
 
@@ -11443,6 +11783,45 @@ class AEExtension {
         return icons[type] || '📋';
     }
 
+    // 显示直接复制文件的提示对话框
+    showDirectFileCopyDialog() {
+        const message = `
+检测到您直接复制了文件，但浏览器安全限制无法直接访问文件内容。
+
+请尝试以下方法：
+• 方法1：直接拖拽文件到此区域
+• 方法2：在图片编辑软件中打开并复制图片后粘贴
+• 方法3：使用截图工具复制图片后粘贴
+
+推荐使用拖拽方式，支持批量导入且更稳定。
+        `.trim();
+        
+        // 避免与全局警告图标重复，这里不再使用 emoji
+        this.showDropMessage('无法读取剪贴板中的文件', 'warning');
+        
+        // 如果有对话框系统，也可以显示详细信息
+        setTimeout(() => {
+            this.log('用户尝试粘贴直接复制的文件，已提示使用拖拽方式', 'info');
+        }, 100);
+    }
+
+    // 显示检测到文件路径的对话框
+    showFilePathDetectedDialog(filePaths) {
+        const pathsText = filePaths.slice(0, 3).join('\n') + (filePaths.length > 3 ? `\n... 还有 ${filePaths.length - 3} 个文件` : '');
+        
+        const message = `
+检测到 ${filePaths.length} 个文件路径：
+${pathsText}
+
+但浏览器无法直接访问这些文件。请直接拖拽文件到此区域进行导入。
+        `.trim();
+        
+        // 统一由组件内置图标呈现，这里不再使用 emoji
+        this.showDropMessage(`检测到 ${filePaths.length} 个文件路径，请使用拖拽方式导入`, 'info');
+        
+        this.log(`检测到文件路径但无法访问: ${filePaths.join(', ')}`, 'info');
+    }
+
     /**
      * 显示错误对话框
      * @param {string} title - 错误标题
@@ -11588,20 +11967,29 @@ class AEExtension {
     // 设置剪贴板监听
     setupClipboardListener() {
         try {
+            // 记录最近一次 paste 事件时间，用于与 keydown 粘贴去重
+            this._lastPasteEventAt = 0;
             // 监听键盘事件，检测Ctrl+V/Cmd+V
             document.addEventListener('keydown', (e) => {
                 // 检测Ctrl+V (Windows) 或 Cmd+V (Mac)
                 if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
                     // 延迟一点执行，确保剪贴板内容已更新
                     setTimeout(() => {
-                        this.handleClipboardPaste(e);
+                        const now = Date.now();
+                        // 如果在极短时间内已有 paste 事件，则跳过 keydown 的重复处理
+                        if (this._lastPasteEventAt && (now - this._lastPasteEventAt) < 250) {
+                            this.log('检测到近似同时的 paste 事件，跳过 keydown 粘贴处理', 'debug');
+                            return;
+                        }
+                        this.handleClipboardPaste(e, 'keydown');
                     }, 50);
                 }
             });
 
             // 也监听paste事件作为备用
             document.addEventListener('paste', (e) => {
-                this.handleClipboardPaste(e);
+                this._lastPasteEventAt = Date.now();
+                this.handleClipboardPaste(e, 'paste');
             });
 
             this.log(window.i18n.getText('logs.clipboardListenerSet') || 'Clipboard listener set', 'debug');
@@ -11611,7 +11999,7 @@ class AEExtension {
     }
 
     // 处理剪贴板粘贴事件
-    async handleClipboardPaste(event) {
+    async handleClipboardPaste(event, sourceHint = 'auto') {
         try {
             // 防止在输入框中触发
             if (event.target && (
@@ -11626,14 +12014,30 @@ class AEExtension {
 
             let clipboardData = null;
 
-            // 尝试从事件获取剪贴板数据
+            // 尝试从事件获取剪贴板数据（优先使用，因为权限要求较低）
             if (event.clipboardData) {
                 clipboardData = event.clipboardData;
+                this.log('使用事件剪贴板数据', 'debug');
             } else {
                 // 尝试使用现代剪贴板API
                 try {
+                    // 首先检查剪贴板权限
+                    let hasPermission = false;
+                    try {
+                        if (navigator.permissions && navigator.permissions.query) {
+                            const permission = await navigator.permissions.query({ name: 'clipboard-read' });
+                            hasPermission = permission.state === 'granted';
+                            this.log(`剪贴板读取权限状态: ${permission.state}`, 'debug');
+                        }
+                    } catch (permError) {
+                        this.log(`权限查询失败: ${permError.message}`, 'debug');
+                    }
+
+                    // 尝试读取剪贴板
                     const clipboardItems = await navigator.clipboard.read();
                     if (clipboardItems && clipboardItems.length > 0) {
+                        this.log(`成功读取剪贴板，包含 ${clipboardItems.length} 个项目`, 'debug');
+                        
                         // 构造类似clipboardData的对象
                         clipboardData = {
                             files: [],
@@ -11641,54 +12045,118 @@ class AEExtension {
                             getData: () => ''
                         };
 
-                        // 首先尝试获取文本信息，可能包含文件名
+                        // 首先尝试获取文本信息，可能包含文件名或文件路径
                         let possibleFileName = null;
+                        let filePathsFromText = [];
+                        
                         for (const item of clipboardItems) {
                             if (item.types.includes('text/plain')) {
                                 try {
                                     const text = await item.getType('text/plain');
                                     const textContent = await text.text();
+                                    this.log(`剪贴板文本内容: ${textContent.substring(0, 100)}...`, 'debug');
+                                    
                                     // 检查文本是否像文件路径
-                                    const filePathMatch = textContent.match(/([^\\\\/]+\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg))$/i);
+                                    const filePathMatch = textContent.match(/([^\\\\/]+\.(jpg|jpeg|png|gif|bmp|webp|tiff|svg|mp4|mov|avi|mkv|webm|mp3|wav|aac|flac|ogg))$/i);
                                     if (filePathMatch) {
                                         possibleFileName = filePathMatch[1];
                                     }
+                                    
+                                    // 提取可能的文件路径
+                                    filePathsFromText = this.extractFilePathsFromText(textContent);
+                                    if (filePathsFromText.length > 0) {
+                                        this.log(`检测到 ${filePathsFromText.length} 个文件路径`, 'debug');
+                                    }
                                 } catch (e) {
-                                    // 忽略文本获取错误
+                                    this.log(`获取文本内容失败: ${e.message}`, 'debug');
                                 }
                             }
                         }
 
+                        // 处理各种类型的剪贴板内容
                         for (const item of clipboardItems) {
                             for (const type of item.types) {
                                 clipboardData.types.push(type);
+                                this.log(`处理剪贴板类型: ${type}`, 'debug');
+                                
                                 if (type.startsWith('image/')) {
-                                    const blob = await item.getType(type);
-                                    const ext = type.split('/')[1] === 'jpeg' ? 'jpg' : type.split('/')[1];
+                                    try {
+                                        const blob = await item.getType(type);
+                                        const ext = type.split('/')[1] === 'jpeg' ? 'jpg' : type.split('/')[1];
 
-                                    // 智能文件名选择
-                                    let fileName;
-                                    if (possibleFileName && this.isValidImageFileName(possibleFileName)) {
-                                        // 使用检测到的原始文件名
-                                        fileName = possibleFileName;
-                                    } else {
-                                        // 使用通用名称，将被标记为临时文件
-                                        fileName = `clipboard_image.${ext}`;
+                                        // 智能文件名选择
+                                        let fileName;
+                                        if (possibleFileName && this.isValidImageFileName(possibleFileName)) {
+                                            fileName = possibleFileName;
+                                        } else {
+                                            fileName = `clipboard_image.${ext}`;
+                                        }
+
+                                        const file = new File([blob], fileName, { type });
+                                        clipboardData.files.push(file);
+                                        this.log(`成功创建图片文件: ${fileName}`, 'debug');
+                                    } catch (e) {
+                                        this.log(`处理图片类型失败: ${e.message}`, 'debug');
                                     }
-
-                                    const file = new File([blob], fileName, { type });
-                                    clipboardData.files.push(file);
+                                }
+                                // 处理其他文件类型（如果支持）
+                                else if (type.startsWith('application/') || type.startsWith('video/') || type.startsWith('audio/')) {
+                                    try {
+                                        const blob = await item.getType(type);
+                                        // 尝试从MIME类型推断文件扩展名
+                                        const ext = this.getExtensionFromMimeType(type);
+                                        const fileName = possibleFileName || `clipboard_file.${ext}`;
+                                        const file = new File([blob], fileName, { type });
+                                        clipboardData.files.push(file);
+                                        this.log(`成功创建文件: ${fileName}`, 'debug');
+                                    } catch (e) {
+                                        this.log(`处理文件类型 ${type} 失败: ${e.message}`, 'debug');
+                                    }
                                 }
                             }
                         }
+
+                        // 如果没有找到文件但有文件路径，提示用户
+                        if (clipboardData.files.length === 0 && filePathsFromText.length > 0) {
+                            this.log('检测到文件路径但无法直接访问文件内容', 'info');
+                            this.showFilePathDetectedDialog(filePathsFromText);
+                            return;
+                        }
                     }
                 } catch (clipboardError) {
-                    this.log(`无法访问剪贴板API: ${clipboardError.message}`, 'debug');
+                    this.log(`剪贴板API访问失败: ${clipboardError.message}`, 'debug');
+                    
+                    // 提供更详细的错误信息和解决方案
+                    if (clipboardError.message.includes('Read permission denied')) {
+                        this.log('剪贴板读取权限被拒绝，这通常发生在直接复制文件时', 'info');
+                        // 若是 keydown 触发且近似同时有 paste 成功，则抑制重复警告
+                        const suppress = sourceHint === 'keydown' && this._lastPasteEventAt && (Date.now() - this._lastPasteEventAt) < 300;
+                        if (suppress) {
+                            this.log('检测到已由 paste 事件处理，抑制重复的剪贴板权限警告', 'debug');
+                        } else {
+                            this.showDirectFileCopyDialog();
+                        }
+                    } else if (clipboardError.message.includes('Document is not focused')) {
+                        this.log('文档未获得焦点，无法访问剪贴板', 'info');
+                        this.showDropMessage('请先点击此区域获得焦点，然后再尝试粘贴', 'info');
+                    } else if (clipboardError.message.includes('NotAllowedError')) {
+                        this.log('剪贴板访问被阻止', 'info');
+                        const suppress = sourceHint === 'keydown' && this._lastPasteEventAt && (Date.now() - this._lastPasteEventAt) < 300;
+                        if (suppress) {
+                            this.log('检测到已由 paste 事件处理，抑制重复的访问被阻止警告', 'debug');
+                        } else {
+                            this.showDirectFileCopyDialog();
+                        }
+                    } else {
+                        this.showDropMessage(`剪贴板访问失败: ${clipboardError.message}。请尝试直接拖拽文件`, 'warning');
+                    }
+                    return;
                 }
             }
 
-            if (!clipboardData) {
-                this.log('无法获取剪贴板数据', 'debug');
+            if (!clipboardData || (!clipboardData.files?.length && !clipboardData.types?.length && !clipboardData.items?.length && !clipboardData.getData)) {
+                this.log('剪贴板中没有可用数据', 'debug');
+                this.showDropMessage('剪贴板中没有可导入的内容', 'info');
                 return;
             }
 
@@ -11700,13 +12168,11 @@ class AEExtension {
 
                 // 预处理文件名称，在显示对话框时就显示最终名称
                 const processedFiles = clipboardContent.files.map(file => {
-                    if (file.isTemporary && !file.hasOriginalName) {
-                        // 只有临时文件且没有原始名称时才重命名
+                    const shouldTimestampRename = file.isTemporary && !file.hasOriginalName && this.isGenericTempFilename(file.name);
+                    if (shouldTimestampRename) {
+                        // 只有临时文件且没有原始名称且为通用占位名时才重命名
                         const ext = this.getFileExtension(file.name);
                         const newName = this.generateTimestampFilename(ext);
-
-
-
                         return {
                             ...file,
                             displayName: newName, // 用于显示的名称
@@ -11717,7 +12183,6 @@ class AEExtension {
                         };
                     } else if (file.hasOriginalName) {
                         // 有原始名称的文件，保持原名
-
                         return {
                             ...file,
                             displayName: file.name,
@@ -11746,30 +12211,64 @@ class AEExtension {
             const result = {
                 files: [],
                 hasImages: false,
-                hasFilePaths: false
+                hasVideos: false,
+                hasAudio: false,
+                hasProjects: false,
+                hasFilePaths: false,
+                contentTypes: []
             };
 
             // 检查文件
             if (clipboardData.files && clipboardData.files.length > 0) {
                 const files = Array.from(clipboardData.files);
+                this.log(`检查 ${files.length} 个剪贴板文件`, 'debug');
+                
                 for (const file of files) {
                     if (this.isImportableFile(file)) {
                         const fileName = file.path || file.name;
+                        const fileType = this.getFileCategory(file);
+                        
                         // 改进的临时文件检测逻辑
                         const isTemp = this.isTemporaryFileEnhanced(fileName);
 
-                        result.files.push({
+                        const fileInfo = {
                             name: file.name,
                             path: file.path || file.name,
                             size: file.size,
                             type: file.type,
+                            category: fileType,
                             lastModified: file.lastModified || Date.now(),
                             isClipboardImport: true,
                             isTemporary: isTemp,
-                            hasOriginalName: !isTemp, // 如果不是临时文件，说明有原始名称
-                            file: file // 保存原始文件对象
-                        });
-                        result.hasImages = true;
+                            hasOriginalName: !isTemp,
+                            file: file
+                        };
+
+                        result.files.push(fileInfo);
+
+                        // 更新内容类型标志
+                        switch (fileType) {
+                            case 'image':
+                                result.hasImages = true;
+                                break;
+                            case 'video':
+                                result.hasVideos = true;
+                                break;
+                            case 'audio':
+                                result.hasAudio = true;
+                                break;
+                            case 'project':
+                                result.hasProjects = true;
+                                break;
+                        }
+
+                        if (!result.contentTypes.includes(fileType)) {
+                            result.contentTypes.push(fileType);
+                        }
+
+                        this.log(`检测到 ${fileType} 文件: ${file.name}`, 'debug');
+                    } else {
+                        this.log(`跳过不支持的文件: ${file.name} (${file.type})`, 'debug');
                     }
                 }
             }
@@ -11781,10 +12280,18 @@ class AEExtension {
                     const filePaths = this.extractFilePathsFromText(textData);
                     if (filePaths.length > 0) {
                         result.hasFilePaths = true;
-                        // 这里可以进一步处理文件路径，但需要文件系统访问权限
-                        this.log(`检测到 ${filePaths.length} 个文件路径`, 'debug');
+                        this.log(`检测到 ${filePaths.length} 个文件路径: ${filePaths.slice(0, 3).join(', ')}${filePaths.length > 3 ? '...' : ''}`, 'debug');
                     }
                 }
+            }
+
+            // 记录检测结果摘要
+            if (result.files.length > 0) {
+                const summary = result.contentTypes.map(type => {
+                    const count = result.files.filter(f => f.category === type).length;
+                    return `${count}个${type === 'image' ? '图片' : type === 'video' ? '视频' : type === 'audio' ? '音频' : '项目'}文件`;
+                }).join(', ');
+                this.log(`剪贴板内容检测完成: ${summary}`, 'info');
             }
 
             return result.files.length > 0 ? result : null;
@@ -11795,18 +12302,79 @@ class AEExtension {
         }
     }
 
+    // 获取文件类别
+    getFileCategory(file) {
+        if (!file) return 'unknown';
+        
+        const mimeType = file.type || '';
+        const fileName = file.name || file.path || '';
+        const extension = this.getFileExtension(fileName).toLowerCase();
+        
+        // 根据 MIME 类型判断
+        if (mimeType.startsWith('image/')) {
+            return 'image';
+        } else if (mimeType.startsWith('video/')) {
+            return 'video';
+        } else if (mimeType.startsWith('audio/')) {
+            return 'audio';
+        }
+        
+        // 根据文件扩展名判断
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'tga', 'psd', 'ai', 'eps'];
+        const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v', '3gp', 'mpg', 'mpeg'];
+        const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a', 'opus'];
+        const projectExts = ['aep', 'aet', 'aepx'];
+        
+        if (imageExts.includes(extension)) {
+            return 'image';
+        } else if (videoExts.includes(extension)) {
+            return 'video';
+        } else if (audioExts.includes(extension)) {
+            return 'audio';
+        } else if (projectExts.includes(extension)) {
+            return 'project';
+        }
+        
+        return 'other';
+    }
+
     // 检查文件是否可导入
     isImportableFile(file) {
-        if (!file || !file.type) return false;
+        if (!file) return false;
 
-        const importableTypes = [
-            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp',
-            'image/tiff', 'image/webp', 'image/svg+xml',
-            'video/mp4', 'video/mov', 'video/avi', 'video/mkv', 'video/webm',
-            'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg'
-        ];
+        // 首先通过MIME类型检查
+        if (file.type) {
+            const importableTypes = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp',
+                'image/tiff', 'image/webp', 'image/svg+xml',
+                'video/mp4', 'video/mov', 'video/avi', 'video/mkv', 'video/webm',
+                'audio/mp3', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/ogg'
+            ];
 
-        return importableTypes.some(type => file.type.startsWith(type.split('/')[0]));
+            if (importableTypes.some(type => file.type.startsWith(type.split('/')[0]))) {
+                return true;
+            }
+        }
+
+        // 如果没有MIME类型或MIME类型检查失败，通过文件扩展名检查
+        const fileName = file.name || file.path || '';
+        if (fileName) {
+            const ext = this.getFileExtension(fileName).toLowerCase();
+            const importableExtensions = [
+                // 图片格式
+                '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.svg',
+                // 视频格式
+                '.mp4', '.mov', '.avi', '.mkv', '.webm', '.wmv', '.flv', '.m4v',
+                // 音频格式
+                '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma',
+                // After Effects 项目文件
+                '.aep', '.aet'
+            ];
+
+            return importableExtensions.includes(ext);
+        }
+
+        return false;
     }
 
     // 检测是否为临时文件
@@ -11903,7 +12471,7 @@ class AEExtension {
                 return `
                     <div class="file-item-simple" data-file-index="${index}">
                         <span class="file-icon">${typeIcon}</span>
-                        <span class="file-name" title="${displayName}">${displayName}</span>
+                        <span class="file-name editable" title="${displayName}">${displayName}</span>
                         <span class="file-size">${sizeText}</span>
                         <span class="file-type">${fileType}</span>
                     </div>
@@ -11957,6 +12525,9 @@ class AEExtension {
             `;
 
             document.body.appendChild(dialog);
+
+            // 启用文件名双击编辑
+            this.setupFileNameEditing(dialog, files);
 
             // 绑定事件
             document.getElementById('clipboard-confirm-yes').onclick = async () => {
@@ -12043,14 +12614,14 @@ class AEExtension {
 
             // 显示结果 - 改进判断逻辑
             if (result && (result.success === true || result.importedCount > 0)) {
-                this.showDropMessage(`✅ 剪贴板导入成功 (${result.importedCount || 1} 个文件)`, 'success');
+                this.showDropMessage(` 剪贴板导入成功 (${result.importedCount || 1} 个文件)`, 'success');
             } else {
-                this.showDropMessage(`❌ 剪贴板导入失败: ${result?.error || '未知错误'}`, 'error');
+                this.showDropMessage(` 剪贴板导入失败: ${result?.error || '未知错误'}`, 'error');
             }
 
         } catch (error) {
-            this.log(`❌ 剪贴板导入失败: ${error.message}`, 'error');
-            this.showDropMessage(`❌ 剪贴板导入失败: ${error.message}`, 'error');
+            this.log(` 剪贴板导入失败: ${error.message}`, 'error');
+            this.showDropMessage(` 剪贴板导入失败: ${error.message}`, 'error');
         }
     }
 
@@ -12067,6 +12638,43 @@ class AEExtension {
     getFileExtension(filename) {
         const lastDot = filename.lastIndexOf('.');
         return lastDot !== -1 ? filename.substring(lastDot) : '';
+    }
+
+    // 从MIME类型获取文件扩展名
+    getExtensionFromMimeType(mimeType) {
+        const mimeToExt = {
+            // 图片类型
+            'image/jpeg': 'jpg',
+            'image/jpg': 'jpg',
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'image/bmp': 'bmp',
+            'image/webp': 'webp',
+            'image/tiff': 'tiff',
+            'image/svg+xml': 'svg',
+            
+            // 视频类型
+            'video/mp4': 'mp4',
+            'video/quicktime': 'mov',
+            'video/x-msvideo': 'avi',
+            'video/x-matroska': 'mkv',
+            'video/webm': 'webm',
+            
+            // 音频类型
+            'audio/mpeg': 'mp3',
+            'audio/wav': 'wav',
+            'audio/x-wav': 'wav',
+            'audio/aac': 'aac',
+            'audio/flac': 'flac',
+            'audio/ogg': 'ogg',
+            
+            // 其他常见类型
+            'application/pdf': 'pdf',
+            'application/zip': 'zip',
+            'text/plain': 'txt'
+        };
+
+        return mimeToExt[mimeType] || 'bin';
     }
 
     // 获取不含扩展名的文件名
@@ -12111,6 +12719,22 @@ class AEExtension {
         return true;
     }
 
+    // 判断是否为通用/临时占位文件名（用于是否需要改为时间戳）
+    isGenericTempFilename(fileName) {
+        if (!fileName || typeof fileName !== 'string') return true;
+        const patterns = [
+            /^web-image\./i,
+            /^clipboard_image\./i,
+            /^image\./i,
+            /^screenshot\./i,
+            /^capture\./i,
+            /^untitled\./i,
+            /^temp\./i,
+            /^tmp\./i
+        ];
+        return patterns.some(p => p.test(fileName));
+    }
+
     // 设置文件名编辑功能
     setupFileNameEditing(dialog, files) {
         const editableNames = dialog.querySelectorAll('.file-name.editable');
@@ -12135,7 +12759,9 @@ class AEExtension {
         // 创建输入框
         const input = document.createElement('input');
         input.type = 'text';
-        input.value = originalText;
+        // 只编辑不含扩展名的部分，扩展名固定保留
+        const ext = this.getFileExtension(file.name);
+        input.value = this.getFileNameWithoutExtension(originalText);
         input.className = 'file-name-input';
         input.style.cssText = `
             background: rgba(255, 255, 255, 0.1);
@@ -12161,7 +12787,6 @@ class AEExtension {
         const finishEdit = (save = true) => {
             if (save && input.value.trim() && input.value !== originalText) {
                 const newName = input.value.trim();
-                const ext = this.getFileExtension(file.name);
                 const fullNewName = newName + ext;
 
                 // 更新文件对象
@@ -12169,7 +12794,7 @@ class AEExtension {
                 file.customName = true; // 标记为用户自定义名称
 
                 // 更新显示
-                nameElement.textContent = newName;
+                nameElement.textContent = fullNewName;
 
                 this.log(`文件名已修改: ${originalText}${ext} -> ${fullNewName}`, 'info');
             }

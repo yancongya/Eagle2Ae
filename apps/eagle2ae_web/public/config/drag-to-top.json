@@ -1,7 +1,7 @@
 {
   "enabled": true,
-  "logo1Src": "/src/assets/logo.png",
-  "logo2Src": "/src/assets/logo2.png",
+  "logo1Src": "/logo.png",
+  "logo2Src": "/logo_download.png",
   "explosionSprites": [
     "/explosion/Gif.svg",
     "/explosion/Mov.svg",

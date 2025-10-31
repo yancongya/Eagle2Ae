@@ -1,7 +1,7 @@
 <template>
-  <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative">
-    <!-- Centering Container -->
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-screen-2xl px-6">
+  <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative" style="scroll-margin-top: var(--navbar-height, 0px)">
+    <!-- Centering Container: use normal flow to avoid overlap with next section -->
+    <div ref="heroInnerRef" class="w-full max-w-screen-2xl px-6" :style="innerStyle">
 
       <!-- Inner container with adjusted top padding -->
       <div class="pt-8 md:pt-24">
@@ -46,7 +46,7 @@
                    class="relative block rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
                 <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl md:rounded-2xl">
               </div>
-              <h3 class="mt-2 font-bold text-sm md:text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
+              <h3 :ref="el => { if (el) titleRefs[index] = el }" class="mt-2 font-bold text-sm md:text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
             </div>
           </div>
         </div>
@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch, computed } from 'vue';
+import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { useI18n } from 'vue-i18n';
@@ -118,10 +118,69 @@ gsap.registerPlugin(ScrollToPlugin);
 
 // Animation Refs
 const title = ref(null);
+const heroInnerRef = ref(null);
+const scale = ref(1);
+const innerStyle = computed(() => ({ transform: `scale(${scale.value})`, transformOrigin: 'top center' }));
+let heroResizeObserver;
+const readNavHeight = () => {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--navbar-height') || '0px';
+  return parseFloat(v) || 0;
+};
+const computeScale = () => {
+  const el = heroInnerRef.value;
+  if (!el) { scale.value = 1; return; }
+  const available = Math.max(0, window.innerHeight - readNavHeight());
+  const rect = el.getBoundingClientRect();
+  const contentHeight = rect.height || available;
+  const s = Math.min(1, available / contentHeight);
+  scale.value = Math.max(0.75, s);
+};
+onMounted(async () => {
+  await nextTick();
+  computeScale();
+  window.addEventListener('resize', computeScale);
+  if ('ResizeObserver' in window && heroInnerRef.value) {
+    heroResizeObserver = new ResizeObserver(computeScale);
+    heroResizeObserver.observe(heroInnerRef.value);
+  }
+});
+onUnmounted(() => {
+  window.removeEventListener('resize', computeScale);
+  if (heroResizeObserver) heroResizeObserver.disconnect();
+});
 const subtitle = ref(null);
 const buttons = ref(null);
 const cardsContainer = ref(null);
 const cardRefs = ref([]); // To hold refs for each card
+const titleRefs = ref([]); // To hold refs for each title
+
+// Fit hero card titles to a single line on small screens
+const fitTitleToOneLine = (el) => {
+  if (!el) return;
+  const isSmallScreen = window.innerWidth < 768; // md breakpoint
+  if (!isSmallScreen) {
+    el.style.whiteSpace = '';
+    el.style.wordBreak = '';
+    el.style.fontSize = '';
+    return;
+  }
+  el.style.whiteSpace = 'nowrap';
+  el.style.wordBreak = 'keep-all';
+  // Reset to default before measuring
+  el.style.fontSize = '';
+  const container = el.parentElement;
+  const containerWidth = container ? container.clientWidth : el.clientWidth;
+  const textWidth = el.scrollWidth;
+  if (textWidth <= containerWidth) return;
+  const currentFontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
+  const ratio = containerWidth / textWidth;
+  const newSize = Math.max(12, Math.floor(currentFontSize * ratio));
+  el.style.fontSize = `${newSize}px`;
+};
+
+const fitAllTitles = () => {
+  titleRefs.value.forEach(fitTitleToOneLine);
+};
 
 // Hover state
 let hoverClearTimer = null;
@@ -285,6 +344,13 @@ onMounted(async () => {
 
   await buildEnterTimeline();
   hasPlayedOnce.value = true;
+  // Fit titles after initial render and on resize for small screens
+  await nextTick();
+  fitAllTitles();
+  window.addEventListener('resize', fitAllTitles);
+});
+onUnmounted(() => {
+  window.removeEventListener('resize', fitAllTitles);
 });
 
 const playEnter = (delay = 0) => {
@@ -353,6 +419,11 @@ watch(cardsContainer, (newVal) => {
   if (newVal) {
     gsap.set(cardRefs.value, { clearProps: 'all' });
   }
+});
+// Refit titles when language changes (text length changes)
+watch(locale, async () => {
+  await nextTick();
+  fitAllTitles();
 });
 </script>
 

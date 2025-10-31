@@ -1,5 +1,5 @@
 <template>
-  <section :id="id" ref="featureSection" class="py-12 sm:py-16 md:py-20 flex flex-col justify-start bg-gray-100 dark:bg-gray-900" :class="isLast ? 'min-h-[calc(82vh-var(--navbar-height,0px))]' : 'min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))]'">
+  <section :id="id" ref="featureSection" class="relative py-12 sm:py-16 md:py-20 pb-24 sm:pb-24 md:pb-28 flex flex-col justify-start bg-gray-100 dark:bg-gray-900" :class="isLast ? 'min-h-[calc(82vh-var(--navbar-height,0px))]' : 'min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))]'" :style="{ scrollMarginTop: 'var(--navbar-height, 0px)' }">
     <div class="container mx-auto px-6">
       <div class="flex flex-col md:items-start gap-12" :class="[isImageLeft ? 'md:flex-row' : 'md:flex-row-reverse']">
         <!-- Image Stacked Cards -->
@@ -47,12 +47,33 @@
           </TransitionGroup>
         </div>
       </div>
+      
     </div>
+
+    <!-- Footer Description: small screens in document flow, large screens overlay at bottom -->
+    <transition
+      appear
+      enter-active-class="duration-500 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="duration-400 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div v-if="footerTextComputed && footerVisible" :class="footerContainerClass">
+        <div class="max-w-[95%] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto text-center">
+          <p class="text-xs sm:text-sm md:text-base lg:text-lg leading-relaxed text-gray-700 dark:text-gray-300 whitespace-normal break-words">
+            {{ footerTextComputed }}
+          </p>
+        </div>
+      </div>
+    </transition>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed, inject } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 // Swiper imports for Webflow overlapping cards effect
@@ -100,6 +121,7 @@ const opts = computed(() => deepMerge(defaults.value, externalConfig.value));
 
 
 gsap.registerPlugin(ScrollTrigger);
+const { t, locale } = useI18n();
 
 const props = defineProps({
   id: String,
@@ -108,6 +130,8 @@ const props = defineProps({
   descriptionLines: { type: Array, default: () => [] },
   imageUrl: { type: String, default: '' }, // backward compatibility
   imageUrls: { type: Array, default: () => [] },
+  // 新增：底部描述文本（支持 i18n 文本或多语言对象）
+  footerText: { type: [String, Object], default: '' },
   isImageLeft: { type: Boolean, default: true },
   isLast: { type: Boolean, default: false }
 });
@@ -115,6 +139,31 @@ const props = defineProps({
 const featureSection = ref(null);
 const imageContainer = ref(null);
 const textContainer = ref(null);
+// 控制底部描述的进出场显示
+const showFooter = ref(false);
+// 小屏设备模式检测
+const isSmallScreen = ref(false);
+// 互斥状态注入：仅当本段为激活段时才允许显示
+const activeFeatureId = inject('activeFeatureId', ref(null));
+const setActiveFeatureId = inject('setActiveFeatureId', (id) => { activeFeatureId.value = id; });
+
+// 可见性：由 showFooter 与互斥状态共同控制
+const footerVisible = computed(() => showFooter.value && activeFeatureId?.value === props.id);
+// 定位与布局：
+// - 小屏：固定贴屏幕底部，考虑安全区；
+// - 大屏：绝对定位覆盖在区块底部居中。
+const footerContainerClass = computed(() => {
+  if (isSmallScreen.value) {
+    // 最后一个详情段：描述放在页脚上方，采用文档流布局避免覆盖页脚
+    if (props.isLast) {
+      return 'relative left-1/2 -translate-x-1/2 w-full px-4 z-20 mt-4 mb-[calc(env(safe-area-inset-bottom)+8px)]';
+    }
+    // 其他段：保持固定贴屏幕底部的展示方式
+    return 'pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[calc(16px+env(safe-area-inset-bottom))] w-full px-4 z-30';
+  }
+  // 大屏：绝对定位覆盖在区块底部居中
+  return 'pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-4 sm:bottom-8 md:bottom-10 w-full px-4 sm:px-6 z-20';
+});
 const activeIndex = ref(0);
 const swiperRef = ref(null);
 
@@ -154,6 +203,31 @@ const lines = computed(() => {
 });
 
 const visibleLines = computed(() => lines.value.slice(0, Math.min(activeIndex.value + 1, lines.value.length)));
+
+// 底部描述的 i18n 解析（支持字符串键或多语言对象）
+const getLocalized = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    // 如果字符串看起来像是已经翻译过的文本（包含空格或长度较长），直接返回
+    // 否则尝试作为翻译键查找
+    if (val.includes(' ') || val.length > 50) {
+      return val;
+    }
+    const translated = t(val);
+    return translated && translated !== val ? translated : val;
+  }
+  if (typeof val === 'object') {
+    const loc = locale.value;
+    if (typeof val[loc] === 'string') return val[loc];
+    if (typeof val['en-US'] === 'string') return val['en-US'];
+    if (typeof val['zh-CN'] === 'string') return val['zh-CN'];
+    const first = Object.values(val).find(v => typeof v === 'string');
+    return typeof first === 'string' ? first : '';
+  }
+  return '';
+};
+
+const footerTextComputed = computed(() => getLocalized(props.footerText));
 
 // --- Theme detection ---
 const isDarkMode = ref(false);
@@ -223,17 +297,59 @@ const setIndex = (i) => {
 
 let ctx;
 let themeObserver; // Declare here
+let io; // IntersectionObserver for reliable visibility
+let mq; // matchMedia for small screen detection
+const handleMq = (e) => { isSmallScreen.value = !!e.matches; };
 
 // 供父级调用：分页滚动完成后再触发（大屏）
 const playEnter = (delay = 0) => {
   const imageX = props.isImageLeft ? -100 : 100;
-  gsap.to(imageContainer.value, { x: 0, opacity: 1, duration: opts.value.enterAnimation.duration, ease: opts.value.enterAnimation.ease, delay });
-  gsap.to(textContainer.value, { x: 0, opacity: 1, duration: opts.value.enterAnimation.duration, ease: opts.value.enterAnimation.ease, delay: delay + opts.value.enterAnimation.stagger });
+  
+  // 确保从正确的初始状态开始动画，避免底部快速位移
+  if (delay === 0) {
+    gsap.set(imageContainer.value, { x: imageX, opacity: 0 });
+    gsap.set(textContainer.value, { x: -imageX, opacity: 0 });
+  }
+  
+  gsap.to(imageContainer.value, { 
+    x: 0, 
+    opacity: 1, 
+    duration: opts.value.enterAnimation.duration, 
+    ease: opts.value.enterAnimation.ease, 
+    delay,
+    clearProps: 'transform'
+  });
+  gsap.to(textContainer.value, { 
+    x: 0, 
+    opacity: 1, 
+    duration: opts.value.enterAnimation.duration, 
+    ease: opts.value.enterAnimation.ease, 
+    delay: delay + opts.value.enterAnimation.stagger,
+    clearProps: 'transform'
+  });
+  
+  // 确保阴影正确应用
+  if (swiperRef.value) {
+    setTimeout(() => updateSlideShadows(swiperRef.value), delay * 1000 + 100);
+  }
 };
+
 const playExit = (delay = 0) => {
   const imageX = props.isImageLeft ? -100 : 100;
-  gsap.to(imageContainer.value, { x: imageX, opacity: 0, duration: opts.value.exitAnimation.duration, ease: opts.value.exitAnimation.ease, delay });
-  gsap.to(textContainer.value, { x: -imageX, opacity: 0, duration: opts.value.exitAnimation.duration, ease: opts.value.exitAnimation.ease, delay });
+  gsap.to(imageContainer.value, { 
+    x: imageX, 
+    opacity: 0, 
+    duration: opts.value.exitAnimation.duration, 
+    ease: opts.value.exitAnimation.ease, 
+    delay 
+  });
+  gsap.to(textContainer.value, { 
+    x: -imageX, 
+    opacity: 0, 
+    duration: opts.value.exitAnimation.duration, 
+    ease: opts.value.exitAnimation.ease, 
+    delay 
+  });
 };
 
 defineExpose({ playEnter, playExit });
@@ -247,6 +363,27 @@ onMounted(async () => {
   } catch (e) {
     console.warn('Feature detail config not found, using defaults.', e);
   }
+
+  // --- Small screen detection ---
+  try {
+    mq = window.matchMedia('(max-width: 640px)');
+    isSmallScreen.value = mq.matches;
+    if (mq.addEventListener) mq.addEventListener('change', handleMq);
+    else if (mq.addListener) mq.addListener(handleMq);
+  } catch {}
+
+  // --- IntersectionObserver for footer visibility ---
+  try {
+    io = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      // 小屏：区块在视口中且可见比例达到一定阈值时显示，避免与相邻 section 重叠同时显示
+      // 大屏：需要一定可见比例以触发覆盖显示。
+      showFooter.value = isSmallScreen.value
+        ? (entry.isIntersecting && entry.intersectionRatio > 0.2)
+        : (entry.isIntersecting && entry.intersectionRatio > 0.08);
+    }, { threshold: [0, 0.08, 0.15, 0.3, 0.5, 1] });
+    if (featureSection.value) io.observe(featureSection.value);
+  } catch {}
 
   // --- Theme detection logic ---
   isDarkMode.value = document.documentElement.classList.contains('dark');
@@ -264,39 +401,79 @@ onMounted(async () => {
 
   nextTick(() => {
     const imageX = props.isImageLeft ? -100 : 100; // 左/右方向
-    // 初始状态：离场且透明
-    gsap.set(imageContainer.value, { x: imageX, opacity: 0 });
-    gsap.set(textContainer.value, { x: -imageX, opacity: 0 });
+    
+    // 确保初始状态正确设置，避免刷新后的位移问题
+    const setInitialState = () => {
+      gsap.set(imageContainer.value, { x: imageX, opacity: 0, clearProps: 'transform' });
+      gsap.set(textContainer.value, { x: -imageX, opacity: 0, clearProps: 'transform' });
+    };
+    
+    // 立即设置初始状态
+    setInitialState();
+    
+    // 延迟再次设置，确保覆盖任何可能的样式冲突
+    setTimeout(setInitialState, 10);
 
     const show = (delay = 0) => {
-      gsap.to(imageContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay });
-      gsap.to(textContainer.value, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: delay + 0.05 });
-      if (swiperRef.value) updateSlideShadows(swiperRef.value); // Ensure shadows are set on show
-    };
-    const hide = (delay = 0) => {
-      gsap.to(imageContainer.value, { x: imageX, opacity: 0, duration: 0.6, ease: 'power2.in', delay });
-      gsap.to(textContainer.value, { x: -imageX, opacity: 0, duration: 0.6, ease: 'power2.in', delay });
-    };
-
-    // 小屏使用 ScrollTrigger；大屏由 Home.vue 调度进出场
-    if (window.innerWidth < 1024) {
-      ctx = gsap.context(() => {
-        ScrollTrigger.create({
-          trigger: featureSection.value,
-          start: 'top 80%',
-          end: 'bottom 20%',
-          onEnter: () => show(),
-          onEnterBack: () => show(),
-          onLeave: () => hide(),
-          onLeaveBack: () => hide(),
-        });
+      // 在动画开始前再次确保初始状态
+      if (delay === 0) {
+        gsap.set(imageContainer.value, { x: imageX, opacity: 0 });
+        gsap.set(textContainer.value, { x: -imageX, opacity: 0 });
+      }
+      
+      gsap.to(imageContainer.value, { 
+        x: 0, 
+        opacity: 1, 
+        duration: opts.value.enterAnimation.duration, 
+        ease: opts.value.enterAnimation.ease, 
+        delay,
+        clearProps: 'transform' 
       });
-    }
+      gsap.to(textContainer.value, { 
+        x: 0, 
+        opacity: 1, 
+        duration: opts.value.enterAnimation.duration, 
+        ease: opts.value.enterAnimation.ease, 
+        delay: delay + opts.value.enterAnimation.stagger,
+        clearProps: 'transform'
+      });
+      if (swiperRef.value) updateSlideShadows(swiperRef.value);
+    };
+    
+    const hide = (delay = 0) => {
+      gsap.to(imageContainer.value, { 
+        x: imageX, 
+        opacity: 0, 
+        duration: opts.value.exitAnimation.duration, 
+        ease: opts.value.exitAnimation.ease, 
+        delay 
+      });
+      gsap.to(textContainer.value, { 
+        x: -imageX, 
+        opacity: 0, 
+        duration: opts.value.exitAnimation.duration, 
+        ease: opts.value.exitAnimation.ease, 
+        delay 
+      });
+    };
 
-    // 大屏由父级 Home.vue 调度，已在顶层暴露 playEnter/playExit
-    // Initial shadow application if not handled by ScrollTrigger
-    if (window.innerWidth >= 1024 && swiperRef.value) {
-        updateSlideShadows(swiperRef.value);
+    // 所有屏幕均使用 ScrollTrigger 控制进/出场，Lenis 提供平滑滚动
+    ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: featureSection.value,
+        // 使用“定位点”：当本段顶部到达视口中心时进入；底部到达视口中心时离开
+        start: 'top center',
+        end: 'bottom center',
+        onEnter: () => { setActiveFeatureId(props.id); show(); showFooter.value = true; },
+        onEnterBack: () => { setActiveFeatureId(props.id); show(); showFooter.value = true; },
+        onLeave: () => { if (activeFeatureId?.value === props.id) setActiveFeatureId(null); hide(); showFooter.value = false; },
+        onLeaveBack: () => { if (activeFeatureId?.value === props.id) setActiveFeatureId(null); hide(); showFooter.value = false; },
+      });
+    });
+
+    // 初始阴影应用
+    if (swiperRef.value) {
+      updateSlideShadows(swiperRef.value);
     }
   });
 });
@@ -305,6 +482,14 @@ onUnmounted(() => {
   if (ctx) ctx.revert();
   // Clean up theme observer
   if (themeObserver) themeObserver.disconnect();
+  // Clean up IntersectionObserver
+  if (io && featureSection.value) io.unobserve(featureSection.value);
+  io = null;
+  // Clean up matchMedia
+  if (mq) {
+    if (mq.removeEventListener) mq.removeEventListener('change', handleMq);
+    else if (mq.removeListener) mq.removeListener(handleMq);
+  }
 });
 
 const beforeEnterLine = (el) => {

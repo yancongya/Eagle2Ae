@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900">
+  <main class="bg-white dark:bg-gray-900 flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
     <div ref="pageRef" :style="[{ 'view-transition-name': 'preview' }, wrapperStyle]" class="flex flex-col">
       <section class="flex-1 min-h-0 w-full">
         <!-- Mobile: single preview -->
@@ -114,7 +114,7 @@ import { useI18n } from 'vue-i18n';
 const route = useRoute();
 const { locale } = useI18n();
 const pageRef = ref(null);
-const wrapperStyle = computed(() => ({ height: '100vh' }));
+const wrapperStyle = computed(() => ({ height: 'calc(100vh - var(--navbar-height, 0px))' }));
 const isDark = useDark({ storageKey: 'theme' });
 
 // Keep track of iframe load cleanup handlers

@@ -64,7 +64,12 @@ const handleScroll = () => {
 };
 
 const scrollToTop = () => {
-  gsap.to(window, { duration: opts.value.animation.duration, scrollTo: 0, ease: opts.value.animation.ease });
+  const duration = opts.value.animation?.duration ?? 0.8;
+  if (window.__lenis && typeof window.__lenis.scrollTo === 'function') {
+    window.__lenis.scrollTo(0, { duration });
+  } else {
+    gsap.to(window, { duration, scrollTo: 0, ease: opts.value.animation?.ease || 'power2.out' });
+  }
 };
 
 
