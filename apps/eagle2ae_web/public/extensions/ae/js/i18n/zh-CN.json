@@ -241,7 +241,10 @@
     "uiToggleHeader": "标题栏显示（取消后折叠，悬浮时出现）",
     "uiToggleFullscreen": "独显模式：只显示导入模式面板，隐藏其他面板",
     "panelIdPrefix": "当前面板ID:",
-    "presetFilenamePrefix": "当前预设文件名:"
+    "presetFilenamePrefix": "当前预设文件名:",
+    "openCurrentPresetDirectory": "打开当前预设目录：我的文档\\Eagle2Ae-Ae\\presets",
+    "openCustomPresetDirectory": "打开自定义预设目录：\n%s",
+    "portRangeInfo": "端口范围: 1024-65535，修改后需重新连接"
   },
   "categories": {
     "design": "设计",
@@ -303,5 +306,15 @@
     "checkingFiles": "正在检测 %d 个文件...",
     "readyToCheck": "准备检测拖拽的文件",
     "webContentDetected": "检测到网页内容，松手后尝试导入图片"
+  },
+  "settingsPanel": {
+    "confirmResetToDefault": "确定要重置所有设置到默认值吗？",
+    "settingsResetToDefault": "设置已重置为默认值",
+    "resetSettingsFailed": "重置设置失败",
+    "startSavingSettings": "开始保存设置...",
+    "allSettingsSavedSuccessfully": "所有设置保存成功",
+    "errorSavingSettings": "保存设置出错",
+    "featureUnavailableInDemo": "此功能在网页演示模式下不可用。",
+    "communicationSettings": "通信设置"
   }
 }

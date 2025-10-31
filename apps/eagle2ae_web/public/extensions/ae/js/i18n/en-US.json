@@ -244,7 +244,10 @@
     "uiToggleHeader": "Toggle header visibility (collapses when disabled, appears on hover)",
     "uiToggleFullscreen": "Solo mode: Show only import mode panel, hide other panels",
     "panelIdPrefix": "Current Panel ID:",
-    "presetFilenamePrefix": "Current Preset Filename:"
+    "presetFilenamePrefix": "Current Preset Filename:",
+    "openCurrentPresetDirectory": "Open current preset directory: My Documents\\Eagle2Ae-Ae\\presets",
+    "openCustomPresetDirectory": "Open custom preset directory:\n%s",
+    "portRangeInfo": "Port range: 1024-65535, requires reconnection after modification"
   },
   "categories": {
     "design": "Design",
@@ -305,6 +308,8 @@
     "filesFoundInFolder": "Found %d files in folder",
     "checkingFiles": "Checking %d files...",
     "readyToCheck": "Ready to check dragged files",
-    "webContentDetected": "Web content detected, release to try importing images"
+    "errorSavingSettings": "Error saving settings",
+    "featureUnavailableInDemo": "This feature is not available in web demo mode.",
+    "communicationSettings": "Communication Settings"
   }
 }

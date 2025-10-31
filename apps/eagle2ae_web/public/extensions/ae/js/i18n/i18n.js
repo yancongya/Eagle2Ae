@@ -194,6 +194,10 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const text = this.getText(key);
       if (text) {
+        if (element.id === 'communicationPortSettingsTitle') {
+            console.log(`[i18n.updatePageTexts] 尝试翻译通信端口设置标题: 键: ${key}, 翻译文本: ${text}`);
+        }
+        console.log(`[i18n.updatePageTexts] 找到 data-i18n 元素: ${element.tagName}#${element.id || element.className}，键: ${key}，翻译文本: ${text}`);
         element.textContent = text;
         // 调试：记录 UI 设置按钮的更新（仅在 debug 开启时输出）
         try {

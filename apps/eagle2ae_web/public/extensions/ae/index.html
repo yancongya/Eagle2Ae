@@ -1075,6 +1075,33 @@
             background: rgba(52, 152, 219, 0.1);
         }
 
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #555;
+            color: #eee;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            margin-left: 8px;
+            flex-shrink: 0;
+            transition: background 0.2s ease;
+        }
+
+        .info-icon:hover {
+            background: #777;
+        }
+
+        .settings-section input[type="number"] {
+            background: #333;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
         /* 设置面板样式 */
         .settings-panel {
             position: absolute;
@@ -4332,15 +4359,13 @@
 
                 <!-- 通信端口设置 -->
                 <div class="settings-section">
-                    <div class="settings-section-title" data-i18n="common.communicationPortSettings">通信端口设置</div>
-                    <div class="input-group">
-                        <label class="input-option">
-                            <div class="input-wrapper">
-                                <input type="number" id="communication-port" value="8080" min="1024" max="65535">
-                                <small class="input-hint" data-i18n="common.portRange">端口范围: 1024-65535，修改后需重新连接</small>
-                            </div>
-                        </label>
-                    </div>
+<h4 class="settings-section-title" id="communicationPortSettingsTitle" data-i18n="settingsPanel.communicationSettings">通信端口设置
+    <span class="info-icon" data-i18n-title="tooltips.portRangeInfo" title="Port range: 1024-65535, requires reconnection after modification">?</span>
+</h4>
+<div class="setting-item">
+    <label for="communicationPort" data-i18n="common.communicationPort">通信端口</label>
+    <input type="number" id="communicationPort" min="1024" max="65535">
+</div>
                 </div>
 
                 <!-- UI 设置 -->
@@ -5837,198 +5862,7 @@
             }
         })();
 
-        // 预设按钮事件
-        (function setupPresetButtons() {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', setupPresetButtons);
-                return;
-            }
 
-            const downloadBtn = document.getElementById('download-preset-btn');
-            const openBtn = document.getElementById('open-preset-btn');
-
-            // 下载预设文件按钮 - CEP环境选择目录并复制文件
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', async function (e) {
-                    e.preventDefault(); // 阻止默认行为
-                    e.stopPropagation(); // 阻止事件冒泡
-                    
-                    try {
-                        if (!window.eagleToAeApp) {
-                            alert('应用未初始化');
-                            return;
-                        }
-
-                        // 检查是否在 CEP 环境中
-                        const isCEP = typeof CSInterface !== 'undefined';
-
-                        if (isCEP && window.eagleToAeApp.csInterface) {
-                            // CEP 环境：使用 ExtendScript 选择目录并复制文件
-                            const fileName = window.eagleToAeApp.getPresetFileName();
-                            
-                            // 获取源文件路径并复制
-                            const copyScript = `
-                                (function() {
-                                    try {
-                                        // 获取用户文档目录
-                                        var documentsFolder = Folder.myDocuments;
-                                        var presetsDir = new Folder(documentsFolder.fsName + '/Eagle2Ae-Ae/presets');
-                                        var sourceFile = new File(presetsDir.fsName + '/${fileName}');
-                                        
-                                        if (!sourceFile.exists) {
-                                            return JSON.stringify({
-                                                success: false, 
-                                                error: '预设文件不存在',
-                                                path: sourceFile.fsName,
-                                                presetsDir: presetsDir.fsName
-                                            });
-                                        }
-                                        
-                                        // 选择目标文件夹
-                                        var targetFolder = Folder.selectDialog('选择保存预设文件的目录');
-                                        if (!targetFolder) {
-                                            return JSON.stringify({success: false, cancelled: true});
-                                        }
-                                        
-                                        // 复制文件
-                                        var targetFile = new File(targetFolder.fsName + '/${fileName}');
-                                        if (sourceFile.copy(targetFile)) {
-                                            return JSON.stringify({
-                                                success: true, 
-                                                path: targetFile.fsName
-                                            });
-                                        } else {
-                                            return JSON.stringify({success: false, error: '文件复制失败'});
-                                        }
-                                    } catch (e) {
-                                        return JSON.stringify({success: false, error: e.toString()});
-                                    }
-                                })();
-                            `;
-
-                            window.eagleToAeApp.csInterface.evalScript(copyScript, (result) => {
-                                try {
-                                    const res = JSON.parse(result);
-                                    if (res.success) {
-                                        alert(`预设文件已保存到:\n${res.path}`);
-                                        console.log(`✅ 预设文件已复制到: ${res.path}`);
-                                    } else if (res.cancelled) {
-                                        console.log('用户取消了文件夹选择');
-                                    } else {
-                                        alert('保存失败: ' + res.error);
-                                        console.error('保存失败:', res.error);
-                                    }
-                                } catch (error) {
-                                    console.error('解析结果失败:', error, result);
-                                    alert('保存失败: ' + error.message);
-                                }
-                            });
-                        } else {
-                            // 网页环境：使用浏览器下载
-                            const settings = window.eagleToAeApp.settingsManager.getSettings();
-                            const presetData = JSON.stringify(settings, null, 2);
-                            const fileName = window.eagleToAeApp.getPresetFileName();
-                            
-                            const blob = new Blob([presetData], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = fileName;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            
-                            console.log(`✅ 预设文件下载已触发: ${fileName}`);
-                        }
-                    } catch (error) {
-                        console.error('下载预设文件失败:', error);
-                        alert('下载预设文件失败: ' + error.message);
-                    }
-                });
-            }
-
-            // 打开预设文件按钮 - 使用系统默认程序打开
-            if (openBtn) {
-                openBtn.addEventListener('click', async function () {
-                    try {
-                        if (!window.eagleToAeApp) {
-                            alert('应用未初始化');
-                            return;
-                        }
-
-                        // 检查是否在 CEP 环境中
-                        const isCEP = typeof CSInterface !== 'undefined';
-
-                        if (isCEP && window.eagleToAeApp.csInterface) {
-                            // CEP 环境：使用 ExtendScript 打开文件
-                            const fileName = window.eagleToAeApp.getPresetFileName();
-                            
-                            const openFileScript = `
-                                (function() {
-                                    try {
-                                        // 获取用户文档目录
-                                        var documentsFolder = Folder.myDocuments;
-                                        var presetsDir = new Folder(documentsFolder.fsName + '/Eagle2Ae-Ae/presets');
-                                        var presetFile = new File(presetsDir.fsName + '/${fileName}');
-                                        
-                                        if (!presetFile.exists) {
-                                            return JSON.stringify({
-                                                success: false, 
-                                                error: '预设文件不存在',
-                                                path: presetFile.fsName,
-                                                presetsDir: presetsDir.fsName
-                                            });
-                                        }
-                                        
-                                        // 使用系统默认程序打开文件
-                                        if (presetFile.execute()) {
-                                            return JSON.stringify({
-                                                success: true, 
-                                                path: presetFile.fsName
-                                            });
-                                        } else {
-                                            return JSON.stringify({
-                                                success: false, 
-                                                error: '无法打开文件',
-                                                path: presetFile.fsName
-                                            });
-                                        }
-                                    } catch (e) {
-                                        return JSON.stringify({success: false, error: e.toString()});
-                                    }
-                                })();
-                            `;
-
-                            window.eagleToAeApp.csInterface.evalScript(openFileScript, (result) => {
-                                try {
-                                    const res = JSON.parse(result);
-                                    if (res.success) {
-                                        console.log(`✅ 已打开预设文件: ${res.path}`);
-                                    } else {
-                                        if (res.path) {
-                                            alert(`${res.error}\n\n文件路径:\n${res.path}\n\n请手动打开此文件`);
-                                        } else {
-                                            alert('打开失败: ' + res.error);
-                                        }
-                                        console.error('打开失败:', res.error);
-                                    }
-                                } catch (error) {
-                                    console.error('解析结果失败:', error, result);
-                                    alert('打开失败: ' + error.message);
-                                }
-                            });
-                        } else {
-                            // 网页环境：提示用户
-                            alert('网页环境下无法直接打开预设文件\n请使用"下载预设文件"功能');
-                        }
-                    } catch (error) {
-                        console.error('打开预设文件失败:', error);
-                        alert('打开预设文件失败: ' + error.message);
-                    }
-                });
-            }
-        })();
 
         // 监听来自父窗口的语言更新消息
         window.addEventListener('message', function (event) {

@@ -7,7 +7,7 @@
     "noImportSubMode": "normal",
     "timelineOptions": {
       "enabled": true,
-      "placement": "current_time"
+      "placement": "timeline_start"
     },
     "fileManagement": {
       "keepOriginalName": true,
@@ -25,7 +25,8 @@
       "customExportPath": "",
       "autoCopy": true,
       "addTimestamp": false,
-      "createSubfolders": false
+      "createSubfolders": false,
+      "burnAfterReading": false
     }
   },
   "userPreferences": {
@@ -33,10 +34,13 @@
     "favoriteFolder": "",
     "autoSaveSettings": true,
     "showWelcomeWizard": true,
-    "theme": "ae_native",
+    "theme": "dark",
     "communicationPort": 8080,
     "lastUsedExportMode": "project_adjacent",
-    "favoriteExportFolder": ""
+    "favoriteExportFolder": "",
+    "autoConnect": true,
+    "showNotifications": true,
+    "language": "zh-CN"
   },
   "uiSettings": {
     "theme": true,
@@ -44,8 +48,8 @@
     "log": true,
     "projectInfo": true,
     "logPanel": true,
-    "header": true,
-    "fullscreen": false
+    "header": false,
+    "fullscreen": true
   },
-  "exportedAt": "2025-10-30T14:57:26.072Z"
+  "exportedAt": "2025-10-31T13:20:05.262Z"
 }

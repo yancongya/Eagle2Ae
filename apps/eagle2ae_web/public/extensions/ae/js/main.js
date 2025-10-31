@@ -6546,12 +6546,33 @@ class AEExtension {
         } else {
             // 重置按钮：重置为默认并立即写入预设JSON
             resetBtn.addEventListener('click', async () => {
-                try {
-                    this.resetSettings();
-                    await this.savePresetsSilently();
-                    this.log('🧹 已重置为默认并同步到预设JSON', 'info');
-                } catch (e) {
-                    this.log(`⚠️ 重置并保存预设失败：${e.message}`, 'warning');
+                const lang = localStorage.getItem('language') || 'zh-CN';
+                const message = lang.includes('en') 
+                    ? 'Are you sure to reset all settings to default?' 
+                    : '确定要重置所有设置到默认值吗？';
+
+                if (confirm(message)) {
+                    // 检查是否在 CEP 环境中
+                    if (typeof CSInterface === 'undefined' || !window.csInterface || typeof window.csInterface.evalScript !== 'function') {
+                        // Web 演示模式：只重置内存中的设置，并依赖 settingsManager 的自动保存到 localStorage
+                        const result = this.settingsManager.resetSettings();
+                        if (result.success) {
+                            this.loadSettingsToUI();
+                            this.log(i18n.getText('settingsPanel.settingsResetToDefault'), 'success');
+                        } else {
+                            this.log(i18n.getText('settingsPanel.resetSettingsFailed') + ': ' + result.error, 'error');
+                        }
+                    } else {
+                        // CEP 插件环境：重置并写入文件
+                        try {
+                            this.settingsManager.resetSettings();
+                            await this.savePresetsSilently();
+                            this.loadSettingsToUI();
+                            this.log('🧹 已重置为默认并同步到预设JSON', 'info');
+                        } catch (e) {
+                            this.log(`⚠️ 重置并保存预设失败：${e.message}`, 'warning');
+                        }
+                    }
                 }
             });
         }
@@ -6981,19 +7002,15 @@ class AEExtension {
         console.log('[Settings] ========== 打开设置面板 ==========');
         const settingsPanel = document.getElementById('settings-panel');
         settingsPanel.style.display = 'flex';
-        this.loadSettingsToUI();
-        // 刷新按钮选中样式（打开面板后确保正确高亮）
-        this.updateModeButtonStyles();
-        // 立即更新阅后即焚的tooltip
-        this.updateBurnAfterReadingTooltip();
-
-        // 初始化预设文件管理按钮（两种模式通用）
-        // 每次打开面板都重新初始化，确保事件绑定正确
+        // this.loadSettingsToUI(); // 移动到 setTimeout 内部
+        // ...
         console.log('[Settings] 准备初始化预设文件按钮（300ms 后）');
         setTimeout(() => {
             console.log('[Settings] 现在调用 initPresetFileButtons()');
             this.initPresetFileButtons();
-        }, 300);
+            this.loadSettingsToUI(); // 移动到这里
+            window.i18n?.updatePageTexts(); // 强制更新UI翻译
+        }, 500);
 
         this.log('打开导入设置面板', 'info');
     }
@@ -7111,10 +7128,15 @@ class AEExtension {
 
         // 通信端口
         const preferences = this.settingsManager.getPreferences();
-        const communicationPort = document.getElementById('communication-port');
-        if (communicationPort) {
-            communicationPort.value = preferences.communicationPort;
-            this.updateEagleUrl(preferences.communicationPort);
+        console.log('[loadSettingsToUI] preferences.communicationPort:', preferences.communicationPort);
+
+        const communicationPortInput = document.getElementById('communicationPort');
+        if (communicationPortInput) {
+            console.log('[loadSettingsToUI] communicationPortInput 存在，当前值:', communicationPortInput.value);
+            communicationPortInput.value = preferences.communicationPort;
+            console.log('[loadSettingsToUI] communicationPortInput 设置后值:', communicationPortInput.value);
+        } else {
+            console.warn('[loadSettingsToUI] communicationPort 输入框未找到！');
         }
 
         // 音效设置（默认启用，设置音效播放器音量）
@@ -7948,7 +7970,7 @@ class AEExtension {
     // 保存设置
     saveSettings(hidePanel = true) {
         try {
-            this.log('开始保存设置...', 'info');
+            this.log(i18n.getText('settingsPanel.startSavingSettings'), 'info');
             const settings = this.getSettingsFromUI();
 
             // 记录当前设置状态
@@ -7986,7 +8008,7 @@ class AEExtension {
                 return;
             }
 
-            this.log('所有设置保存成功', 'success');
+            this.log(i18n.getText('settingsPanel.allSettingsSavedSuccessfully'), 'success');
 
             // 同步UI状态
             this.syncSettingsUI();
@@ -8007,21 +8029,21 @@ class AEExtension {
             this.syncSettingsToEagle(settings);
 
         } catch (error) {
-            this.log(`保存设置出错: ${error.message}`, 'error');
+            this.log(i18n.getText('settingsPanel.errorSavingSettings') + ': ' + error.message, 'error');
             console.error('保存设置详细错误:', error);
         }
     }
 
     // 重置设置
     resetSettings() {
-        if (confirm('确定要重置所有设置到默认值吗？')) {
+        if (confirm(i18n.getText('settingsPanel.confirmResetToDefault'))) {
             const result = this.settingsManager.resetSettings();
 
             if (result.success) {
                 this.loadSettingsToUI();
-                this.log('设置已重置为默认值', 'success');
+                this.log(i18n.getText('settingsPanel.settingsResetToDefault'), 'success');
             } else {
-                this.log(`重置设置失败: ${result.error}`, 'error');
+                this.log(i18n.getText('settingsPanel.resetSettingsFailed') + ': ' + result.error, 'error');
             }
         }
     }
@@ -9105,27 +9127,21 @@ class AEExtension {
      * 静默保存预设到JSON（无弹窗与打开文件夹）
      * @returns {Promise<boolean>} 是否保存成功
      */
-    async savePresetsSilently() {
-        try {
-            const fileName = this.getPresetFileName();
-            console.log(`[${this.panelId}] 💾 准备保存预设到文件: ${fileName}`);
-            
-            const settings = this.settingsManager.getSettings();
-            const preferences = this.settingsManager.getPreferences();
-
-            // 收集所有配置
-            const exportPayload = {
-                importSettings: settings,
-                userPreferences: preferences,
-                uiSettings: this.getUISettingsFromLocalStorage(),
-                exportedAt: new Date().toISOString()
-            };
-
-            // Demo 模式：优先保存到项目内 /public/config/presets（通过本地开发服务器 API）
+        async savePresetsSilently() {
+            // 明确区分Web演示模式和CEP插件环境
             if (window.__DEMO_MODE_ACTIVE__) {
                 try {
+                    const fileName = this.getPresetFileName();
+                    const settings = this.settingsManager.getSettings();
+                    const preferences = this.settingsManager.getPreferences();
+                    const exportPayload = {
+                        importSettings: settings,
+                        userPreferences: preferences,
+                        uiSettings: this.getUISettingsFromLocalStorage(),
+                        exportedAt: new Date().toISOString()
+                    };
                     const jsonContent = JSON.stringify(exportPayload, null, 2);
-
+    
                     // 优先通过开发服务器写入到 public/config/presets
                     try {
                         const resp = await fetch('/api/presets', {
@@ -9148,16 +9164,11 @@ class AEExtension {
                     } catch (apiErr) {
                         console.warn('[Demo] 保存到 /api/presets 失败，降级到本地方式:', apiErr.message);
                     }
-
+    
                     // 保存到虚拟文件系统
                     if (window.demoFileSystem) {
-                        // 🔥 使用面板特定的文件名
-                        const demoFileName = `Eagle2Ae-Ae/presets/${this.getPresetFileName()}`;
-                        const result = window.demoFileSystem.writeFile(
-                            demoFileName,
-                            jsonContent
-                        );
-
+                        const demoFileName = `Eagle2Ae-Ae/presets/${fileName}`;
+                        const result = window.demoFileSystem.writeFile(demoFileName, jsonContent);
                         if (result.success) {
                             this.log(`💾 预设已保存到虚拟文件系统 (${result.size} bytes)`, 'info');
                             return true;
@@ -9176,35 +9187,44 @@ class AEExtension {
                     return false;
                 }
             }
-
-            // CEP 模式：保存到文件系统
-            // 🔥 使用面板特定的文件名
-            const params = {
-                fileName: this.getPresetFileName(),
-                overwrite: true,
-                jsonData: JSON.stringify(exportPayload, null, 2)
-            };
-            const baseFolder = this.getPresetsBaseFolderPath();
-            if (baseFolder) {
-                params.baseFolderFsPath = baseFolder;
-            } else {
-                params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
-            }
-
-            const result = await this.executeExtendScript('exportImportSettingsToJSON', params);
-            if (result && result.success) {
-                this.log('💾 预设已自动保存到文档目录', 'info');
-                return true;
-            } else {
-                const msg = result && result.error ? result.error : '未知错误';
-                this.log(`⚠️ 自动保存预设失败: ${msg}`, 'warning');
+    
+            // CEP 插件环境逻辑 (只有在非Demo模式下才执行)
+            try {
+                const fileName = this.getPresetFileName();
+                const settings = this.settingsManager.getSettings();
+                const preferences = this.settingsManager.getPreferences();
+                const exportPayload = {
+                    importSettings: settings,
+                    userPreferences: preferences,
+                    uiSettings: this.getUISettingsFromLocalStorage(),
+                    exportedAt: new Date().toISOString()
+                };
+                const params = {
+                    fileName: fileName,
+                    overwrite: true,
+                    jsonData: JSON.stringify(exportPayload, null, 2)
+                };
+                const baseFolder = this.getPresetsBaseFolderPath();
+                if (baseFolder) {
+                    params.baseFolderFsPath = baseFolder;
+                } else {
+                    params.targetSubFolder = 'Eagle2Ae-Ae\\presets';
+                }
+    
+                const result = await this.executeExtendScript('exportImportSettingsToJSON', params);
+                if (result && result.success) {
+                    this.log('💾 预设已自动保存到文档目录', 'info');
+                    return true;
+                } else {
+                    const msg = result && result.error ? result.error : '未知错误';
+                    this.log(`⚠️ 自动保存预设失败: ${msg}`, 'warning');
+                    return false;
+                }
+            } catch (error) {
+                this.log(`⚠️ 自动保存预设异常: ${error.message}`, 'warning');
                 return false;
             }
-        } catch (error) {
-            this.log(`⚠️ 自动保存预设异常: ${error.message}`, 'warning');
-            return false;
         }
-    }
 
     /**
      * 从JSON自动读取预设并应用到UI
@@ -9495,11 +9515,15 @@ class AEExtension {
     }
 
     updateOpenPresetsBtnTooltip() {
-        const btn = document.getElementById('export-presets-btn');
-        if (!btn) return;
-        const base = this.getPresetsBaseFolderPath();
-        const display = base || '我的文档\\Eagle2Ae-Ae\\presets';
-        btn.title = `打开当前预设目录：${display}`;
+        const openPresetsDirBtn = document.getElementById('open-presets-dir-btn');
+        if (openPresetsDirBtn) {
+            const basePath = this.getPresetsBaseFolderPath();
+            if (basePath) {
+                openPresetsDirBtn.title = i18n.getText('tooltips.openCustomPresetDirectory').replace('%s', basePath);
+            } else {
+                openPresetsDirBtn.title = i18n.getText('tooltips.openCurrentPresetDirectory');
+            }
+        }
     }
 
     /**
@@ -9508,7 +9532,12 @@ class AEExtension {
     async handleOpenPresetsFolder() {
         // Demo 模式：显示虚拟文件系统信息
         if (window.__DEMO_MODE_ACTIVE__) {
-            this.handleViewDemoFiles();
+            // Simple, robust language check for this specific demo-mode alert
+            const lang = localStorage.getItem('language') || 'zh-CN';
+            const message = lang.includes('en') 
+                ? 'This feature is not available in web demo mode.' 
+                : '此功能在网页演示模式下不可用。';
+            alert(message);
             return;
         }
 
@@ -10063,8 +10092,8 @@ class AEExtension {
             });
 
             document.addEventListener('dragleave', (e) => {
-                // 只有当拖拽完全离开窗口时才移除样式
-                if (e.clientX === 0 && e.clientY === 0) {
+                // 当鼠标指针离开窗口时，e.relatedTarget 会是 null
+                if (!e.relatedTarget) {
                     document.body.classList.remove('drag-over');
                     // 重置拖拽提示状态
                     this.resetDragPreviewState();
@@ -10202,8 +10231,7 @@ class AEExtension {
                 this.dragPreviewTimeout = null;
             }
 
-            // 重置提示文本
-            this.updateDragHint('拖拽文件到此处');
+            this.updateDragHint(i18n.getText('dragDrop.dragFilesHere'));
 
             // 移除特殊样式
             document.body.classList.remove('drag-project-files');

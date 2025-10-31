@@ -38,24 +38,26 @@
 - [ ] "测试连接" → "Test connection"
 
 ### 5. 设置面板文字 (Settings Panel Text)
-- [ ] "确定要重置所有设置到默认值吗？" → "Are you sure to reset all settings to default?"
-- [ ] "设置已重置为默认值" → "Settings reset to default"
-- [ ] "重置设置失败" → "Reset settings failed"
-- [ ] "开始保存设置..." → "Start saving settings..."
-- [ ] "所有设置保存成功" → "All settings saved successfully"
-- [ ] "保存设置出错" → "Error saving settings"
+- [x] "确定要重置所有设置到默认值吗？" → "Are you sure to reset all settings to default?"
+- [x] "设置已重置为默认值" → "Settings reset to default"
+- [x] "重置设置失败" → "Reset settings failed"
+- [x] "开始保存设置..." → "Start saving settings..."
+- [x] "所有设置保存成功" → "All settings saved successfully"
+- [x] "保存设置出错" → "Error saving settings"
+- [x] "通信端口设置" → "Communication Port Settings"
+- [x] "Port range: 1024-65535, requires reconnection after modification" → "Port range: 1024-65535, requires reconnection after modification"
 
 ### 6. 拖拽功能文字 (Drag and Drop Text)
-- [ ] "拖拽文件到此处" → "Drag files here"
-- [ ] "检测到项目内文件，无法导入：" → "Project internal files detected, cannot import:"
-- [ ] "检测到AE项目文件，无法导入：" → "AE project files detected, cannot import:"
-- [ ] "AE项目文件导入限制" → "AE Project File Import Limit"
-- [ ] "项目内文件导入限制" → "Project Internal File Import Limit"
-- [ ] "检测到 %d 个项目内文件" → "Detected %d project internal files"
-- [ ] "项目内文件无法导入" → "Project internal files cannot be imported"
-- [ ] "准备导入 %d 个文件" → "Ready to import %d files"
-- [ ] "文件夹中没有找到可导入的文件" → "No importable files found in folder"
-- [ ] "文件夹中找到 %d 个文件" → "Found %d files in folder"
+- [x] "拖拽文件到此处" → "Drag files here"
+- [x] "检测到项目内文件，无法导入：" → "Project internal files detected, cannot import:"
+- [x] "检测到AE项目文件，无法导入：" → "AE project files detected, cannot import:"
+- [x] "AE项目文件导入限制" → "AE Project File Import Limit"
+- [x] "项目内文件导入限制" → "Project Internal File Import Limit"
+- [x] "检测到 %d 个项目内文件" → "Detected %d project internal files"
+- [x] "项目内文件无法导入" → "Project internal files cannot be imported"
+- [x] "准备导入 %d 个文件" → "Ready to import %d files"
+- [x] "文件夹中没有找到可导入的文件" → "No importable files found in folder"
+- [x] "文件夹中找到 %d 个文件" → "Found %d files in folder"
 
 ### 7. 文件导入文字 (File Import Text)
 - [ ] "检测到 %d 个文件" → "Detected %d files"
@@ -87,7 +89,7 @@
 - [ ] "获取AE状态失败" → "Get AE status failed"
 
 ### 10. 成功消息 (Success Messages)
-- [ ] "扩展启动 - 端口" → "Extension startup - Port"。
+- [ ] "扩展启动 - 端口" → "Extension startup - Port"
 - [ ] "Eagle插件启动完成 - 版本" → "Eagle plugin startup complete - Version"
 - [ ] "资源库 已加载" → "Library loaded"
 - [ ] "共 个文件，占用" → "Total files,占用"
@@ -173,7 +175,7 @@
 
 ### 18. 预设和设置 (Presets and Settings)
 - [ ] "正在导出预设为JSON..." → "Exporting presets to JSON..."
-- [ ] "预设导出成功" → "Presets exported successfully"
+- [ ] "预设导出成功" → "Presets exported successfully" 
 - [ ] "预设导出失败" → "Presets export failed"
 - [ ] "导出预设过程出错" → "Error exporting presets"
 - [ ] "自动保存预设失败" → "Auto save presets failed"
@@ -181,18 +183,18 @@
 - [ ] "尝试加载预设文件" → "Trying to load preset file"
 - [ ] "正在创建默认预设文件" → "Creating default preset file"
 - [ ] "默认预设文件创建成功" → "Default preset file created successfully"
-- [ ] "预设目录就绪" → "Preset directory ready"
-- [ ] "预设目录已设置为" → "Preset directory set to"
-- [ ] "预设文件不存在" → "Preset file does not exist"
+- [x] "预设目录就绪" → "Preset directory ready"
+- [x] "预设目录已设置为" → "Preset directory set to"
+- [x] "预设文件不存在" → "Preset file does not exist"
 - [ ] "正在创建预设文件" → "Creating preset file"
 - [ ] "创建默认预设文件" → "Create default preset file"
-- [ ] "预设文件" → "Preset file"
-- [ ] "预设目录" → "Preset directory"
+- [x] "预设文件" → "Preset file"
+- [x] "预设目录" → "Preset directory"
 - [ ] "预设文件管理" → "Preset file management"
 
 ### 19. 主题和UI文字 (Theme and UI Text)
 - [ ] "切换为暗色模式" → "Switch to dark mode"
-- [ ] "切换为亮色模式" → "Switch to light mode"
+- [ ] "切换为亮色模式" → "Light mode"
 - [ ] "已被宿主锁定" → "Host locked"
 - [ ] "亮色模式" → "Light mode"
 - [ ] "暗色模式" → "Dark mode"
@@ -253,7 +255,7 @@
 ### 24. 摘要信息 (Summary Information)
 - [ ] "可导出: " → "Exportable: "
 - [ ] "不可导出: " → "Not exportable: "
-- [ ] "总结: 共检测 %d 个图层，%d 个可导出，%d 个不可导出" → "Summary: Total %d layers detected, %d exportable, %d not exportable"
+- [ ] "总结: 共检测 %d 个图层，{exportable} 个可导出，{nonExportable} 个不可导出" → "Summary: Total %d layers detected, {exportable} exportable, {nonExportable} not exportable"
 - [ ] "素材分布" → "Asset distribution"
 - [ ] "其他图层" → "Other layers"
 - [ ] "路径汇总" → "Path summary"

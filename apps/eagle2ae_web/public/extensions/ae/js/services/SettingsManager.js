@@ -77,6 +77,12 @@ class SettingsManager {
             } else {
                 this.preferences = { ...this.DEFAULT_USER_PREFERENCES };
             }
+            // 确保 communicationPort 始终是有效数字
+            if (typeof this.preferences.communicationPort !== 'number' || isNaN(this.preferences.communicationPort)) {
+                console.warn('[SettingsManager] communicationPort 无效，回退到默认值:', this.DEFAULT_USER_PREFERENCES.communicationPort);
+                this.preferences.communicationPort = this.DEFAULT_USER_PREFERENCES.communicationPort;
+            }
+            console.log('[SettingsManager] 加载偏好设置完成，communicationPort:', this.preferences.communicationPort);
         } catch (error) {
             console.warn('加载用户偏好失败，使用默认设置:', error);
             this.preferences = { ...this.DEFAULT_USER_PREFERENCES };
