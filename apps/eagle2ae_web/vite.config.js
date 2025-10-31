@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 import fs from 'fs'
 
@@ -7,6 +8,15 @@ import fs from 'fs'
 export default defineConfig({
   plugins: [
     vue(),
+    // PWA: 预缓存核心 JSON 与静态资源，提高离线与回访命中率
+    VitePWA({
+      registerType: 'autoUpdate',
+      devOptions: { enabled: true },
+      workbox: {
+        // 预缓存构建产物以及 public 目录中常见静态资源与 JSON
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
+      },
+    }),
     // 开发期内置一个极简文件写入 API，用于 Demo 模式将预设写回到 public/config/presets
     {
       name: 'preset-writer-api',

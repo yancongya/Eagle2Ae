@@ -17,6 +17,7 @@ export const messages = {
       eaglePreview: 'Eagle 演示',
       download: '下载',
       about: '关于',
+      other: '其他',
       docs: '使用文档'
     },
     footer: {
@@ -27,6 +28,10 @@ export const messages = {
     links: {
       docs: 'https://example.com/docs'
     },
+    other: {
+      title: '其他',
+      subtitle: '聚合网页导航标签与友链内容'
+    },
     route: {
       title: {
         home: '首页 - Eagle2AE',
@@ -34,6 +39,8 @@ export const messages = {
         eaglePreview: 'Eagle 演示 - Eagle2AE',
         download: '下载 - Eagle2AE',
         about: '关于 - Eagle2AE'
+        ,
+        other: '其他 - Eagle2AE'
       }
     },
     download: {
@@ -147,6 +154,7 @@ export const messages = {
       eaglePreview: 'Eagle Demo',
       download: 'Download',
       about: 'About',
+      other: 'Other',
       docs: 'Documentation'
     },
     footer: {
@@ -157,6 +165,10 @@ export const messages = {
     links: {
       docs: 'https://example.com/docs'
     },
+    other: {
+      title: 'Other',
+      subtitle: 'Link hub and friend sites'
+    },
     route: {
       title: {
         home: 'Home - Eagle2AE',
@@ -164,6 +176,8 @@ export const messages = {
         eaglePreview: 'Eagle Demo - Eagle2AE',
         download: 'Download - Eagle2AE',
         about: 'About - Eagle2AE'
+        ,
+        other: 'Other - Eagle2AE'
       }
     },
     download: {

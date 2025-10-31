@@ -439,18 +439,8 @@ class AEExtension {
                 }
             }
 
-            if (!clipboardData) {
-                this.log('无法获取剪贴板数据', 'debug');
-                return;
-            }
-
-            // 检测剪贴板内容
-            const clipboardContent = await this.detectClipboardContent(clipboardData);
-
             if (clipboardContent && clipboardContent.files.length > 0) {
-                this.log(`检测到剪贴板中有 ${clipboardContent.files.length} 个可导入文件`, 'info');
-
-                // 预处理文件名称，在显示对话框时就显示最终名称
+                this.log(this.logManager?.getText('clipboard.importableFilesDetected').replace('%d', clipboardContent.files.length), 'info');
                 const processedFiles = clipboardContent.files.map(file => {
                     if (file.isTemporary && !file.hasOriginalName) {
                         // 只有临时文件且没有原始名称时才重命名
@@ -481,11 +471,11 @@ class AEExtension {
 
                 this.showClipboardConfirmDialog({ ...clipboardContent, files: processedFiles });
             } else {
-                this.log('剪贴板中没有可导入的内容', 'debug');
+                this.log(this.logManager?.getText('clipboard.noImportableContent'), 'debug');
             }
 
         } catch (error) {
-            this.log(`处理剪贴板粘贴失败: ${error.message}`, 'error');
+            this.log(this.logManager?.composeI18nMessage('clipboard.pasteFailed', { msg: error.message }), 'error');
         }
     }
 
@@ -1677,13 +1667,13 @@ class AEExtension {
                     this.logWarning('3. 然后重新尝试导入');
 
                     // 根据导入类型显示不同的提示文本
-                    const dialogTitle = isDragImport ? '请选择合成' : '导入确认';
+                    const dialogTitle = isDragImport ? this.logManager?.getText('dialogs.selectCompositionTitle') : this.logManager?.getText('dialogs.importConfirmationTitle');
                     let dialogMessage;
 
                     if (isDragImport) {
-                        dialogMessage = '请选择合成后操作\n\n文件将被导入到选中的合成中。';
+                        dialogMessage = this.logManager?.composeI18nMessage('dialogs.selectCompositionMessage');
                     } else {
-                        dialogMessage = '未检测到活动合成，是否仍要继续导入？\n\n注意：导入可能会失败或导入到错误的位置。';
+                        dialogMessage = this.logManager?.composeI18nMessage('dialogs.noActiveCompositionMessage');
                     }
 
                     // 使用ExtendScript的Panel样式确认对话框
@@ -1699,7 +1689,7 @@ class AEExtension {
                         return { success: false, error: '请选择合成后操作' };
                     } else {
                         // 非拖拽导入时显示确认对话框
-                        const confirmScript = `showPanelConfirmDialog("${escapedTitle}", "${escapedMessage}", ["继续导入", "取消"]);`;
+                        const confirmScript = `showPanelConfirmDialog("${escapedTitle}", "${escapedMessage}", ["${this.logManager?.getText('dialogs.continueImportButton')}", "${this.logManager?.getText('dialogs.cancelButton')}"]);`;
                         const dialogResult = this.csInterface.evalScript(confirmScript);
 
                         // 解析对话框结果（0=继续导入，1=取消）
@@ -10892,26 +10882,30 @@ class AEExtension {
                 // 计算序列帧总大小
                 const totalSize = seq.files.reduce((sum, file) => sum + (file.size || 0), 0);
                 const sizeText = this.formatFileSize(totalSize);
+                const seqLabel = (window.i18n?.getText('categories.sequence') || '序列');
 
                 fileInfoHtml += `
                     <div class="file-item-simple">
                         <span class="file-icon">🎞️</span>
                         <span class="file-name">${seq.pattern}</span>
                         <span class="file-size">${sizeText}</span>
-                        <span class="file-type">序列帧</span>
+                        <span class="file-type">${seqLabel}</span>
                     </div>
                 `;
             });
         } else {
-            // 普通文件显示
+            // 普通文件显示（支持双击编辑文件名）
             fileInfoHtml = displayFiles.slice(0, 5).map(file => {
                 const icon = this.getFileIcon(file);
                 const size = this.formatFileSize(file.size);
                 const type = this.getFileType(file);
+                const originalIndex = files.indexOf(file);
+                const displayName = file.displayName || file.name;
+                const editHint = (window.i18n?.getText('tooltips.fileNameEditHint') || '双击编辑文件名');
                 return `
-                    <div class="file-item-simple">
+                    <div class="file-item-simple" data-file-index="${originalIndex}">
                         <span class="file-icon">${icon}</span>
-                        <span class="file-name">${file.name}</span>
+                        <span class="file-name editable" title="${editHint}">${displayName}</span>
                         <span class="file-size">${size}</span>
                         <span class="file-type">${type}</span>
                     </div>
@@ -10928,9 +10922,9 @@ class AEExtension {
 
         // 导入模式映射
         const importModeText = {
-            'direct': '直接导入',
-            'project_adjacent': '项目旁复制',
-            'custom_folder': '自定义文件夹'
+            'direct': (window.i18n?.getText('common.directImport') || '直接导入'),
+            'project_adjacent': (window.i18n?.getText('common.projectAdjacentCopy') || '项目旁复制'),
+            'custom_folder': (window.i18n?.getText('common.customFolder') || '自定义文件夹')
         }[settings.mode] || settings.mode;
 
         // 根据是否自动添加到合成来确定导入行为
@@ -10938,9 +10932,9 @@ class AEExtension {
         if (settings.addToComposition) {
             // 如果自动添加到合成，显示时间轴放置位置
             const timelinePlacement = {
-                'current_time': '当前时间',
-                'timeline_start': '时间轴开始'
-            }[settings.timelineOptions?.placement] || '当前时间';
+                'current_time': (window.i18n?.getText('common.currentTime') || '当前时间'),
+                'timeline_start': (window.i18n?.getText('common.timelineStart') || '时间轴开始')
+            }[settings.timelineOptions?.placement] || (window.i18n?.getText('common.currentTime') || '当前时间');
             importBehavior = timelinePlacement;
         } else {
             // 如果不自动添加到合成，显示"不导入合成"
@@ -10961,10 +10955,22 @@ class AEExtension {
         const dialog = document.createElement('div');
         dialog.className = 'eagle-confirm-dialog';
 
+        // 标题与标签的国际化
+        const dragTitle = (window.i18n?.getText('dialogs.importConfirmationTitle') || '拖拽导入确认');
+        const importModeLabel = (window.i18n?.getText('common.importMode') || '导入模式');
+        const importBehaviorLabel = (window.i18n?.getText('common.importBehavior') || '导入行为');
+        const confirmText = (window.i18n?.getText('common.confirm') || '确认');
+        const cancelText = (window.i18n?.getText('common.cancel') || '取消');
+        // 普通文件场景的检测文案
+        if (!hasSequences && folderCount === 0) {
+            const detMsgTpl = (window.i18n?.getText('dragDrop.readyToImportFiles') || '准备导入 %d 个文件');
+            detectionInfo = detMsgTpl.replace('%d', files.length);
+        }
+
         dialog.innerHTML = `
             <div class="eagle-confirm-content">
                 <div class="eagle-confirm-header">
-                    <h3>拖拽导入确认</h3>
+                    <h3>${dragTitle}</h3>
                 </div>
                 <div class="eagle-confirm-body">
                     <p>${detectionInfo}</p>
@@ -10972,19 +10978,27 @@ class AEExtension {
                         ${fileInfoHtml}
                         ${moreFilesHtml}
                     </div>
-                    <div class="import-settings-dark">
-                        <div class="setting-item"><span class="setting-label">导入模式:</span><span class="setting-value">${importMode}</span></div>
-                        <div class="setting-item"><span class="setting-label">导入行为:</span><span class="setting-value">${importBehavior}</span></div>
+                    <div class="import-settings-compact">
+                        <span class="label label-mode" title="${importModeLabel}">${importMode}</span>
+                        <span class="settings-divider"></span>
+                        <span class="label label-behavior" title="${importBehaviorLabel}">${importBehavior}</span>
                     </div>
                 </div>
                 <div class="eagle-confirm-actions-flex">
-                    <button id="drag-confirm-yes" class="btn-outline-primary">确认导入</button>
-                    <button id="drag-confirm-no" class="btn-outline-secondary">取消</button>
+                    <button id="drag-confirm-yes" class="btn-outline-primary"><span class="btn-icon">✔</span><span class="btn-text">${confirmText}</span></button>
+                    <button id="drag-confirm-no" class="btn-outline-secondary"><span class="btn-icon">❌</span><span class="btn-text">${cancelText}</span></button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(dialog);
+
+        // 初始化文件名双击编辑（与剪贴板确认对话框保持一致）
+        try {
+            this.setupFileNameEditing(dialog, files);
+        } catch (e) {
+            this.log(`初始化文件名编辑失败: ${e.message}`, 'warning');
+        }
 
         // 绑定事件
         document.getElementById('drag-confirm-yes').onclick = async () => {
@@ -12038,12 +12052,8 @@ ${pathsText}
                 return;
             }
 
-            this.log('检测到剪贴板粘贴操作', 'debug');
-
-            let clipboardData = null;
-
-            // 尝试从事件获取剪贴板数据（优先使用，因为权限要求较低）
-            if (event.clipboardData) {
+            this.log(this.logManager?.getText('clipboard.pasteOperationDetected'), 'debug');
+            if (event && event.clipboardData) {
                 clipboardData = event.clipboardData;
                 this.log('使用事件剪贴板数据', 'debug');
             } else {
@@ -12152,39 +12162,38 @@ ${pathsText}
                         }
                     }
                 } catch (clipboardError) {
-                    this.log(`剪贴板API访问失败: ${clipboardError.message}`, 'debug');
+                    this.log(this.logManager?.composeI18nMessage('clipboard.apiAccessFailed', { msg: clipboardError.message }), 'debug');
                     
                     // 提供更详细的错误信息和解决方案
                     if (clipboardError.message.includes('Read permission denied')) {
-                        this.log('剪贴板读取权限被拒绝，这通常发生在直接复制文件时', 'info');
+                        this.log(this.logManager?.getText('clipboard.readPermissionDenied'), 'info');
                         // 若是 keydown 触发且近似同时有 paste 成功，则抑制重复警告
                         const suppress = sourceHint === 'keydown' && this._lastPasteEventAt && (Date.now() - this._lastPasteEventAt) < 300;
                         if (suppress) {
-                            this.log('检测到已由 paste 事件处理，抑制重复的剪贴板权限警告', 'debug');
+                            this.log(this.logManager?.getText('clipboard.suppressDuplicateWarning'), 'debug');
                         } else {
                             this.showDirectFileCopyDialog();
                         }
                     } else if (clipboardError.message.includes('Document is not focused')) {
-                        this.log('文档未获得焦点，无法访问剪贴板', 'info');
-                        this.showDropMessage('请先点击此区域获得焦点，然后再尝试粘贴', 'info');
+                        this.log(this.logManager?.getText('clipboard.documentNotFocused'), 'info');
+                        this.showDropMessage(this.logManager?.getText('clipboard.clickToFocus'), 'info');
                     } else if (clipboardError.message.includes('NotAllowedError')) {
-                        this.log('剪贴板访问被阻止', 'info');
+                        this.log(this.logManager?.getText('clipboard.accessBlocked'), 'info');
                         const suppress = sourceHint === 'keydown' && this._lastPasteEventAt && (Date.now() - this._lastPasteEventAt) < 300;
                         if (suppress) {
-                            this.log('检测到已由 paste 事件处理，抑制重复的访问被阻止警告', 'debug');
+                            this.log(this.logManager?.getText('clipboard.suppressDuplicateWarning'), 'debug');
                         } else {
                             this.showDirectFileCopyDialog();
                         }
                     } else {
-                        this.showDropMessage(`剪贴板访问失败: ${clipboardError.message}。请尝试直接拖拽文件`, 'warning');
+                        this.showDropMessage(this.logManager?.composeI18nMessage('clipboard.accessFailedTryDrag', { msg: clipboardError.message }), 'warning');
                     }
                     return;
                 }
             }
 
-            if (!clipboardData || (!clipboardData.files?.length && !clipboardData.types?.length && !clipboardData.items?.length && !clipboardData.getData)) {
-                this.log('剪贴板中没有可用数据', 'debug');
-                this.showDropMessage('剪贴板中没有可导入的内容', 'info');
+            if (!clipboardData) {
+                this.log(this.logManager?.getText('clipboard.noData'), 'debug');
                 return;
             }
 
@@ -12225,11 +12234,11 @@ ${pathsText}
 
                 this.showClipboardConfirmDialog({ ...clipboardContent, files: processedFiles });
             } else {
-                this.log('剪贴板中没有可导入的内容', 'debug');
+                this.log(this.logManager?.getText('clipboard.noImportableContent'), 'debug');
             }
 
         } catch (error) {
-            this.log(`处理剪贴板粘贴失败: ${error.message}`, 'error');
+            this.log(this.logManager?.composeI18nMessage('clipboard.pasteFailed', { msg: error.message }), 'error');
         }
     }
 
@@ -12491,15 +12500,16 @@ ${pathsText}
 
             // 构建文件信息 - 简化为一行显示
             const fileInfoHtml = files.map((file, index) => {
-                const sizeText = file.size ? this.formatFileSize(file.size) : '未知大小';
+                const sizeText = file.size ? this.formatFileSize(file.size) : (window.i18n?.getText('unknown') || '未知');
                 const typeIcon = this.getFileIcon(file);
                 const displayName = file.displayName || file.name;
-                const fileType = file.type || '未知类型';
+                const fileType = file.type || (window.i18n?.getText('unknown') || '未知');
+                const editHint = (window.i18n?.getText('tooltips.fileNameEditHint') || '双击编辑文件名');
 
                 return `
                     <div class="file-item-simple" data-file-index="${index}">
                         <span class="file-icon">${typeIcon}</span>
-                        <span class="file-name editable" title="${displayName}">${displayName}</span>
+                        <span class="file-name editable" title="${editHint}">${displayName}</span>
                         <span class="file-size">${sizeText}</span>
                         <span class="file-type">${fileType}</span>
                     </div>
@@ -12508,9 +12518,9 @@ ${pathsText}
 
             // 构建导入设置信息 - 简化显示
             const importModeText = {
-                'direct': '直接导入',
-                'project_adjacent': '项目旁复制',
-                'custom_folder': '自定义文件夹'
+                'direct': (window.i18n?.getText('directImport') || '直接导入'),
+                'project_adjacent': (window.i18n?.getText('projectAdjacentCopy') || '项目旁复制'),
+                'custom_folder': (window.i18n?.getText('customFolder') || '自定义文件夹')
             }[settings.mode] || settings.mode;
 
             // 获取当前设置
@@ -12521,33 +12531,41 @@ ${pathsText}
             if (currentSettings.addToComposition) {
                 // 如果自动添加到合成，显示时间轴放置位置
                 const timelinePlacement = {
-                    'current_time': '当前时间',
-                    'timeline_start': '时间轴开始'
-                }[currentSettings.timelineOptions?.placement] || '当前时间';
+                    'current_time': (window.i18n?.getText('currentTime') || '当前时间'),
+                    'timeline_start': (window.i18n?.getText('timelineStart') || '时间轴开始')
+                }[currentSettings.timelineOptions?.placement] || (window.i18n?.getText('currentTime') || '当前时间');
                 importBehavior = timelinePlacement;
             } else {
                 // 如果不自动添加到合成，显示"不导入合成"
                 importBehavior = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
             }
 
+            const clipTitle = (window.i18n?.getText('clipboard.confirmImportTitle') || '剪贴板导入确认');
+            const importModeLabel = (window.i18n?.getText('clipboard.importModeLabel') || '导入模式:');
+            const importBehaviorLabel = (window.i18n?.getText('clipboard.importBehaviorLabel') || '导入行为:');
+            const importBtnText = (window.i18n?.getText('clipboard.importFileButton') || '导入文件');
+            const cancelText = (window.i18n?.getText('clipboard.cancelButton') || '取消');
+            const confirmMsgTpl = (window.i18n?.getText('clipboard.confirmImportMessage') || '检测到剪贴板中有 {count} 个可导入文件');
+            const confirmMsg = confirmMsgTpl.replace('{count}', String(files.length));
+
             dialog.innerHTML = `
                 <div class="eagle-confirm-content">
                     <div class="eagle-confirm-header">
-                        <h3>剪贴板导入确认</h3>
+                        <h3>${clipTitle}</h3>
                     </div>
                     <div class="eagle-confirm-body">
-                        <p>检测到剪贴板中有 ${files.length} 个可导入文件</p>
+                        <p>${confirmMsg}</p>
                         <div class="file-list">
                             ${fileInfoHtml}
                         </div>
                         <div class="import-settings-dark">
-                            <div class="setting-item"><span class="setting-label">导入模式:</span><span class="setting-value">${importModeText}</span></div>
-                            <div class="setting-item"><span class="setting-label">导入行为:</span><span class="setting-value">${importBehavior}</span></div>
+                            <div class="setting-item"><span class="setting-label">${importModeLabel}:</span><span class="setting-value">${importModeText}</span></div>
+                            <div class="setting-item"><span class="setting-label">${importBehaviorLabel}:</span><span class="setting-value">${importBehavior}</span></div>
                         </div>
                     </div>
                     <div class="eagle-confirm-actions-flex">
-                        <button class="btn-outline-primary" id="clipboard-confirm-yes">导入文件</button>
-                        <button class="btn-outline-secondary" id="clipboard-confirm-no">取消</button>
+                        <button class="btn-outline-primary" id="clipboard-confirm-yes">${importBtnText}</button>
+                        <button class="btn-outline-secondary" id="clipboard-confirm-no">${cancelText}</button>
                     </div>
                 </div>
             `;
@@ -12763,49 +12781,60 @@ ${pathsText}
         return patterns.some(p => p.test(fileName));
     }
 
-    // 设置文件名编辑功能
+    // 设置文件名编辑功能（整行可双击，覆盖式输入框）
     setupFileNameEditing(dialog, files) {
         const editableNames = dialog.querySelectorAll('.file-name.editable');
 
+        // 保留原有：文件名自身双击
         editableNames.forEach((nameElement, index) => {
-            // 双击编辑
             nameElement.addEventListener('dblclick', () => {
-                this.startFileNameEdit(nameElement, files, index);
+                const parentItem = nameElement.closest('.file-item-simple');
+                const idxAttr = parentItem && parentItem.getAttribute('data-file-index');
+                const targetIndex = idxAttr ? parseInt(idxAttr, 10) : index;
+                this.startFileNameEdit(nameElement, files, targetIndex);
             });
-
-            // 添加视觉提示
             nameElement.style.cursor = 'pointer';
-            nameElement.title = '双击编辑文件名';
+            nameElement.title = (window.i18n?.getText('tooltips.fileNameEditHint') || '双击编辑文件名');
+        });
+
+        // 新增：整行双击触发编辑
+        const rows = dialog.querySelectorAll('.file-item-simple');
+        rows.forEach((row, index) => {
+            const idxAttr = row.getAttribute('data-file-index');
+            const targetIndex = idxAttr ? parseInt(idxAttr, 10) : index;
+            row.addEventListener('dblclick', () => {
+                const nameElement = row.querySelector('.file-name');
+                if (!nameElement) return;
+                this.startFileNameEdit(nameElement, files, targetIndex);
+            });
+            row.style.cursor = 'pointer';
+            row.title = (window.i18n?.getText('tooltips.fileNameEditHint') || '双击编辑文件名');
         });
     }
 
-    // 开始编辑文件名
+    // 开始编辑文件名（整行覆盖输入框）
     startFileNameEdit(nameElement, files, fileIndex) {
         const originalText = nameElement.textContent;
         const file = files[fileIndex];
 
-        // 创建输入框
+        const row = nameElement.closest('.file-item-simple');
+        if (!row) return;
+
+        // 只编辑不含扩展名的部分，扩展名固定保留
+        const extSourceName = (file && (file.displayName || file.name)) || originalText;
+        const ext = this.getFileExtension(extSourceName);
+
+        // 创建覆盖容器与输入框
+        const container = document.createElement('div');
+        container.className = 'file-name-input-row';
         const input = document.createElement('input');
         input.type = 'text';
-        // 只编辑不含扩展名的部分，扩展名固定保留
-        const ext = this.getFileExtension(file.name);
         input.value = this.getFileNameWithoutExtension(originalText);
-        input.className = 'file-name-input';
-        input.style.cssText = `
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid #3498db;
-            color: #e0e0e0;
-            padding: 2px 4px;
-            font-size: 12px;
-            font-family: inherit;
-            border-radius: 2px;
-            width: 100%;
-            box-sizing: border-box;
-        `;
+        container.appendChild(input);
 
-        // 替换文本为输入框
-        nameElement.style.display = 'none';
-        nameElement.parentNode.insertBefore(input, nameElement);
+        // 显示覆盖状态
+        row.classList.add('editing');
+        row.appendChild(container);
 
         // 选中文本
         input.focus();
@@ -12813,23 +12842,30 @@ ${pathsText}
 
         // 完成编辑的函数
         const finishEdit = (save = true) => {
-            if (save && input.value.trim() && input.value !== originalText) {
-                const newName = input.value.trim();
-                const fullNewName = newName + ext;
+            if (save) {
+                const rawNew = input.value || '';
+                const trimmed = rawNew.trim();
+                if (trimmed && trimmed !== this.getFileNameWithoutExtension(originalText)) {
+                    // 简单清理非法文件名字符
+                    const safeName = trimmed.replace(/[<>:\"\/=\\|?*]/g, '').trim();
+                    const finalBase = safeName || this.getFileNameWithoutExtension(originalText);
+                    const fullNewName = finalBase + ext;
 
-                // 更新文件对象
-                file.name = fullNewName;
-                file.customName = true; // 标记为用户自定义名称
+                    // 更新文件对象首选显示名，保留原始 file.name（只读）
+                    file.displayName = fullNewName;
+                    file.customName = true;
+                    file.wasRenamed = true;
 
-                // 更新显示
-                nameElement.textContent = fullNewName;
+                    // 更新显示
+                    nameElement.textContent = fullNewName;
 
-                this.log(`文件名已修改: ${originalText}${ext} -> ${fullNewName}`, 'info');
+                    this.log(`文件名已修改: ${originalText} -> ${fullNewName}`, 'info');
+                }
             }
 
             // 恢复显示
-            input.remove();
-            nameElement.style.display = '';
+            row.classList.remove('editing');
+            container.remove();
         };
 
         // 绑定事件

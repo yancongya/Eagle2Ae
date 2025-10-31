@@ -10,6 +10,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
+import { registerSW } from 'virtual:pwa-register';
 
 // Initialize dark mode early to prevent FOUC
 -useDark({ storageKey: 'theme', initialValue: 'dark' }); // Force dark mode
@@ -48,3 +49,24 @@ app.use(router); // 使用 router
 app.use(i18n); // 使用 i18n
 
 app.mount('#app');
+
+// 注册 Service Worker（自动更新），以启用 PWA 预缓存
+try { registerSW({ immediate: true }); } catch {}
+
+// 页面空闲时预取“其他页”与下载页核心 JSON，提升回访体验
+try {
+  const idle = (cb) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(cb) : setTimeout(cb, 500));
+  idle(async () => {
+    try {
+      const idxRes = await fetch('/config/links/groups.json');
+      if (idxRes.ok) {
+        const idx = await idxRes.json();
+        const files = Array.isArray(idx.groups) ? idx.groups.map(g => g.file).filter(Boolean) : [];
+        // 预取每个组文件
+        files.forEach(fn => { fetch(`/config/links/${fn}`).catch(() => {}); });
+      }
+    } catch {}
+    // 下载页配置也预取
+    try { await fetch('/config/download.json'); } catch {}
+  });
+} catch {}

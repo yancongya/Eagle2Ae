@@ -184,7 +184,13 @@ export function usePanelLoader(options = {}) {
     it.status = 'loading';
     it.startedAt = performance.now();
     activeLoads.value++;
-    if (it.shouldLoadRef) it.shouldLoadRef.value = true;
+    if (it.shouldLoadRef) {
+      if (typeof it.shouldLoadRef === 'object' && 'value' in it.shouldLoadRef) {
+        it.shouldLoadRef.value = true;
+      } else if (typeof it.shouldLoadRef === 'function') {
+        it.shouldLoadRef(true);
+      }
+    }
     // Timeout protection
     it.timeoutHandle = setTimeout(() => {
       notifyError(panelId, 'Load timeout');

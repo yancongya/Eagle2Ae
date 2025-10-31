@@ -1,0 +1,12 @@
+{
+  "group_info": {
+    "name": { "zh-CN": "友链", "en-US": "Friends" },
+    "note": { "zh-CN": "社区与伙伴项目", "en-US": "Community and partner projects" },
+    "order": 1
+  },
+  "tag_list": [
+    { "title": { "zh-CN": "LinkStack", "en-US": "LinkStack" }, "note": { "zh-CN": "开源链接聚合", "en-US": "Open-source link hub" }, "link": "https://linkstack.org/" },
+    { "title": { "zh-CN": "Flare", "en-US": "Flare" }, "note": { "zh-CN": "轻量链接页", "en-US": "Lightweight link page" }, "link": "https://github.com/Flare-Empower/flare" },
+    { "title": { "zh-CN": "Linktree", "en-US": "Linktree" }, "note": { "zh-CN": "个人链接聚合", "en-US": "Personal link hub" }, "link": "https://linktr.ee/" }
+  ]
+}

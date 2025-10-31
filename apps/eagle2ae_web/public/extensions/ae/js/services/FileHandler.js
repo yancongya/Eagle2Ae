@@ -160,7 +160,7 @@ class FileHandler {
                 processedFiles.push({
                     originalPath: file.path,
                     importPath: file.path,
-                    name: this.processFileName(file.name, settings),
+                    name: this.processFileName(file.displayName || file.name, settings),
                     tags: file.tags || [],
                     processed: false // 标记为未处理（直接使用原文件）
                 });
@@ -235,7 +235,7 @@ class FileHandler {
 
         // 从原始路径提取完整文件名（包含扩展名）
         const originalFileName = this.getFileNameFromPath(file.path);
-        const fileName = this.processFileName(originalFileName, settings);
+        const fileName = this.processFileName(file.displayName || originalFileName, settings);
         let targetPath = this.joinPath(targetDir, fileName);
 
         // 如果启用了标签文件夹
@@ -273,7 +273,7 @@ class FileHandler {
         this.log('FileHandler: 处理剪贴板文件', 'debug');
 
         // 使用处理后的文件名（可能已经重命名）
-        const fileName = this.processFileName(file.name, settings);
+        const fileName = this.processFileName(file.displayName || file.name, settings);
         let targetPath = this.joinPath(targetDir, fileName);
 
         // 如果启用了标签文件夹

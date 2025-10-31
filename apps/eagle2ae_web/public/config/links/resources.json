@@ -1,0 +1,12 @@
+{
+  "group_info": {
+    "name": { "zh-CN": "资源", "en-US": "Resources" },
+    "note": { "zh-CN": "常用工具与文档", "en-US": "Useful tools and docs" },
+    "order": 2
+  },
+  "tag_list": [
+    { "title": { "zh-CN": "GSAP", "en-US": "GSAP" }, "note": { "zh-CN": "动画库", "en-US": "Animation library" }, "link": "https://greensock.com/gsap/" },
+    { "title": { "zh-CN": "Tailwind", "en-US": "Tailwind" }, "note": { "zh-CN": "实用类样式", "en-US": "Utility-first CSS" }, "link": "https://tailwindcss.com/" },
+    { "title": { "zh-CN": "Vue", "en-US": "Vue" }, "note": { "zh-CN": "前端框架", "en-US": "Frontend framework" }, "link": "https://vuejs.org/" }
+  ]
+}

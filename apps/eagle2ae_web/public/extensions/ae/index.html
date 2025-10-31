@@ -3111,8 +3111,8 @@
             background: #2a2a2a;
             border-radius: 8px;
             border: 1px solid #555;
-            max-width: 400px;
-            width: 90%;
+            max-width: 420px;
+            width: 92%;
             max-height: 80vh;
             overflow-y: auto;
         }
@@ -3138,6 +3138,10 @@
 
         .eagle-confirm-body p {
             margin: 0 0 12px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: clamp(10px, 2.6vw, 12px);
         }
 
         .file-list {
@@ -3148,6 +3152,7 @@
             margin-top: 12px;
             max-height: 120px;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .file-item {
@@ -3205,6 +3210,60 @@
             margin-top: 12px;
             display: flex;
             gap: 20px;
+        }
+
+        /* 紧凑导入设置，仅显示当前模式与行为（蓝/橙配色） */
+        .import-settings-compact {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .import-settings-compact .label {
+            flex: 1;
+            min-width: 0;
+            font-size: 11px;
+            font-weight: 600; /* 加粗文本 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            justify-content: center; /* 两边各自居中 */
+            text-align: center;
+            user-select: none; /* 不可选中 */
+            pointer-events: none; /* 不可点击 */
+        }
+
+        .import-settings-compact .label-mode { color: #3498db; }
+        .import-settings-compact .label-behavior { color: #f39c12; }
+
+        .import-settings-compact .settings-divider {
+            width: 1px;
+            height: 16px;
+            background: #444;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 420px) {
+            .eagle-confirm-content {
+                max-width: 360px;
+                width: 96%;
+            }
+            .import-settings-compact { gap: 8px; }
+            .import-settings-compact .label { font-size: 10px; }
+        }
+
+        /* 按钮文本不换行，超小屏仅显示图标 */
+        .eagle-confirm-actions-flex button {
+            white-space: nowrap;
+        }
+        .eagle-confirm-actions-flex .btn-icon { margin-right: 6px; }
+        .eagle-confirm-actions-flex .btn-text { display: inline; }
+        @media (max-width: 420px) {
+            .eagle-confirm-actions-flex .btn-icon { margin-right: 0; }
+            .eagle-confirm-actions-flex .btn-text { display: none; }
+            .btn-outline-primary, .btn-outline-secondary { padding: 6px 10px; }
         }
 
         .setting-item {
@@ -3437,7 +3496,11 @@
 
         /* 新的简化文件列表样式 */
         .file-item-simple {
-            display: flex;
+            position: relative;
+            min-width: 0;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 18px minmax(0, 1fr) minmax(52px, 12ch) minmax(40px, 10ch);
             align-items: center;
             padding: 6px 8px;
             background: rgba(255, 255, 255, 0.05);
@@ -3472,17 +3535,54 @@
         .file-item-simple .file-size {
             color: #999;
             font-size: 10px;
-            flex-shrink: 0;
             min-width: 40px;
-            text-align: right;
+            text-align: center; /* 居中 */
+            justify-self: center;
         }
 
         .file-item-simple .file-type {
             color: #999;
             font-size: 10px;
-            flex-shrink: 0;
-            min-width: 60px;
-            text-align: right;
+            /* 缩小最小宽度并限制最大宽度，改善自适应 */
+            min-width: 36px;
+            max-width: 80px;
+            text-align: right; /* 右对齐 */
+            justify-self: end;
+            /* 单行展示并在过长时省略 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 当类型为空时不占位，避免无意义空白 */
+        .file-item-simple .file-type:empty {
+            display: none;
+        }
+
+        /* 整行覆盖式输入框 */
+        .file-item-simple.editing {
+            outline: 1px dashed #3498db;
+        }
+        .file-item-simple.editing > *:not(.file-name-input-row) {
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .file-name-input-row {
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .file-name-input-row input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            font-size: 12px;
+            box-sizing: border-box;
         }
 
         /* 导入设置样式 */

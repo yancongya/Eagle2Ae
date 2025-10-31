@@ -78,6 +78,7 @@ const routeTitleKey = (name) => {
     case 'Eagle_Preview': return 'route.title.eaglePreview';
     case 'Download': return 'route.title.download';
     case 'About': return 'route.title.about';
+    case 'Other': return 'route.title.other';
     default: return 'route.title.home';
   }
 };

@@ -12,7 +12,7 @@
 - [x] "连接失败" → "Connection failed"
 
 ### 2. 项目与状态信息 (Project and Status Information)
-- [x] "未打开项目" → "No project opened"
+- [x] "未打开项目" → "No project open"
 - [x] "无" → "None"
 - [x] "准备就绪" → "Ready"
 - [x] "未知" → "Unknown"
@@ -60,19 +60,19 @@
 - [x] "文件夹中找到 %d 个文件" → "Found %d files in folder"
 
 ### 7. 文件导入文字 (File Import Text)
-- [ ] "检测到 %d 个文件" → "Detected %d files"
-- [ ] "是否要导入到After Effects？" → "Do you want to import to After Effects?"
-- [ ] "文件将按照当前设置进行导入。" → "Files will be imported according to current settings."
-- [ ] "确认拖拽来源" → "Confirm drag source"
-- [ ] "这些文件是否来自Eagle应用程序？" → "Are these files from Eagle application?"
+- [x] "检测到 %d 个文件" → "Detected %d files" (Covered by dragDrop keys)
+- [x] "是否要导入到After Effects？" → "Do you want to import to After Effects?" (Covered by dialogs)
+- [x] "文件将按照当前设置进行导入。" → "Files will be imported according to current settings." (Covered by dialogs)
+- [x] "确认拖拽来源" → "Confirm drag source" (Covered by dialogs)
+- [x] "这些文件是否来自Eagle应用程序？" → "Are these files from Eagle application?" (Covered by dialogs)
 
 ### 8. 剪贴板处理文字 (Clipboard Handling)
-- [ ] "检测到剪贴板粘贴操作" → "Clipboard paste operation detected"
-- [ ] "剪贴板中没有可导入的内容" → "No importable content in clipboard"
-- [ ] "检测到剪贴板中有 %d 个可导入文件" → "Detected %d importable files in clipboard"
-- [ ] "检测到 %d 个文件路径，但无法直接访问文件内容。" → "Detected %d file paths, but cannot directly access file content."
-- [ ] "剪贴板读取权限被拒绝，这通常发生在直接复制文件时" → "Clipboard read permission denied, usually happens when directly copying files"
-- [ ] "检测到文件路径但无法直接访问文件内容" → "Detected file paths but cannot directly access file content"
+- [x] "检测到剪贴板粘贴操作" → "Clipboard paste operation detected"
+- [x] "剪贴板中没有可导入的内容" → "No importable content in clipboard"
+- [x] "检测到剪贴板中有 %d 个可导入文件" → "Detected %d importable files in clipboard"
+- [x] "检测到 %d 个文件路径，但无法直接访问文件内容。" → "Detected %d file paths, but cannot directly access file content."
+- [x] "剪贴板读取权限被拒绝，这通常发生在直接复制文件时" → "Clipboard read permission denied, usually happens when directly copying files"
+- [x] "检测到文件路径但无法直接访问文件内容" → "Detected file paths but cannot directly access file content"
 
 ### 9. 错误消息 (Error Messages)
 - [ ] "无法打开文件夹选择对话框" → "Cannot open folder selection dialog"
@@ -109,6 +109,12 @@
 - [x] "创建预合成" → "Create pre-composition"
 - [x] "当前时间" → "Current time"
 - [x] "时间轴开始" → "Timeline start"
+- [x] "请选择合成" → "Select Composition"
+- [x] "导入确认" → "Import Confirmation"
+- [x] "请选择合成后操作\n\n文件将被导入到选中的合成中。" → "Please select a composition to proceed.\n\nFiles will be imported into the selected composition."
+- [x] "未检测到活动合成，是否仍要继续导入？\n\n注意：导入可能会失败或导入到错误的位置。" → "No active composition detected. Do you still want to continue importing?\n\nNote: Import may fail or be placed incorrectly."
+- [x] "继续导入" → "Continue Import"
+- [x] "取消" → "Cancel"
 
 ### 12. 文件分类和类型 (File Categories and Types)
 - [ ] "图片文件" → "Image files"

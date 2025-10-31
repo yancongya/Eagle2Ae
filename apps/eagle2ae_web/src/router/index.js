@@ -4,6 +4,7 @@ import AE_Preview from '../views/AE_Preview.vue';
 import Eagle_Preview from '../views/Eagle_Preview.vue';
 import Download from '../views/Download.vue';
 import About from '../views/About.vue';
+import Other from '../views/Other.vue';
 
 const routes = [
   {
@@ -30,6 +31,11 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About,
+  },
+  {
+    path: '/other',
+    name: 'Other',
+    component: Other,
   },
 ];
 
@@ -60,6 +66,11 @@ const router = createRouter({
       path: '/about',
       name: 'About',
       component: About,
+    },
+    {
+      path: '/other',
+      name: 'Other',
+      component: Other,
     },
   ],
   scrollBehavior(to, from, savedPosition) {

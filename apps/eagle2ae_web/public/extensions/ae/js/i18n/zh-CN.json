@@ -92,6 +92,7 @@
     "ready": "准备就绪",
     "notReady": "未就绪"
   },
+  
   "logs": {
     "testingConnectionToEagle": "正在测试连接到Eagle...",
     "eagleReceivedConnectionRequest": "接收到连接请求",
@@ -210,6 +211,7 @@
     "currentGroupPrefix": "当前组:",
     "libraryPathPrefix": "路径:",
     "librarySizePrefix": "大小:",
+    "fileNameEditHint": "双击编辑文件名",
     "directImport": "从源目录直接导入到AE项目，不复制文件",
     "projectAdjacentCopy": "复制文件到AE项目文件旁边后导入",
     "customFolder": "复制文件到指定文件夹后导入",
@@ -244,7 +246,8 @@
     "presetFilenamePrefix": "当前预设文件名:",
     "openCurrentPresetDirectory": "打开当前预设目录：我的文档\\Eagle2Ae-Ae\\presets",
     "openCustomPresetDirectory": "打开自定义预设目录：\n%s",
-    "portRangeInfo": "端口范围: 1024-65535，修改后需重新连接"
+    "portRangeInfo": "端口范围: 1024-65535，修改后需重新连接",
+    "fileNameEditHint": "双击编辑文件名"
   },
   "categories": {
     "design": "设计",
@@ -316,5 +319,49 @@
     "errorSavingSettings": "保存设置出错",
     "featureUnavailableInDemo": "此功能在网页演示模式下不可用。",
     "communicationSettings": "通信设置"
+  },
+  "dialogs": {
+    "selectCompositionTitle": "请选择合成",
+    "importConfirmationTitle": "导入确认",
+    "selectCompositionMessage": "请选择合成后操作\\n\\n文件将被导入到选中的合成中。",
+    "noActiveCompositionMessage": "未检测到活动合成，是否仍要继续导入？\\n\\n注意：导入可能会失败或导入到错误的位置。",
+    "continueImportButton": "继续导入",
+    "cancelButton": "取消"
+  },
+  "clipboard": {
+    "pasteOperationDetected": "检测到剪贴板粘贴操作",
+    "noData": "无法获取剪贴板数据",
+    "importableFilesDetected": "检测到剪贴板中有 %d 个可导入文件",
+    "noImportableContent": "剪贴板中没有可导入的内容",
+    "apiAccessFailed": "剪贴板API访问失败: {msg}",
+    "readPermissionDenied": "剪贴板读取权限被拒绝，这通常发生在直接复制文件时",
+    "suppressDuplicateWarning": "检测到已由 paste 事件处理，抑制重复的剪贴板权限警告",
+    "documentNotFocused": "文档未获得焦点，无法访问剪贴板",
+    "clickToFocus": "请先点击此区域获得焦点，然后再尝试粘贴",
+    "accessBlocked": "剪贴板访问被阻止",
+    "accessFailedTryDrag": "剪贴板访问失败: {msg}。请尝试直接拖拽文件",
+    "pasteFailed": "处理剪贴板粘贴失败: {msg}",
+    "checkingFiles": "检查 {count} 个剪贴板文件",
+    "fileDetected": "检测到 {type} 文件: {name}",
+    "skipUnsupportedFile": "跳过不支持的文件: {name} ({type})",
+    "filePathsDetected": "检测到 {count} 个文件路径",
+    "contentDetectionComplete": "剪贴板内容检测完成: {summary}",
+    "contentDetectionFailed": "检测剪贴板内容失败: {msg}",
+    "cannotReadFiles": "无法读取剪贴板中的文件",
+    "pasteDirectCopyTip": "检测到您直接复制了文件，但浏览器安全限制无法直接访问文件内容。\\n\\n请尝试以下方法：\\n• 方法1：直接拖拽文件到此区域\\n• 方法2：在图片编辑软件中打开并复制图片后粘贴\\n• 方法3：使用截图工具复制图片后粘贴\\n\\n推荐使用拖拽方式，支持批量导入且更稳定。",
+    "pasteDirectCopyLog": "用户尝试粘贴直接复制的文件，已提示使用拖拽方式",
+    "filePathsDetectedMessage": "检测到 {count} 个文件路径：\\n{paths}\\n\\n但浏览器无法直接访问这些文件。请直接拖拽文件到此区域进行导入。",
+    "filePathsDetectedLog": "检测到文件路径但无法访问: {paths}",
+    "confirmImportTitle": "剪贴板导入确认",
+    "confirmImportMessage": "检测到剪贴板中有 {count} 个可导入文件",
+    "importModeLabel": "导入模式:",
+    "importBehaviorLabel": "导入行为:",
+    "importFileButton": "导入文件",
+    "cancelButton": "取消",
+    "tempFileRename": "临时文件重命名: {oldName} -> {newName}",
+    "keepFileName": "保留文件名: {name} (用户自定义: {custom}, 已重命名: {renamed})",
+    "importSuccess": "剪贴板导入成功 ({count} 个文件)",
+    "importFailed": "剪贴板导入失败: {msg}",
+    "importCancelled": "已取消导入"
   }
 }

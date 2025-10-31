@@ -159,7 +159,8 @@ const wrapperStyle = computed(() => ({ minHeight: '100%' }))
 
 const loadConfig = async () => {
   try {
-    const res = await fetch('/config/download.json', { cache: 'no-cache' })
+    // 允许浏览器缓存命中，减少二次访问的网络往返
+    const res = await fetch('/config/download.json')
     if (!res.ok) throw new Error('网络错误')
     const data = await res.json()
     if (data.platforms && typeof data.platforms === 'object') {

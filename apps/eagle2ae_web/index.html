@@ -5,6 +5,11 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eagle2AE</title>
+    <!-- 预取核心 JSON：提高首屏与回访加载速度 -->
+    <link rel="preload" href="/config/links/groups.json" as="fetch" crossorigin="use-credentials" />
+    <link rel="preload" href="/config/links/friends.json" as="fetch" crossorigin="use-credentials" />
+    <link rel="preload" href="/config/links/resources.json" as="fetch" crossorigin="use-credentials" />
+    <link rel="preload" href="/config/download.json" as="fetch" crossorigin="use-credentials" />
   </head>
   <body>
     <div id="app"></div>
