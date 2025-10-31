@@ -3,11 +3,11 @@
     "mode": "project_adjacent",
     "projectAdjacentFolder": "Eagle_Assets",
     "customFolderPath": "",
-    "addToComposition": true,
+    "addToComposition": false,
     "noImportSubMode": "normal",
     "timelineOptions": {
       "enabled": true,
-      "placement": "timeline_start"
+      "placement": "current_time"
     },
     "fileManagement": {
       "keepOriginalName": true,
@@ -48,8 +48,8 @@
     "log": true,
     "projectInfo": true,
     "logPanel": true,
-    "header": false,
+    "header": true,
     "fullscreen": true
   },
-  "exportedAt": "2025-10-31T16:14:51.601Z"
+  "exportedAt": "2025-10-31T18:52:52.111Z"
 }

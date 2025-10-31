@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps({
   panelId: { type: String, required: true },
@@ -31,6 +31,9 @@ const props = defineProps({
   status: { type: String, default: 'idle' }, // idle | queued | loading | error
   mode: { type: String, default: 'frosted' }, // 'solid' | 'frosted' | 'empty'
   blurRadius: { type: Number, default: 8 },
+  // 进入时的坐标（页面坐标），用于暂停时的圆形遮罩入场动画
+  enterX: { type: Number, default: null },
+  enterY: { type: Number, default: null },
 });
 
 const emit = defineEmits(['activate']);
@@ -52,6 +55,21 @@ const overlayStyle = computed(() => {
     return { '--tw-backdrop-blur': `blur(${props.blurRadius}px)` };
   }
   return {};
+});
+
+onMounted(() => {
+  // 在暂停导致的占位层显示时，若提供 enterX/enterY，则执行圆形遮罩入场动画
+  const el = overlayRef.value;
+  if (!el || typeof el.animate !== 'function') return;
+  if (props.enterX == null || props.enterY == null) return;
+  const rect = el.getBoundingClientRect();
+  const cx = props.enterX - rect.left;
+  const cy = props.enterY - rect.top;
+  const radius = Math.hypot(Math.max(cx, rect.width - cx), Math.max(cy, rect.height - cy));
+  el.animate([
+    { clipPath: `circle(0px at ${cx}px ${cy}px)`, opacity: 1 },
+    { clipPath: `circle(${radius}px at ${cx}px ${cy}px)`, opacity: 1 }
+  ], { duration: 700, easing: 'cubic-bezier(.25,.8,.25,1)' });
 });
 
 function onActivate(e) {

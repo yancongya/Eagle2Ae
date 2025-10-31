@@ -609,7 +609,10 @@ class DemoUI {
         const indicator = document.createElement('button');
         indicator.id = 'demo-mode-indicator';
         indicator.className = 'icon-btn demo-mode-indicator';
-        indicator.title = '当前为演示模式';
+        const tooltip = '当前为演示模式\n左键：切换面板\nCtrl+Shift：禁用面板';
+        indicator.setAttribute('title', tooltip);
+        indicator.title = tooltip;
+        indicator.setAttribute('aria-label', tooltip);
         indicator.innerHTML = `<span class="icon">🎭</span>`;
 
         // 找到header-actions容器，添加到日志按钮旁边
@@ -624,6 +627,35 @@ class DemoUI {
 
         // 添加样式
         this.injectDemoIndicatorStyles();
+
+        // 点击指示器：
+        // - Ctrl+Shift 点击：请求宿主暂停当前面板（变为未加载状态）
+        // - 普通点击：请求宿主切换该 iframe 的面板到下一个（1→2→3）
+        try {
+            indicator.addEventListener('click', (ev) => {
+                try {
+                    if (!window.parent) return;
+                    if (ev && ev.ctrlKey && ev.shiftKey) {
+                        // 传递点击坐标，宿主据此执行圆形遮罩入场动画
+                        const x = typeof ev.clientX === 'number' ? ev.clientX : 0;
+                        const y = typeof ev.clientY === 'number' ? ev.clientY : 0;
+                        window.parent.postMessage({ type: 'PAUSE_PANEL_REQUEST', clientX: x, clientY: y }, '*');
+                        return;
+                    }
+                    window.parent.postMessage({ type: 'SWITCH_PANEL_REQUEST', cycle: 'next' }, '*');
+                } catch (___) {}
+            });
+        } catch (___) {}
+
+        // 在指示器创建后，尝试更新悬浮提示内容为当前面板与预设名称
+        try {
+            if (window.aeExtension && typeof window.aeExtension.updateDemoIndicatorTooltip === 'function') {
+                // 稍作延迟，确保宿主页面的 PANEL_INFO 已同步到扩展
+                setTimeout(() => {
+                    try { window.aeExtension.updateDemoIndicatorTooltip(); } catch (__) {}
+                }, 150);
+            }
+        } catch (__) {}
 
         console.log('🎭 演示模式指示器已显示');
     }

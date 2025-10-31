@@ -1,8 +1,8 @@
 {
   "importSettings": {
-    "mode": "project_adjacent",
+    "mode": "custom_folder",
     "projectAdjacentFolder": "Eagle_Assets",
-    "customFolderPath": "",
+    "customFolderPath": "[已选择] 测试",
     "addToComposition": true,
     "noImportSubMode": "normal",
     "timelineOptions": {
@@ -47,5 +47,5 @@
     "header": true,
     "fullscreen": false
   },
-  "exportedAt": "2025-10-31T17:20:27.502Z"
+  "exportedAt": "2025-10-31T18:52:44.150Z"
 }

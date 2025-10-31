@@ -175,6 +175,24 @@ class AEExtension {
         window.getPanelLocalStorage = this.getPanelLocalStorage.bind(this);
         window.setPanelLocalStorage = this.setPanelLocalStorage.bind(this);
 
+        // 面板显示名称（由宿主页面通过 postMessage 同步）
+        this.panelDisplayName = null;
+
+        // 监听宿主页面传入的面板信息（AE_Preview.vue 会发送 PANEL_INFO）
+        window.addEventListener('message', (event) => {
+            try {
+                const data = event?.data;
+                if (data && (data.type === 'PANEL_INFO' || data.event === 'PANEL_INFO')) {
+                    // 接受多种字段名称，确保拿到宿主侧的面板显示名
+                    const name = data.panelName || data.name || data.panelDisplayName || data.label || null;
+                    if (name) {
+                        this.panelDisplayName = name;
+                        this.updateDemoIndicatorTooltip();
+                    }
+                }
+            } catch (_) {}
+        }, false);
+
         // 异步初始化
         this.asyncInit();
     }
@@ -200,6 +218,9 @@ class AEExtension {
             this.updateOpenPresetsBtnTooltip();
             console.log(`[${this.panelId}] ✅ 预设加载完成`);
         }, 2500); // 比 init() 中的延迟稍长一点
+
+        // 初始尝试更新演示模式面具图标的悬浮提示（若演示模式已启用且图标已出现）
+        setTimeout(() => this.updateDemoIndicatorTooltip(), 300);
 
         // 然后执行异步的端口初始化
         await this.initializePort();
@@ -276,6 +297,59 @@ class AEExtension {
     getPresetFileName() {
         const panelNumber = this.panelId.replace('panel', '');
         return `Eagle2Ae${panelNumber}.Presets`;
+    }
+
+    /**
+     * 获取当前面板的显示名称（用于演示模式提示）。
+     */
+    getPanelDisplayName() {
+        if (this.panelDisplayName && typeof this.panelDisplayName === 'string') {
+            return this.panelDisplayName;
+        }
+        const map = {
+            'com.yanrouya.eagle2ae.panel1': 'Eagle2Ae 面板 1',
+            'com.yanrouya.eagle2ae.panel2': 'Eagle2Ae 面板 2',
+            'com.yanrouya.eagle2ae.panel3': 'Eagle2Ae 面板 3'
+        };
+        return map[this.panelId] || this.panelId || '未知面板';
+    }
+
+    /**
+     * 获取当前面板的预设名称（配置中的 name 字段；无配置时使用默认映射）。
+     */
+    getPanelPresetName() {
+        try {
+            const cfg = this.configManager?.currentPanelConfig;
+            if (cfg && typeof cfg.name === 'string' && cfg.name.trim()) {
+                return cfg.name.trim();
+            }
+        } catch (_) {}
+        const defaults = {
+            'com.yanrouya.eagle2ae.panel1': '默认配置',
+            'com.yanrouya.eagle2ae.panel2': '快速预览',
+            'com.yanrouya.eagle2ae.panel3': '音频项目'
+        };
+        return defaults[this.panelId] || '未命名预设';
+    }
+
+    /**
+     * 更新演示模式面具图标的悬浮提示（title）。
+     */
+    updateDemoIndicatorTooltip() {
+        try {
+            const indicator = document.getElementById('demo-mode-indicator');
+            if (!indicator) return;
+            // 第一行：演示模式提醒；第二行：当前面板；随后为交互说明
+            const defaultTitle = (window.i18n?.getText('demo.indicatorTitle')) || '当前为演示模式';
+            const panelPrefix = (window.i18n?.getText('tooltips.panelNamePrefix')) || '当前面板:';
+            const panelNameTitle = this.getPanelDisplayName();
+            const tipClick = (window.i18n?.getText('demo.indicatorClickTip')) || '单击切换面板';
+            const tipCtrlShift = (window.i18n?.getText('demo.indicatorCtrlShiftTip')) || 'Ctrl+Shift 单击禁用/恢复该面板';
+            const separator = (window.i18n?.getText('demo.indicatorSeparator')) || '——';
+            const fullText = `${defaultTitle}\n${panelPrefix} ${panelNameTitle}\n${separator}\n${tipClick}\n${tipCtrlShift}`;
+            indicator.title = fullText;
+            indicator.setAttribute('aria-label', fullText);
+        } catch (_) {}
     }
 
     /**
