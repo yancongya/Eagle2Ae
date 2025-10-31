@@ -16,7 +16,13 @@ export const messages = {
       aePreview: 'AE 演示',
       eaglePreview: 'Eagle 演示',
       download: '下载',
-      about: '关于',
+      about: {
+        title: '关于',
+        page: {
+          heading: '关于 Eagle2AE',
+          description: '了解更多关于 Eagle2AE 的信息'
+        }
+      },
       other: '其他',
       docs: '使用文档'
     },
@@ -153,7 +159,13 @@ export const messages = {
       aePreview: 'AE Demo',
       eaglePreview: 'Eagle Demo',
       download: 'Download',
-      about: 'About',
+      about: {
+        title: 'About',
+        page: {
+          heading: 'About Eagle2AE',
+          description: 'Learn more about Eagle2AE'
+        }
+      },
       other: 'Other',
       docs: 'Documentation'
     },

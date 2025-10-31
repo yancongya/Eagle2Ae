@@ -28,7 +28,7 @@
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
         <router-link to="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
-          {{ t('nav.about') }}
+          {{ t('nav.about.title') }}
           <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
         </router-link>
         <router-link to="/other" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group">
@@ -104,7 +104,7 @@
           </router-link>
           <router-link to="/about" class="mobile-nav-link">
             <span class="relative inline-block group">
-              {{ t('nav.about') }}
+              {{ t('nav.about.title') }}
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>

@@ -202,6 +202,12 @@
     "configChangeReceived": "Config change notification received",
     "processedNewMessages": "Processed %d new messages"
   },
+  "demo": {
+    "indicatorTitle": "Demo Mode Active",
+    "indicatorClickTip": "Click to switch panel",
+    "indicatorCtrlShiftTip": "Ctrl+Shift click to disable/enable panel",
+    "indicatorSeparator": "—"
+  },
   "titles": {
     "connectionButtonConnected": "Left-click: Disconnect\nRight-click: Refresh status",
     "connectionButtonDisconnected": "Left-click: Connect to Eagle\nRight-click: Refresh status"
@@ -248,7 +254,8 @@
     "presetFilenamePrefix": "Current Preset Filename:",
     "openCurrentPresetDirectory": "Open current preset directory: My Documents\\Eagle2Ae-Ae\\presets",
     "openCustomPresetDirectory": "Open custom preset directory:\n%s",
-    "portRangeInfo": "Port range: 1024-65535, requires reconnection after modification"
+    "portRangeInfo": "Port range: 1024-65535, requires reconnection after modification",
+    "panelNamePrefix": "Current Panel:"
   },
   "categories": {
     "design": "Design",
