@@ -88,7 +88,9 @@
     "connectionErrorDemo": "连接失败 (演示)",
     "connecting": "连接中...",
     "disconnecting": "断开连接中...",
-    "connected": "已连接"
+    "connected": "已连接",
+    "ready": "准备就绪",
+    "notReady": "未就绪"
   },
   "logs": {
     "testingConnectionToEagle": "正在测试连接到Eagle...",
@@ -100,7 +102,7 @@
     "eaglePluginReady": "Eagle插件就绪，等待导入请求",
     "httpConnected": "HTTP连接成功！",
     "latency": "延迟",
-    "websocketConnected": "WebSocket连接成功！",
+    "websocketConnected": "WebSocket连接已建立",
     "websocketDisconnected": "WebSocket已断开",
     "connectingToEagleWebSocket": "正在连接到Eagle WebSocket服务器...",
     "websocketConnectFailedPrefix": "WebSocket连接失败：{msg}",
@@ -119,7 +121,6 @@
     "demoNoLayerSelected": "演示模式：没有选中任何图层",
     "demoLayerDetectionSummaryShown": "演示模式：图层检测总结弹窗已显示",
     "demoModeResponsePrefix": "演示模式响应",
-
     "demoModeEnabledPrefix": "演示模式已启用 - 虚拟端口",
     "refreshProjectStateBeforeImport": "导入前刷新项目状态...",
     "importTargetPrefix": "导入目标",
@@ -131,7 +132,6 @@
     "jsxVersionTipsPrefix": "如果JSX脚本版本不正确，请尝试以下方法:",
     "demoEnvReady": "Eagle2Ae 演示环境准备完成",
     "dragTipStartImport": "提示：拖拽图片到此处开始体验导入功能",
-
     "tempFolderCleaned": "临时文件夹清理完成",
     "startupTempFolderCleaned": "启动时临时文件夹清理完成",
     "jsxScriptReloaded": "JSX脚本重新加载完成",
@@ -140,7 +140,6 @@
     "autoSaveSettingsCompleted": "设置自动保存完成",
     "scanningImportableFiles": "扫描可导入文件...",
     "performanceOptimizationCompleted": "性能优化完成",
-
     "aeInfoFetchedOnStartup": "AE信息已在启动时获取",
     "portDiscoveryDisabledUsingConfigPort": "端口发现服务已禁用，使用配置端口以提高启动性能",
     "clipboardListenerSet": "剪贴板监听已设置",
@@ -191,7 +190,14 @@
     "quickSettingsNormalInitFailedPrefix": "快速设置正常初始化失败: {msg}",
     "otherInitFailedPrefix": "其他初始化失败: {msg}",
     "panelInitFailedPrefix": "设置面板初始化失败: {msg}",
-    "quickSettingsInitSetUninitialized": "快速设置初始化失败，设置为未初始化状态"
+    "quickSettingsInitSetUninitialized": "快速设置初始化失败，设置为未初始化状态",
+    "pollingStarted": "轮询已启动",
+    "pollingStopped": "轮询已停止",
+    "pollingFailed": "轮询消息失败",
+    "statusChanged": "状态变更",
+    "eagleStatusReceived": "收到Eagle状态更新",
+    "configChangeReceived": "收到配置变更通知",
+    "processedNewMessages": "处理了 %d 条新消息"
   },
   "titles": {
     "connectionButtonConnected": "左键：断开连接\n右键：刷新状态",
@@ -282,5 +288,20 @@
     "tipFolderPathPrefix": "文件夹路径: ",
     "tipPathUnavailable": "路径信息不可用",
     "compExportFailed": "无法导出合成帧，请检查扩展状态"
+  },
+  "dragDrop": {
+    "dragFilesHere": "拖拽文件到此处",
+    "projectInternalFilesDetected": "检测到项目内文件，无法导入：",
+    "aeProjectFilesDetected": "检测到AE项目文件，无法导入：",
+    "aeProjectFileImportLimit": "AE项目文件导入限制",
+    "projectInternalFileImportLimit": "项目内文件导入限制",
+    "detectedProjectInternalFiles": "检测到 %d 个项目内文件",
+    "projectInternalFilesCannotBeImported": "项目内文件无法导入",
+    "readyToImportFiles": "准备导入 %d 个文件",
+    "noImportableFilesInFolder": "文件夹中没有找到可导入的文件",
+    "filesFoundInFolder": "文件夹中找到 %d 个文件",
+    "checkingFiles": "正在检测 %d 个文件...",
+    "readyToCheck": "准备检测拖拽的文件",
+    "webContentDetected": "检测到网页内容，松手后尝试导入图片"
   }
 }

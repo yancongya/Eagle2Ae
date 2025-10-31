@@ -26,7 +26,7 @@ class PollingManager {
         if (!this.isActive) {
             this.isActive = true;
             this.pollInterval = setInterval(this.callback, this.interval);
-            console.log('轮询已启动');
+            this.logManager.infoI18n('logs.pollingStarted');
         }
     }
 
@@ -35,7 +35,7 @@ class PollingManager {
             this.isActive = false;
             clearInterval(this.pollInterval);
             this.pollInterval = null;
-            console.log('轮询已停止');
+            this.logManager.infoI18n('logs.pollingStopped');
         }
     }
 
@@ -1214,7 +1214,7 @@ class AEExtension {
             return;
         }
 
-        this.log('正在断开连接...', 'info');
+        this.logManager.infoI18n('common.disconnecting');
 
         // 断开WebSocket连接
         if (this.webSocketClient) {
@@ -1233,7 +1233,7 @@ class AEExtension {
         // 设置状态
         this.setConnectionState(ConnectionState.DISCONNECTED);
 
-        this.log('已断开连接', 'success');
+        this.logManager.successI18n('common.disconnected');
 
         // 播放断开连接音效
         this.playConnectionSound('stop');
@@ -1241,13 +1241,13 @@ class AEExtension {
 
     // WebSocket连接成功回调
     onWebSocketConnected() {
-        this.log('WebSocket连接已建立', 'success');
+        this.logManager.successI18n('logs.websocketConnected');
         // 连接状态已在connectWebSocket中设置
     }
 
     // WebSocket连接断开回调
     onWebSocketDisconnected() {
-        this.log('WebSocket连接已断开', 'warning');
+        this.logManager.warningI18n('logs.websocketDisconnected');
         if (this.connectionState === ConnectionState.CONNECTED) {
             this.setConnectionState(ConnectionState.DISCONNECTED);
         }
@@ -1255,7 +1255,7 @@ class AEExtension {
 
     // 处理Eagle状态更新（WebSocket）
     handleEagleStatus(status) {
-        this.log('收到Eagle状态更新', 'debug');
+        this.logManager.debugI18n('logs.eagleStatusReceived');
         // 更新Eagle信息UI
         if (status && status.eagleStatus) {
             this.updateEagleUI(status.eagleStatus);
@@ -1264,7 +1264,7 @@ class AEExtension {
 
     // 处理配置变更（WebSocket）
     handleConfigChange(config) {
-        this.log('收到配置变更通知', 'info');
+        this.logManager.infoI18n('logs.configChangeReceived');
         // 可以在这里处理配置变更
     }
 
@@ -1274,7 +1274,7 @@ class AEExtension {
         this.connectionState = newState;
 
         if (oldState !== newState) {
-            this.log(`状态变更: ${oldState} -> ${newState}`, 'info');
+            this.log(i18n.getText('logs.statusChanged') + `: ${oldState} -> ${newState}`, 'info');
             this.updateConnectionUI();
         }
     }
@@ -1389,7 +1389,7 @@ class AEExtension {
                 });
 
                 if (newMessages > 0) {
-                    this.log(`处理了 ${newMessages} 条新消息`, 'info');
+                    this.log(i18n.getText('logs.processedNewMessages').replace('%d', newMessages), 'info');
                 }
 
                 // 清理旧的消息ID（保留最近50个）
@@ -1418,7 +1418,7 @@ class AEExtension {
             this.updateConnectionQuality();
 
         } catch (error) {
-            this.log(`轮询消息失败: ${error.message}`, 'warning');
+            this.log(i18n.getText('logs.pollingFailed') + ': ' + error.message, 'warning');
             this.connectionMonitor.recordFailure();
 
             // 连接出错，设置错误状态
@@ -10143,7 +10143,7 @@ class AEExtension {
                     return;
                 }
                 // 如果仍然无法获取任何信息，显示默认提示
-                this.updateDragHint('拖拽文件到此处');
+                this.updateDragHint(i18n.getText('dragDrop.dragFilesHere'));
                 return;
             }
 
@@ -10155,18 +10155,18 @@ class AEExtension {
                 const projectFileCount = projectFileCheck.projectFiles.length;
                 const externalFileCount = projectFileCheck.externalFiles.length;
 
-                let hintText = `⚠️ 检测到 ${projectFileCount} 个项目内文件`;
+                let hintText = '⚠️ ' + i18n.getText('dragDrop.detectedProjectInternalFiles').replace('%d', projectFileCount);
                 if (externalFileCount > 0) {
                     hintText += `，${externalFileCount} 个外部文件`;
                 }
-                hintText += '\n项目内文件无法导入';
+                hintText += '\n' + i18n.getText('dragDrop.projectInternalFilesCannotBeImported');
 
                 this.updateDragHint(hintText, 'warning');
                 document.body.classList.add('drag-project-files');
             } else {
                 // 外部文件，显示正常提示
                 const fileCount = files.length;
-                this.updateDragHint(`✅ 准备导入 ${fileCount} 个文件`, 'success');
+                this.updateDragHint('✅ ' + i18n.getText('dragDrop.readyToImportFiles').replace('%d', fileCount), 'success');
                 document.body.classList.remove('drag-project-files');
                 document.body.classList.add('drag-success');
             }
@@ -10487,11 +10487,11 @@ class AEExtension {
         allFiles.push(...files);
 
         if (allFiles.length === 0) {
-            this.showDropMessage('文件夹中没有找到可导入的文件', 'warning');
+            this.showDropMessage(i18n.getText('dragDrop.noImportableFilesInFolder'), 'warning');
             return;
         }
 
-        this.log(`文件夹中找到 ${allFiles.length} 个文件`, 'info');
+        this.log(i18n.getText('dragDrop.filesFoundInFolder').replace('%d', allFiles.length), 'info');
 
         // 首先检查是否包含项目文件
         const projectFileCheck = await this.isProjectInternalFile(allFiles);
@@ -11455,8 +11455,8 @@ class AEExtension {
 
         if (aeProjectFiles.length > 0) {
             // 如果有AE项目文件，显示专门的警告
-            title = 'AE项目文件导入限制';
-            message = '检测到After Effects项目文件，无法导入：\n\n';
+            title = i18n.getText('dragDrop.aeProjectFileImportLimit');
+            message = i18n.getText('dragDrop.aeProjectFilesDetected') + '\n\n';
 
             message += 'AE项目文件：\n';
             aeProjectFiles.forEach(file => {
@@ -11470,8 +11470,8 @@ class AEExtension {
             message += '3. 将导出的素材导入到当前项目';
         } else {
             // 普通项目内文件警告
-            title = '项目内文件导入限制';
-            message = '检测到项目内文件，无法导入：\n\n';
+            title = i18n.getText('dragDrop.projectInternalFileImportLimit');
+            message = i18n.getText('dragDrop.projectInternalFilesDetected') + '\n\n';
 
             message += '项目内文件：\n';
             normalProjectFiles.forEach(file => {

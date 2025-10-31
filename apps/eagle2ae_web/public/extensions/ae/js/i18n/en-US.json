@@ -88,7 +88,9 @@
     "connectionErrorDemo": "Connection failed (Demo)",
     "connecting": "Connecting...",
     "disconnecting": "Disconnecting...",
-    "connected": "Connected"
+    "connected": "Connected",
+    "ready": "Ready",
+    "notReady": "Not ready"
   },
   "logs": {
     "testingConnectionToEagle": "Testing connection to Eagle...",
@@ -191,7 +193,14 @@
     "quickSettingsNormalInitFailedPrefix": "Quick settings normal init failed: {msg}",
     "otherInitFailedPrefix": "Other initialization failed: {msg}",
     "panelInitFailedPrefix": "Settings panel init failed: {msg}",
-    "quickSettingsInitSetUninitialized": "Quick settings init failed, set to uninitialized state"
+    "quickSettingsInitSetUninitialized": "Quick settings init failed, set to uninitialized state",
+    "pollingStarted": "Polling started",
+    "pollingStopped": "Polling stopped",
+    "pollingFailed": "Polling messages failed",
+    "statusChanged": "Status changed",
+    "eagleStatusReceived": "Eagle status update received",
+    "configChangeReceived": "Config change notification received",
+    "processedNewMessages": "Processed %d new messages"
   },
   "titles": {
     "connectionButtonConnected": "Left-click: Disconnect\nRight-click: Refresh status",
@@ -282,5 +291,20 @@
     "tipFolderPathPrefix": "Folder Path: ",
     "tipPathUnavailable": "Path information unavailable",
     "compExportFailed": "Unable to export composition frame, please check extension status"
+  },
+  "dragDrop": {
+    "dragFilesHere": "Drag files here",
+    "projectInternalFilesDetected": "Project internal files detected, cannot import:",
+    "aeProjectFilesDetected": "AE project files detected, cannot import:",
+    "aeProjectFileImportLimit": "AE Project File Import Limit",
+    "projectInternalFileImportLimit": "Project Internal File Import Limit",
+    "detectedProjectInternalFiles": "Detected %d project internal files",
+    "projectInternalFilesCannotBeImported": "Project internal files cannot be imported",
+    "readyToImportFiles": "Ready to import %d files",
+    "noImportableFilesInFolder": "No importable files found in folder",
+    "filesFoundInFolder": "Found %d files in folder",
+    "checkingFiles": "Checking %d files...",
+    "readyToCheck": "Ready to check dragged files",
+    "webContentDetected": "Web content detected, release to try importing images"
   }
 }

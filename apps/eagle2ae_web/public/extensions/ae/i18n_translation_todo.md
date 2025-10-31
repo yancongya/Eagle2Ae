@@ -14,20 +14,20 @@
 ### 2. 项目与状态信息 (Project and Status Information)
 - [x] "未打开项目" → "No project opened"
 - [x] "无" → "None"
-- [ ] "准备就绪" → "Ready"
+- [x] "准备就绪" → "Ready"
 - [x] "未知" → "Unknown"
-- [ ] "未就绪" → "Not ready"
+- [x] "未就绪" → "Not ready"
 
 ### 3. 日志消息 (Log Messages)
-- [ ] "轮询消息失败" → "Polling messages failed"
-- [ ] "状态变更" → "Status changed"
-- [ ] "正在断开连接..." → "Disconnecting..."
-- [ ] "已断开连接" → "Disconnected"
-- [ ] "WebSocket连接已建立" → "WebSocket connected"
-- [ ] "WebSocket连接已断开" → "WebSocket disconnected"
-- [ ] "收到Eagle状态更新" → "Eagle status update received"
-- [ ] "收到配置变更通知" → "Config change notification received"
-- [ ] "处理了 %d 条新消息" → "Processed %d new messages"
+- [x] "轮询消息失败" → "Polling messages failed"
+- [x] "状态变更" → "Status changed"
+- [x] "正在断开连接..." → "Disconnecting..."
+- [x] "已断开连接" → "Disconnected"
+- [x] "WebSocket连接已建立" → "WebSocket connected"
+- [x] "WebSocket连接已断开" → "WebSocket disconnected"
+- [x] "收到Eagle状态更新" → "Eagle status update received"
+- [x] "收到配置变更通知" → "Config change notification received"
+- [x] "处理了 %d 条新消息" → "Processed %d new messages"
 
 ### 4. UI按钮和标签 (UI Buttons and Labels)
 - [ ] "左键：连接到Eagle" → "Left-click: Connect to Eagle"
@@ -87,7 +87,7 @@
 - [ ] "获取AE状态失败" → "Get AE status failed"
 
 ### 10. 成功消息 (Success Messages)
-- [ ] "扩展启动 - 端口" → "Extension startup - Port"
+- [ ] "扩展启动 - 端口" → "Extension startup - Port"。
 - [ ] "Eagle插件启动完成 - 版本" → "Eagle plugin startup complete - Version"
 - [ ] "资源库 已加载" → "Library loaded"
 - [ ] "共 个文件，占用" → "Total files,占用"
