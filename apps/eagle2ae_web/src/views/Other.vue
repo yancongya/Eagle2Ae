@@ -20,6 +20,7 @@
             :title="tag.title"
             :desc="tag.note"
             :link="tag.link"
+            :hover-desc="tag.hover_desc"
             default-icon="/home.svg"
           />
         </div>
@@ -86,7 +87,7 @@ async function loadGroups() {
           order: typeof info.order === 'number' ? info.order : 999,
           name: info.name || '',
           note: info.note || '',
-          tags: tags.map(t => ({ title: t.title, note: t.note, link: t.link }))
+          tags: tags.map(t => ({ title: t.title, note: t.note, link: t.link, hover_desc: t.hover_desc }))
         });
       } catch {}
     }
