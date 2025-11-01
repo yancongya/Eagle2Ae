@@ -11,8 +11,8 @@
       class="flex h-full items-center gap-3 rounded-lg border bg-slate-50 p-3 transition-all duration-200 ease-out dark:bg-neutral-800/50 border-slate-200 dark:border-neutral-600 hover:scale-[1.04] hover:shadow-lg hover:border-blue-500/60 dark:hover:bg-neutral-800 active:scale-[1.02] active:shadow-md sm:gap-4 sm:p-4"
     >
       <img
-        :src="faviconSrc"
-        @error="onFaviconError"
+        :src="finalIconSrc"
+        @error="onIconError"
         :alt="localizedTitle"
         loading="lazy"
         decoding="async"
@@ -39,7 +39,8 @@ const props = defineProps({
   desc: { type: [String, Object], default: '' },
   link: { type: String, required: true },
   hoverDesc: { type: [String, Object], default: '' },
-  defaultIcon: { type: String, default: '/home.svg' }
+  defaultIcon: { type: String, default: '/home.svg' },
+  icon: { type: String, default: 'fetch' } // 'fetch' or a path string
 });
 
 const { locale, t } = useI18n();
@@ -65,12 +66,13 @@ const localizedTitle = computed(() => getLocalized(props.title));
 const localizedDesc = computed(() => getLocalized(props.desc));
 const localizedHoverDesc = computed(() => getLocalized(props.hoverDesc));
 
-// 决定 title 属性最终显示什么内容
 const titleAttributeContent = computed(() => {
   return localizedHoverDesc.value || localizedTitle.value;
 });
 
-const faviconSrc = ref(props.defaultIcon);
+// --- Icon Logic ---
+const fetchedFaviconSrc = ref(props.defaultIcon); // Stores the result of favicon fetch
+
 const buildFaviconUrl = () => {
   try {
     const u = new URL(props.link);
@@ -79,16 +81,34 @@ const buildFaviconUrl = () => {
     return props.defaultIcon;
   }
 };
-const onFaviconError = () => { faviconSrc.value = props.defaultIcon; };
+
+const fetchFavicon = () => {
+  const url = buildFaviconUrl();
+  const img = new Image();
+  img.onload = () => { fetchedFaviconSrc.value = url; };
+  img.onerror = () => { fetchedFaviconSrc.value = props.defaultIcon; };
+  img.src = url;
+};
+
+const onIconError = (event) => {
+  // Only fallback to defaultIcon if current src is not already defaultIcon
+  if (event.target.src !== props.defaultIcon) {
+    event.target.src = props.defaultIcon;
+  }
+};
+
+const finalIconSrc = computed(() => {
+  if (props.icon !== 'fetch') {
+    return props.icon; // Use the path directly
+  } else { // 'fetch' mode
+    return fetchedFaviconSrc.value;
+  }
+});
 
 onMounted(() => {
-  const url = buildFaviconUrl();
-  try {
-    const test = new Image();
-    test.onload = () => { faviconSrc.value = url; };
-    test.onerror = () => { faviconSrc.value = props.defaultIcon; };
-    test.src = url;
-  } catch { faviconSrc.value = props.defaultIcon; }
+  if (props.icon === 'fetch') {
+    fetchFavicon();
+  }
 });
 </script>
 

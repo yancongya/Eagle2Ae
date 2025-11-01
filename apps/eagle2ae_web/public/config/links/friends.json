@@ -9,19 +9,22 @@
       "title": { "zh-CN": "LinkStack", "en-US": "LinkStack" },
       "note": { "zh-CN": "开源链接聚合", "en-US": "Open-source link hub" },
       "link": "https://linkstack.org/",
-      "hover_desc": { "zh-CN": "这是一个开源的链接聚合工具，可以自托管。", "en-US": "This is an open-source, self-hostable link aggregation tool." }
+      "hover_desc": { "zh-CN": "这是一个开源的链接聚合工具，可以自托管。", "en-US": "This is an open-source, self-hostable link aggregation tool." },
+      "icon": "/config/links/logo/linkstack.svg"
     },
     {
       "title": { "zh-CN": "Flare", "en-US": "Flare" },
       "note": { "zh-CN": "轻量链接页", "en-US": "Lightweight link page" },
       "link": "https://github.com/Flare-Empower/flare",
-      "hover_desc": { "zh-CN": "一个轻量级的个人链接聚合页，快速分享你的所有链接。", "en-US": "A lightweight personal link aggregation page to quickly share all your links." }
+      "hover_desc": { "zh-CN": "一个轻量级的个人链接聚合页，快速分享你的所有链接。", "en-US": "A lightweight personal link aggregation page to quickly share all your links." },
+      "icon": "/config/links/logo/flare.svg"
     },
     {
       "title": { "zh-CN": "Linktree", "en-US": "Linktree" },
       "note": { "zh-CN": "个人链接聚合", "en-US": "Personal link hub" },
       "link": "https://linktr.ee/",
-      "hover_desc": { "zh-CN": "流行的个人链接聚合服务，将所有社交媒体和内容链接集中展示。", "en-US": "A popular personal link aggregation service to centralize all social media and content links." }
+      "hover_desc": { "zh-CN": "流行的个人链接聚合服务，将所有社交媒体和内容链接集中展示。", "en-US": "A popular personal link aggregation service to centralize all social media and content links." },
+      "icon": "/config/links/logo/linktree.svg"
     }
   ]
 }
