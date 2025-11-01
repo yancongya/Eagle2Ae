@@ -199,7 +199,7 @@ const props = defineProps({
   // 使用 public 目录下的静态资源，避免构建后 /src 路径失效
   logo1Src: { type: String, default: '/logo.png' },
   logo2Src: { type: String, default: '/logo_download.png' },
-  explosionSprites: { type: Array, default: () => ['/explosion/frag-star.svg','/explosion/frag-ring.svg','/explosion/frag-triangle.svg','/explosion/frag-bolt.svg','/explosion/frag-shard.svg'] },
+  explosionSprites: { type: Array, default: () => ['/explosion/图片.svg','/explosion/Gif.svg','/explosion/Mov.svg','/explosion/Mp3.svg','/explosion/Wav.svg'] },
   explosionDurationMs: { type: Number, default: 7000 },
   explosionFadeOutMs: { type: Number, default: 900 }
 });

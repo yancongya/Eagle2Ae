@@ -9,6 +9,8 @@
         </router-link>
       </div>
 
+
+
       <!-- Center: Navigation Links (with flex-grow wrapper) -->
       <div class="flex-1 min-w-0 px-4">
         <div class="hidden md:flex items-center justify-center sm:space-x-2 space-x-4 md:space-x-6 lg:space-x-8">
@@ -68,14 +70,14 @@
           </svg>
         </label>
         <!-- Mobile menu toggle -->
-        <button ref="mobileMenuButtonRef" @click="isMobileOpen = !isMobileOpen" @mouseenter="isMobileOpen = true" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
+        <button ref="mobileMenuButtonRef" @click="toggleMenu" @mouseenter="!isMobile && (isMobileOpen = true)" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
           <svg class="w-5 h-5 md:w-6 md:h-6 transition-transform duration-200 ease-out" :class="{ 'rotate-90': isMobileOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
     </nav>
     <!-- Mobile menu -->
-    <transition name="mobile-menu" @enter="mobileEnter" @leave="mobileLeave">
-      <div v-if="isMobileOpen" ref="mobileMenuRef" @mouseleave="isMobileOpen = false" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
+    <transition name="mobile-menu">
+      <div v-show="isMobileOpen" ref="mobileMenuRef" @mouseleave="!isMobile && (isMobileOpen = false)" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
         <div class="w-full px-4 py-3 sm:py-4 flex flex-col space-y-2">
           <router-link to="/" class="mobile-nav-link">
             <span class="relative inline-block group">
@@ -86,7 +88,7 @@
           <router-link to="/ae-preview" class="mobile-nav-link" @dblclick.prevent="onAePreviewDblClick">
             <span class="relative inline-block group">
               {{ t('nav.aePreview') }}
-              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+            <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>
           <router-link to="/eagle-preview" class="mobile-nav-link" @dblclick.prevent="onEaglePreviewDblClick">
@@ -128,29 +130,60 @@
 <script setup>
 import { useDark, useToggle, onClickOutside } from '@vueuse/core';
 import { useRouter, useRoute } from 'vue-router';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LanguageSwitcher from './LanguageSwitcher.vue';
+import { useDevice } from '@/composables/useDevice.js';
 import { gsap } from 'gsap'
 
 const { t } = useI18n();
 const isDark = useDark({ storageKey: 'theme' });
- const toggleDark = useToggle(isDark);
- const isMobileOpen = ref(false);
- const router = useRouter();
- const route = useRoute();
+const toggleDark = useToggle(isDark);
+const isMobileOpen = ref(false);
+const router = useRouter();
+const route = useRoute();
+const { isMobile, isSmallScreen, isTouchDevice } = useDevice();
 
 const mobileMenuRef = ref(null);
 const mobileMenuButtonRef = ref(null);
 const navTitle = ref(null);
+const isClickOutsideEnabled = ref(true);
 
 onClickOutside(
   mobileMenuRef,
-  () => { isMobileOpen.value = false; },
+  () => {
+    if (isClickOutsideEnabled.value) {
+      isMobileOpen.value = false;
+    }
+  },
   { ignore: [mobileMenuButtonRef] }
 );
 
+const toggleMenu = () => {
+  isMobileOpen.value = !isMobileOpen.value;
+  if (isMobileOpen.value) {
+    isClickOutsideEnabled.value = false;
+    setTimeout(() => {
+      isClickOutsideEnabled.value = true;
+    }, 100);
+  }
+};
+
 router.afterEach(() => { isMobileOpen.value = false; });
+
+watch(isMobileOpen, (isOpen) => {
+  if (isOpen) {
+    nextTick(() => {
+      if (mobileMenuRef.value) {
+        mobileEnter(mobileMenuRef.value, () => {});
+      }
+    });
+  } else {
+    if (mobileMenuRef.value) {
+      mobileLeave(mobileMenuRef.value, () => {});
+    }
+  }
+});
 
 const onToggleTheme = (e) => {
   const supports = typeof document !== 'undefined' && 'startViewTransition' in document && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative inline-flex items-center" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <div class="relative inline-flex items-center" @mouseenter="!isMobile && onMouseEnter()" @mouseleave="!isMobile && onMouseLeave()">
     <button
       ref="triggerRef"
       type="button"
@@ -48,8 +48,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { gsap } from 'gsap'
+import { useDevice } from '@/composables/useDevice.js';
 
 const { locale } = useI18n()
+const { isMobile } = useDevice();
 
 const props = defineProps({
   size: { type: String, default: 'md' }

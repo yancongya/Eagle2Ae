@@ -34,7 +34,7 @@
 
         <!-- Bottom Part: Feature Cards (Balanced Size) -->
         <div ref="cardsContainer" class="mx-auto mt-12 md:mt-24 w-full">
-           <div class="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-5 lg:gap-6" :style="{ perspective: '900px' }">
+           <div class="grid grid-cols-3 lg:grid-cols-6 gap-6 md:gap-5 lg:gap-6" :style="{ perspective: '900px' }">
             <div v-for="(feature, index) in features" :key="feature.id"
                  :ref="el => { if (el) cardRefs[index] = el }"
                  @mouseenter="onCardEnter(feature.id)"
@@ -46,7 +46,7 @@
                    class="relative block rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
                 <img :src="feature.iconUrl" :alt="feature.title" class="absolute inset-0 h-full w-full object-cover rounded-xl md:rounded-2xl">
               </div>
-              <h3 :ref="el => { if (el) titleRefs[index] = el }" class="mt-2 font-bold text-sm md:text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
+              <h3 class="mt-2 font-bold text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">{{ feature.title }}</h3>
             </div>
           </div>
         </div>
@@ -152,35 +152,6 @@ const subtitle = ref(null);
 const buttons = ref(null);
 const cardsContainer = ref(null);
 const cardRefs = ref([]); // To hold refs for each card
-const titleRefs = ref([]); // To hold refs for each title
-
-// Fit hero card titles to a single line on small screens
-const fitTitleToOneLine = (el) => {
-  if (!el) return;
-  const isSmallScreen = window.innerWidth < 768; // md breakpoint
-  if (!isSmallScreen) {
-    el.style.whiteSpace = '';
-    el.style.wordBreak = '';
-    el.style.fontSize = '';
-    return;
-  }
-  el.style.whiteSpace = 'nowrap';
-  el.style.wordBreak = 'keep-all';
-  // Reset to default before measuring
-  el.style.fontSize = '';
-  const container = el.parentElement;
-  const containerWidth = container ? container.clientWidth : el.clientWidth;
-  const textWidth = el.scrollWidth;
-  if (textWidth <= containerWidth) return;
-  const currentFontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
-  const ratio = containerWidth / textWidth;
-  const newSize = Math.max(12, Math.floor(currentFontSize * ratio));
-  el.style.fontSize = `${newSize}px`;
-};
-
-const fitAllTitles = () => {
-  titleRefs.value.forEach(fitTitleToOneLine);
-};
 
 // Hover state
 let hoverClearTimer = null;
@@ -344,13 +315,6 @@ onMounted(async () => {
 
   await buildEnterTimeline();
   hasPlayedOnce.value = true;
-  // Fit titles after initial render and on resize for small screens
-  await nextTick();
-  fitAllTitles();
-  window.addEventListener('resize', fitAllTitles);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', fitAllTitles);
 });
 
 const playEnter = (delay = 0) => {
@@ -419,11 +383,6 @@ watch(cardsContainer, (newVal) => {
   if (newVal) {
     gsap.set(cardRefs.value, { clearProps: 'all' });
   }
-});
-// Refit titles when language changes (text length changes)
-watch(locale, async () => {
-  await nextTick();
-  fitAllTitles();
 });
 </script>
 

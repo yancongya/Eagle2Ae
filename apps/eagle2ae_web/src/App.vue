@@ -8,7 +8,7 @@
     </router-view>
     <!-- 已根据偏好移除过渡期间遮罩层 -->
     <!-- 仅在首页挂载拖拽组件 -->
-    <DragToTop v-if="dragToTopEnabled" :enabled="true" />
+    <DragToTop v-if="dragToTopEnabled && !isMobile" />
     <ReturnToTopButton />
   </div>
 </template>
@@ -20,10 +20,12 @@ import { useI18n } from 'vue-i18n';
 import Navbar from './components/Navbar.vue';
 import DragToTop from './components/DragToTop.vue';
 import ReturnToTopButton from './components/ReturnToTopButton.vue';
+import { useDevice } from './composables/useDevice.js';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { isMobile } = useDevice();
 
 // 仅在首页启用拖拽组件
 const dragToTopEnabled = computed(() => route.name === 'Home');
