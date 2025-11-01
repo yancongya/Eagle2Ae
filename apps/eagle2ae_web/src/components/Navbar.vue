@@ -1,50 +1,50 @@
 <template>
   <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm transition-colors duration-300 w-full">
-    <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex justify-between items-center">
+    <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center">
       <!-- Logo -->
-      <div class="font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
+      <div class="flex-shrink-0 font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
         <router-link to="/" class="flex items-center group">
           <img src="/logo.png" alt="Logo" class="h-6 sm:h-7 md:h-8 mr-2" />
           <span class="font-bold" ref="navTitle">Eagle2Ae</span>
         </router-link>
       </div>
 
-      <!-- Navigation Links -->
-      <div class="hidden md:flex items-center sm:space-x-2 space-x-4 md:space-x-6 lg:space-x-8">
-        <router-link to="/" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
-          {{ t('nav.home') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <router-link to="/ae-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onAePreviewDblClick">
-          {{ t('nav.aePreview') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <router-link to="/eagle-preview" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onEaglePreviewDblClick">
-          {{ t('nav.eaglePreview') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <router-link to="/download" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
-          {{ t('nav.download') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <router-link to="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
-          {{ t('nav.about.title') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <router-link to="/other" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
-          {{ t('nav.other') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </router-link>
-        <a :href="t('links.docs')" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
-          {{ t('nav.docs') }}
-          <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
-        </a>
-        
-        <!-- 已移除旧的“详细文档”链接 -->
+      <!-- Center: Navigation Links (with flex-grow wrapper) -->
+      <div class="flex-1 min-w-0 px-4">
+        <div class="hidden md:flex items-center justify-center sm:space-x-2 space-x-4 md:space-x-6 lg:space-x-8">
+          <router-link to="/" class="nav-link-item nav-link-hides-at-custom text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
+            {{ t('nav.home') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <router-link to="/ae-preview" class="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onAePreviewDblClick">
+            {{ t('nav.aePreview') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <router-link to="/eagle-preview" class="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onEaglePreviewDblClick">
+            {{ t('nav.eaglePreview') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <router-link to="/download" class="nav-link-item nav-link-hides-at-custom text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
+            {{ t('nav.download') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <router-link to="/about" class="nav-link-item nav-link-hides-at-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
+            {{ t('nav.about.title') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <router-link to="/other" class="nav-link-item nav-link-hides-at-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
+            {{ t('nav.other') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </router-link>
+          <a :href="t('links.docs')" class="nav-link-item nav-link-hides-at-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap">
+            {{ t('nav.docs') }}
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
+          </a>
+        </div>
       </div>
 
-      <!-- Theme Toggle & CTA Button -->
-      <div class="flex items-center gap-2 md:gap-4">
+      <!-- Right: Theme Toggle & Controls -->
+      <div class="flex-shrink-0 flex items-center gap-2 md:gap-4">
         <LanguageSwitcher size="md" class="hidden md:block" />
         <!-- 移动端始终可见的语言切换 -->
         <LanguageSwitcher size="sm" class="md:hidden" @languageChanged="isMobileOpen = false"/>
@@ -67,7 +67,6 @@
             </g>
           </svg>
         </label>
-        <!-- 已移除旧的下载按钮 CTA -->
         <!-- Mobile menu toggle -->
         <button ref="mobileMenuButtonRef" @click="isMobileOpen = !isMobileOpen" @mouseenter="isMobileOpen = true" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
           <svg class="w-5 h-5 md:w-6 md:h-6 transition-transform duration-200 ease-out" :class="{ 'rotate-90': isMobileOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -419,4 +418,46 @@ onMounted(() => {
 .st-sunMoonThemeToggleBtn .themeToggleInput:checked + svg .sunMoon { transform: scale(0.55); }
 .st-sunMoonThemeToggleBtn .themeToggleInput:checked + svg .sunRay { animation: showRay1832 0.4s ease 0s 1 forwards; }
 @keyframes showRay1832 { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+.nav-link-item {
+  transition: opacity 0.3s ease, max-width 0.4s ease, margin 0.4s ease;
+  overflow: hidden;
+  white-space: nowrap; /* Ensure content doesn't wrap inside */
+}
+
+/* Hides 'Docs' at 1279px and below */
+@media (max-width: 1279px) {
+  .nav-link-hides-at-xl {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important; /* Ensure padding is also removed */
+    padding-right: 0 !important;
+  }
+}
+
+/* Hides 'About' and 'Other' at 1023px and below */
+@media (max-width: 1023px) {
+  .nav-link-hides-at-lg {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important; /* Ensure padding is also removed */
+    padding-right: 0 !important;
+  }
+}
+
+/* Hides 'Home' and 'Download' at 920px and below */
+@media (max-width: 920px) {
+  .nav-link-hides-at-custom {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important; /* Ensure padding is also removed */
+    padding-right: 0 !important;
+  }
+}
 </style>
