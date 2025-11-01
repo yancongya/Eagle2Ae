@@ -69,14 +69,14 @@
         </label>
         <!-- 已移除旧的下载按钮 CTA -->
         <!-- Mobile menu toggle -->
-        <button ref="mobileMenuButtonRef" @click="isMobileOpen = !isMobileOpen" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
+        <button ref="mobileMenuButtonRef" @click="isMobileOpen = !isMobileOpen" @mouseenter="isMobileOpen = true" class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.95]" aria-label="打开菜单" :aria-expanded="isMobileOpen">
           <svg class="w-5 h-5 md:w-6 md:h-6 transition-transform duration-200 ease-out" :class="{ 'rotate-90': isMobileOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
     </nav>
     <!-- Mobile menu -->
     <transition name="mobile-menu" @enter="mobileEnter" @leave="mobileLeave">
-      <div v-if="isMobileOpen" ref="mobileMenuRef" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
+      <div v-if="isMobileOpen" ref="mobileMenuRef" @mouseleave="isMobileOpen = false" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
         <div class="w-full px-4 py-3 sm:py-4 flex flex-col space-y-2">
           <router-link to="/" class="mobile-nav-link">
             <span class="relative inline-block group">
