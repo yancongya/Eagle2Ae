@@ -9,8 +9,10 @@
         <div class="text-center max-w-4xl mx-auto">
           <div class="overflow-hidden">
             <h1 ref="title" 
-                class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4 cursor-pointer"
-                @mouseenter="toggleTitle">
+                :class="isMobile ? 'cursor-default' : 'cursor-pointer'"
+                :style="isMobile ? {} : { cursor: 'pointer' }"
+                @mouseenter="!isMobile && toggleTitle()"
+                class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
               <span class="title-part" data-role="eagle">Eagle</span>
               <span class="title-arrow mx-1" data-role="arrow" aria-hidden="true">👉</span>
               <span class="title-part" data-role="ae">AE</span>
@@ -40,7 +42,8 @@
                  @mouseenter="onCardEnter(feature.id)"
                  @mouseleave="onCardLeave"
                  :style="{ zIndex: hoveredCardId === feature.id ? 10 : 1 }"
-                 class="flex flex-col items-center text-center cursor-pointer opacity-0 transition-all duration-300">
+                 :class="isMobile ? 'cursor-default' : 'cursor-pointer'"
+                 class="flex flex-col items-center text-center opacity-0 transition-all duration-300">
               <div @click="scrollTo(feature.id)"
                    :style="cardStyle(index)"
                    class="relative block rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg transition-all duration-300 bg-white/50 dark:bg-gray-800/50 aspect-[3/4] w-full">
@@ -61,6 +64,10 @@ import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { useI18n } from 'vue-i18n';
+import { useDevice } from '@/composables/useDevice.js';
+
+// 获取设备信息
+const { isMobile } = useDevice();
 
 // Helper to check for object type
 const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
@@ -157,10 +164,14 @@ const cardRefs = ref([]); // To hold refs for each card
 let hoverClearTimer = null;
 
 const onCardEnter = (id) => {
+  // 在移动设备上不执行悬停效果
+  if (isMobile.value) return;
   if (hoverClearTimer) { clearTimeout(hoverClearTimer); hoverClearTimer = null; }
   hoveredCardId.value = id;
 };
 const onCardLeave = () => {
+  // 在移动设备上不执行悬停效果
+  if (isMobile.value) return;
   if (hoverClearTimer) { clearTimeout(hoverClearTimer); }
   hoverClearTimer = setTimeout(() => {
     hoveredCardId.value = null;
@@ -179,6 +190,21 @@ const hoveredIndex = computed(() => {
 
 // 基于与悬浮卡片的距离，计算缩放与 Z 轴位移样式
 const cardStyle = (index) => {
+  // 在移动设备上始终返回默认样式，不执行悬停变换效果
+  if (isMobile.value) {
+    return {
+      transform: 'translateY(0) scale(1) translateZ(0)',
+      opacity: 1,
+      filter: 'blur(0px)',
+      transformStyle: 'preserve-3d',
+      willChange: 'transform, opacity, box-shadow, filter',
+      transitionTimingFunction: opts.value.transition.timingFunction,
+      transitionDuration: `${opts.value.transition.durationMs}ms`,
+      transitionProperty: 'transform, opacity, box-shadow, filter',
+      transitionDelay: '0ms'
+    };
+  }
+  
   const sel = hoveredIndex.value;
   const transition = {
     transitionTimingFunction: opts.value.transition.timingFunction,

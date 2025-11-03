@@ -11,13 +11,52 @@ export default defineConfig({
     // PWA: 预缓存核心 JSON 与静态资源，提高离线与回访命中率
     VitePWA({
       registerType: 'autoUpdate',
-      devOptions: { enabled: true },
+      devOptions: { 
+        enabled: true,
+        suppressWarnings: true, // 在开发环境中抑制 Workbox 警告
+        type: 'module'
+      },
       workbox: {
         // 预缓存构建产物以及 public 目录中常见静态资源与 JSON
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
         // 避免导航回退将 /extensions/ae/* 误回退到主应用 index.html
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/extensions\/ae\//],
+        // 配置静默模式以减少控制台警告
+        skipWaiting: true,
+        clientsClaim: true,
+        // 过滤掉不希望预缓存的开发时资源
+        globIgnores: ['**/node_modules/**/*', '**/.*', '**/config/presets/**/*', '**/vite/**', '**/@vite/**', '**/@id/**', '**/?t=**', '**/?v=**'],
+        // 跳过 Vite 开发服务器的特殊文件路径
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.+$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'external',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24, // 24 小时
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^http:\/\/localhost:.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'dev-server',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 5, // 5 分钟
+              },
+            },
+          },
+        ],
+        // 过滤掉可能导致警告的文件
+        ignoreURLParametersMatching: [/^t$/, /^v$/], // 忽略时间戳和版本参数
       },
     }),
     // 开发期内置一个极简文件写入 API，用于 Demo 模式将预设写回到 public/config/presets

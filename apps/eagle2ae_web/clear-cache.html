@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Browser Cache</title>
+</head>
+<body>
+    <h1>Clear Browser Cache</h1>
+    <p>This page helps clear browser cache and service workers to apply the new log filtering settings.</p>
+    <button onclick="clearCache()">Clear Cache & Service Workers</button>
+    <script>
+        async function clearCache() {
+            // 清除所有缓存
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                    cacheNames.map((cacheName) => {
+                        console.log('Deleting cache:', cacheName);
+                        return caches.delete(cacheName);
+                    })
+                );
+            }
+
+            // 注销所有 Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(
+                    registrations.map((reg) => {
+                        console.log('Unregistering SW:', reg.scope);
+                        return reg.unregister();
+                    })
+                );
+            }
+
+            // 清除本地存储
+            localStorage.clear();
+            sessionStorage.clear();
+
+            alert('Cache cleared! Please reload the application to apply new log filtering settings.');
+            
+            // 重新加载页面
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

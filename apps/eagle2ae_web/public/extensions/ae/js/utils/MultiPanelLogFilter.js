@@ -91,26 +91,68 @@ class MultiPanelLogFilter {
             debug: console.debug
         };
         
-        // 只过滤 log 和 info，保留 warn 和 error
-        ['log', 'info'].forEach(method => {
+        // 根据环境决定是否过滤日志
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
+        
+        // 定义需要过滤的警告模式（更广的范围）
+        const warningPatternsToSuppress = [
+            /Precaching did not find a match/,
+            /No route found for:/,
+            /The navigation route.*is not being used, since the URL matches this denylist pattern/,
+            /extendScript.*connection failed/,
+            /WebSocket connection failed/,
+            /workbox.*Precaching/,
+            /workbox.*No route found/,
+            /Workbox Router only supports URLs that start with 'http'/,
+            /The navigation route.*is not being used/
+        ];
+        
+        // 函数用于检测消息是否应该被抑制
+        const shouldSuppressByPattern = (message) => {
+            const messageStr = String(message);
+            return warningPatternsToSuppress.some(pattern => pattern.test(messageStr));
+        };
+        
+        // 创建一个简单的去重机制
+        const logCache = new Set();
+        const getLogKey = (...args) => {
+            return args.join(' ');
+        };
+        
+        // 对所有控制台方法进行过滤
+        ['log', 'info', 'warn', 'error', 'debug', 'table', 'trace'].forEach(method => {
             console[method] = function(...args) {
                 const message = args.join(' ');
-                if (!self.shouldSuppressLog(message)) {
-                    // 为非主面板添加面板标识前缀
-                    if (!self.isMainPanel && args.length > 0) {
-                        args[0] = `[${self.panelId}] ${args[0]}`;
-                    }
-                    originalConsole[method].apply(console, args);
+                const logKey = getLogKey(...args);
+                
+                // 检查是否应该完全抑制此消息
+                if (self.shouldSuppressLog(message) || shouldSuppressByPattern(message)) {
+                    return; // 完全不输出
                 }
-            };
-        });
-        
-        // warn 和 error 始终显示，但添加面板标识
-        ['warn', 'error'].forEach(method => {
-            console[method] = function(...args) {
-                if (!self.isMainPanel && args.length > 0) {
+                
+                // 对于开发环境中的特定警告，仅在调试模式下显示
+                if (isDevelopment && (method === 'warn' || method === 'error') && 
+                    warningPatternsToSuppress.some(pattern => pattern.test(message))) {
+                    if (window.localStorage && window.localStorage.getItem('debugMode') !== 'true') {
+                        return; // 非调试模式下不显示这些警告
+                    }
+                }
+                
+                // 检查是否是重复的日志（可选的去重功能）
+                if (logCache.has(logKey)) {
+                    // 简单的去重：相同消息每分钟最多显示一次
+                    const lastLogTime = logCache.get(logKey);
+                    if (Date.now() - lastLogTime < 60000) { // 60秒内不重复
+                        return;
+                    }
+                }
+                logCache.set(logKey, Date.now());
+                
+                // 为非主面板添加面板标识前缀
+                if (!self.isMainPanel && args.length > 0 && !shouldSuppressByPattern(message)) {
                     args[0] = `[${self.panelId}] ${args[0]}`;
                 }
+                
                 originalConsole[method].apply(console, args);
             };
         });

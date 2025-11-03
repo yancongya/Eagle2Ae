@@ -51,7 +51,22 @@ app.use(i18n); // 使用 i18n
 app.mount('#app');
 
 // 注册 Service Worker（自动更新），以启用 PWA 预缓存
-try { registerSW({ immediate: true }); } catch {}
+try { 
+  // 在开发环境中完全静默注册，不输出任何信息
+  if (process.env.NODE_ENV === 'production') {
+    registerSW({ immediate: true });
+  } else {
+    registerSW({ 
+      immediate: true,
+      onRegisteredSW(swScriptUrl, r) {
+        // 开发环境下完全静默，不输出任何信息
+      },
+      onRegisterError(e) {
+        // 开发环境下完全静默，不输出任何信息
+      }
+    });
+  }
+} catch {}
 
 // 页面空闲时预取“其他页”与下载页核心 JSON，提升回访体验
 try {
