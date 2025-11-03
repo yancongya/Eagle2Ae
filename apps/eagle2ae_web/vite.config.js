@@ -15,6 +15,9 @@ export default defineConfig({
       workbox: {
         // 预缓存构建产物以及 public 目录中常见静态资源与 JSON
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
+        // 避免导航回退将 /extensions/ae/* 误回退到主应用 index.html
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/extensions\/ae\//],
       },
     }),
     // 开发期内置一个极简文件写入 API，用于 Demo 模式将预设写回到 public/config/presets
