@@ -6651,6 +6651,39 @@
                             }, 300);
                         }
                     });
+
+                    // --- 新增：触摸交互 ---
+                    let touchStartY = 0;
+                    let touchStartTime = 0;
+                    headerHoverTrigger.addEventListener('touchstart', (e) => {
+                        if (!uiSettings.header && e.touches.length > 0) {
+                            touchStartY = e.touches[0].clientY;
+                            touchStartTime = Date.now();
+                        }
+                    }, { passive: true });
+
+                    headerHoverTrigger.addEventListener('touchmove', (e) => {
+                        if (!uiSettings.header && e.touches.length > 0) {
+                            const touchCurrentY = e.touches[0].clientY;
+                            const deltaY = touchCurrentY - touchStartY;
+                            if (touchStartY < 50 && deltaY > 30) { // 从顶部50px内开始，向下滑动超过30px
+                                const deltaTime = Date.now() - touchStartTime;
+                                const speed = deltaY / deltaTime;
+                                if (speed > 0.5) { // 速度阈值
+                                    mainPanelElements.header.classList.add('hover');
+                                    touchStartY = 9999; // 防止连续触发
+                                }
+                            }
+                        }
+                    }, { passive: true });
+
+                    document.addEventListener('touchend', () => {
+                        if (mainPanelElements.header.classList.contains('hover')) {
+                            setTimeout(() => {
+                                mainPanelElements.header.classList.remove('hover');
+                            }, 5000);
+                        }
+                    }, { passive: true });
                 }
 
                 // 让 i18n 系统自动处理翻译

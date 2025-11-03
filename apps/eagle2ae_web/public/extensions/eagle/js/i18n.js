@@ -244,141 +244,34 @@ class I18n {
         return translation;
     }
     
-    // Update UI elements with current translations
+    // Update UI elements with current translations based on data-i18n attribute
     updateUI() {
-        // Update main title
-        const mainTitle = document.getElementById('main-title');
-        if (mainTitle) {
-            mainTitle.textContent = this.t('appTitle');
-        }
-        
-        // Update status section title
-        const statusTitle = document.querySelector('.status-section h3');
-        if (statusTitle) {
-            statusTitle.textContent = this.t('statusSectionTitle');
-        }
-        
-        // Update status labels
-        const aePortLabel = document.querySelector('.status-item:nth-child(1) .status-label');
-        if (aePortLabel) {
-            aePortLabel.textContent = this.t('aePortLabel');
-        }
-        
-        const connectionLabel = document.querySelector('.status-item:nth-child(2) .status-label');
-        if (connectionLabel) {
-            connectionLabel.textContent = this.t('connectionStatusLabel');
-        }
-        
-        const uptimeLabel = document.querySelector('.status-item:nth-child(3) .status-label');
-        if (uptimeLabel) {
-            uptimeLabel.textContent = this.t('uptimeLabel');
-        }
-        
-        // Update files section title
-        const filesTitle = document.querySelector('.files-section h3');
-        if (filesTitle) {
-            filesTitle.textContent = this.t('filesSectionTitle');
-        }
-        
-        // Update log section title
-        const logTitle = document.querySelector('.log-section h3');
-        if (logTitle) {
-            logTitle.textContent = this.t('logSectionTitle');
-        }
-        
-        // Update log info text
-        const logInfo = document.querySelector('.log-info');
-        if (logInfo) {
-            logInfo.textContent = this.t('logInfo');
-        }
-        
-        // Update settings button title
-        const settingsButton = document.getElementById('title-settings-button');
-        if (settingsButton) {
-            settingsButton.title = this.t('settingsButtonTitle');
-        }
-        
-        // Update language switch button title
+        document.querySelectorAll('[data-i18n]').forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            const translation = this.t(key);
+
+            // Handle specific element types or attributes if needed
+            if (element.hasAttribute('title')) {
+                 if(element.tagName.toLowerCase() !== 'button'){
+                    element.title = translation;
+                 }
+            } 
+            if (element.hasAttribute('placeholder')) {
+                element.placeholder = translation;
+            } 
+            if (element.tagName.toLowerCase() === 'input' && element.type === 'submit') {
+                element.value = translation;
+            } else {
+                // Default to textContent for most elements
+                element.textContent = translation;
+            }
+        });
+
+        // Special handling for elements that need it, like buttons with specific titles
         const langSwitchButton = document.getElementById('language-switch');
         if (langSwitchButton) {
             const currentLang = this.getLanguage();
             langSwitchButton.title = currentLang === 'zh' ? 'Switch to English' : '切换到中文';
-        }
-        
-        // Update settings dialog elements
-        const settingsDialogTitle = document.getElementById('settings-dialog-title');
-        if (settingsDialogTitle) {
-            settingsDialogTitle.textContent = this.t('settingsTitle');
-        }
-        
-        // Update settings labels with proper structure
-        const showNotificationsLabel = document.getElementById('show-notifications-label');
-        if (showNotificationsLabel) {
-            const checkbox = showNotificationsLabel.querySelector('input');
-            if (checkbox) {
-                showNotificationsLabel.innerHTML = `${checkbox.outerHTML}${this.t('showNotifications')}`;
-            } else {
-                showNotificationsLabel.textContent = this.t('showNotifications');
-            }
-        }
-        
-        const serverPortLabel = document.getElementById('server-port-label');
-        if (serverPortLabel) {
-            serverPortLabel.textContent = this.t('serverPort');
-        }
-        
-        const clipboardIntervalLabel = document.getElementById('clipboard-interval-label');
-        if (clipboardIntervalLabel) {
-            clipboardIntervalLabel.textContent = this.t('clipboardInterval');
-        }
-        
-        // Update button texts
-        const saveSettingsButton = document.getElementById('save-settings');
-        if (saveSettingsButton) {
-            saveSettingsButton.textContent = this.t('saveSettings');
-        }
-        
-        const cancelSettingsButton = document.getElementById('cancel-settings');
-        if (cancelSettingsButton) {
-            cancelSettingsButton.textContent = this.t('cancelSettings');
-        }
-        
-        // Update connection status text (only if it matches known values)
-        const connectionStatusElement = document.getElementById('connection-status');
-        if (connectionStatusElement) {
-            const currentText = connectionStatusElement.textContent;
-            if (currentText === '已连接' || currentText === 'Connected') {
-                connectionStatusElement.textContent = this.t('connected');
-            } else if (currentText === '未连接' || currentText === 'Disconnected') {
-                connectionStatusElement.textContent = this.t('disconnected');
-            } else if (currentText === 'AE运行中，等待连接' || currentText === 'AE Running, Waiting for Connection') {
-                connectionStatusElement.textContent = this.t('aeRunning');
-            } else if (currentText === 'AE未运行' || currentText === 'AE Not Running') {
-                connectionStatusElement.textContent = this.t('aeNotRunning');
-            }
-        }
-        
-        // Update files count text (only if it contains known patterns)
-        const filesCount = document.getElementById('files-count');
-        if (filesCount) {
-            const currentText = filesCount.textContent;
-            if (currentText === '未选择文件' || currentText === 'No files selected') {
-                filesCount.textContent = this.t('noSelection');
-            } else if (currentText.includes('已选择') || currentText.includes('Selected')) {
-                // Extract count from text and re-translate
-                const countMatch = currentText.match(/\d+/);
-                if (countMatch) {
-                    const count = countMatch[0];
-                    filesCount.textContent = this.t('selectedCount', { count: count });
-                }
-            }
-        }
-        
-        // Update no-files message
-        const noFilesMessage = document.querySelector('.no-files');
-        if (noFilesMessage) {
-            // Update with the current language's message
-            noFilesMessage.textContent = this.t('selectFilesInEagle', { defaultValue: '请在Eagle中选择要导出的文件' });
         }
     }
     

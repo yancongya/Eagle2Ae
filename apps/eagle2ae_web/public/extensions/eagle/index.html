@@ -523,27 +523,27 @@
 
         <!-- 简化的服务状态 -->
         <div class="status-section">
-            <h3>服务状态</h3>
+            <h3 data-i18n="statusSectionTitle"></h3>
             <div class="status-item">
-                <span class="status-label">AE连接端口</span>
+                <span class="status-label" data-i18n="aePortLabel"></span>
                 <span id="ae-port" class="status-value">--</span>
             </div>
             <div class="status-item">
-                <span class="status-label">连接状态</span>
-                <span id="connection-status" class="status-value disconnected">未连接</span>
+                <span class="status-label" data-i18n="connectionStatusLabel"></span>
+                <span id="connection-status" class="status-value disconnected" data-i18n="disconnected"></span>
             </div>
             <div class="status-item">
-                <span class="status-label">运行时间</span>
+                <span class="status-label" data-i18n="uptimeLabel"></span>
                 <span id="uptime" class="status-value">00:00:00</span>
             </div>
         </div>
 
         <!-- 当前选中文件 -->
         <div class="files-section">
-            <h3>当前选中文件</h3>
-            <div id="files-count" class="files-count">未选择文件</div>
+            <h3 data-i18n="filesSectionTitle"></h3>
+            <div id="files-count" class="files-count" data-i18n="noSelection"></div>
             <div id="files-list" class="files-list" onclick="handleFileListClick()">
-                <div class="no-files">请在Eagle中选择要导出的文件</div>
+                <div class="no-files" data-i18n="selectFilesInEagle"></div>
             </div>
         </div>
 
@@ -551,9 +551,9 @@
 
         <!-- 日志输出 -->
         <div class="log-section">
-            <h3>操作日志</h3>
+            <h3 data-i18n="logSectionTitle"></h3>
             <div id="log-output" class="log-output">
-                <div class="log-info">等待操作日志...</div>
+                <div class="log-info" data-i18n="logInfo"></div>
             </div>
         </div>
     </div>
@@ -561,28 +561,28 @@
     <!-- 设置对话框 -->
     <div id="settings-overlay" class="settings-overlay" style="display: none;">
         <div class="settings-dialog">
-            <h3 id="settings-dialog-title">Eagle2Ae 设置</h3>
+            <h3 id="settings-dialog-title" data-i18n="settingsTitle"></h3>
 
             <div class="setting-item">
                 <label for="show-notifications" id="show-notifications-label">
                     <input type="checkbox" id="show-notifications" checked>
-                    显示操作通知
+                    <span data-i18n="showNotifications"></span>
                 </label>
             </div>
 
             <div class="setting-item">
-                <label for="server-port" id="server-port-label">服务器端口:</label>
+                <label for="server-port" id="server-port-label" data-i18n="serverPort"></label>
                 <input type="number" id="server-port" value="8080" min="1024" max="65535">
             </div>
 
             <div class="setting-item">
-                <label for="clipboard-interval" id="clipboard-interval-label">剪切板检查间隔(毫秒):</label>
+                <label for="clipboard-interval" id="clipboard-interval-label" data-i18n="clipboardInterval"></label>
                 <input type="number" id="clipboard-interval" value="1000" min="500" max="10000">
             </div>
 
             <div class="setting-actions">
-                <button id="save-settings">保存设置</button>
-                <button id="cancel-settings">取消</button>
+                <button id="save-settings" data-i18n="saveSettings"></button>
+                <button id="cancel-settings" data-i18n="cancelSettings"></button>
             </div>
         </div>
     </div>
