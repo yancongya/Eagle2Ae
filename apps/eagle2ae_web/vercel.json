@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "buildCommand": "npx vite@7.1.10 build",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [

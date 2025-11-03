@@ -463,18 +463,7 @@ onMounted(() => {
 
   // 渐进式自动加载面板2与面板3，避免初始空白占位
   // 面板1不使用队列，保持即时加载
-  setTimeout(() => {
-    try {
-      shouldLoadPanel2.value = true;
-      loader.activate('panel2');
-    } catch (_) {}
-  }, 600);
-  setTimeout(() => {
-    try {
-      shouldLoadPanel3.value = true;
-      loader.activate('panel3');
-    } catch (_) {}
-  }, 1200);
+  // 保持原始行为：仅 panel1 默认加载；panel2/3 等待用户点击占位层后再激活
   
   // Sync language after a short delay to ensure iframes are loaded
   setTimeout(syncLanguageToAllIframes, 100);

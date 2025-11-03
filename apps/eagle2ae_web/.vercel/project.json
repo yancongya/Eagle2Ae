@@ -1,0 +1,15 @@
+{
+  "projectId": "prj_5eTnkAnDiMGMMQh6dSCqI9IcJFTw",
+  "orgId": "team_RboCpexETFMKt0t5GQo5dsUa",
+  "projectName": "eagle2ae",
+  "settings": {
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": "vite build",
+    "outputDirectory": "dist",
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "20.x"
+  }
+}
