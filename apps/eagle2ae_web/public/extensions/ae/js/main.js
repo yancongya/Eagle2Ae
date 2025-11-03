@@ -13412,15 +13412,60 @@ ${pathsText}
 
 }
 
+// 读取版本文件并设置标题栏版本提示
+async function loadVersionAndSetTitle() {
+    try {
+        const response = await fetch('./version.json');
+        if (response.ok) {
+            const versionData = await response.json();
+            const version = versionData.version;
+            
+            // 获取标题元素并设置版本信息
+            const titleElement = document.getElementById('title-link');
+            if (titleElement) {
+                // 保留原有的title信息并添加版本号
+                const originalTitle = titleElement.getAttribute('title') || '';
+                const versionTitle = `v${version}`;
+                const fullTitle = originalTitle ? `${originalTitle}\n${versionTitle}` : versionTitle;
+                titleElement.setAttribute('title', fullTitle);
+            }
+            
+            // 也可以更新页面标题
+            if (typeof document !== 'undefined') {
+                document.title = `Eagle2AE - v${version}`;
+            }
+            
+            console.log(`✅ 版本信息已加载: v${version}`);
+        } else {
+            console.warn('⚠️ 无法加载版本文件，使用默认版本信息');
+            // 设置默认版本提示
+            const titleElement = document.getElementById('title-link');
+            if (titleElement) {
+                titleElement.setAttribute('title', 'v1.0.0');
+            }
+        }
+    } catch (error) {
+        console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
+        // 设置默认版本提示
+        const titleElement = document.getElementById('title-link');
+        if (titleElement) {
+            titleElement.setAttribute('title', 'v1.0.0');
+        }
+    }
+}
+
 // 初始化扩展
 let aeExtension = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     aeExtension = new AEExtension();
     // 将应用实例暴露到全局作用域，供模态框函数使用
     window.eagleToAeApp = aeExtension;
     // 同时暴露为aeExtension，供JSX弹窗调用
     window.aeExtension = aeExtension;
+
+    // 在DOM准备好之后加载版本信息
+    setTimeout(loadVersionAndSetTitle, 500);
 
     const noImportCompBtn = document.getElementById('no-import-comp-btn');
     if (noImportCompBtn) {
