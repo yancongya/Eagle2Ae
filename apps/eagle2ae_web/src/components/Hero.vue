@@ -1,33 +1,33 @@
 <template>
   <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative" style="scroll-margin-top: var(--navbar-height, 0px)">
     <!-- Centering Container: use normal flow to avoid overlap with next section -->
-    <div ref="heroInnerRef" class="w-full max-w-screen-2xl px-6" :style="innerStyle">
+    <div ref="heroInnerRef" class="w-full max-w-screen-2xl px-6">
 
       <!-- Inner container with adjusted top padding -->
       <div class="pt-8 md:pt-24">
-        <!-- Top Part: Title & Buttons -->
-        <div class="text-center max-w-4xl mx-auto">
+        <!-- Top Part: Title & Buttons (scaled when space is tight) -->
+        <div ref="heroTopRef" :style="topStyle" class="text-center max-w-4xl mx-auto">
           <div class="overflow-hidden">
             <h1 ref="title" 
                 :class="isMobile ? 'cursor-default' : 'cursor-pointer'"
                 :style="isMobile ? {} : { cursor: 'pointer' }"
                 @mouseenter="!isMobile && toggleTitle()"
-                class="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
+                class="font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4 text-[clamp(2.4rem,8.5vw,4.5rem)]">
               <span class="title-part" data-role="eagle">Eagle</span>
               <span class="title-arrow mx-1" data-role="arrow" aria-hidden="true">👉</span>
               <span class="title-part" data-role="ae">AE</span>
               <span class="title-part"> {{ t('hero.bridge') }} </span>
             </h1>
           </div>
-          <p ref="subtitle" class="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8">
+          <p ref="subtitle" class="text-gray-600 dark:text-gray-400 mb-8 text-[clamp(1rem,2.6vw,1.25rem)]">
             {{ t('hero.subtitle') }}
           </p>
-          <div ref="buttons" class="space-x-4">
-            <router-link to="/ae-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
+          <div ref="buttons" class="flex justify-center gap-4 flex-nowrap">
+            <router-link to="/ae-preview" class="inline-flex justify-center min-w-[8.5rem] md:min-w-[11rem] px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap shrink-0"
                          style="background-color: var(--btn-ae-bg); border: 3px solid var(--btn-ae-border); color: var(--btn-ae-text);">
               {{ t('nav.aePreview') }}
             </router-link>
-            <router-link to="/eagle-preview" class="inline-flex justify-center w-36 md:w-44 px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap"
+            <router-link to="/eagle-preview" class="inline-flex justify-center min-w-[8.5rem] md:min-w-[11rem] px-4 py-2 text-base md:text-lg font-bold transition-all duration-300 transform rounded-xl hover:scale-105 has-sweep-light whitespace-nowrap shrink-0"
                          style="background-color: var(--btn-eagle-bg); border: 3px solid var(--btn-eagle-border); color: var(--btn-eagle-text);">
               {{ t('nav.eaglePreview') }}
             </router-link>
@@ -126,29 +126,33 @@ gsap.registerPlugin(ScrollToPlugin);
 // Animation Refs
 const title = ref(null);
 const heroInnerRef = ref(null);
-const scale = ref(1);
-const innerStyle = computed(() => ({ transform: `scale(${scale.value})`, transformOrigin: 'top center' }));
+const heroTopRef = ref(null);
+const topScale = ref(1);
+const topStyle = computed(() => ({ transform: `scale(${topScale.value})`, transformOrigin: 'top center' }));
 let heroResizeObserver;
 const readNavHeight = () => {
   const v = getComputedStyle(document.documentElement).getPropertyValue('--navbar-height') || '0px';
   return parseFloat(v) || 0;
 };
 const computeScale = () => {
-  const el = heroInnerRef.value;
-  if (!el) { scale.value = 1; return; }
   const available = Math.max(0, window.innerHeight - readNavHeight());
-  const rect = el.getBoundingClientRect();
-  const contentHeight = rect.height || available;
-  const s = Math.min(1, available / contentHeight);
-  scale.value = Math.max(0.75, s);
+  const topEl = heroTopRef.value;
+  const cardsEl = cardsContainer.value;
+  if (!topEl) { topScale.value = 1; return; }
+  const topH = topEl.getBoundingClientRect().height || 0;
+  const cardsH = cardsEl ? cardsEl.getBoundingClientRect().height || 0 : 0;
+  const s = Math.min(1, (available - cardsH) / Math.max(topH, 1));
+  // 提高最小缩放比例，避免标题过小
+  topScale.value = Math.max(0.85, s);
 };
 onMounted(async () => {
   await nextTick();
   computeScale();
   window.addEventListener('resize', computeScale);
-  if ('ResizeObserver' in window && heroInnerRef.value) {
+  if ('ResizeObserver' in window) {
     heroResizeObserver = new ResizeObserver(computeScale);
-    heroResizeObserver.observe(heroInnerRef.value);
+    if (heroTopRef.value) heroResizeObserver.observe(heroTopRef.value);
+    if (cardsContainer.value) heroResizeObserver.observe(cardsContainer.value);
   }
 });
 onUnmounted(() => {

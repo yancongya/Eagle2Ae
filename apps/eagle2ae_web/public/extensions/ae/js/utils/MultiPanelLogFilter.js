@@ -113,8 +113,8 @@ class MultiPanelLogFilter {
             return warningPatternsToSuppress.some(pattern => pattern.test(messageStr));
         };
         
-        // 创建一个简单的去重机制
-        const logCache = new Set();
+        // 创建一个简单的去重机制（需要保存时间戳，使用 Map）
+        const logCache = new Map();
         const getLogKey = (...args) => {
             return args.join(' ');
         };
