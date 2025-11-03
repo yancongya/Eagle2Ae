@@ -1,6 +1,7 @@
 {
   "name": "eagle2ae-monorepo",
   "private": true,
+  "packageManager": "pnpm@10.12.4",
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:docs": "pnpm --filter eagle2ae_docs dev",
