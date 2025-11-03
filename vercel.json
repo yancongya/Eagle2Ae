@@ -1,0 +1,10 @@
+{
+  "rootDirectory": "apps/eagle2ae_docs",
+  "buildCommand": "pnpm run docs:build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "outputDirectory": "apps/eagle2ae_docs/.vitepress/dist",
+  "framework": "vitepress",
+  "env": {
+    "PNPM_FLAGS": "--no-frozen-lockfile"
+  }
+}
