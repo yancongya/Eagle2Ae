@@ -1,0 +1,11 @@
+{
+  "enterAnimation": {
+    "duration": 1.2,
+    "ease": "power3.out",
+    "stagger": 0.1
+  },
+  "exitAnimation": {
+    "duration": 0.6,
+    "ease": "power2.in"
+  }
+}

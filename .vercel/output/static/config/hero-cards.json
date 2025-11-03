@@ -1,0 +1,21 @@
+{
+  "transition": {
+    "durationMs": 420,
+    "timingFunction": "cubic-bezier(.23,1,.32,1)"
+  },
+  "hovered": {
+    "scale": 1.10,
+    "shadow": "0 24px 48px rgba(0,0,0,0.35)",
+    "yOffset": -24
+  },
+  "unhovered": {
+    "cascadeDelayMs": 25,
+    "adjacentCardYOffset": -8,
+    "maxScaleReduction": 0.30,
+    "maxZDepth": -80,
+    "maxOpacityReduction": 0.70,
+    "maxBlurPx": 6,
+    "maxDownwardYOffset": 20
+  },
+  "leaveDelayMs": 110
+}
