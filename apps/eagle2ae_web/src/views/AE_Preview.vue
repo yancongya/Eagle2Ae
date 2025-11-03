@@ -5,7 +5,12 @@
         <!-- Mobile: single preview (Panel 1) -->
         <div class="md:hidden h-full">
           <!-- 使用骨架屏 + 渐隐显示，移动端支持暂停/恢复第一个面板 -->
-          <div class="relative w-full h-full">
+          <div
+            ref="panel1ContainerRef"
+            class="relative w-full h-full"
+            :class="{ 'flash-border': panelFlash.panel1 }"
+            :style="{ 'view-transition-name': 'pane-panel1' }"
+          >
             <PanelFrame
               panel-id="panel1"
               :label="panelLabels.panel1"
@@ -15,6 +20,10 @@
               variant="primary"
               @load="onPanel1Loaded"
             />
+            <!-- 面板切换时的居中文案覆盖层（移动端也显示） -->
+            <div v-if="panelSwitchOverlay.panel1?.visible" class="switch-overlay">
+              <div class="switch-overlay__label">{{ panelSwitchOverlay.panel1.text }}</div>
+            </div>
             <transition name="fade300">
               <PanelPlaceholder
                 v-if="panel1Status === 'idle'"
