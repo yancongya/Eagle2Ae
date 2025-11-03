@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "corepack enable && corepack prepare pnpm@10.12.4 --activate && pnpm --filter eagle2ae_web install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter eagle2ae_web run build",
   "outputDirectory": "apps/eagle2ae_web/dist",
   "framework": "vite",
