@@ -460,6 +460,21 @@ onMounted(() => {
   window.addEventListener('themeToggle', handleThemeToggle);
   // 监听来自 Navbar 的重置布局事件
   window.addEventListener('reset-ae-layout', resetLayoutToDefault);
+
+  // 渐进式自动加载面板2与面板3，避免初始空白占位
+  // 面板1不使用队列，保持即时加载
+  setTimeout(() => {
+    try {
+      shouldLoadPanel2.value = true;
+      loader.activate('panel2');
+    } catch (_) {}
+  }, 600);
+  setTimeout(() => {
+    try {
+      shouldLoadPanel3.value = true;
+      loader.activate('panel3');
+    } catch (_) {}
+  }, 1200);
   
   // Sync language after a short delay to ensure iframes are loaded
   setTimeout(syncLanguageToAllIframes, 100);
