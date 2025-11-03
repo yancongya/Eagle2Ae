@@ -1,0 +1,41 @@
+{
+  "defaultOS": "ae",
+  "platforms": {
+    "ae": {
+      "version": "1.0.0",
+      "requirement": {
+        "zh-CN": "Ae CC 2017+",
+        "en-US": "Ae CC 2017+"
+      },
+      "updated": "2025-10-18",
+      "url": "https://example.com/ae-plugin",
+      "target": "_blank",
+      "ctaText": {
+        "zh-CN": "下载 AE 插件",
+        "en-US": "Get AE Plugin"
+      },
+      "prompt": {
+        "zh-CN": "点击下载最新版本",
+        "en-US": "Click to download the latest version."
+      }
+    },
+    "eagle": {
+      "version": "1.0.0",
+      "requirement": {
+        "zh-CN": "Eagle 4.0+",
+        "en-US": "Eagle 4.0+"
+      },
+      "updated": "2025-10-18",
+      "url": "eagle://",
+      "target": "protocol",
+      "ctaText": {
+        "zh-CN": "打开 Eagle",
+        "en-US": "Open Eagle"
+      },
+      "prompt": {
+        "zh-CN": "4.0+版本即可去插件中心进行安装",
+        "en-US": "Version 4.0+ can be installed in the plugin center."
+      }
+    }
+  }
+}

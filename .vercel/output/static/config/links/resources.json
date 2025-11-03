@@ -1,0 +1,30 @@
+{
+  "group_info": {
+    "name": { "zh-CN": "资源", "en-US": "Resources" },
+    "note": { "zh-CN": "常用工具与文档", "en-US": "Useful tools and docs" },
+    "order": 2
+  },
+  "tag_list": [
+    {
+      "title": { "zh-CN": "GSAP", "en-US": "GSAP" },
+      "note": { "zh-CN": "动画库", "en-US": "Animation library" },
+      "link": "https://greensock.com/gsap/",
+      "hover_desc": { "zh-CN": "一个功能强大的 JavaScript 动画库，用于创建高性能、复杂的网页动画。", "en-US": "A powerful JavaScript animation library for creating high-performance, complex web animations." },
+      "icon": "fetch"
+    },
+    {
+      "title": { "zh-CN": "Tailwind", "en-US": "Tailwind" },
+      "note": { "zh-CN": "实用类样式", "en-US": "Utility-first CSS" },
+      "link": "https://tailwindcss.com/",
+      "hover_desc": { "zh-CN": "一个功能类优先的 CSS 框架，用于快速构建自定义用户界面。", "en-US": "A utility-first CSS framework for rapidly building custom user interfaces." },
+      "icon": "fetch"
+    },
+    {
+      "title": { "zh-CN": "Vue", "en-US": "Vue" },
+      "note": { "zh-CN": "前端框架", "en-US": "Frontend framework" },
+      "link": "https://vuejs.org/",
+      "hover_desc": { "zh-CN": "一个平易近人、多功能的前端框架，用于构建用户界面。", "en-US": "An approachable, versatile frontend framework for building user interfaces." },
+      "icon": "fetch"
+    }
+  ]
+}

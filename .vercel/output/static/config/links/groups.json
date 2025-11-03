@@ -1,0 +1,6 @@
+{
+  "groups": [
+    { "file": "friends.json" },
+    { "file": "resources.json" }
+  ]
+}

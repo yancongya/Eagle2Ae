@@ -1,0 +1,64 @@
+{
+  "enabled": true,
+  "logo1Src": "/logo.png",
+  "logo2Src": "/logo_download.png",
+  "explosionSprites": [
+    "/explosion/Gif.svg",
+    "/explosion/Mov.svg",
+    "/explosion/Mp3.svg",
+    "/explosion/Wav.svg",
+    "/explosion/图片.svg"
+  ],
+  "explosionDurationMs": 7000,
+  "explosionFadeOutMs": 900,
+  "baseGravityY": 1.3,
+  "drag": {
+    "logo1Scale": {
+      "mode": "log",
+      "distanceDivisor": 200,
+      "gain": 0.8,
+      "min": 1,
+      "max": 2.4
+    }
+  },
+  "animation": {
+    "easing": {
+      "easeIn": "power2.in",
+      "easeOut": "fastOut"
+    },
+    "return": {
+      "durationMinMs": 120,
+      "durationMaxMs": 260,
+      "distanceNormalizer": 800,
+      "distanceCurvePower": 0.5
+    },
+    "scaleToZero": {
+      "durationMs": 180
+    }
+  },
+  "scrollTopAnimation": {
+    "duration": 1.5,
+    "ease": "expo.inOut"
+  },
+  "scroll": {
+    "deadbandDy": 2,
+    "down": {
+      "gravityFactor": 0.85,
+      "impulseCoeff": 0.0028,
+      "impulseMin": 0.0008,
+      "impulseMax": 0.010,
+      "restoreDurationMs": 700,
+      "restoreDelayMs": 60
+    },
+    "up": {
+      "gravityFactor": 1.45,
+      "gravityMax": 2.0,
+      "durationMs": 200,
+      "restoreDurationMs": 800,
+      "restoreDelayMs": 50
+    }
+  },
+  "behavior": {
+    "forceReloadAfterRelease": true
+  }
+}

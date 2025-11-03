@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Eagle2Ae - 后台服务</title>
+    <style>
+        /* 完全隐藏窗口 - 从加载开始就不显示 */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            background: transparent !important;
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            left: -99999px !important;
+            top: -99999px !important;
+        }
+
+        * {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        #hidden-container {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            left: -99999px !important;
+            top: -99999px !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="hidden-container">
+        <!-- 隐藏的容器，用于服务运行 -->
+        <div id="service-status">后台服务运行中</div>
+    </div>
+
+    <script src="js/websocket-eagle-compatible.js"></script>
+    <script src="js/plugin.js"></script>
+    
+    <script>
+        // 立即隐藏窗口 - 在页面加载的第一时间
+        (function() {
+            // 立即隐藏DOM
+            if (document.documentElement) {
+                document.documentElement.style.display = 'none';
+                document.documentElement.style.visibility = 'hidden';
+                document.documentElement.style.opacity = '0';
+            }
+
+            // 确保窗口完全隐藏
+            if (typeof eagle !== 'undefined') {
+                // 尝试隐藏窗口
+                try {
+                    if (eagle.window && eagle.window.hide) {
+                        eagle.window.hide();
+                    }
+
+                    // 最小化窗口
+                    if (eagle.window && eagle.window.minimize) {
+                        eagle.window.minimize();
+                    }
+
+                    // 设置窗口不可见
+                    if (eagle.window && eagle.window.setVisible) {
+                        eagle.window.setVisible(false);
+                    }
+
+                    // 移动窗口到屏幕外
+                    if (eagle.window && eagle.window.setPosition) {
+                        eagle.window.setPosition(-99999, -99999);
+                    }
+
+                    // 设置窗口大小为0
+                    if (eagle.window && eagle.window.setSize) {
+                        eagle.window.setSize(0, 0);
+                    }
+
+                } catch (error) {
+                    console.log('窗口控制失败:', error);
+                }
+            }
+        })();
+        
+        // 阻止任何UI显示 - 多重保护
+        document.addEventListener('DOMContentLoaded', function() {
+            // 强制隐藏所有元素
+            document.documentElement.style.display = 'none';
+            document.documentElement.style.visibility = 'hidden';
+            document.documentElement.style.opacity = '0';
+
+            if (document.body) {
+                document.body.style.display = 'none';
+                document.body.style.visibility = 'hidden';
+                document.body.style.opacity = '0';
+            }
+
+            // 如果有窗口对象，尝试隐藏
+            if (window.parent && window.parent !== window) {
+                try {
+                    window.parent.document.body.style.display = 'none';
+                    window.parent.document.documentElement.style.display = 'none';
+                } catch (e) {
+                    // 跨域限制，忽略错误
+                }
+            }
+
+            // 持续隐藏窗口
+            setInterval(function() {
+                if (typeof eagle !== 'undefined' && eagle.window) {
+                    try {
+                        if (eagle.window.hide) eagle.window.hide();
+                        if (eagle.window.setVisible) eagle.window.setVisible(false);
+                    } catch (e) {
+                        // 忽略错误
+                    }
+                }
+            }, 100); // 每100ms检查一次
+        });
+        
+        // 阻止右键菜单等交互
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // 记录服务启动
+        console.log('Eagle2Ae 后台服务页面已加载');
+    </script>
+</body>
+</html>
