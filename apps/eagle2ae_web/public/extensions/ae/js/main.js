@@ -13550,7 +13550,7 @@ ${pathsText}
     }
 
     /**
-     * 初始化版本显示功能（仅显示©图标，版本信息在tooltip中）
+     * 初始化版本显示功能（仅显示©图标，版本信息在tooltip中，点击显示消息提醒）
      */
     async initVersionDisplay() {
         try {
@@ -13560,13 +13560,10 @@ ${pathsText}
                 return;
             }
 
-            // 移除点击事件
-            versionBadge.onclick = null;
-
             // 保持©图标不变，只更新title/tooltips
             versionBadge.textContent = '©';
 
-            // 页面加载后获取版本信息用于tooltip（延迟执行，避免影响页面初始化）
+            // 页面加载后获取版本信息用于tooltip和点击事件（延迟执行，避免影响页面初始化）
             setTimeout(async () => {
                 try {
                     // 获取本地版本并用作tooltip信息
@@ -13578,13 +13575,15 @@ ${pathsText}
                         const remoteVersion = remoteVersionInfo.version;
                         const isRemoteNewer = this.compareVersions(remoteVersion, localVersion) > 0;
                         
+                        // 构建版本信息文本，用于tooltip和点击消息
+                        let versionInfoText = '';
+                        let versionInfoType = 'info'; // 默认为info类型
+                        
+                        const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
+                            (window.i18n && window.i18n.currentLang) || 'zh-CN';
+                        
                         if (isRemoteNewer) {
-                            // 如果远程版本更新，更新tooltip但保持©图标
-                            // 构建标题信息，包含版本描述（根据语言环境显示）
-                            const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
-                                (window.i18n && window.i18n.currentLang) || 'zh-CN';
-                            
-                            let versionInfoText = '';
+                            // 如果远程版本更新
                             if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
                                 // 中文环境
                                 versionInfoText = `发现新版本: v${remoteVersion} (当前: v${localVersion})`;
@@ -13593,9 +13592,8 @@ ${pathsText}
                                 versionInfoText = `New version found: v${remoteVersion} (Current: v${localVersion})`;
                             }
                             
-                            let title = versionInfoText;
+                            // 添加版本描述
                             if (remoteVersionInfo.description && typeof remoteVersionInfo.description === 'object') {
-                                // 根据当前语言环境获取对应描述
                                 let descText = '';
                                 if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
                                     // 中文环境：优先 zh-CN，然后 zh，然后 en
@@ -13612,11 +13610,24 @@ ${pathsText}
                                 }
                                 
                                 if (descText) {
-                                    title += `\n${descText}`;
+                                    versionInfoText += `\n${descText}`;
                                 }
                             }
                             
-                            versionBadge.title = title;
+                            versionInfoType = 'warning'; // 新版本提醒使用warning类型
+                        } else {
+                            // 本地版本是最新的
+                            if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                                versionInfoText = `当前版本: v${localVersion} (已是最新)`;
+                            } else {
+                                versionInfoText = `Current version: v${localVersion} (up to date)`;
+                            }
+                        }
+                        
+                        // 设置tooltip
+                        versionBadge.title = versionInfoText;
+                        
+                        if (isRemoteNewer) {
                             // 为©图标添加更新提示样式
                             versionBadge.style.color = '#27ae60';
                             versionBadge.style.fontWeight = 'bold';
@@ -13628,17 +13639,20 @@ ${pathsText}
                             versionBadge.onmouseleave = () => {
                                 versionBadge.style.transform = 'rotate(0deg)';
                             };
-                        } else {
-                            // 本地版本是最新的，更新tooltip但保持©图标
-                            const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
-                                (window.i18n && window.i18n.currentLang) || 'zh-CN';
-                            
-                            if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
-                                versionBadge.title = `当前版本: v${localVersion} (已是最新)`;
-                            } else {
-                                versionBadge.title = `Current version: v${localVersion} (up to date)`;
-                            }
                         }
+                        
+                        // 绑定点击事件，显示版本信息作为消息提醒
+                        versionBadge.onclick = () => {
+                            // 使用换行符将信息分为多行显示
+                            const messageLines = versionInfoText.split('\n');
+                            let finalMessage = messageLines[0]; // 第一行作为主要信息
+                            if (messageLines.length > 1) {
+                                // 如果有多行，将它们连接起来
+                                finalMessage = messageLines.join(' ');
+                            }
+                            this.showDropMessage(finalMessage, versionInfoType);
+                        };
+                        
                     } catch (remoteError) {
                         // 如果无法获取远程版本，只显示本地版本在tooltip中，保持©图标
                         console.debug(`无法获取远程版本: ${remoteError.message}`);
@@ -13647,11 +13661,19 @@ ${pathsText}
                         const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
                             (window.i18n && window.i18n.currentLang) || 'zh-CN';
                         
+                        let versionInfoText;
                         if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
-                            versionBadge.title = `当前版本: v${localVersion}`;
+                            versionInfoText = `当前版本: v${localVersion}`;
                         } else {
-                            versionBadge.title = `Current version: v${localVersion}`;
+                            versionInfoText = `Current version: v${localVersion}`;
                         }
+                        
+                        versionBadge.title = versionInfoText;
+                        
+                        // 绑定点击事件，显示版本信息作为消息提醒
+                        versionBadge.onclick = () => {
+                            this.showDropMessage(versionInfoText, 'info');
+                        };
                     }
                 } catch (localError) {
                     // 如果本地版本也获取失败，更新tooltip但保持©图标
@@ -13661,11 +13683,19 @@ ${pathsText}
                     const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
                         (window.i18n && window.i18n.currentLang) || 'zh-CN';
                     
+                    let versionInfoText;
                     if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
-                        versionBadge.title = '当前版本: v1.0.0 (本地版本文件不可用)';
+                        versionInfoText = '当前版本: v1.0.0 (本地版本文件不可用)';
                     } else {
-                        versionBadge.title = 'Current version: v1.0.0 (Local version file unavailable)';
+                        versionInfoText = 'Current version: v1.0.0 (Local version file unavailable)';
                     }
+                    
+                    versionBadge.title = versionInfoText;
+                    
+                    // 绑定点击事件，显示版本信息作为消息提醒
+                    versionBadge.onclick = () => {
+                        this.showDropMessage(versionInfoText, 'info');
+                    };
                 }
             }, 2000); // 延迟2秒确保DOM完全加载
 
