@@ -13550,7 +13550,7 @@ ${pathsText}
     }
 
     /**
-     * 初始化版本显示功能（仅显示本地版本，无检查功能）
+     * 初始化版本显示功能（仅显示©图标，版本信息在tooltip中）
      */
     async initVersionDisplay() {
         try {
@@ -13563,10 +13563,13 @@ ${pathsText}
             // 移除点击事件
             versionBadge.onclick = null;
 
-            // 页面加载后显示本地版本（延迟执行，避免影响页面初始化）
+            // 保持©图标不变，只更新title/tooltips
+            versionBadge.textContent = '©';
+
+            // 页面加载后获取版本信息用于tooltip（延迟执行，避免影响页面初始化）
             setTimeout(async () => {
                 try {
-                    // 获取本地版本并显示
+                    // 获取本地版本并用作tooltip信息
                     const localVersion = await this.getLocalVersion();
                     
                     // 从远程获取版本信息用于比较
@@ -13576,9 +13579,7 @@ ${pathsText}
                         const isRemoteNewer = this.compareVersions(remoteVersion, localVersion) > 0;
                         
                         if (isRemoteNewer) {
-                            // 如果远程版本更新，显示更新图标
-                            versionBadge.textContent = '🔄'; // 刷新图标
-                            
+                            // 如果远程版本更新，更新tooltip但保持©图标
                             // 构建标题信息，包含版本描述（根据语言环境显示）
                             const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
                                 (window.i18n && window.i18n.currentLang) || 'zh-CN';
@@ -13616,6 +13617,7 @@ ${pathsText}
                             }
                             
                             versionBadge.title = title;
+                            // 为©图标添加更新提示样式
                             versionBadge.style.color = '#27ae60';
                             versionBadge.style.fontWeight = 'bold';
                             // 添加轻微的旋转动画效果
@@ -13627,10 +13629,7 @@ ${pathsText}
                                 versionBadge.style.transform = 'rotate(0deg)';
                             };
                         } else {
-                            // 本地版本是最新的
-                            versionBadge.textContent = `v${localVersion}`;
-                            
-                            // 根据当前语言环境显示标题
+                            // 本地版本是最新的，更新tooltip但保持©图标
                             const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
                                 (window.i18n && window.i18n.currentLang) || 'zh-CN';
                             
@@ -13641,9 +13640,8 @@ ${pathsText}
                             }
                         }
                     } catch (remoteError) {
-                        // 如果无法获取远程版本，只显示本地版本
+                        // 如果无法获取远程版本，只显示本地版本在tooltip中，保持©图标
                         console.debug(`无法获取远程版本: ${remoteError.message}`);
-                        versionBadge.textContent = `v${localVersion}`;
                         
                         // 根据当前语言环境显示标题
                         const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
@@ -13656,9 +13654,8 @@ ${pathsText}
                         }
                     }
                 } catch (localError) {
-                    // 如果本地版本也获取失败，显示默认版本
+                    // 如果本地版本也获取失败，更新tooltip但保持©图标
                     console.debug(`获取本地版本失败: ${localError.message}`);
-                    versionBadge.textContent = 'v1.0.0';
                     
                     // 根据当前语言环境显示标题
                     const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
