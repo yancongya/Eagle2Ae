@@ -1098,6 +1098,13 @@ class AEExtension {
             });
         }
 
+        if (buttons.versionBadge) {
+            buttons.versionBadge.addEventListener('click', () => {
+                this.log('点击了版权信息按钮', 'info');
+                // 未来可以在这里添加显示“关于”对话框的逻辑
+            });
+        }
+
         // 设置面板事件（使用try-catch保护）
         try {
             this.setupSettingsPanel();
@@ -5925,9 +5932,7 @@ class AEExtension {
     // 获取AE版本信息
     getAEVersion() {
         try {
-            // 确保DOM元素存在
-            const versionElement = document.getElementById('ae-version');
-            if (!versionElement) {
+                            const versionElement = document.getElementById('ae-version-display-new');            if (!versionElement) {
                 console.warn('ae-version元素不存在，延迟执行');
                 // 延迟执行，等待DOM加载完成
                 setTimeout(() => this.getAEVersion(), 100);
