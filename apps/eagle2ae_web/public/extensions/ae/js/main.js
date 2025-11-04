@@ -13410,6 +13410,269 @@ ${pathsText}
         // - 等等
     }
 
+    /**
+     * 获取本地版本
+     */
+    async getLocalVersion() {
+        try {
+            // 尝试从本地version.json获取
+            const response = await fetch('./version.json');
+            if (response.ok) {
+                const versionData = await response.json();
+                return versionData.version || '1.0.0';
+            } else {
+                // 如果获取失败，使用默认版本
+                return '1.0.0';
+            }
+        } catch (error) {
+            // 针对CORS错误的特殊处理
+            if (error.message.includes('CORS') || error.message.includes('network')) {
+                this.log(`本地版本文件访问受限（CORS/网络错误）: ${error.message}`, 'debug');
+            } else {
+                this.log(`获取本地版本失败: ${error.message}`, 'warning');
+            }
+            return '1.0.0';
+        }
+    }
+
+    /**
+     * 获取远程版本信息（包含版本号和描述）
+     */
+    async getRemoteVersionInfo() {
+        try {
+            // 使用GitHub API来获取远程版本信息以避免CORS问题
+            const response = await fetch('https://api.github.com/repos/yancongya/Eagle2AE-public/contents/version.json', {
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`GitHub API请求失败: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // GitHub API返回的是文件内容的base64编码，需要解码
+            if (data && data.content) {
+                // 正确解码base64并处理UTF-8编码
+                const content = this.atobUTF8(data.content.replace(/\n/g, '')); // 解码base64并处理UTF-8
+                const versionData = JSON.parse(content);
+                return {
+                    version: versionData.version || '1.0.0',
+                    description: versionData.description || {}
+                };
+            } else {
+                throw new Error('GitHub API响应中未包含版本信息');
+            }
+        } catch (error) {
+            // 如果GitHub API失败，回退到raw.githubusercontent.com方式
+            try {
+                console.warn(`GitHub API方式失败: ${error.message}，尝试raw.githubusercontent.com方式`);
+                
+                const response = await fetch('https://raw.githubusercontent.com/yancongya/Eagle2AE-public/main/version.json', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (response.ok) {
+                    const versionData = await response.json();
+                    return {
+                        version: versionData.version || '1.0.0',
+                        description: versionData.description || {}
+                    };
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (fallbackError) {
+                // 只有在两种方式都失败时才报错
+                this.log(`获取远程版本失败 (API: ${error.message}, 回退: ${fallbackError.message})`, 'error');
+                throw new Error(`无法获取远程版本: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * 正确处理UTF-8编码的base64解码
+     * @param {string} base64String - Base64编码的字符串
+     * @returns {string} 解码后的UTF-8字符串
+     */
+    atobUTF8(base64String) {
+        // 解码base64
+        const binaryString = atob(base64String);
+        
+        // 将二进制字符串转换为UTF-8字符串
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // 使用TextDecoder解码UTF-8
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(bytes);
+    }
+
+    /**
+     * 获取远程版本号（兼容旧方法）
+     */
+    async getRemoteVersion() {
+        const info = await this.getRemoteVersionInfo();
+        return info.version;
+    }
+
+    /**
+     * 比较两个版本号
+     * @param {string} version1 - 第一个版本号
+     * @param {string} version2 - 第二个版本号
+     * @returns {number} 1如果version1 > version2, -1如果version1 < version2, 0如果相等
+     */
+    compareVersions(version1, version2) {
+        // 簡單的版本比較邏輯 (例如: "1.0.0" vs "1.2.1")
+        const v1Parts = version1.split('.').map(Number);
+        const v2Parts = version2.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+            const v1 = i < v1Parts.length ? v1Parts[i] : 0;
+            const v2 = i < v2Parts.length ? v2Parts[i] : 0;
+
+            if (v1 > v2) return 1;
+            if (v1 < v2) return -1;
+        }
+
+        return 0;
+    }
+
+    /**
+     * 初始化版本显示功能（仅显示本地版本，无检查功能）
+     */
+    async initVersionDisplay() {
+        try {
+            const versionBadge = document.getElementById('version-badge');
+            if (!versionBadge) {
+                this.log('版本标签元素未找到', 'warning');
+                return;
+            }
+
+            // 移除点击事件
+            versionBadge.onclick = null;
+
+            // 页面加载后显示本地版本（延迟执行，避免影响页面初始化）
+            setTimeout(async () => {
+                try {
+                    // 获取本地版本并显示
+                    const localVersion = await this.getLocalVersion();
+                    
+                    // 从远程获取版本信息用于比较
+                    try {
+                        const remoteVersionInfo = await this.getRemoteVersionInfo();
+                        const remoteVersion = remoteVersionInfo.version;
+                        const isRemoteNewer = this.compareVersions(remoteVersion, localVersion) > 0;
+                        
+                        if (isRemoteNewer) {
+                            // 如果远程版本更新，显示更新图标
+                            versionBadge.textContent = '🔄'; // 刷新图标
+                            
+                            // 构建标题信息，包含版本描述（根据语言环境显示）
+                            const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
+                                (window.i18n && window.i18n.currentLang) || 'zh-CN';
+                            
+                            let versionInfoText = '';
+                            if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                                // 中文环境
+                                versionInfoText = `发现新版本: v${remoteVersion} (当前: v${localVersion})`;
+                            } else {
+                                // 英文或其他环境
+                                versionInfoText = `New version found: v${remoteVersion} (Current: v${localVersion})`;
+                            }
+                            
+                            let title = versionInfoText;
+                            if (remoteVersionInfo.description && typeof remoteVersionInfo.description === 'object') {
+                                // 根据当前语言环境获取对应描述
+                                let descText = '';
+                                if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                                    // 中文环境：优先 zh-CN，然后 zh，然后 en
+                                    descText = remoteVersionInfo.description['zh-CN'] || 
+                                              remoteVersionInfo.description.zh || 
+                                              remoteVersionInfo.description['en-US'] || 
+                                              remoteVersionInfo.description.en || '';
+                                } else {
+                                    // 非中文环境：优先 en-US，然后 en，然后 zh-CN
+                                    descText = remoteVersionInfo.description['en-US'] || 
+                                              remoteVersionInfo.description.en || 
+                                              remoteVersionInfo.description['zh-CN'] || 
+                                              remoteVersionInfo.description.zh || '';
+                                }
+                                
+                                if (descText) {
+                                    title += `\n${descText}`;
+                                }
+                            }
+                            
+                            versionBadge.title = title;
+                            versionBadge.style.color = '#27ae60';
+                            versionBadge.style.fontWeight = 'bold';
+                            // 添加轻微的旋转动画效果
+                            versionBadge.style.transition = 'transform 0.3s ease';
+                            versionBadge.onmouseenter = () => {
+                                versionBadge.style.transform = 'rotate(360deg)';
+                            };
+                            versionBadge.onmouseleave = () => {
+                                versionBadge.style.transform = 'rotate(0deg)';
+                            };
+                        } else {
+                            // 本地版本是最新的
+                            versionBadge.textContent = `v${localVersion}`;
+                            
+                            // 根据当前语言环境显示标题
+                            const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
+                                (window.i18n && window.i18n.currentLang) || 'zh-CN';
+                            
+                            if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                                versionBadge.title = `当前版本: v${localVersion} (已是最新)`;
+                            } else {
+                                versionBadge.title = `Current version: v${localVersion} (up to date)`;
+                            }
+                        }
+                    } catch (remoteError) {
+                        // 如果无法获取远程版本，只显示本地版本
+                        console.debug(`无法获取远程版本: ${remoteError.message}`);
+                        versionBadge.textContent = `v${localVersion}`;
+                        
+                        // 根据当前语言环境显示标题
+                        const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
+                            (window.i18n && window.i18n.currentLang) || 'zh-CN';
+                        
+                        if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                            versionBadge.title = `当前版本: v${localVersion}`;
+                        } else {
+                            versionBadge.title = `Current version: v${localVersion}`;
+                        }
+                    }
+                } catch (localError) {
+                    // 如果本地版本也获取失败，显示默认版本
+                    console.debug(`获取本地版本失败: ${localError.message}`);
+                    versionBadge.textContent = 'v1.0.0';
+                    
+                    // 根据当前语言环境显示标题
+                    const currentLang = localStorage.getItem('lang') || localStorage.getItem('language') || 
+                        (window.i18n && window.i18n.currentLang) || 'zh-CN';
+                    
+                    if (currentLang.toLowerCase().includes('zh') || currentLang.toLowerCase().includes('cn')) {
+                        versionBadge.title = '当前版本: v1.0.0 (本地版本文件不可用)';
+                    } else {
+                        versionBadge.title = 'Current version: v1.0.0 (Local version file unavailable)';
+                    }
+                }
+            }, 2000); // 延迟2秒确保DOM完全加载
+
+            this.log('版本显示功能已初始化', 'info');
+        } catch (error) {
+            this.log(`初始化版本显示功能失败: ${error.message}`, 'error');
+        }
+    }
+
 }
 
 // 读取版本文件并设置标题栏版本提示
@@ -13445,7 +13708,59 @@ async function loadVersionAndSetTitle() {
             }
         }
     } catch (error) {
-        console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
+        // 针对CORS错误的特殊处理
+        if (error.message.includes('CORS') || error.message.includes('network')) {
+            console.debug(`本地版本文件访问受限 (CORS/网络错误): ${error.message}`);
+        } else {
+            console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
+        }
+        // 设置默认版本提示
+        const titleElement = document.getElementById('title-link');
+        if (titleElement) {
+            titleElement.setAttribute('title', 'v1.0.0');
+        }
+    }
+}
+
+// 读取版本文件并设置标题栏版本提示
+async function loadVersionAndSetTitle() {
+    try {
+        const response = await fetch('./version.json');
+        if (response.ok) {
+            const versionData = await response.json();
+            const version = versionData.version;
+            
+            // 获取标题元素并设置版本信息
+            const titleElement = document.getElementById('title-link');
+            if (titleElement) {
+                // 保留原有的title信息并添加版本号
+                const originalTitle = titleElement.getAttribute('title') || '';
+                const versionTitle = `v${version}`;
+                const fullTitle = originalTitle ? `${originalTitle}\n${versionTitle}` : versionTitle;
+                titleElement.setAttribute('title', fullTitle);
+            }
+            
+            // 也可以更新页面标题
+            if (typeof document !== 'undefined') {
+                document.title = `Eagle2AE - v${version}`;
+            }
+            
+            console.log(`✅ 版本信息已加载: v${version}`);
+        } else {
+            console.warn('⚠️ 无法加载版本文件，使用默认版本信息');
+            // 设置默认版本提示
+            const titleElement = document.getElementById('title-link');
+            if (titleElement) {
+                titleElement.setAttribute('title', 'v1.0.0');
+            }
+        }
+    } catch (error) {
+        // 针对CORS错误的特殊处理
+        if (error.message.includes('CORS') || error.message.includes('network')) {
+            console.debug(`本地版本文件访问受限 (CORS/网络错误): ${error.message}`);
+        } else {
+            console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
+        }
         // 设置默认版本提示
         const titleElement = document.getElementById('title-link');
         if (titleElement) {
@@ -13466,6 +13781,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 在DOM准备好之后加载版本信息
     setTimeout(loadVersionAndSetTitle, 500);
+
+    // 初始化版本显示功能
+    setTimeout(async () => {
+        if (aeExtension && typeof aeExtension.initVersionDisplay === 'function') {
+            await aeExtension.initVersionDisplay();
+        }
+    }, 1000); // 比版本标题加载稍微晚一点
 
     const noImportCompBtn = document.getElementById('no-import-comp-btn');
     if (noImportCompBtn) {

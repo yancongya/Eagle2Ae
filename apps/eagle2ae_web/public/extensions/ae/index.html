@@ -9,6 +9,59 @@
     <!-- 移除 Node.js 检测，提供静默默认值 -->
     <script type="text/javascript">window.__NODE_JS_AVAILABLE__ = false;</script>
     <style>
+        /* 版本检查标签样式 */
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #e0e0e0;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            text-align: center;
+            /* 独立于标题动画 */
+            position: static;
+            transform: none !important;
+            animation: none !important;
+            height: 24px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+            margin-right: 4px; /* 与按钮间距一致 */
+        }
+        
+        .version-badge:hover {
+            background: #4a4a4a;
+            border-color: #666;
+            cursor: pointer;
+        }
+        
+        .version-badge:active {
+            background: #2a2a2a;
+        }
+        
+        /* 在暗色主题下的样式 */
+        body.dark .version-badge,
+        html.dark .version-badge {
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+        
+        body.dark .version-badge:hover,
+        html.dark .version-badge:hover {
+            background: #4a4a4a;
+            border-color: #666;
+        }
+        
+        body.dark .version-badge:active,
+        html.dark .version-badge:active {
+            background: #2a2a2a;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -4177,6 +4230,7 @@
             </a>
             <div style="flex: 1;"></div>
             <div class="header-actions">
+                <div id="version-badge" class="version-badge" title="版本信息" style="cursor: pointer; align-self: center; margin-right: 4px;">v1.0.0</div>
                 <button id="theme-toggle-btn" class="icon-btn" data-i18n-title="common.themeToggle">
                     <span class="icon">🌙</span>
                 </button>

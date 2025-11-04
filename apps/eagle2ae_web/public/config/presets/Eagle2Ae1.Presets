@@ -7,7 +7,7 @@
     "noImportSubMode": "normal",
     "timelineOptions": {
       "enabled": true,
-      "placement": "current_time"
+      "placement": "timeline_start"
     },
     "fileManagement": {
       "keepOriginalName": true,
@@ -47,5 +47,5 @@
     "header": true,
     "fullscreen": false
   },
-  "exportedAt": "2025-11-03T15:30:26.673Z"
+  "exportedAt": "2025-11-04T06:32:21.352Z"
 }
