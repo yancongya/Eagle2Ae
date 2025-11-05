@@ -240,12 +240,24 @@
         }
 
         .icon-btn .icon {
-            font-size: 1em; /* 使用1em使图标完全填充按钮，自适应按钮大小 */
+            font-size: 1.2em; /* 使用1.2em使图标完全填充按钮，自适应按钮大小 */
             line-height: 1;
             margin: 0; /* 移除额外的外边距 */
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* 特别针对版本信息按钮，使其©符号填充按钮 */
+        #version-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em; /* 增大版本按钮字体大小，使©符号更大 */
+        }
+        
+        #version-badge .icon {
+            font-size: 1.1em; /* 如果版本按钮有图标类，也调整大小 */
         }
 
         /* 响应式：中等屏幕优化 */
@@ -278,6 +290,11 @@
 
             .icon-btn .icon {
                 font-size: 1em; /* 相对于按钮的字体大小 */
+            }
+            
+            /* 版本按钮在中等屏幕下 */
+            #version-badge {
+                font-size: 1.2em; /* 增大版本按钮字体 */
             }
             
             .version-text-display {
@@ -320,6 +337,11 @@
                 font-size: 1em; /* 相对于按钮的字体大小 */
             }
             
+            /* 版本按钮在小屏幕下 */
+            #version-badge {
+                font-size: 1.3em; /* 进一步增大版本按钮字体以使其图标更大 */
+            }
+            
             .version-text-display {
                 min-width: 20px;
                 height: 16px;
@@ -354,6 +376,11 @@
 
             .icon-btn .icon {
                 font-size: 1em; /* 相对于按钮的字体大小 */
+            }
+            
+            /* 版本按钮在极小屏幕下 */
+            #version-badge {
+                font-size: 1.4em; /* 最大化版本按钮内©符号大小 */
             }
             
             .version-text-display {
