@@ -80,7 +80,7 @@
         }
 
         .header-hover-trigger.active {
-            pointer-events: auto;
+            pointer-events: none; /* 保持不拦截点击，使用全局坐标识别手势 */
         }
 
         /* 折叠状态下悬浮时显示 */
@@ -636,42 +636,41 @@
             min-width: 0;
         }
 
-        /* 超小屏（≤200px）仅显示状态圆点；隐藏连接文本与信息标签，并缩写标题 */
+        /* 超小屏（≤200px）优化：隐藏左侧标题，使连接按钮填满标题栏宽度 */
         @media (max-width: 200px) {
-            .connection-status-btn {
-                background: transparent;
-                border: none;
-                padding: 0;
-                min-width: auto;
+            /* 隐藏左侧面板标题，为按钮腾出空间 */
+            .section-header .section-title {
+                display: none;
+            }
+
+            /* 让连接按钮填充标题栏宽度，并保持文本可见 */
+            .section-header .connection-status-btn {
+                flex: 1 1 auto;
+                width: 100%;
+                min-width: 0;
+                justify-content: center;
+                height: 20px;
+                padding: 2px 6px;
             }
 
             .connection-status-btn .connection-text {
-                display: none;
+                display: flex;
             }
 
-            .connection-status-btn .status-indicator {
-                width: 8px;
-                height: 8px;
-                box-shadow: none;
-            }
-
-            .project-info .label,
-            .eagle-info .label {
-                display: none;
-            }
-
-            .project-info span:not(.label),
-            .eagle-info span:not(.label) {
-                flex: 1 1 100%;
-                min-width: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
+            /* 在超小屏下将两侧标题缩写为 A / E */
             .project-info .ae-title,
             .eagle-info .eagle-title {
                 font-size: 0; /* 隐藏原文，以下用伪元素显示缩写 */
+                justify-content: center;
+                width: 100%;
+                gap: 0;
+            }
+
+            /* 移除标题前置圆点，避免与居中缩写冲突 */
+            .project-info .ae-title::before,
+            .eagle-info .eagle-title::before {
+                display: none !important;
+                content: '';
             }
 
             .project-info .ae-title::after {
@@ -684,6 +683,21 @@
                 content: 'E';
                 font-size: 12px;
                 font-weight: 700;
+            }
+
+            /* 继续保留信息标签隐藏与右侧值扩展为整行的规则 */
+            .project-info .label,
+            .eagle-info .label {
+                display: none;
+            }
+
+            .project-info span:not(.label),
+            .eagle-info span:not(.label) {
+                flex: 1 1 100%;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
         }
 
@@ -1229,6 +1243,7 @@
             border-left: 3px solid #3498db;
             font-size: 10px;
             transition: all 0.3s ease;
+            min-width: 0; /* 允许内部元素收缩以触发省略 */
         }
 
         .import-status.success {
@@ -1249,6 +1264,11 @@
         .status-message {
             color: #e0e0e0;
             font-weight: 500;
+            white-space: nowrap; /* 不换行 */
+            overflow: hidden;    /* 隐藏溢出 */
+            text-overflow: ellipsis; /* 省略号 */
+            display: block;      /* 占满容器宽度以便省略 */
+            min-width: 0;        /* 与容器配合触发省略 */
         }
 
         .log-header {
@@ -4443,6 +4463,8 @@
     }
 }
 
+        /* 顶部触发层不拦截任何点击/触摸事件，由全局监听判定 */
+        .header-hover-trigger { pointer-events: none !important; }
     </style>
     <script>
         // Configuration for the title link URL
@@ -6510,8 +6532,8 @@
                         var spacing = 4; // 与常规模式保持一致的下间距
                         content.style.marginTop = (top + header.offsetHeight + spacing) + 'px';
                     } else {
-                        // 标题栏折叠或隐藏时，内容贴齐顶部
-                        content.style.marginTop = '0px';
+                        // 标题栏折叠或隐藏时，内容顶部保留与悬浮触发条一致的小间距，避免交互遮挡
+                        content.style.marginTop = '6px';
                     }
                     return;
                 }
@@ -6796,7 +6818,7 @@
                         const headerHeight = headerRect.height;
                         const headerTop = parseFloat(getComputedStyle(mainPanelElements.header).top) || 12;
                         
-                        // 计算合适的激活区域高度：标题栏高度 + 顶部间距 + 小的缓冲区域
+                        // 计算合适的激活区域高度：标题栏高度 + 顶部间距 + 缓冲区（保留原逻辑）
                         const triggerHeight = Math.max(30, Math.min(50, headerHeight + headerTop + 8));
                         
                         headerHoverTrigger.style.height = triggerHeight + 'px';
@@ -6844,74 +6866,77 @@
                         }
                     };
 
-                    headerHoverTrigger.addEventListener('mouseenter', (e) => {
-                        if (!uiSettings.header) {
-                            hoverPending = true;
-                            hoverActivated = false;
-                            swipeCount = 0;
-                            currentDirection = 0;
-                            segmentDistance = 0;
-                            startX = e.clientX;
-                            lastX = startX;
-                            segmentStartTime = performance.now();
-                            lastTime = segmentStartTime;
-                            // 取消延迟隐藏，避免误收起
-                            if (hideHoverTimeoutId) {
-                                clearTimeout(hideHoverTimeoutId);
-                                hideHoverTimeoutId = null;
-                            }
+                    // 改为全局坐标判定（避免顶部触发层拦截事件）
+                    const getTriggerHeight = () => {
+                        const val = parseFloat(headerHoverTrigger.style.height || '0');
+                        if (!isFinite(val) || val <= 0) {
+                            const rect = mainPanelElements.header.getBoundingClientRect();
+                            const headerTop = parseFloat(getComputedStyle(mainPanelElements.header).top) || 12;
+                            return Math.max(30, Math.min(50, rect.height + headerTop + 8));
                         }
-                    });
+                        return val;
+                    };
 
-                    headerHoverTrigger.addEventListener('mousemove', (e) => {
-                        if (!uiSettings.header && hoverPending && !hoverActivated) {
-                            const now = performance.now();
-                            const dt = now - lastTime;
-                            const dx = e.clientX - lastX;
-                            if (dt <= 0 || dx === 0) { lastTime = now; lastX = e.clientX; return; }
-                            const dir = dx > 0 ? 1 : -1;
-                            const adx = Math.abs(dx);
+                    document.addEventListener('mousemove', (e) => {
+                        if (uiSettings.header) return;
+                        const isCollapsed = mainPanelElements.header.classList.contains('collapsed');
+                        if (!isCollapsed) return;
+                        const triggerHeight = getTriggerHeight();
 
-                            if (currentDirection === 0) {
-                                // 初次确定方向
-                                currentDirection = dir;
-                                segmentDistance = adx;
-                                segmentStartTime = now;
-                            } else if (dir === currentDirection) {
-                                // 同向累积位移
-                                segmentDistance += adx;
-                            } else {
-                                // 方向反转：上一段结束，判断是否“快速且达阈值”
-                                const segmentDuration = now - segmentStartTime;
-                                if (segmentDistance >= HORIZONTAL_SWIPE_THRESHOLD && segmentDuration <= MAX_SEGMENT_DURATION_MS) {
-                                    swipeCount += 1;
-                                    // 达到所需来回次数，激活标题栏
-                                    if (swipeCount >= REQUIRED_SWIPE_COUNT) {
-                                        mainPanelElements.header.classList.add('hover');
-                                        hoverActivated = true;
+                        if (e.clientY <= triggerHeight) {
+                            if (!hoverPending) {
+                                hoverPending = true;
+                                hoverActivated = false;
+                                swipeCount = 0;
+                                currentDirection = 0;
+                                segmentDistance = 0;
+                                startX = e.clientX;
+                                lastX = startX;
+                                segmentStartTime = performance.now();
+                                lastTime = segmentStartTime;
+                                if (hideHoverTimeoutId) { clearTimeout(hideHoverTimeoutId); hideHoverTimeoutId = null; }
+                            }
+                            if (!hoverActivated) {
+                                const now = performance.now();
+                                const dt = now - lastTime;
+                                const dx = e.clientX - lastX;
+                                if (dt <= 0 || dx === 0) { lastTime = now; lastX = e.clientX; return; }
+                                const dir = dx > 0 ? 1 : -1;
+                                const adx = Math.abs(dx);
+
+                                if (currentDirection === 0) {
+                                    currentDirection = dir;
+                                    segmentDistance = adx;
+                                    segmentStartTime = now;
+                                } else if (dir === currentDirection) {
+                                    segmentDistance += adx;
+                                } else {
+                                    const segmentDuration = now - segmentStartTime;
+                                    if (segmentDistance >= HORIZONTAL_SWIPE_THRESHOLD && segmentDuration <= MAX_SEGMENT_DURATION_MS) {
+                                        swipeCount += 1;
+                                        if (swipeCount >= REQUIRED_SWIPE_COUNT) {
+                                            mainPanelElements.header.classList.add('hover');
+                                            hoverActivated = true;
+                                        }
                                     }
+                                    currentDirection = dir;
+                                    segmentDistance = adx;
+                                    segmentStartTime = now;
                                 }
-                                // 开启新段
-                                currentDirection = dir;
-                                segmentDistance = adx;
-                                segmentStartTime = now;
-                            }
 
-                            lastX = e.clientX;
-                            lastTime = now;
-                        }
-                    });
-
-                    headerHoverTrigger.addEventListener('mouseleave', () => {
-                        if (!uiSettings.header) {
-                            // 延迟0.3秒后收起，如果期间重新进入则取消
-                            if (hideHoverTimeoutId) {
-                                clearTimeout(hideHoverTimeoutId);
+                                lastX = e.clientX;
+                                lastTime = now;
                             }
-                            hideHoverTimeoutId = setTimeout(() => {
-                                mainPanelElements.header.classList.remove('hover');
-                                resetHoverSwipeState();
-                            }, 300);
+                        } else {
+                            // 离开顶部识别区，按原逻辑延迟收起（若不在标题栏内悬停）
+                            hoverPending = false;
+                            if (!mainPanelElements.header.matches(':hover')) {
+                                if (hideHoverTimeoutId) { clearTimeout(hideHoverTimeoutId); }
+                                hideHoverTimeoutId = setTimeout(() => {
+                                    mainPanelElements.header.classList.remove('hover');
+                                    resetHoverSwipeState();
+                                }, 300);
+                            }
                         }
                     });
 
@@ -6939,26 +6964,67 @@
                         }
                     });
 
-                    // --- 新增：触摸交互 ---
-                    let touchStartY = 0;
-                    let touchStartTime = 0;
-                    headerHoverTrigger.addEventListener('touchstart', (e) => {
-                        if (!uiSettings.header && e.touches.length > 0) {
-                            touchStartY = e.touches[0].clientY;
-                            touchStartTime = Date.now();
+                    // --- 触摸交互：顶部区域水平来回滑动，避免与下拉刷新冲突 ---
+                    let touchStartX = 0;
+                    let touchLastX = 0;
+                    let touchSegmentStartTime = 0;
+                    document.addEventListener('touchstart', (e) => {
+                        if (!uiSettings.header && e.touches.length > 0 && mainPanelElements.header.classList.contains('collapsed')) {
+                            const triggerHeight = getTriggerHeight();
+                            const y = e.touches[0].clientY;
+                            if (y <= triggerHeight) {
+                                hoverPending = true;
+                                hoverActivated = false;
+                                swipeCount = 0;
+                                currentDirection = 0;
+                                segmentDistance = 0;
+                                touchStartX = e.touches[0].clientX;
+                                touchLastX = touchStartX;
+                                touchSegmentStartTime = performance.now();
+                                if (hideHoverTimeoutId) { clearTimeout(hideHoverTimeoutId); hideHoverTimeoutId = null; }
+                            }
                         }
                     }, { passive: true });
 
-                    headerHoverTrigger.addEventListener('touchmove', (e) => {
-                        if (!uiSettings.header && e.touches.length > 0) {
-                            const touchCurrentY = e.touches[0].clientY;
-                            const deltaY = touchCurrentY - touchStartY;
-                            if (touchStartY < 50 && deltaY > 30) { // 从顶部50px内开始，向下滑动超过30px
-                                const deltaTime = Date.now() - touchStartTime;
-                                const speed = deltaY / deltaTime;
-                                if (speed > 0.5) { // 速度阈值
-                                    mainPanelElements.header.classList.add('hover');
-                                    touchStartY = 9999; // 防止连续触发
+                    document.addEventListener('touchmove', (e) => {
+                        if (!uiSettings.header && e.touches.length > 0 && mainPanelElements.header.classList.contains('collapsed')) {
+                            const triggerHeight = getTriggerHeight();
+                            const y = e.touches[0].clientY;
+                            const x = e.touches[0].clientX;
+                            if (y <= triggerHeight && hoverPending && !hoverActivated) {
+                                const now = performance.now();
+                                const dx = x - touchLastX;
+                                const dir = dx > 0 ? 1 : -1;
+                                const adx = Math.abs(dx);
+
+                                if (currentDirection === 0) {
+                                    currentDirection = dir;
+                                    segmentDistance = adx;
+                                    touchSegmentStartTime = now;
+                                } else if (dir === currentDirection) {
+                                    segmentDistance += adx;
+                                } else {
+                                    const segmentDuration = now - touchSegmentStartTime;
+                                    if (segmentDistance >= HORIZONTAL_SWIPE_THRESHOLD && segmentDuration <= MAX_SEGMENT_DURATION_MS) {
+                                        swipeCount += 1;
+                                        if (swipeCount >= REQUIRED_SWIPE_COUNT) {
+                                            mainPanelElements.header.classList.add('hover');
+                                            hoverActivated = true;
+                                        }
+                                    }
+                                    currentDirection = dir;
+                                    segmentDistance = adx;
+                                    touchSegmentStartTime = now;
+                                }
+                                touchLastX = x;
+                            } else if (y > triggerHeight) {
+                                hoverPending = false;
+                                if (!mainPanelElements.header.matches(':hover')) {
+                                    if (hideHoverTimeoutId) { clearTimeout(hideHoverTimeoutId); }
+                                    hideHoverTimeoutId = setTimeout(() => {
+                                        mainPanelElements.header.classList.remove('hover');
+                                        resetHoverSwipeState();
+                                    }, 300);
                                 }
                             }
                         }

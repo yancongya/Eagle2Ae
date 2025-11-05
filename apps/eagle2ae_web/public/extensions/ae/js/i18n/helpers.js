@@ -97,13 +97,29 @@ function updateDynamicContent(lang) {
     if (value) eagleFolder.title = `${prefix} ${value}`;
   }
 
-  // 更新导入状态消息
+  // 更新导入状态消息，并设置悬浮提示为完整文本
   const latestLogMessage = document.getElementById('latest-log-message');
   if (latestLogMessage) {
     const waitingPlaceholders = ['等待', 'Waiting'];
     if (waitingPlaceholders.some(p => latestLogMessage.textContent.includes(p))) {
       latestLogMessage.textContent = window.i18n.getText('common.waitingForImport') || latestLogMessage.textContent;
     }
+
+    const setTooltipTitle = () => {
+      const fullText = latestLogMessage.textContent.trim();
+      latestLogMessage.setAttribute('title', fullText);
+    };
+
+    // 初始化一次标题
+    setTooltipTitle();
+
+    // 监听文本更新，保持 title 同步，确保悬浮查看完整信息
+    const logMessageObserver = new MutationObserver(() => setTooltipTitle());
+    logMessageObserver.observe(latestLogMessage, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
   }
 
   // 更新最近使用的文件夹标题
