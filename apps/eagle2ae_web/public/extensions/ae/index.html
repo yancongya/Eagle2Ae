@@ -42,21 +42,22 @@
 
         .header {
             background: #2a2a2a;
-            padding: 12px;
+            padding: 8px; /* 减少内边距 */
             border-radius: 6px;
             border: 1px solid #555;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: nowrap;
-            gap: 8px;
+            gap: 6px; /* 减少间隙 */
             position: fixed;
-            top: 12px;
-            left: 12px;
-            right: 12px;
+            top: 8px; /* 减少顶部间距 */
+            left: 8px; /* 减少左边距 */
+            right: 8px; /* 减少右边距 */
             z-index: 1000;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s ease, opacity 0.3s ease;
+            min-height: 36px; /* 设置最小高度 */
         }
 
         /* 标题栏折叠状态 */
@@ -103,13 +104,13 @@
         }
 
         .title {
-            font-size: 14px;
+            font-size: 12px; /* 减小字体大小 */
             font-weight: 600;
             color: #9966cc;
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px; /* 减少间隙 */
             cursor: pointer;
             transition: all 0.3s ease;
             flex: 0 0 auto;
@@ -176,8 +177,8 @@
 
 
         .title-logo {
-            width: clamp(16px, 3.2vw, 28px);
-            height: clamp(16px, 3.2vw, 28px);
+            width: 20px; /* 固定尺寸 */
+            height: 20px; /* 固定尺寸 */
             object-fit: contain;
             transition: all 0.3s ease;
             cursor: pointer;
@@ -186,7 +187,7 @@
         /* 顶部图标按钮样式 */
         .header-actions {
             display: flex;
-            gap: 8px;
+            gap: clamp(3px, 0.5vw, 6px); /* 减小间隙 */
             align-items: center;
             flex-wrap: nowrap;
             justify-content: flex-end;
@@ -199,14 +200,16 @@
             color: #e0e0e0;
             border: 1px solid #555;
             border-radius: 4px;
-            padding: clamp(2px, 0.4vw, 6px) clamp(3px, 0.6vw, 8px);
+            padding: 1px 2px; /* 进一步减少内边距 */
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: clamp(18px, 3.2vw, 32px);
-            height: clamp(18px, 3vw, 28px);
+            min-width: 20px; /* 减小最小宽度 */
+            height: 18px; /* 减小高度 */
+            font-size: 0.75em; /* 使用更小的相对单位 */
+            flex-shrink: 0; /* 防止在flex容器中被压缩 */
         }
 
         .icon-btn:hover {
@@ -223,13 +226,13 @@
             color: #e0e0e0;
             border: 1px solid #555;
             border-radius: 4px;
-            padding: clamp(2px, 0.4vw, 6px) clamp(3px, 0.6vw, 8px);
+            padding: 2px 3px; /* 减少内边距，让内容更贴近按钮边界 */
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: clamp(18px, 3.2vw, 32px);
-            height: clamp(18px, 3vw, 28px);
-            font-size: clamp(10px, 1.4vw, 14px);
+            min-width: 24px;
+            height: 20px;
+            font-size: 0.8em; /* 使用相对单位 */
             line-height: 1;
             white-space: nowrap;
             overflow: hidden;
@@ -237,8 +240,131 @@
         }
 
         .icon-btn .icon {
-            font-size: clamp(10px, 1.4vw, 14px);
+            font-size: 1em; /* 使用1em使图标完全填充按钮，自适应按钮大小 */
             line-height: 1;
+            margin: 0; /* 移除额外的外边距 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 响应式：中等屏幕优化 */
+        @media (max-width: 768px) {
+            .header {
+                gap: 4px;
+                padding: 7px;
+            }
+
+            .title {
+                gap: 4px;
+                font-size: 11px;
+            }
+
+            .title-logo {
+                width: 20px;
+                height: 20px;
+            }
+
+            .header-actions {
+                gap: 4px;
+            }
+
+            .icon-btn {
+                min-width: 22px;
+                height: 18px;
+                padding: 0px 2px; /* 进一步减少内边距 */
+                font-size: 0.7em; /* 使用更小的相对单位 */
+            }
+
+            .icon-btn .icon {
+                font-size: 1em; /* 相对于按钮的字体大小 */
+            }
+            
+            .version-text-display {
+                min-width: 22px;
+                height: 18px;
+                padding: 1px 2px;
+                font-size: 0.7em; /* 与按钮字体大小一致 */
+            }
+        }
+
+        /* 小屏幕：进一步压缩 */
+        @media (max-width: 600px) {
+            .header {
+                gap: 3px;
+                padding: 6px;
+            }
+
+            .title {
+                gap: 3px;
+                font-size: 10px;
+            }
+
+            .title-logo {
+                width: 18px;
+                height: 18px;
+            }
+
+            .header-actions {
+                gap: 3px;
+            }
+
+            .icon-btn {
+                min-width: 20px;
+                height: 16px;
+                padding: 0px 1px; /* 最小内边距 */
+                font-size: 0.65em; /* 使用更小的相对单位 */
+            }
+
+            .icon-btn .icon {
+                font-size: 1em; /* 相对于按钮的字体大小 */
+            }
+            
+            .version-text-display {
+                min-width: 20px;
+                height: 16px;
+                padding: 0px 1px;
+                font-size: 0.65em;
+            }
+        }
+
+        /* 极小尺寸：只显示图标 */
+        @media (max-width: 480px) {
+            .title-text {
+                display: none;
+            }
+
+            .header {
+                gap: 2px;
+                padding: 4px;
+            }
+
+            .title-logo {
+                width: 16px;
+                height: 16px;
+            }
+
+            .header-actions {
+                gap: 2px;
+            }
+
+            .icon-btn {
+                min-width: 18px;
+                height: 15px;
+                padding: 0px 0.5px; /* 最小内边距 */
+                font-size: 0.6em; /* 使用最小的相对单位 */
+            }
+
+            .icon-btn .icon {
+                font-size: 1em; /* 相对于按钮的字体大小 */
+            }
+            
+            .version-text-display {
+                min-width: 18px;
+                height: 15px;
+                padding: 0px 0.5px;
+                font-size: 0.6em;
+            }
         }
 
         /* 图标按钮中的图片尺寸 */

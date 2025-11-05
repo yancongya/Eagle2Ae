@@ -5932,7 +5932,8 @@ class AEExtension {
     // 获取AE版本信息
     getAEVersion() {
         try {
-                            const versionElement = document.getElementById('ae-version-display-new');            if (!versionElement) {
+            const versionElement = document.getElementById('ae-version');
+            if (!versionElement) {
                 console.warn('ae-version元素不存在，延迟执行');
                 // 延迟执行，等待DOM加载完成
                 setTimeout(() => this.getAEVersion(), 100);
@@ -13421,14 +13422,36 @@ ${pathsText}
     async getLocalVersion() {
         try {
             // 尝试从本地version.json获取
-            const response = await fetch('./version.json');
-            if (response.ok) {
-                const versionData = await response.json();
-                return versionData.version || '1.0.0';
-            } else {
-                // 如果获取失败，使用默认版本
-                return '1.0.0';
+            // 使用相对路径，处理 file:// 协议的限制
+            let versionData;
+            try {
+                // 先尝试使用XMLHttpRequest，对本地文件更兼容
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', './version.json', false); // 同步请求以简化逻辑
+                xhr.send();
+                
+                if (xhr.status === 0 || xhr.status === 200) { // 本地文件加载时状态码为0
+                    versionData = JSON.parse(xhr.responseText);
+                } else {
+                    throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
+                }
+            } catch (xhrError) {
+                // 如果XMLHttpRequest失败，再尝试fetch
+                try {
+                    const response = await fetch('./version.json');
+                    if (response.ok || (response.status === 0 && response.type === 'opaque')) {
+                        versionData = await response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (fetchError) {
+                    console.warn('版本文件加载失败 (fetch):', fetchError.message);
+                    // 如果两者都失败，返回默认版本
+                    return '1.0.0';
+                }
             }
+            
+            return versionData.version || '1.0.0';
         } catch (error) {
             // 针对CORS错误的特殊处理
             if (error.message.includes('CORS') || error.message.includes('network')) {
@@ -13710,56 +13733,33 @@ ${pathsText}
 // 读取版本文件并设置标题栏版本提示
 async function loadVersionAndSetTitle() {
     try {
-        const response = await fetch('./version.json');
-        if (response.ok) {
-            const versionData = await response.json();
-            const version = versionData.version;
+        let versionData;
+        try {
+            // 先尝试使用XMLHttpRequest，对本地文件更兼容
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', './version.json', false); // 同步请求以简化逻辑
+            xhr.send();
             
-            // 获取标题元素并设置版本信息
-            const titleElement = document.getElementById('title-link');
-            if (titleElement) {
-                // 保留原有的title信息并添加版本号
-                const originalTitle = titleElement.getAttribute('title') || '';
-                const versionTitle = `v${version}`;
-                const fullTitle = originalTitle ? `${originalTitle}\n${versionTitle}` : versionTitle;
-                titleElement.setAttribute('title', fullTitle);
+            if (xhr.status === 0 || xhr.status === 200) { // 本地文件加载时状态码可能为0
+                versionData = JSON.parse(xhr.responseText);
+            } else {
+                throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
             }
-            
-            // 也可以更新页面标题
-            if (typeof document !== 'undefined') {
-                document.title = `Eagle2AE - v${version}`;
-            }
-            
-            console.log(`✅ 版本信息已加载: v${version}`);
-        } else {
-            console.warn('⚠️ 无法加载版本文件，使用默认版本信息');
-            // 设置默认版本提示
-            const titleElement = document.getElementById('title-link');
-            if (titleElement) {
-                titleElement.setAttribute('title', 'v1.0.0');
+        } catch (xhrError) {
+            // 如果XMLHttpRequest失败，再尝试fetch
+            try {
+                const response = await fetch('./version.json');
+                if (response.ok || (response.status === 0 && response.type === 'opaque')) {
+                    versionData = await response.json();
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (fetchError) {
+                throw fetchError;
             }
         }
-    } catch (error) {
-        // 针对CORS错误的特殊处理
-        if (error.message.includes('CORS') || error.message.includes('network')) {
-            console.debug(`本地版本文件访问受限 (CORS/网络错误): ${error.message}`);
-        } else {
-            console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
-        }
-        // 设置默认版本提示
-        const titleElement = document.getElementById('title-link');
-        if (titleElement) {
-            titleElement.setAttribute('title', 'v1.0.0');
-        }
-    }
-}
 
-// 读取版本文件并设置标题栏版本提示
-async function loadVersionAndSetTitle() {
-    try {
-        const response = await fetch('./version.json');
-        if (response.ok) {
-            const versionData = await response.json();
+        if (versionData && versionData.version) {
             const version = versionData.version;
             
             // 获取标题元素并设置版本信息
@@ -13787,8 +13787,8 @@ async function loadVersionAndSetTitle() {
             }
         }
     } catch (error) {
-        // 针对CORS错误的特殊处理
-        if (error.message.includes('CORS') || error.message.includes('network')) {
+        // 针对CORS错误或网络错误的特殊处理
+        if (error.message.includes('CORS') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
             console.debug(`本地版本文件访问受限 (CORS/网络错误): ${error.message}`);
         } else {
             console.warn(`⚠️ 读取版本文件失败: ${error.message}，使用默认版本信息`);
