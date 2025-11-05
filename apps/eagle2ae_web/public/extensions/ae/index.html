@@ -611,6 +611,82 @@
             border-radius: 2px;
         }
 
+        /* 连接状态文本省略，避免换行溢出 */
+        .connection-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .connection-text .status-main,
+        .connection-text .ping-time {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* AE/Eagle 标题在窄屏也省略 */
+        .project-info .ae-title,
+        .eagle-info .eagle-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        /* 超小屏（≤200px）仅显示状态圆点；隐藏连接文本与信息标签，并缩写标题 */
+        @media (max-width: 200px) {
+            .connection-status-btn {
+                background: transparent;
+                border: none;
+                padding: 0;
+                min-width: auto;
+            }
+
+            .connection-status-btn .connection-text {
+                display: none;
+            }
+
+            .connection-status-btn .status-indicator {
+                width: 8px;
+                height: 8px;
+                box-shadow: none;
+            }
+
+            .project-info .label,
+            .eagle-info .label {
+                display: none;
+            }
+
+            .project-info span:not(.label),
+            .eagle-info span:not(.label) {
+                flex: 1 1 100%;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .project-info .ae-title,
+            .eagle-info .eagle-title {
+                font-size: 0; /* 隐藏原文，以下用伪元素显示缩写 */
+            }
+
+            .project-info .ae-title::after {
+                content: 'A';
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .eagle-info .eagle-title::after {
+                content: 'E';
+                font-size: 12px;
+                font-weight: 700;
+            }
+        }
+
         /* 原来的连接状态样式已移除，使用新的紧凑样式 */
 
         @keyframes pulse {
@@ -3418,7 +3494,7 @@
             flex-shrink: 0;
         }
 
-        @media (max-width: 420px) {
+        @media (max-width: 200px) {
             .eagle-confirm-content {
                 max-width: 360px;
                 width: 96%;
@@ -3433,7 +3509,7 @@
         }
         .eagle-confirm-actions-flex .btn-icon { margin-right: 6px; }
         .eagle-confirm-actions-flex .btn-text { display: inline; }
-        @media (max-width: 420px) {
+        @media (max-width: 200px) {
             .eagle-confirm-actions-flex .btn-icon { margin-right: 0; }
             .eagle-confirm-actions-flex .btn-text { display: none; }
             .btn-outline-primary, .btn-outline-secondary { padding: 6px 10px; }
