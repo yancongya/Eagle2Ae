@@ -330,9 +330,6 @@
 
         /* 极小尺寸：只显示图标 */
         @media (max-width: 480px) {
-            .title-text {
-                display: none;
-            }
 
             .header {
                 gap: 2px;
@@ -4332,6 +4329,13 @@
 /* Hide log-panel-toggle at 240px */
 @media (max-width: 240px) {
     #log-panel-toggle {
+        display: none !important;
+    }
+}
+
+/* 极小尺寸：标题文本消失 */
+@media (max-width: 220px) {
+    .title-text {
         display: none !important;
     }
 }
