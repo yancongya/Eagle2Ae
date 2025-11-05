@@ -1998,6 +1998,10 @@
         .recent-folder-item {
             background: #333;
             border: 1px solid #555;
+        }
+
+        }
+
             border-radius: 4px;
             color: #e0e0e0;
             cursor: pointer;
@@ -4238,7 +4242,7 @@
         }
 
         /* 极限尺寸：只显示 logo 和按钮组 */
-        @media (max-width: 360px) {
+        @media (max-width: 150px) {
             .header {
                 gap: 4px;
                 padding: 8px;
@@ -4302,6 +4306,36 @@
             opacity: 1;
             transform: translateY(0);
         }
+/* Custom responsive hiding for header-actions buttons (Left to Right disappearance) */
+
+/* Hide version-badge at 140px */
+@media (max-width: 140px) {
+    #version-badge {
+        display: none !important;
+    }
+}
+
+/* Hide theme-toggle-btn at 120px */
+@media (max-width: 120px) {
+    #theme-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* Hide language-toggle-btn at 100px */
+@media (max-width: 100px) {
+    #language-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* Hide log-panel-toggle at 80px */
+@media (max-width: 80px) {
+    #log-panel-toggle {
+        display: none !important;
+    }
+}
+
     </style>
     <script>
         // Configuration for the title link URL
