@@ -9212,27 +9212,33 @@ class AEExtension {
                     };
                     const jsonContent = JSON.stringify(exportPayload, null, 2);
     
-                    // 优先通过开发服务器写入到 public/config/presets
-                    try {
-                        const resp = await fetch('/api/presets', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                fileName: this.getPresetFileName(),
-                                jsonData: jsonContent
-                            })
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if (data && data.success) {
-                                this.log('💾 预设已保存到 /public/config/presets (Demo)', 'info');
-                                return true;
+                    // 优先通过开发服务器写入到 public/config/presets（仅在本地开发环境）
+                    const isDevHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+                    if (isDevHost) {
+                        try {
+                            const resp = await fetch('/api/presets', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    fileName: this.getPresetFileName(),
+                                    jsonData: jsonContent
+                                })
+                            });
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if (data && data.success) {
+                                    this.log('💾 预设已保存到 /public/config/presets (Demo, dev)', 'info');
+                                    return true;
+                                }
+                                throw new Error(data && data.error ? data.error : 'unknown error');
                             }
-                            throw new Error(data && data.error ? data.error : 'unknown error');
+                            throw new Error(`HTTP ${resp.status}`);
+                        } catch (apiErr) {
+                            console.warn('[Demo] 保存到 /api/presets 失败，降级到本地方式:', apiErr.message);
                         }
-                        throw new Error(`HTTP ${resp.status}`);
-                    } catch (apiErr) {
-                        console.warn('[Demo] 保存到 /api/presets 失败，降级到本地方式:', apiErr.message);
+                    } else {
+                        // 生产环境不尝试调用静态站点的 /api/presets，直接走本地/虚拟文件系统方案
+                        this.log('[Demo] 生产环境跳过 /api/presets 写入（只读站点）', 'info');
                     }
     
                     // 保存到虚拟文件系统
