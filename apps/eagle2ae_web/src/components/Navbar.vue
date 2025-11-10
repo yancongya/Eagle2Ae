@@ -18,11 +18,11 @@
             {{ t('nav.home') }}
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
           </router-link>
-          <router-link to="/ae-preview" class="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onAePreviewDblClick">
+          <router-link to="/ae-preview" class="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onAePreviewDblClick" @mouseover="prefetchRoute('AE_Preview')">
             {{ t('nav.aePreview') }}
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
           </router-link>
-          <router-link to="/eagle-preview" class="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onEaglePreviewDblClick">
+          <router-link to="/eagle-preview" classs="nav-link-item text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative group whitespace-nowrap" @dblclick.prevent="onEaglePreviewDblClick" @mouseover="prefetchRoute('Eagle_Preview')">
             {{ t('nav.eaglePreview') }}
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
           </router-link>
@@ -85,13 +85,13 @@
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>
-          <router-link to="/ae-preview" class="mobile-nav-link" @dblclick.prevent="onAePreviewDblClick">
+          <router-link to="/ae-preview" class="mobile-nav-link" @dblclick.prevent="onAePreviewDblClick" @mouseover="prefetchRoute('AE_Preview')">
             <span class="relative inline-block group">
               {{ t('nav.aePreview') }}
             <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
             </span>
           </router-link>
-          <router-link to="/eagle-preview" class="mobile-nav-link" @dblclick.prevent="onEaglePreviewDblClick">
+          <router-link to="/eagle-preview" class="mobile-nav-link" @dblclick.prevent="onEaglePreviewDblClick" @mouseover="prefetchRoute('Eagle_Preview')">
             <span class="relative inline-block group">
               {{ t('nav.eaglePreview') }}
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black dark:bg-white group-hover:w-full transition-all duration-500 ease-in-out"></span>
@@ -370,6 +370,22 @@ onMounted(() => {
 
   navTitle.value.textContent = normalText;
 });
+
+const prefetchedRoutes = new Map();
+
+const prefetchRoute = (routeName) => {
+  if (prefetchedRoutes.has(routeName)) {
+    return;
+  }
+  const routeRecord = router.getRoutes().find(r => r.name === routeName);
+  if (routeRecord && typeof routeRecord.component === 'function') {
+    prefetchedRoutes.set(routeName, true);
+    routeRecord.component().catch(err => {
+      console.error(`Failed to prefetch route ${routeName}:`, err);
+      prefetchedRoutes.delete(routeName);
+    });
+  }
+};
 </script>
 
 <style scoped>

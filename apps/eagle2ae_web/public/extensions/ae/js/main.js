@@ -843,7 +843,6 @@ class AEExtension {
 
             // 立即获取AE信息，不依赖连接状态
             try {
-                this.getAEVersion();
                 this.updateAEInfoOnStartup();
                 this.log(window.i18n.getText('logs.aeInfoFetchedOnStartup') || 'AE info fetched at startup', 'info');
             } catch (aeError) {
@@ -5934,9 +5933,7 @@ class AEExtension {
         try {
             const versionElement = document.getElementById('ae-version');
             if (!versionElement) {
-                console.warn('ae-version元素不存在，延迟执行');
-                // 延迟执行，等待DOM加载完成
-                setTimeout(() => this.getAEVersion(), 100);
+                console.error('❌ 未找到ae-version元素');
                 return;
             }
 
@@ -13824,6 +13821,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         if (aeExtension && typeof aeExtension.initVersionDisplay === 'function') {
             await aeExtension.initVersionDisplay();
+        }
+        // 确保 getAEVersion 在所有UI初始化后调用
+        if (aeExtension) {
+            aeExtension.getAEVersion();
         }
     }, 1000); // 比版本标题加载稍微晚一点
 

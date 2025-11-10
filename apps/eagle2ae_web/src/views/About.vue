@@ -38,23 +38,9 @@ import { gsap } from 'gsap'
 
 const { t, locale } = useI18n()
 
-const headingText = computed(() => {
-  const s = t('about.page.heading')
-  if (s === 'about.page.heading') {
-    return locale.value === 'zh-CN' ? '关于项目' : 'About the Project'
-  }
-  return s
-})
+const headingText = computed(() => t('nav.about.page.heading'))
 
-const descText = computed(() => {
-  const s = t('about.page.description')
-  if (s === 'about.page.description') {
-    return locale.value === 'zh-CN'
-      ? '这是一个 Eagle 与 AE 之间的桥接扩展，帮助你更快地在 AE 中管理并导入 Eagle 的素材。这里是测试文案，后续可以替换为正式介绍。'
-      : 'This is a bridging extension between Eagle and AE, helping you manage and import Eagle assets into AE more efficiently. This is placeholder copy and can be replaced with formal introduction later.'
-  }
-  return s
-})
+const descText = computed(() => t('nav.about.page.description'))
 
 const socialButtons = ref([])
 const btnRefs = ref([])

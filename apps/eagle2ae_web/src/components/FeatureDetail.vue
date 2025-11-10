@@ -208,12 +208,10 @@ const visibleLines = computed(() => lines.value.slice(0, Math.min(activeIndex.va
 const getLocalized = (val) => {
   if (!val) return '';
   if (typeof val === 'string') {
-    // 如果字符串看起来像是已经翻译过的文本（包含空格或长度较长），直接返回
-    // 否则尝试作为翻译键查找
-    if (val.includes(' ') || val.length > 50) {
-      return val;
-    }
+    // 始终将字符串视为 i18n 键
     const translated = t(val);
+    // 如果找到翻译且与键不同，则返回翻译
+    // 否则，返回键本身（如果键为空则返回空字符串）
     return translated && translated !== val ? translated : val;
   }
   if (typeof val === 'object') {

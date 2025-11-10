@@ -1,76 +1,36 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../views/Home.vue';
-import AE_Preview from '../views/AE_Preview.vue';
-import Eagle_Preview from '../views/Eagle_Preview.vue';
-import Download from '../views/Download.vue';
-import About from '../views/About.vue';
-import Other from '../views/Other.vue';
-
-const routes = [
-  {
-    path: '/',
-    name: 'Home',
-    component: Home,
-  },
-  {
-    path: '/ae-preview',
-    name: 'AE_Preview',
-    component: AE_Preview,
-  },
-  {
-    path: '/eagle-preview',
-    name: 'Eagle_Preview',
-    component: Eagle_Preview,
-  },
-  {
-    path: '/download',
-    name: 'Download',
-    component: Download,
-  },
-  {
-    path: '/about',
-    name: 'About',
-    component: About,
-  },
-  {
-    path: '/other',
-    name: 'Other',
-    component: Other,
-  },
-];
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'Home',
-      component: Home,
+      component: () => import('../views/Home.vue'),
     },
     {
       path: '/ae-preview',
       name: 'AE_Preview',
-      component: AE_Preview,
+      component: () => import('../views/AE_Preview.vue'),
     },
     {
       path: '/eagle-preview',
       name: 'Eagle_Preview',
-      component: Eagle_Preview,
+      component: () => import('../views/Eagle_Preview.vue'),
     },
     {
       path: '/download',
       name: 'Download',
-      component: Download,
+      component: () => import('../views/Download.vue'),
     },
     {
       path: '/about',
       name: 'About',
-      component: About,
+      component: () => import('../views/About.vue'),
     },
     {
       path: '/other',
       name: 'Other',
-      component: Other,
+      component: () => import('../views/Other.vue'),
     },
   ],
   scrollBehavior(to, from, savedPosition) {
