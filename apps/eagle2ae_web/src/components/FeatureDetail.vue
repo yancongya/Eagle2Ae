@@ -1,5 +1,5 @@
 <template>
-  <section :id="id" ref="featureSection" class="relative py-12 sm:py-16 md:py-20 pb-24 sm:pb-24 md:pb-28 flex flex-col justify-start bg-gray-100 dark:bg-gray-900" :class="isLast ? 'min-h-[calc(82vh-var(--navbar-height,0px))]' : 'min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))]'" :style="{ scrollMarginTop: 'var(--navbar-height, 0px)' }">
+  <section :id="id" ref="featureSection" class="relative py-12 sm:py-16 md:py-20 pb-24 sm:pb-24 md:pb-28 flex flex-col justify-start" :class="isLast ? 'min-h-[calc(82vh-var(--navbar-height,0px))]' : 'min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))]'" :style="{ scrollMarginTop: 'var(--navbar-height, 0px)' }">
     <div class="container mx-auto px-6">
       <div class="flex flex-col md:items-start gap-12" :class="[isImageLeft ? 'md:flex-row' : 'md:flex-row-reverse']">
         <!-- Image Stacked Cards -->

@@ -1,5 +1,5 @@
 <template>
-  <section class="min-h-[calc(100vh-var(--navbar-height,0px))] bg-gray-100 dark:bg-gray-900">
+  <section class="min-h-[calc(100vh-var(--navbar-height,0px))]">
     <Hero ref="heroRef" @scroll-to-feature="scrollToFeatureById" />
     <div class="container mx-auto px-6">
       <FeatureDetail

@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900 flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
+  <main class="flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
     <div ref="pageRef" :style="[{ 'view-transition-name': 'preview' }, wrapperStyle]" class="flex flex-col">
       <section class="flex-1 min-h-0 w-full">
         <!-- Mobile: single preview -->

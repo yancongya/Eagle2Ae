@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900 min-h-[calc(100vh-var(--navbar-height,0px))] flex flex-col pt-14 sm:pt-18">
+  <main class="min-h-[calc(100vh-var(--navbar-height,0px))] flex flex-col pt-14 sm:pt-18">
     <section class="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
       <header class="mb-6 sm:mb-8">
         <h1 ref="titleRef" class="font-bold text-gray-900 dark:text-gray-100 text-[clamp(1.75rem,4vw,2.5rem)]">{{ t('other.title') }}</h1>

@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900 flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
+  <main class="flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
     <section class="flex-1 flex items-center">
       <div class="relative w-full px-6 sm:px-12">
         <div class="max-w-6xl mx-auto w-full">

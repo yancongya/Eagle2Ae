@@ -1,5 +1,5 @@
 <template>
-  <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 relative" style="scroll-margin-top: var(--navbar-height, 0px)">
+  <section id="hero-section" class="min-h-[calc(100vh-var(--navbar-height,0px))] min-h-[calc(100dvh-var(--navbar-height,0px))] w-full flex items-center justify-center relative" style="scroll-margin-top: var(--navbar-height, 0px)">
     <!-- Centering Container: use normal flow to avoid overlap with next section -->
     <div ref="heroInnerRef" class="w-full max-w-screen-2xl px-6">
 

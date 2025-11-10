@@ -1,31 +1,60 @@
 <template>
-  <div class="min-h-screen bg-white dark:bg-neutral-950 transition-colors duration-200 overflow-x-hidden">
-    <Navbar />
-    <router-view v-slot="{ Component }">
-      <div ref="routeContainer" class="page-transition-layer" :style="pageLayerStyle">
-        <component :is="Component" />
-      </div>
-    </router-view>
-    <!-- 已根据偏好移除过渡期间遮罩层 -->
-    <!-- 仅在首页挂载拖拽组件 -->
-    <DragToTop v-if="dragToTopEnabled && !isMobile" />
-    <ReturnToTopButton />
+  <div class="min-h-screen">
+    <!-- Particle container, fixed to viewport, at z-index 0 -->
+    <div class="fixed top-0 left-0 w-full h-full z-0">
+      <Particles v-bind="finalParticlesProps" />
+    </div>
+
+    <!-- Foreground Content -->
+    <div class="relative z-10">
+      <Navbar />
+      <router-view v-slot="{ Component }">
+        <div ref="routeContainer" class="page-transition-layer" :style="pageLayerStyle">
+          <component :is="Component" />
+        </div>
+      </router-view>
+      <!-- 已根据偏好移除过渡期间遮罩层 -->
+      <!-- 仅在首页挂载拖拽组件 -->
+      <DragToTop v-if="dragToTopEnabled && !isMobile" />
+      <ReturnToTopButton />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import { ref, computed, onMounted, nextTick, onUnmounted, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Navbar from './components/Navbar.vue';
+import Particles from '@/blocks/Backgrounds/Particles/Particles.vue';
+import Aurora from '@/blocks/Backgrounds/Aurora/Aurora.vue';
 import DragToTop from './components/DragToTop.vue';
 import ReturnToTopButton from './components/ReturnToTopButton.vue';
 import { useDevice } from './composables/useDevice.js';
+import { useDark } from '@vueuse/core';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { isMobile } = useDevice();
+const isDark = useDark();
+
+const mouse = reactive({ x: 0, y: 0 });
+
+const particleColor = computed(() => {
+  return isDark.value ? ['#ffffff'] : ['#cccccc'];
+});
+
+const particlesConfig = ref({});
+
+const finalParticlesProps = computed(() => ({
+  ...particlesConfig.value,
+  moveParticlesOnHover: true,
+  particleHoverFactor: 0.5,
+  mouseX: mouse.x,
+  mouseY: mouse.y,
+  particleColors: particleColor.value,
+}));
 
 // 仅在首页启用拖拽组件
 const dragToTopEnabled = computed(() => route.name === 'Home');
@@ -47,8 +76,25 @@ const updateNavbarHeight = () => {
   document.documentElement.style.setProperty('--navbar-height', `${h}px`);
 };
 
+const handleMouseMove = (event) => {
+  if (isMobile.value) return;
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+};
+
 // 初次加载：等待 window.onload（包含图片、样式等资源）
-onMounted(() => {
+onMounted(async () => {
+  window.addEventListener('mousemove', handleMouseMove);
+
+  try {
+    const res = await fetch('/config/particles.json', { cache: 'no-store' });
+    if (res.ok) {
+      particlesConfig.value = await res.json();
+    }
+  } catch (e) {
+    console.warn('Particles config not found or invalid, using defaults.', e);
+  }
+
   const finish = () => { isLoading.value = false; };
   if (document.readyState === 'complete') {
     finish();
@@ -68,6 +114,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('resize', updateNavbarHeight);
   if (__navbarResizeObserver) __navbarResizeObserver.disconnect();
 });

@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white dark:bg-gray-900 flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
+  <main class="flex flex-col min-h-[calc(100vh-var(--navbar-height,0px))]">
     <div :style="wrapperStyle" class="flex flex-col">
       <section ref="pageRef" class="scroll-smooth h-[calc(100vh-var(--navbar-height,0px))] overflow-hidden relative">
         <div class="relative h-full px-6 sm:px-12 flex items-center">
