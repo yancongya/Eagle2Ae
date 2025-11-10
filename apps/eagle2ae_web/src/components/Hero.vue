@@ -268,12 +268,12 @@ const features = computed(() => {
   // Depend on locale to re-compute when language changes
   const _ = locale.value;
   return [
-    { id: 'feature-drag-drop', title: t('hero.featuresTitles.dragDrop'), iconUrl: '/images/features/feature-drag-import.png' },
-    { id: 'feature-format-support', title: t('hero.featuresTitles.formatSupport'), iconUrl: '/images/features/feature-import-mode.png' },
-    { id: 'feature-smart-options', title: t('hero.featuresTitles.smartOptions'), iconUrl: '/images/features/feature-import-behavior.png' },
-    { id: 'feature-auto-sync', title: t('hero.featuresTitles.autoSync'), iconUrl: '/images/features/feature-export-layer.png' },
-    { id: 'feature-presets', title: t('hero.featuresTitles.presets'), iconUrl: '/images/features/feature-presets.png' },
-    { id: 'feature-performance', title: t('hero.featuresTitles.performance'), iconUrl: '/images/features/feature-import-mode.png' },
+    { id: 'feature-drag-drop', title: t('hero.featuresTitles.dragDrop'), iconUrl: '/images/features/feature-drag-import.webp' },
+    { id: 'feature-format-support', title: t('hero.featuresTitles.formatSupport'), iconUrl: '/images/features/feature-import-mode.webp' },
+    { id: 'feature-smart-options', title: t('hero.featuresTitles.smartOptions'), iconUrl: '/images/features/feature-import-behavior.webp' },
+    { id: 'feature-auto-sync', title: t('hero.featuresTitles.autoSync'), iconUrl: '/images/features/feature-export-layer.webp' },
+    { id: 'feature-presets', title: t('hero.featuresTitles.presets'), iconUrl: '/images/features/feature-presets.webp' },
+    { id: 'feature-performance', title: t('hero.featuresTitles.performance'), iconUrl: '/images/features/feature-import-mode.webp' },
   ];
 });
 

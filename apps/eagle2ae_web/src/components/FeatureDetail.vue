@@ -18,7 +18,7 @@
               :style="{ overflow: 'visible' }"
             >
               <SwiperSlide v-for="(src, i) in imageList" :key="i">
-                <img :src="src" :alt="title" class="w-full h-full object-cover rounded-md" />
+                <img :src="src" :alt="title" class="w-full h-full object-cover rounded-md" loading="lazy" />
               </SwiperSlide>
             </Swiper>
             <span class="absolute top-2 left-2 px-2 py-1 text-xs font-medium rounded-md bg-black/50 text-white">
@@ -169,11 +169,11 @@ const swiperRef = ref(null);
 
 // Build image list: prefer imageUrls, fallback to single imageUrl, finally local placeholders
 const defaultPlaceholders = [
-  '/images/features/feature-drag-import.png',
-  '/images/features/feature-import-mode.png',
-  '/images/features/feature-import-behavior.png',
-  '/images/features/feature-export-layer.png',
-  '/images/features/feature-presets.png',
+  '/images/features/feature-drag-import.webp',
+  '/images/features/feature-import-mode.webp',
+  '/images/features/feature-import-behavior.webp',
+  '/images/features/feature-export-layer.webp',
+  '/images/features/feature-presets.webp',
 ];
 const imageList = computed(() => {
   if (props.imageUrls && props.imageUrls.length > 0) return props.imageUrls;

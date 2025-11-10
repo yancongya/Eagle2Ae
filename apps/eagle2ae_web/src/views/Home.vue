@@ -65,149 +65,149 @@ const features = computed(() => {
 
             footerText: 'home.features.dragDrop.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-            ],
+                        ],
 
-          },
+                      },
 
-          {
+                      {
 
-            id: 'feature-format-support',
+                        id: 'feature-format-support',
 
-            title: featureMessages.formatSupport.title,
+                        title: featureMessages.formatSupport.title,
 
-            descriptionLines: featureMessages.formatSupport.desc,
+                        descriptionLines: featureMessages.formatSupport.desc,
 
-            footerText: 'home.features.formatSupport.footer',
+                        footerText: 'home.features.formatSupport.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-            ],
+                        ],
 
-          },
+                      },
 
-          {
+                      {
 
-            id: 'feature-smart-options',
+                        id: 'feature-smart-options',
 
-            title: featureMessages.smartOptions.title,
+                        title: featureMessages.smartOptions.title,
 
-            descriptionLines: featureMessages.smartOptions.desc,
+                        descriptionLines: featureMessages.smartOptions.desc,
 
-            footerText: 'home.features.smartOptions.footer',
+                        footerText: 'home.features.smartOptions.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-            ],
+                        ],
 
-          },
+                      },
 
-          {
+                      {
 
-            id: 'feature-auto-sync',
+                        id: 'feature-auto-sync',
 
-            title: featureMessages.autoSync.title,
+                        title: featureMessages.autoSync.title,
 
-            descriptionLines: featureMessages.autoSync.desc,
+                        descriptionLines: featureMessages.autoSync.desc,
 
-            footerText: 'home.features.autoSync.footer',
+                        footerText: 'home.features.autoSync.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-            ],
+                        ],
 
-          },
+                      },
 
-          {
+                      {
 
-            id: 'feature-presets',
+                        id: 'feature-presets',
 
-            title: featureMessages.presets.title,
+                        title: featureMessages.presets.title,
 
-            descriptionLines: featureMessages.presets.desc,
+                        descriptionLines: featureMessages.presets.desc,
 
-            footerText: 'home.features.presets.footer',
+                        footerText: 'home.features.presets.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-            ],
+                        ],
 
-          },
+                      },
 
-          {
+                      {
 
-            id: 'feature-performance',
+                        id: 'feature-performance',
 
-            title: featureMessages.performance.title,
+                        title: featureMessages.performance.title,
 
-            descriptionLines: featureMessages.performance.desc,
+                        descriptionLines: featureMessages.performance.desc,
 
-            footerText: 'home.features.performance.footer',
+                        footerText: 'home.features.performance.footer',
 
-            imageUrls: [
+                        imageUrls: [
 
-              '/images/features/feature-import-mode.png',
+                          '/images/features/feature-import-mode.webp',
 
-              '/images/features/feature-export-layer.png',
+                          '/images/features/feature-export-layer.webp',
 
-              '/images/features/feature-presets.png',
+                          '/images/features/feature-presets.webp',
 
-              '/images/features/feature-drag-import.png',
+                          '/images/features/feature-drag-import.webp',
 
-              '/images/features/feature-import-behavior.png',
+                          '/images/features/feature-import-behavior.webp',
 
-            ],
+                        ],
 
           },
 
