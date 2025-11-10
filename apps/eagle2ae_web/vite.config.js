@@ -3,11 +3,18 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 import fs from 'fs'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    visualizer({
+      filename: './stats.html', // 分析文件输出路径
+      open: true, // 构建后自动打开分析报告
+      gzipSize: true, // 显示 Gzip 压缩后的大小
+      brotliSize: true, // 显示 Brotli 压缩后的大小
+    }),
     // PWA: 预缓存核心 JSON 与静态资源，提高离线与回访命中率
     VitePWA({
       registerType: 'autoUpdate',
