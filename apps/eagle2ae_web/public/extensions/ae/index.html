@@ -1105,6 +1105,45 @@
             transform: translateY(0);
         }
 
+        /* 主面板按钮图标的平滑过渡 */
+        .icon-btn .icon,
+        .project-action-btn .btn-icon,
+        .btn .btn-icon {
+            transform: scale(0.94) translateY(1px);
+            opacity: 0.85;
+            filter: saturate(0.9);
+            transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease;
+            will-change: transform, opacity, filter;
+        }
+
+        /* 极小屏：主面板按钮切换为图标模式，并平滑到正常大小与不透明 */
+        @media (max-width: 400px) {
+            .project-action-btn {
+                font-size: 0;
+                padding: 6px;
+                min-width: 32px;
+            }
+            .project-action-btn .btn-text {
+                display: none;
+            }
+            .icon-btn .icon,
+            .project-action-btn .btn-icon,
+            .btn .btn-icon {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+                filter: saturate(1);
+            }
+        }
+
+        /* 无障碍偏好：减少动画 */
+        @media (prefers-reduced-motion: reduce) {
+            .icon-btn .icon,
+            .project-action-btn .btn-icon,
+            .btn .btn-icon {
+                transition: none;
+            }
+        }
+
         .log {
             display: flex;
             flex-direction: column;
@@ -2492,6 +2531,19 @@
             font-size: 14px;
         }
 
+        /* 预设管理按钮在极小宽度下切换为图标模式 */
+        @media (max-width: 400px) {
+            .preset-button {
+                font-size: 0;
+                padding: 6px;
+                min-width: 32px;
+            }
+            .preset-button::before {
+                content: attr(data-icon);
+                font-size: 12px;
+            }
+        }
+
         /* UI 设置样式 */
         .ui-settings-group {
             display: flex;
@@ -2581,6 +2633,53 @@
             .ui-toggle-button::before {
                 content: attr(data-icon);
                 font-size: 12px;
+            }
+        }
+
+        /* 平滑过渡：为伪元素与 SVG/IMG 添加动画 */
+        .preset-button::before,
+        .ui-toggle-button::before {
+            display: inline-block;
+            transform: scale(0.94) translateY(1px);
+            opacity: 0.85;
+            filter: saturate(0.9);
+            transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease;
+            will-change: transform, opacity, filter;
+        }
+
+        .preset-button svg,
+        .ui-toggle-button svg,
+        .preset-button img,
+        .ui-toggle-button img {
+            transform: scale(0.94) translateY(1px);
+            opacity: 0.85;
+            filter: saturate(0.9);
+            transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease;
+            will-change: transform, opacity, filter;
+        }
+
+        @media (max-width: 400px) {
+            .preset-button::before,
+            .ui-toggle-button::before,
+            .preset-button svg,
+            .ui-toggle-button svg,
+            .preset-button img,
+            .ui-toggle-button img {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+                filter: saturate(1);
+            }
+        }
+
+        /* 无障碍偏好：减少动画 */
+        @media (prefers-reduced-motion: reduce) {
+            .preset-button::before,
+            .ui-toggle-button::before,
+            .preset-button svg,
+            .ui-toggle-button svg,
+            .preset-button img,
+            .ui-toggle-button img {
+                transition: none;
             }
         }
 
@@ -4812,15 +4911,15 @@
                 <div class="settings-section" id="preset-management-section">
                     <div class="settings-section-title" data-i18n="common.presetManagement">预设管理</div>
                     <div class="preset-management-buttons">
-                        <button id="reset-settings-btn" class="preset-button" data-i18n-title="tooltips.resetToDefault"
+                        <button id="reset-settings-btn" class="preset-button" data-i18n-title="tooltips.resetToDefault" data-icon="♻"
                             data-i18n="common.resetToDefault">重置默认</button>
-                        <button id="export-presets-btn" class="preset-button"
+                        <button id="export-presets-btn" class="preset-button" data-icon="📂"
                             data-i18n-title="tooltips.openPresetDirectory"
                             data-i18n="common.openPresetDirectory">打开预设目录</button>
-                        <button id="download-preset-btn" class="preset-button" 
+                        <button id="download-preset-btn" class="preset-button" data-icon="⬇"
                             data-i18n-title="tooltips.downloadPresetFile"
                             data-i18n="common.downloadPresetFile">下载预设文件</button>
-                        <button id="open-preset-btn" class="preset-button" 
+                        <button id="open-preset-btn" class="preset-button" data-icon="📄"
                             data-i18n-title="tooltips.openPresetFile"
                             data-i18n="common.openPresetFile">打开预设文件</button>
                         <button id="choose-presets-dir-btn" class="preset-button icon"

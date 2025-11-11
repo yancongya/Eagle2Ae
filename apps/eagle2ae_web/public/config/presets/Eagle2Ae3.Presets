@@ -3,7 +3,7 @@
     "mode": "project_adjacent",
     "projectAdjacentFolder": "Eagle_Assets",
     "customFolderPath": "",
-    "addToComposition": true,
+    "addToComposition": false,
     "noImportSubMode": "normal",
     "timelineOptions": {
       "enabled": true,
@@ -25,7 +25,8 @@
       "customExportPath": "",
       "autoCopy": true,
       "addTimestamp": false,
-      "createSubfolders": false
+      "createSubfolders": false,
+      "burnAfterReading": false
     }
   },
   "userPreferences": {
@@ -33,10 +34,13 @@
     "favoriteFolder": "",
     "autoSaveSettings": true,
     "showWelcomeWizard": true,
-    "theme": "ae_native",
+    "theme": "dark",
     "communicationPort": 8080,
     "lastUsedExportMode": "project_adjacent",
-    "favoriteExportFolder": ""
+    "favoriteExportFolder": "",
+    "autoConnect": true,
+    "showNotifications": true,
+    "language": "zh-CN"
   },
   "uiSettings": {
     "theme": true,
@@ -45,7 +49,7 @@
     "projectInfo": true,
     "logPanel": true,
     "header": true,
-    "fullscreen": false
+    "fullscreen": true
   },
-  "exportedAt": "2025-11-05T09:06:36.306Z"
+  "exportedAt": "2025-11-11T02:28:29.388Z"
 }

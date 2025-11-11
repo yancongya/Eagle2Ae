@@ -1,5 +1,5 @@
 <template>
-  <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm transition-colors duration-300 w-full">
+  <header class="fixed top-0 left-0 right-0 z-50 bg-white/30 dark:bg-neutral-900/30 backdrop-blur-md border-b border-white/20 dark:border-white/10 transition-colors duration-300 w-full">
     <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center">
       <!-- Logo -->
       <div class="flex-shrink-0 font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
@@ -77,7 +77,7 @@
     </nav>
     <!-- Mobile menu -->
     <transition name="mobile-menu">
-      <div v-show="isMobileOpen" ref="mobileMenuRef" @mouseleave="!isMobile && (isMobileOpen = false)" class="absolute left-0 right-0 top-full md:hidden bg-white/80 dark:bg-gray-900/85 backdrop-blur-md border-t border-white/10 dark:border-white/10 shadow-lg rounded-b-2xl z-[60] max-h-[75vh] overflow-y-auto">
+      <div v-show="isMobileOpen" ref="mobileMenuRef" @mouseleave="!isMobile && (isMobileOpen = false)" class="absolute left-0 right-0 top-full md:hidden bg-white/30 dark:bg-neutral-900/30 backdrop-blur-md border-t border-white/20 dark:border-white/10 rounded-b-xl z-50 max-h-[75vh] overflow-y-auto">
         <div class="w-full px-4 py-3 sm:py-4 flex flex-col space-y-2">
           <router-link to="/" class="mobile-nav-link">
             <span class="relative inline-block group">
@@ -403,20 +403,16 @@ const prefetchRoute = (routeName) => {
   }
 }
 
-/* Fallback for CSS transition */
+/* Fallback for CSS transition (仅在 JS 动画不可用时生效) */
 .mobile-menu-enter-active, .mobile-menu-leave-active {
-  transition: max-height 250ms ease, opacity 200ms ease, transform 200ms ease;
+  transition: max-height 250ms ease;
   overflow: hidden;
 }
 .mobile-menu-enter-from, .mobile-menu-leave-to {
   max-height: 0;
-  opacity: 0;
-  transform: translateY(-4px);
 }
 .mobile-menu-enter-to, .mobile-menu-leave-from {
   max-height: 500px;
-  opacity: 1;
-  transform: translateY(0);
 }
 
 /* New Interactive Link Styles */
