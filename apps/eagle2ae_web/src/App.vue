@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen">
+  <div class="min-h-screen overflow-x-hidden">
     <!-- Particle container, fixed to viewport, at z-index 0 -->
     <div class="fixed top-0 left-0 w-full h-full z-0">
       <Particles v-bind="finalParticlesProps" />
