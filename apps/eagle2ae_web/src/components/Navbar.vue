@@ -1,6 +1,6 @@
 <template>
-  <header class="fixed top-0 left-0 right-0 z-50 bg-white/30 dark:bg-neutral-900/30 backdrop-blur-md border-b border-white/20 dark:border-white/10 transition-colors duration-300 w-full">
-    <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center">
+  <header class="fixed top-0 left-0 right-0 z-50 w-full">
+    <nav class="w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center bg-white/30 dark:bg-neutral-900/30 backdrop-blur-sm border-b border-white/20 dark:border-white/10 transition-colors duration-300">
       <!-- Logo -->
       <div class="flex-shrink-0 font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-100 flex items-center">
         <router-link to="/" class="flex items-center group">
@@ -77,7 +77,7 @@
     </nav>
     <!-- Mobile menu -->
     <transition name="mobile-menu">
-      <div v-show="isMobileOpen" ref="mobileMenuRef" @mouseleave="!isMobile && (isMobileOpen = false)" class="absolute left-0 right-0 top-full md:hidden bg-white/30 dark:bg-neutral-900/30 backdrop-blur-md border-t border-white/20 dark:border-white/10 rounded-b-xl z-50 max-h-[75vh] overflow-y-auto">
+      <div v-show="isMobileOpen" ref="mobileMenuRef" @mouseleave="!isMobile && (isMobileOpen = false)" class="absolute left-0 right-0 top-full md:hidden bg-white/30 dark:bg-neutral-900/30 backdrop-blur-sm border-t border-white/20 dark:border-white/10 rounded-b-xl z-50 max-h-[75vh] overflow-y-auto hide-scrollbar">
         <div class="w-full px-4 py-3 sm:py-4 flex flex-col space-y-2">
           <router-link to="/" class="mobile-nav-link">
             <span class="relative inline-block group">
