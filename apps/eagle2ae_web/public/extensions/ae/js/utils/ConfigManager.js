@@ -10,7 +10,7 @@ class ConfigManager {
         this.currentPanelConfig = null;
         // 🔥 使用面板特定的配置文件路径
         const presetFileName = this.ae.getPresetFileName();
-        this.configFilePath = `Eagle2Ae-Ae/presets/${presetFileName}`;
+        this.configFilePath = presetFileName; // 修复：直接使用文件名，因为它与index.html在同一目录
         this.saveTimeout = null;
         console.log(`[ConfigManager] 配置文件路径: ${this.configFilePath}`);
     }
@@ -144,7 +144,7 @@ class ConfigManager {
                 hasLatestConfig: !!latestConfig,
                 latestPanels: latestConfig?.panels ? Object.keys(latestConfig.panels) : [],
                 configToSavePanels: configToSave?.panels ? Object.keys(configToSave.panels) : [],
-                currentPanelId: this.ae.currentPanelId
+                currentPanelId: this.ae.panelId
             });
             
             if (latestConfig) {
@@ -157,12 +157,12 @@ class ConfigManager {
                 }
                 
                 // 从 configToSave 中提取当前面板的配置
-                if (configToSave.panels && configToSave.panels[this.ae.currentPanelId]) {
-                    finalConfig.panels[this.ae.currentPanelId] = configToSave.panels[this.ae.currentPanelId];
-                    console.log(`[ConfigManager] ✅ 已合并配置，只更新面板: ${this.ae.currentPanelId}`);
+                if (configToSave.panels && configToSave.panels[this.ae.panelId]) {
+                    finalConfig.panels[this.ae.panelId] = configToSave.panels[this.ae.panelId];
+                    console.log(`[ConfigManager] ✅ 已合并配置，只更新面板: ${this.ae.panelId}`);
                     console.log(`[ConfigManager] 📊 合并后的面板列表:`, Object.keys(finalConfig.panels));
                 } else {
-                    console.warn(`[ConfigManager] ⚠️ configToSave 中没有找到面板 ${this.ae.currentPanelId} 的配置`);
+                    console.warn(`[ConfigManager] ⚠️ configToSave 中没有找到面板 ${this.ae.panelId} 的配置`);
                     console.warn(`[ConfigManager] configToSave 结构:`, {
                         hasPanels: !!configToSave.panels,
                         panels: configToSave.panels ? Object.keys(configToSave.panels) : 'undefined'
@@ -177,7 +177,7 @@ class ConfigManager {
             // 更新元数据
             finalConfig.metadata = finalConfig.metadata || {};
             finalConfig.metadata.lastModified = new Date().toISOString();
-            finalConfig.metadata.modifiedBy = this.ae.currentPanelId;
+            finalConfig.metadata.modifiedBy = this.ae.panelId;
             
             const configJSON = JSON.stringify(finalConfig, null, 2);
             console.log('[ConfigManager] 开始保存配置文件...');
@@ -506,16 +506,10 @@ class ConfigManager {
             // 🔥 创建新格式的配置
             const newConfig = this.getDefaultConfig();
             newConfig.panels = {
-                'com.yanrouya.eagle2ae.panel1': panel1Config,
-                'com.yanrouya.eagle2ae.panel2': this.getDefaultPanelConfig(), // panel2 使用默认配置
-                'com.yanrouya.eagle2ae.panel3': this.getDefaultPanelConfig()  // panel3 使用默认配置
+                'panel1': panel1Config,
+                'panel2': this.getDefaultPanelConfig(), // panel2 使用默认配置
+                'panel3': this.getDefaultPanelConfig()  // panel3 使用默认配置
             };
-            
-            // 更新面板名称
-            newConfig.panels['com.yanrouya.eagle2ae.panel2'].name = '快速预览';
-            newConfig.panels['com.yanrouya.eagle2ae.panel2'].description = '快速预览的配置';
-            newConfig.panels['com.yanrouya.eagle2ae.panel3'].name = '音频项目';
-            newConfig.panels['com.yanrouya.eagle2ae.panel3'].description = '音频项目的配置';
             
             // 更新元数据
             newConfig.metadata.migratedFrom = this.fullConfig && !this.fullConfig.panels ? 'configFile' : 'localStorage';
@@ -639,17 +633,12 @@ class ConfigManager {
      * 获取默认面板配置
      */
     getDefaultPanelConfig() {
-        const panelNames = {
-            'com.yanrouya.eagle2ae.panel1': '默认配置',
-            'com.yanrouya.eagle2ae.panel2': '快速预览',
-            'com.yanrouya.eagle2ae.panel3': '音频项目'
-        };
-        
-        const panelName = panelNames[this.ae.currentPanelId] || '未知面板';
+        // 使用 AEExtension 实例的 getPanelDisplayName 方法获取正确的面板显示名称
+        const panelName = this.ae.getPanelDisplayName();
         
         return {
-            name: panelName,
-            description: `${panelName}的配置`,
+            name: panelName, // 使用正确的显示名称
+            description: `${panelName}的配置`, // 描述也使用正确的名称
             lastUsed: new Date().toISOString(),
             importSettings: this.getDefaultImportSettings(),
             userPreferences: this.getDefaultUserPreferences(),
@@ -782,16 +771,16 @@ class ConfigManager {
         try {
             clearTimeout(this.saveTimeout);
             this.saveTimeout = setTimeout(async () => {
-                console.log('[ConfigManager] 执行自动保存');
+                this.ae.log('[ConfigManager] 正在执行自动保存...', 'info');
                 const result = await this.savePanelConfig();
                 if (result.success) {
-                    console.log('[ConfigManager] 自动保存成功');
+                    this.ae.log('[ConfigManager] 预设已自动保存到文件。', 'success');
                 } else {
-                    console.error('[ConfigManager] 自动保存失败:', result.error);
+                    this.ae.log(`[ConfigManager] 自动保存失败: ${result.error}`, 'error');
                 }
             }, 500);  // 500ms 防抖
         } catch (error) {
-            console.error('[ConfigManager] 防抖保存失败:', error);
+            this.ae.log(`[ConfigManager] 防抖保存机制异常: ${error.message}`, 'error');
         }
     }
 
@@ -802,35 +791,35 @@ class ConfigManager {
      */
     async init() {
         try {
-            console.log('[ConfigManager] 开始配置初始化流程...');
+            this.ae.log('[ConfigManager] 开始配置初始化流程...', 'info');
             
             // 🔥 0. 首次运行检查：如果从未初始化过，清除所有旧数据
             const isFirstRun = !localStorage.getItem('eagle2ae_config_initialized');
             if (isFirstRun) {
-                console.log('[ConfigManager] 检测到首次运行，清除旧数据...');
+                this.ae.log('[ConfigManager] 检测到首次运行，清除旧数据...', 'info');
                 localStorage.removeItem('eagle2ae_migrated');
                 localStorage.removeItem('eagle2ae_importSettings');
                 localStorage.removeItem('eagle2ae_userPreferences');
                 localStorage.removeItem('eagle2ae_recentFolders');
                 localStorage.setItem('eagle2ae_config_initialized', 'true');
-                console.log('[ConfigManager] ✅ 旧数据已清除');
+                this.ae.log('[ConfigManager] ✅ 旧数据已清除', 'success');
             }
             
             // 1. 加载配置文件
             await this.loadConfigFile();
-            console.log('[ConfigManager] ✅ 配置文件加载完成');
+            this.ae.log('[ConfigManager] 预设文件加载完成。', 'success');
             
             // 2. 检查并执行迁移
             if (this.checkIfNeedsMigration()) {
-                console.log('[ConfigManager] 执行配置迁移...');
+                this.ae.log('[ConfigManager] 检测到旧配置，开始迁移...', 'info');
                 const migrationResult = await this.migrateOldConfig();
                 if (migrationResult.success) {
                     // 🔥 迁移成功后，fullConfig 已经是新格式了，不需要重新加载
-                    console.log('[ConfigManager] ✅ 配置迁移完成');
+                    this.ae.log('[ConfigManager] ✅ 配置迁移成功', 'success');
                 } else {
-                    console.warn('[ConfigManager] ⚠️ 配置迁移失败:', migrationResult.error);
+                    this.ae.log(`[ConfigManager] ⚠️ 配置迁移失败: ${migrationResult.error}`, 'warning');
                     // 迁移失败，创建默认的新格式配置
-                    console.log('[ConfigManager] 创建默认的新格式配置...');
+                    this.ae.log('[ConfigManager] 创建默认的新格式配置...', 'info');
                     this.fullConfig = this.getDefaultConfig();
                     // 为所有三个面板创建默认配置
                     this.fullConfig.panels['com.yanrouya.eagle2ae.panel1'] = this.getDefaultPanelConfig();
@@ -842,13 +831,13 @@ class ConfigManager {
                     this.fullConfig.panels['com.yanrouya.eagle2ae.panel3'].name = '音频项目';
                     // 保存新配置
                     await this.saveConfigFile();
-                    console.log('[ConfigManager] ✅ 默认配置已创建并保存');
+                    this.ae.log('[ConfigManager] ✅ 默认配置已创建并保存', 'success');
                 }
             }
             
             // 🔥 3. 确保配置文件是新格式
             if (!this.fullConfig.panels) {
-                console.warn('[ConfigManager] ⚠️ 配置文件不是新格式，强制转换...');
+                this.ae.log('[ConfigManager] ⚠️ 配置文件不是新格式，强制转换...', 'warning');
                 const oldConfig = this.fullConfig;
                 this.fullConfig = this.getDefaultConfig();
                 // 将旧配置转换为 panel1 的配置
@@ -866,29 +855,30 @@ class ConfigManager {
                 // 保存新格式配置
                 await this.saveConfigFile();
                 localStorage.setItem('eagle2ae_migrated', 'true');
-                console.log('[ConfigManager] ✅ 配置已转换为新格式并保存');
+                this.ae.log('[ConfigManager] ✅ 配置已转换为新格式并保存', 'success');
             }
             
             // 4. 加载当前面板配置
             this.loadPanelConfig();
-            console.log('[ConfigManager] ✅ 面板配置加载完成');
+            this.ae.log('[ConfigManager] 当前面板配置已加载。', 'info');
             
             // 5. 应用配置到 settingsManager
             this.applyPanelConfigToSettingsManager();
-            console.log('[ConfigManager] ✅ 配置应用到 settingsManager 完成');
+            this.ae.log('[ConfigManager] 配置已应用到当前会话。', 'info');
             
             // 6. 设置自动保存监听
             this.setupAutoSave();
-            console.log('[ConfigManager] ✅ 自动保存设置完成');
+            this.ae.log('[ConfigManager] 自动保存机制已启动。', 'success');
             
-            console.log('[ConfigManager] 🎉 配置初始化流程完成');
+            this.ae.log('[ConfigManager] 🎉 配置初始化流程完成。', 'success');
             
         } catch (error) {
             console.error('[ConfigManager] ❌ 配置初始化失败:', error);
+            this.ae.log(`[ConfigManager] ❌ 配置初始化失败: ${error.message}`, 'error');
             
             // 降级方案：使用默认配置
             try {
-                console.log('[ConfigManager] 使用降级方案...');
+                this.ae.log('[ConfigManager] 使用降级方案...', 'warning');
                 this.fullConfig = this.getDefaultConfig();
                 this.fullConfig.panels['com.yanrouya.eagle2ae.panel1'] = this.getDefaultPanelConfig();
                 this.fullConfig.panels['com.yanrouya.eagle2ae.panel2'] = this.getDefaultPanelConfig();
@@ -900,9 +890,10 @@ class ConfigManager {
                 this.applyPanelConfigToSettingsManager();
                 // 尝试保存
                 await this.saveConfigFile();
-                console.log('[ConfigManager] ✅ 降级方案完成');
+                this.ae.log('[ConfigManager] ✅ 降级方案完成，已生成默认配置。', 'success');
             } catch (fallbackError) {
                 console.error('[ConfigManager] ❌ 降级方案也失败:', fallbackError);
+                this.ae.log(`[ConfigManager] ❌ 降级方案也失败: ${fallbackError.message}`, 'error');
             }
         }
     }

@@ -90,6 +90,7 @@ class ConnectionMonitor {
 class AEExtension {
     constructor() {
         this.csInterface = new CSInterface();
+        this.configManager = null; // 🔥 配置管理器实例
 
         // 🔥 识别当前面板 ID
         this.panelId = this.getPanelId();
@@ -207,17 +208,17 @@ class AEExtension {
         // 确保预设目录已创建
         await this.ensurePresetsFolderReady();
 
-        // 🔥 延迟加载预设，确保 DOM 完全准备好
-        // 等待 init() 中的 2 秒延迟完成后再加载预设
-        setTimeout(async () => {
-            console.log(`[${this.panelId}] 📂 准备加载预设文件: ${this.getPresetFileName()}`);
-            // 启动时自动读取预设并设置自动同步
-            await this.loadPresetsFromDisk();
-            this.setupAutoPresetSync();
-            // 更新打开预设目录按钮的悬浮提示
-            this.updateOpenPresetsBtnTooltip();
-            console.log(`[${this.panelId}] ✅ 预设加载完成`);
-        }, 2500); // 比 init() 中的延迟稍长一点
+        // 🔥 初始化配置管理器，它将处理预设的加载、应用和自动保存
+        try {
+            // this.configManager 已在构造函数中声明
+            this.configManager = new ConfigManager(this);
+            await this.configManager.init();
+            // init方法内部已有详细日志，这里只记录一个总体成功状态
+            this.log('配置系统已成功启动', 'success');
+        } catch (error) {
+            this.log(`配置系统初始化失败: ${error.message}`, 'error');
+            console.error('ConfigManager 初始化过程中发生严重错误:', error);
+        }
 
         // 初始尝试更新演示模式面具图标的悬浮提示（若演示模式已启用且图标已出现）
         setTimeout(() => this.updateDemoIndicatorTooltip(), 300);
@@ -297,6 +298,32 @@ class AEExtension {
     getPresetFileName() {
         const panelNumber = this.panelId.replace('panel', '');
         return `Eagle2Ae${panelNumber}.Presets`;
+    }
+
+    /**
+     * 从 localStorage 获取 UI 面板组设置
+     * @returns {Object} UI 设置对象
+     */
+    getUISettingsFromLocalStorage() {
+        try {
+            const saved = this.getPanelLocalStorage('uiSettings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('无法读取 uiSettings:', e);
+        }
+
+        // 返回默认值
+        return {
+            theme: true,
+            language: true,
+            log: true,
+            projectInfo: true,
+            logPanel: true,
+            header: true,
+            fullscreen: false
+        };
     }
 
     /**
@@ -6675,12 +6702,7 @@ class AEExtension {
                     this.log(`高级导入模式已更改为: ${radio.value}`, 'info');
 
                     // 先保存到设置，避免UI刷新把选择回滚
-                    try {
-                        this.settingsManager.updateField('mode', radio.value, false);
-                    } catch (e) {
-                        // 若settingsManager尚未初始化，忽略错误但继续刷新UI
-                        this.log(`更新导入模式到设置失败: ${e.message}`, 'debug');
-                    }
+                    this.settingsManager.updateField('mode', radio.value, false);
 
                     // 显示相应的模态框
                     if (radio.value === 'project_adjacent') {
@@ -7002,21 +7024,25 @@ class AEExtension {
         }
 
         // 通信端口设置
-        const communicationPortInput = document.getElementById('communication-port');
+        const communicationPortInput = document.getElementById('communicationPort'); // 🔥 修正ID
         if (!communicationPortInput) {
-            this.log('⚠️ 找不到通信端口输入框', 'warning');
+            this.log('⚠️ 找不到通信端口输入框 (ID: communicationPort)', 'error');
         } else {
+            // 监听变更事件以自动保存
             communicationPortInput.addEventListener('change', (event) => {
-                const port = parseInt(communicationPortInput.value);
-                if (port >= 1024 && port <= 65535) {
-                    const oldPort = this.currentPort;
-                    this.settingsManager.updatePreference('communicationPort', port);
-
-                    // 异步处理端口同步，但不阻塞事件处理
-                    this.handlePortChange(oldPort, port);
+                const newPort = parseInt(event.target.value, 10);
+                if (!isNaN(newPort) && newPort >= 1024 && newPort <= 65535) {
+                    const oldPort = this.settingsManager.getPreferences().communicationPort;
+                    // 更新内存中的设置，这将触发自动保存
+                    this.settingsManager.updatePreference('communicationPort', newPort);
+                    // 异步处理端口切换逻辑
+                    if (oldPort !== newPort) {
+                        this.handlePortChange(oldPort, newPort);
+                    }
                 } else {
                     this.log('端口号必须在1024-65535范围内', 'error');
-                    communicationPortInput.value = this.currentPort;
+                    // 恢复为旧值
+                    event.target.value = this.settingsManager.getPreferences().communicationPort;
                 }
             });
         }

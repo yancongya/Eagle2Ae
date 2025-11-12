@@ -555,86 +555,169 @@ class DemoI18nHelper {
 }
 
 // 全局初始化Demo国际化辅助类
+
 window.DemoI18nHelper = new DemoI18nHelper();
 
+
+
 // 初次加载时注入 demo 文案，确保 demo-apis 可用
+
 if (window.DemoI18nHelper) {
+
   try {
+
     window.DemoI18nHelper.installIntoI18n();
+
   } catch (e) {
+
     console.warn('Initial demo i18n injection failed:', e);
+
   }
+
 }
+
+
 
 // 等待 i18n 完成翻译加载后再次注入，避免被 loadTranslations 覆盖
+
 try {
+
   if (window.i18n?.ready && typeof window.i18n.ready.then === 'function') {
+
     window.i18n.ready.then(() => {
+
       try {
+
         window.DemoI18nHelper?.installIntoI18n();
+
       } catch (e) {
+
         console.warn('Re-inject demo i18n after i18n.ready failed:', e);
+
       }
+
     });
+
   }
+
 } catch (e) {
+
   console.warn('Hook i18n.ready for demo injection failed:', e);
+
 }
 
+
+
 // 监听语言变化事件，当语言变化时更新演示模式数据
+
 document.addEventListener('DOMContentLoaded', function() {
+
   // 监听语言变化事件
+
   const originalSwitchLanguage = window.i18n?.switchLanguage;
+
   if (window.i18n && originalSwitchLanguage) {
+
     // 保存原始的switchLanguage方法
+
     window.i18n.originalSwitchLanguage = originalSwitchLanguage;
+
     
+
     // 重写switchLanguage方法以支持演示模式更新（只刷新 AE/Eagle 文本，不更改连接状态）
+
     window.i18n.switchLanguage = function(lang) {
+
       // 确保语言设置被正确保存到localStorage
+
       try {
+
         localStorage.setItem('language', lang);
+
         localStorage.setItem('lang', lang);
+
       } catch (e) {
+
         console.warn('Failed to save language to localStorage:', e);
+
       }
+
       
+
       // 更新演示模式数据（如果存在）
+
       try {
+
         // 语言切换时重新注入 demo 文案
+
         window.DemoI18nHelper?.installIntoI18n();
+
       } catch (e) {
+
         console.warn('Failed to refresh demo i18n on language switch:', e);
+
       }
+
+
 
       if (window.DemoI18nHelper && window.demoMode && window.demoMode.config) {
+
         // 重新加载配置以确保使用正确的语言数据
+
         window.demoMode.config = window.demoMode.getDefaultConfig();
+
         
+
         // 如果演示模式UI已经激活，仅刷新 AE/Eagle 文本数据，避免触发连接状态变更
+
         if (window.demoMode.setAEInfo && window.demoMode.setEagleInfo) {
+
           try {
+
             window.demoMode.setAEInfo();
+
             window.demoMode.setEagleInfo();
+
           } catch (e) {
+
             console.warn('刷新 AE/Eagle 文本失败:', e);
+
           }
+
         }
 
+
+
         // 语言切换后同步 DemoAPIs 的翻译引用，确保日志/标签立即生效
+
         try {
+
           if (window.demoMode.demoAPIs) {
+
             window.demoMode.demoAPIs.t = window.i18n?.translations || window.demoMode.demoAPIs.t;
+
           }
+
         } catch (e) {
+
           console.warn('刷新 DemoAPIs 文案失败:', e);
+
         }
+
       }
+
       
+
       // 调用原始方法
+
       const result = this.originalSwitchLanguage(lang);
+
       
+
       return result;
+
     };
+
   }
+
 });

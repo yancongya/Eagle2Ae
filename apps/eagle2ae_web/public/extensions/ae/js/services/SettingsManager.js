@@ -439,6 +439,9 @@ class SettingsManager {
     // 更新用户偏好
     updatePreference(key, value) {
         try {
+            const oldValue = this.preferences[key];
+            if (oldValue === value) return { success: true }; // 值未变化
+
             this.preferences[key] = value;
 
             // 保存到localStorage
@@ -446,6 +449,12 @@ class SettingsManager {
                 this.STORAGE_KEYS.USER_PREFERENCES,
                 JSON.stringify(this.preferences)
             );
+
+            // 🔥 添加日志记录
+            console.log(`[SettingsManager] 偏好设置 '${key}' 已更新为: ${value}`);
+            if (window.eagleToAeApp && typeof window.eagleToAeApp.log === 'function') {
+                window.eagleToAeApp.log(`[设置] 偏好设置 '${key}' 已更新为: ${value}`, 'info');
+            }
 
             // 触发变更事件
             this.notifyListeners('preferences', this.preferences);

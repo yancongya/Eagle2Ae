@@ -6101,6 +6101,7 @@
 
     <!-- 国际化辅助与主逻辑 -->
     <script src="js/i18n/helpers.js"></script>
+    <script src="js/utils/ConfigManager.js"></script>
     <script src="js/main.js"></script>
 
     <script>
@@ -6863,8 +6864,8 @@
                                 console.log(`[UI Settings] 设置已保存: ${key} = ${uiSettings[key]}`);
                                 
                                 // 触发预设自动保存
-                                if (window.eagle2ae && typeof window.eagle2ae.savePresetsSilently === 'function') {
-                                    window.eagle2ae.savePresetsSilently();
+                                if (window.eagleToAeApp && typeof window.eagleToAeApp.savePresetsSilently === 'function') {
+                                    window.eagleToAeApp.savePresetsSilently();
                                 }
                             } catch (e) {
                                 console.warn('[UI Settings] 无法保存设置:', e);
