@@ -1453,16 +1453,14 @@
         .settings-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
-        }
-
-        .settings-section {
-            margin-bottom: 12px;
-            padding: 12px;
-            background: #1e1e1e;
-            border-radius: 6px;
-            border: 1px solid #444;
-        }
+            padding: 4px; /* 进一步减小内边距以实现更小的左右间隔 */
+.settings-section {
+    margin-bottom: 4px; /* 进一步减小每个设置组的底部外边距 */
+    padding: 8px; /* 减小每个设置组的内边距 */
+    background: #1e1e1e;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
 
         .settings-section-title {
             font-size: 12px;
@@ -1471,8 +1469,30 @@
             margin-bottom: 8px;
             padding-bottom: 4px;
             border-bottom: 1px solid #444;
+            transition: font-size 0.2s ease; /* Add transition */
         }
-
+        
+        /* 响应式：小屏幕下缩小面板组标题 */
+        @media (max-width: 480px) {
+            .settings-section-title {
+                font-size: 11px;
+            }
+        }
+        
+        /* 响应式：超小屏幕下进一步缩小面板组标题 */
+        @media (max-width: 360px) {
+            .settings-section-title {
+                font-size: 10px;
+                margin-bottom: 6px; /* 调整边距 */
+            }
+        }
+        
+        /* 响应式：极小屏幕下隐藏面板组标题 */
+        @media (max-width: 200px) { /* Changed from 320px to 200px */
+            .settings-section-title {
+                display: none;
+            }
+        }
         .settings-subsection-title {
             font-size: 11px;
             font-weight: 600;
@@ -3761,7 +3781,13 @@
             font-size: 11px;
             flex: 1;
         }
-
+        
+        .setting-item label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0; /* Allow flex item to shrink */
+        }
         .setting-label {
             color: #999;
             font-weight: normal;
