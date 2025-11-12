@@ -5958,9 +5958,9 @@ class AEExtension {
     // 获取AE版本信息
     getAEVersion() {
         try {
-            const versionElement = document.getElementById('ae-version');
+            const versionElement = document.getElementById('ae-version-display');
             if (!versionElement) {
-                console.error('❌ 未找到ae-version元素');
+                console.error('❌ 未找到ae-version-display元素');
                 return;
             }
 
@@ -5992,7 +5992,7 @@ class AEExtension {
             }
         } catch (error) {
             console.error('获取AE版本失败:', error);
-            const versionElement = document.getElementById('ae-version');
+            const versionElement = document.getElementById('ae-version-display');
             if (versionElement) {
                 versionElement.textContent = '获取失败';
                 versionElement.removeAttribute('title');

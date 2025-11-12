@@ -1332,89 +1332,45 @@ async function initializeDemoMode() {
 
 // 尽早初始化演示模式，在main.js之前
 (function() {
-    // 立即检查环境并初始化 - 使用简化但更严格的检测
-    let isCEP = false;
-
-    if (window.__adobe_cep__) {
-        isCEP = true;
-    } else if (window.cep && window.cep.process) {
-        isCEP = true;
-    } else if (typeof CSInterface !== 'undefined') {
-        // 尝试更严格的检测
-        try {
-            const cs = new CSInterface();
-            const hostEnv = cs.getHostEnvironment();
-            if (hostEnv && hostEnv.appName) {
-                isCEP = true;
-            }
-        } catch (e) {
-            // CSInterface存在但不可用，判定为Web环境
-            isCEP = false;
+    // 统一在 DOMContentLoaded 后初始化，以修复竞态条件
+    const init = () => {
+        let isCEP = false;
+        if (window.__adobe_cep__ || (window.cep && window.cep.process)) {
+            isCEP = true;
+        } else if (typeof CSInterface !== 'undefined') {
+            try {
+                const cs = new CSInterface();
+                if (cs.getHostEnvironment()) isCEP = true;
+            } catch (e) { isCEP = false; }
         }
-    }
 
-    // console.log('🔍 早期环境检测结果:', isCEP ? 'CEP环境' : 'Web环境');
-
-    if (!isCEP) {
-        // 非CEP环境，立即初始化演示模式并启用网络拦截
-        // console.log('🎭 检测到非CEP环境，立即初始化演示模式并启用网络拦截');
-
-        // 立即进行基础的网络拦截，防止任何早期的网络请求
-        const originalFetch = window.fetch;
-        const originalWebSocket = window.WebSocket;
-
-        // 临时拦截，直到完整的演示模式初始化完成
-        window.fetch = async function(url, options) {
-            if (typeof url === 'string' && (url.includes('localhost:8080') || url.includes('127.0.0.1:8080'))) {
-                console.log('🎭 早期拦截Eagle API请求:', url);
-                return new Response(JSON.stringify({
-                    success: true,
-                    message: '演示模式早期拦截响应',
-                    demo: true
-                }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-            return originalFetch(url, options);
-        };
-
-        window.WebSocket = function(url) {
-            if (url.includes('localhost:8080') || url.includes('127.0.0.1:8080')) {
-                console.log('🎭 早期拦截WebSocket连接:', url);
-                // 返回一个基础的模拟WebSocket
-                return {
-                    readyState: 1,
-                    send: () => console.log('🎭 早期模拟WebSocket发送'),
-                    close: () => console.log('🎭 早期模拟WebSocket关闭'),
-                    onopen: null,
-                    onclose: null,
-                    onmessage: null,
-                    onerror: null
-                };
-            }
-            return new originalWebSocket(url);
-        };
-
-        // 立即初始化完整的演示模式
+        if (!isCEP) {
+            // 临时拦截网络请求，直到完整演示模式启动
+            const originalFetch = window.fetch;
+            window.fetch = async function(url, options) {
+                if (typeof url === 'string' && (url.includes('localhost:8080') || url.includes('127.0.0.1:8080'))) {
+                    return new Response(JSON.stringify({ success: true, message: '演示模式早期拦截响应', demo: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                }
+                return originalFetch(url, options);
+            };
+            const originalWebSocket = window.WebSocket;
+            window.WebSocket = function(url) {
+                if (url.includes('localhost:8080') || url.includes('127.0.0.1:8080')) {
+                    return { readyState: 1, send: () => {}, close: () => {}, onopen: null, onclose: null, onmessage: null, onerror: null };
+                }
+                return new originalWebSocket(url);
+            };
+        }
+        
         initializeDemoMode().catch(error => {
-            console.error('❌ 演示模式异步初始化失败:', error);
+            console.error('❌ 演示模式初始化失败:', error);
         });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        // CEP环境，正常初始化流程
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                initializeDemoMode().catch(error => {
-                    console.error('❌ CEP环境演示模式初始化失败:', error);
-                });
-            });
-        } else {
-            setTimeout(() => {
-                initializeDemoMode().catch(error => {
-                    console.error('❌ CEP环境延迟演示模式初始化失败:', error);
-                });
-            }, 50); // 更早的初始化
-        }
+        init();
     }
 })();
 

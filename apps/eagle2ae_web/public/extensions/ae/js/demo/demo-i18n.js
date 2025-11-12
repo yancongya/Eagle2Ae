@@ -560,21 +560,25 @@ window.DemoI18nHelper = new DemoI18nHelper();
 
 
 
-// 初次加载时注入 demo 文案，确保 demo-apis 可用
+// DOM加载完成后注入 demo 文案，确保主 i18n 系统已初始化
 
-if (window.DemoI18nHelper) {
+document.addEventListener('DOMContentLoaded', function() {
 
-  try {
+  if (window.DemoI18nHelper) {
 
-    window.DemoI18nHelper.installIntoI18n();
+    try {
 
-  } catch (e) {
+      window.DemoI18nHelper.installIntoI18n();
 
-    console.warn('Initial demo i18n injection failed:', e);
+    } catch (e) {
+
+      console.warn('Initial demo i18n injection failed:', e);
+
+    }
 
   }
 
-}
+});
 
 
 
