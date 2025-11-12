@@ -253,8 +253,12 @@ class LogManager {
      * @param {Object} logEntry - 日志条目
      */
     displayLog(logEntry) {
+        console.log('displayLog called for:', logEntry.message);
         const logContainer = document.getElementById('log-container');
-        if (!logContainer) return;
+        if (!logContainer) {
+            console.log('log-container not found');
+            return;
+        }
 
         const logElement = document.createElement('div');
         logElement.className = `log-entry log-${logEntry.level}`;
@@ -271,9 +275,87 @@ class LogManager {
         logContainer.appendChild(logElement);
         logContainer.scrollTop = logContainer.scrollHeight;
 
+        // Add event listeners for custom tooltip
+        logElement.addEventListener('mouseenter', (e) => this.showTooltip(e, logEntry.message));
+        logElement.addEventListener('mouseleave', () => this.hideTooltip());
+        logElement.addEventListener('mousemove', (e) => this.moveTooltip(e));
+
         // 存储引用以便更新计数
         logElement._logEntry = logEntry;
     }
+
+    /**
+     * 显示自定义工具提示
+     * @param {Event} event - 鼠标事件
+     * @param {string} message - 要显示的消息
+     */
+    showTooltip(event, message) {
+        console.log('showTooltip called for:', message);
+        const tooltip = document.getElementById('custom-tooltip');
+        if (!tooltip) {
+            console.log('custom-tooltip element not found');
+            return;
+        }
+
+        tooltip.textContent = message;
+        tooltip.classList.add('visible');
+        console.log('Tooltip visibility set to visible');
+        this.moveTooltip(event); // Initial positioning
+    }
+
+    /**
+     * 移动自定义工具提示
+     * @param {Event} event - 鼠标事件
+     */
+    moveTooltip(event) {
+        const tooltip = document.getElementById('custom-tooltip');
+        if (!tooltip) {
+            console.log('moveTooltip: custom-tooltip element not found');
+            return;
+        }
+        if (!tooltip.classList.contains('visible')) {
+            console.log('moveTooltip: tooltip not visible');
+            return;
+        }
+        console.log('moveTooltip called');
+
+        // Position the tooltip near the cursor, with an offset
+        const x = event.clientX + 15; // 15px offset from cursor
+        const y = event.clientY + 15;
+
+        // Ensure tooltip stays within viewport
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        if (x + tooltipRect.width > viewportWidth) {
+            tooltip.style.left = `${event.clientX - tooltipRect.width - 15}px`;
+        } else {
+            tooltip.style.left = `${x}px`;
+        }
+
+        if (y + tooltipRect.height > viewportHeight) {
+            tooltip.style.top = `${event.clientY - tooltipRect.height - 15}px`;
+        } else {
+            tooltip.style.top = `${y}px`;
+        }
+        console.log(`Tooltip positioned at: left=${tooltip.style.left}, top=${tooltip.style.top}`);
+    }
+
+    /**
+     * 隐藏自定义工具提示
+     */
+    hideTooltip() {
+        console.log('hideTooltip called');
+        const tooltip = document.getElementById('custom-tooltip');
+        if (tooltip) {
+            tooltip.classList.remove('visible');
+            console.log('Tooltip visibility set to hidden');
+        } else {
+            console.log('hideTooltip: custom-tooltip element not found');
+        }
+    }
+
 
     /**
      * 更新最后一条日志的计数

@@ -1171,6 +1171,9 @@
         .log-entry {
             margin: 2px 0;
             padding: 1px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .log-entry.info {
@@ -4757,7 +4760,28 @@
             #log-switch-btn {
                 display: none !important;
             }
-        }    </style>
+        }        /* Custom Tooltip Styles */
+        .custom-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 1.4;
+            max-width: 300px;
+            word-wrap: break-word;
+            z-index: 10000;
+            pointer-events: none; /* Allow interaction with elements beneath */
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-tooltip.visible {
+            opacity: 1;
+        }
+    </style>
     <script>
         // Configuration for the title link URL
         const TITLE_LINK_URL = 'https://www.example.com'; // Replace with actual URL when available
@@ -4916,10 +4940,10 @@
                 <div class="log-header">
                     <div id="log-title" class="section-title clickable log-title-ae" data-i18n="common.log">日志</div>
                     <div class="log-controls">
-                        <button id="log-switch-btn" class="icon-btn" title="切换日志源">
+                        <button id="log-switch-btn" class="icon-btn" data-i18n-title="common.switchLog">
                             <span class="icon">🔄</span>
                         </button>
-                        <button id="clear-log-btn" class="icon-btn" title="清理日志">
+                        <button id="clear-log-btn" class="icon-btn" data-i18n-title="common.clearLog">
                             <span class="icon">🗑️</span>
                         </button>
                     </div>
@@ -7422,6 +7446,7 @@
         })();
     </script>
     <!-- 已移除：悬浮面板显示面板ID与预设文件名的旧提示逻辑（改为在演示模式面具图标上显示面板名与预设名） -->
+    <div id="custom-tooltip" class="custom-tooltip"></div>
   </body>
 
 </html>
