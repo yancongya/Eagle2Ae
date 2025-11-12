@@ -60,6 +60,13 @@ class FileHandler {
 
     // 静默日志方法
     log(message, type = 'info') {
+        // 强制显示调试日志，绕过静默模式
+        if (message.startsWith('FileHandler-Debug:')) {
+            if (this.logger) {
+                this.logger(message, type);
+            }
+            return;
+        }
         if (!this.quietMode && this.logger) {
             this.logger(message, type);
         }
@@ -228,6 +235,9 @@ class FileHandler {
 
     // 复制文件到指定目录
     async copyFileToDirectory(file, targetDir, settings) {
+        this.log('FileHandler-Debug: Entering copyFileToDirectory.', 'debug');
+        this.log('FileHandler-Debug: Received file object: ' + JSON.stringify({ name: file.name, displayName: file.displayName, path: file.path }), 'debug');
+
         // 处理剪贴板文件的特殊情况
         if (file.isClipboardImport && file.file) {
             return await this.copyClipboardFileToDirectory(file, targetDir, settings);
@@ -236,7 +246,9 @@ class FileHandler {
         // 从原始路径提取完整文件名（包含扩展名）
         const originalFileName = this.getFileNameFromPath(file.path);
         const fileName = this.processFileName(file.displayName || originalFileName, settings);
+        this.log('FileHandler-Debug: Determined final fileName: ' + fileName, 'debug');
         let targetPath = this.joinPath(targetDir, fileName);
+        this.log('FileHandler-Debug: Constructed targetPath: ' + targetPath, 'debug');
 
         // 如果启用了标签文件夹
         if (settings.fileManagement.createTagFolders && file.tags && file.tags.length > 0) {

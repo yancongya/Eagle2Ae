@@ -896,6 +896,7 @@ function importFilesWithSettings(data) {
 
         for (var i = 0; i < data.files.length; i++) {
             var file = data.files[i];
+            writeLog('ExtendScript-Debug: Processing file ' + (i+1) + ': ' + JSON.stringify(file), 'DEBUG');
             try {
                 var fileObj = new File(file.importPath);
                 if (!fileObj.exists) continue;
@@ -920,14 +921,14 @@ function importFilesWithSettings(data) {
                     if (settings.noImportSubMode === 'pre_comp') {
                         itemsToPrecompose.push(footageItem);
                     }
-                    if (file.name && file.name !== footageItem.name) {
-                        footageItem.name = file.name;
-                    }
 
                     if (settings.addToComposition) {
                         var comp = project.activeItem;
                         if (comp) {
                             var layer = comp.layers.add(footageItem);
+                            if (file.name) {
+                                layer.name = file.name;
+                            }
                             if (settings.timelineOptions && settings.timelineOptions.placement) {
                                 switch (settings.timelineOptions.placement) {
                                     case 'current_time':

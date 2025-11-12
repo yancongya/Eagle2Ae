@@ -1174,7 +1174,7 @@ class AEExtension {
         this.logManager.addSilentPattern(/选项 \d+ \(/); // 选项检查日志
 
         // 设置日志级别（可以根据需要调整）
-        this.logManager.setLogLevel('info'); // 只显示info及以上级别
+        this.logManager.setLogLevel('debug'); // 只显示info及以上级别
     }
 
     // 测试连接到Eagle（WebSocket优先）
@@ -11786,6 +11786,7 @@ class AEExtension {
             // 转换文件格式以匹配现有的导入接口
             const fileData = files.map(file => ({
                 name: file.name,
+                displayName: file.displayName,
                 path: file.path || file.webkitRelativePath || file.name,
                 size: file.size,
                 type: file.type,
