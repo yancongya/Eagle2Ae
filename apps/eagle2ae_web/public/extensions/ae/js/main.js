@@ -6600,13 +6600,13 @@ class AEExtension {
         const logSwitchBtn = document.getElementById('log-switch-btn');
 
         if (this.currentLogView === 'ae') {
-            logTitle.textContent = '日志 (AE扩展)';
-            logSwitchBtn.textContent = '切换到Eagle日志';
-            logSwitchBtn.className = 'btn-small btn-secondary';
+            logTitle.classList.add('log-title-ae');
+            logTitle.classList.remove('log-title-eagle');
+            logSwitchBtn.title = '切换到Eagle日志';
         } else {
-            logTitle.textContent = '日志 (Eagle插件)';
-            logSwitchBtn.textContent = '切换到AE日志';
-            logSwitchBtn.className = 'btn-small btn-primary';
+            logTitle.classList.add('log-title-eagle');
+            logTitle.classList.remove('log-title-ae');
+            logSwitchBtn.title = '切换到AE日志';
         }
     }
 

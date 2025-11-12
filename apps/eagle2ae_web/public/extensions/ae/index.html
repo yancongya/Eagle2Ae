@@ -1317,6 +1317,14 @@
             margin-bottom: 8px;
         }
 
+        .log-title-ae {
+            color: #9966cc !important; /* Purple */
+        }
+
+        .log-title-eagle {
+            color: #4a90e2 !important; /* Blue */
+        }
+
         .clickable {
             cursor: pointer;
             transition: color 0.2s ease;
@@ -4889,12 +4897,14 @@
 
             <div class="section log" id="log-panel-section">
                 <div class="log-header">
-                    <div id="log-title" class="section-title clickable" data-i18n="common.log">日志 (AE扩展)</div>
+                    <div id="log-title" class="section-title clickable log-title-ae" data-i18n="common.log">日志</div>
                     <div class="log-controls">
-                        <button id="log-switch-btn" class="btn-small btn-secondary"
-                            data-i18n="common.switchLog">切换到Eagle日志</button>
-                        <button id="clear-log-btn" class="btn-small btn-secondary"
-                            data-i18n="common.clearLog">清理日志</button>
+                        <button id="log-switch-btn" class="icon-btn" title="切换日志源">
+                            <span class="icon">🔄</span>
+                        </button>
+                        <button id="clear-log-btn" class="icon-btn" title="清理日志">
+                            <span class="icon">🗑️</span>
+                        </button>
                     </div>
                 </div>
                 <div id="log-output" class="log-output"></div>
