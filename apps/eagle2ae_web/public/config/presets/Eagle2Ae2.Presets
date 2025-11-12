@@ -43,10 +43,10 @@
     "theme": false,
     "language": false,
     "log": true,
-    "projectInfo": false,
-    "logPanel": false,
+    "projectInfo": true,
+    "logPanel": true,
     "header": true,
-    "fullscreen": true
+    "fullscreen": false
   },
-  "exportedAt": "2025-11-12T08:10:14.517Z"
+  "exportedAt": "2025-11-12T08:43:35.572Z"
 }

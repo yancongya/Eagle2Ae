@@ -1432,8 +1432,26 @@
             font-size: 14px;
             font-weight: 600;
             color: #fff;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden;    /* Hide overflow */
+            text-overflow: ellipsis; /* Show ellipsis */
+            min-width: 0;        /* Allow flex item to shrink */
+            transition: font-size 0.2s ease; /* Add transition */
         }
-
+        
+        /* 响应式：小屏幕下缩小高级设置标题 */
+        @media (max-width: 480px) {
+            .settings-title {
+                font-size: 13px;
+            }
+        }
+        
+        /* 响应式：超小屏幕下进一步缩小高级设置标题 */
+        @media (max-width: 360px) {
+            .settings-title {
+                font-size: 12px;
+            }
+        }
         .btn-close {
             background: none;
             border: none;
@@ -1469,7 +1487,7 @@
             margin-bottom: 8px;
             padding-bottom: 4px;
             border-bottom: 1px solid #444;
-            transition: font-size 0.2s ease; /* Add transition */
+            transition: all 0.2s ease; /* Transition all properties */
         }
         
         /* 响应式：小屏幕下缩小面板组标题 */
@@ -1488,12 +1506,17 @@
         }
         
         /* 响应式：极小屏幕下隐藏面板组标题 */
-        @media (max-width: 200px) { /* Changed from 320px to 200px */
+        @media (max-width: 200px) {
             .settings-section-title {
-                display: none;
+                /* 使用 visibility 和 height: 0 代替 display: none，以避免破坏布局库 */
+                visibility: hidden;
+                height: 0;
+                padding: 0;
+                margin: 0;
+                border: none;
+                overflow: hidden;
             }
-        }
-        .settings-subsection-title {
+        }        .settings-subsection-title {
             font-size: 11px;
             font-weight: 600;
             color: #ccc;
