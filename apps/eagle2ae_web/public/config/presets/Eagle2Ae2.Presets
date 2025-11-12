@@ -23,7 +23,8 @@
       "mode": "project_adjacent",
       "projectAdjacentFolder": "Eagle_Assets",
       "customExportPath": "",
-      "autoCopy": true,
+      "autoCopy": false,
+      "burnAfterReading": false,
       "addTimestamp": false,
       "createSubfolders": false
     }
@@ -47,5 +48,5 @@
     "header": true,
     "fullscreen": true
   },
-  "exportedAt": "2025-11-11T10:29:17.916Z"
+  "exportedAt": "2025-11-12T07:18:27.278Z"
 }

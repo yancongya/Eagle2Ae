@@ -1546,6 +1546,55 @@
             }
         }
 
+        /* 响应式：小屏幕下复选框切换为图标 */
+        @media (max-width: 480px) {
+            .checkbox-group-horizontal .checkbox-option {
+                padding: 4px;
+                min-width: auto; /* Let it shrink */
+                min-height: 32px;
+                justify-content: center;
+                display: flex;
+                align-items: center;
+                gap: 4px; /* Gap between checkbox and icon */
+            }
+
+            .checkbox-group-horizontal .checkbox-option .checkbox-label {
+                display: none; /* Hide text */
+            }
+
+            /* Add the icon */
+            .checkbox-group-horizontal .checkbox-option::after {
+                content: attr(data-icon);
+                font-size: 14px;
+                display: inline-block;
+                color: #ccc;
+                order: 2; /* Place icon after checkbox */
+            }
+
+            .checkbox-group-horizontal .checkbox-option input[type="checkbox"] {
+                order: 1; /* Place checkbox before icon */
+                margin: 0; /* Reset margin */
+                width: 14px;
+                height: 14px;
+                /* Make it visible again */
+                opacity: 1;
+                position: static;
+            }
+        }
+
+        /* 响应式：超小屏幕下复选框进一步压缩 */
+        @media (max-width: 360px) {
+            .checkbox-group-horizontal .checkbox-option {
+                padding: 2px;
+                min-height: 28px;
+                gap: 2px;
+            }
+
+            .checkbox-group-horizontal .checkbox-option::after {
+                font-size: 12px;
+            }
+        }
+
         .radio-option,
         .checkbox-option {
             display: flex;
@@ -2529,21 +2578,44 @@
             width: 28px;
             padding: 6px;
             font-size: 14px;
+            transition: all 0.2s ease; /* Add transition */
         }
-
+        
         /* 预设管理按钮在极小宽度下切换为图标模式 */
         @media (max-width: 400px) {
             .preset-button {
-                font-size: 0;
-                padding: 6px;
-                min-width: 32px;
+                font-size: 0; /* Hide original text */
+                padding: 4px; /* Reduce padding */
+                min-width: 28px; /* Reduce min-width */
+                min-height: 28px;
             }
             .preset-button::before {
                 content: attr(data-icon);
-                font-size: 12px;
+                font-size: 14px; /* Keep icon size */
+            }
+            .preset-button.icon {
+                width: 28px;
+                height: 28px;
+                font-size: 16px;
             }
         }
-
+        
+        /* 预设管理按钮在更小宽度下进一步压缩 */
+        @media (max-width: 320px) {
+            .preset-button {
+                padding: 2px;
+                min-width: 24px;
+                min-height: 24px;
+            }
+            .preset-button::before {
+                font-size: 12px; /* Smaller icon */
+            }
+            .preset-button.icon {
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+            }
+        }
         /* UI 设置样式 */
         .ui-settings-group {
             display: flex;
@@ -2623,15 +2695,30 @@
             }
         }
 
-        @media (max-width: 400px) {
+        /* 响应式：更小屏幕切换为图标 */
+        @media (max-width: 480px) {
             .ui-toggle-button {
                 font-size: 0;
-                padding: 6px;
+                padding: 4px;
                 min-width: 32px;
+                min-height: 32px;
             }
 
             .ui-toggle-button::before {
                 content: attr(data-icon);
+                font-size: 14px;
+            }
+        }
+
+        /* 响应式：超小屏幕进一步压缩 */
+        @media (max-width: 360px) {
+            .ui-toggle-button {
+                padding: 2px;
+                min-width: 28px;
+                min-height: 28px;
+            }
+
+            .ui-toggle-button::before {
                 font-size: 12px;
             }
         }
@@ -3057,13 +3144,11 @@
             display: none;
         }
 
-        /* 极小尺寸：只显示图标 */
+        /* 极小尺寸：只显示图标 (主面板) */
         @media (max-width: 280px) {
             .mode-button,
             .import-behavior-button,
-            .layer-operation-button,
-            .import-mode-option,
-            .import-behavior-option {
+            .layer-operation-button {
                 padding: 6px;
                 min-width: 32px;
                 justify-content: center;
@@ -3071,18 +3156,52 @@
 
             .mode-icon,
             .behavior-icon,
-            .operation-icon,
-            .mode-option-icon,
-            .behavior-option-icon {
+            .operation-icon {
                 display: block;
             }
 
             .mode-text,
             .behavior-text,
-            .operation-text,
+            .operation-text {
+                display: none;
+            }
+        }
+
+        /* 响应式：设置面板按钮在小屏幕下切换为图标 */
+        @media (max-width: 480px) {
+            .import-mode-option,
+            .import-behavior-option {
+                padding: 4px;
+                min-width: 32px;
+                min-height: 32px;
+                justify-content: center;
+            }
+
             .import-mode-option span,
             .import-behavior-option span {
                 display: none;
+            }
+
+            .mode-option-icon,
+            .behavior-option-icon {
+                display: block;
+                margin: 0;
+            }
+        }
+
+        /* 响应式：设置面板按钮在超小屏幕下进一步压缩 */
+        @media (max-width: 360px) {
+            .import-mode-option,
+            .import-behavior-option {
+                padding: 2px;
+                min-width: 28px;
+                min-height: 28px;
+            }
+
+            .mode-option-icon,
+            .behavior-option-icon {
+                width: 12px;
+                height: 12px;
             }
         }
 
@@ -4845,20 +4964,20 @@
 
                     <!-- 导出选项 -->
                     <div class="checkbox-group-horizontal">
-                        <label class="checkbox-option" data-i18n-title="tooltips.automaticCopy">
+                        <label class="checkbox-option" data-i18n-title="tooltips.automaticCopy" data-icon="📋">
                             <input type="checkbox" id="export-auto-copy" checked>
                             <span class="checkbox-label" data-i18n="common.automaticCopy">自动复制</span>
                         </label>
                         <label class="checkbox-option" id="burn-after-reading-label"
-                            data-i18n-title="tooltips.burnAfterReading">
+                            data-i18n-title="tooltips.burnAfterReading" data-icon="🔥">
                             <input type="checkbox" id="export-burn-after-reading">
                             <span class="checkbox-label" data-i18n="common.burnAfterReading">阅后即焚</span>
                         </label>
-                        <label class="checkbox-option" data-i18n-title="tooltips.timestampPrefix">
+                        <label class="checkbox-option" data-i18n-title="tooltips.timestampPrefix" data-icon="⏰">
                             <input type="checkbox" id="export-add-timestamp">
                             <span class="checkbox-label" data-i18n="common.timestampPrefix">时间戳前缀</span>
                         </label>
-                        <label class="checkbox-option" data-i18n-title="tooltips.compositionNamePrefix">
+                        <label class="checkbox-option" data-i18n-title="tooltips.compositionNamePrefix" data-icon="🏷️">
                             <input type="checkbox" id="export-create-subfolders">
                             <span class="checkbox-label" data-i18n="common.compositionNamePrefix">合成名前缀</span>
                         </label>
