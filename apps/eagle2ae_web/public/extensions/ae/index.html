@@ -881,8 +881,11 @@
             height: 20px;
             display: flex;
             align-items: center;
+            white-space: nowrap;    /* Prevent wrapping */
+            overflow: hidden;       /* Hide overflow */
+            text-overflow: ellipsis; /* Show ellipsis */
+            min-width: 0;           /* Allow flex item to shrink */
         }
-
 
 
         .project-info .label {
@@ -4740,7 +4743,21 @@
 
         /* 顶部触发层不拦截任何点击/触摸事件，由全局监听判定 */
         .header-hover-trigger { pointer-events: none !important; }
-    </style>
+
+        /* 响应式：日志面板按钮在极小屏幕下断点消失 */
+        /* 在200px时隐藏清理日志按钮 */
+        @media (max-width: 200px) { /* Changed from 280px to 200px */
+            #clear-log-btn {
+                display: none !important;
+            }
+        }
+
+        /* 在150px时隐藏切换日志按钮 */
+        @media (max-width: 150px) { /* Changed from 240px to 150px */
+            #log-switch-btn {
+                display: none !important;
+            }
+        }    </style>
     <script>
         // Configuration for the title link URL
         const TITLE_LINK_URL = 'https://www.example.com'; // Replace with actual URL when available
