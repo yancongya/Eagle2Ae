@@ -44,8 +44,8 @@
     "log": true,
     "projectInfo": true,
     "logPanel": true,
-    "header": false,
+    "header": true,
     "fullscreen": false
   },
-  "exportedAt": "2025-11-13T11:47:37.565Z"
+  "exportedAt": "2025-11-13T11:59:18.251Z"
 }

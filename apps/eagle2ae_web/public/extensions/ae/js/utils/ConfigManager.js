@@ -32,6 +32,11 @@ class ConfigManager {
                     console.log('[ConfigManager] 虚拟文件系统加载成功');
                     return this.fullConfig;
                 }
+                // 在演示模式下，如果虚拟文件不存在，则直接跳到末尾创建默认配置的逻辑
+                // 避免尝试 fs 和 fetch，从而防止在控制台中出现不必要的警告
+                console.log(`[ConfigManager] 演示模式下预设 '${this.configFilePath}' 不存在，将创建默认预设。`);
+                this.fullConfig = this.getDefaultConfig();
+                return this.fullConfig;
             }
             
             // 方法2: 使用 Node.js fs (CEP环境)
@@ -809,9 +814,9 @@ class ConfigManager {
                 });
                 
                 // 自定义面板名称
-                this.fullConfig.panels['panel1'].name = '默认配置';
-                this.fullConfig.panels['panel2'].name = '快速预览';
-                this.fullConfig.panels['panel3'].name = '音频项目';
+                this.fullConfig.panels['panel1'].name = 'Eagle2Ae 1@烟肉鸭';
+                this.fullConfig.panels['panel2'].name = 'Eagle2Ae 2@烟肉鸭';
+                this.fullConfig.panels['panel3'].name = 'Eagle2Ae 3@烟肉鸭';
                 
                 await this.saveConfigFile();
                 this.ae.log('[ConfigManager] ✅ 默认配置已创建并保存。', 'success');
@@ -849,9 +854,9 @@ class ConfigManager {
             panelIds.forEach(id => {
                 this.fullConfig.panels[id] = this.getDefaultPanelConfig(id);
             });
-            this.fullConfig.panels['panel1'].name = '默认配置';
-            this.fullConfig.panels['panel2'].name = '快速预览';
-            this.fullConfig.panels['panel3'].name = '音频项目';
+            this.fullConfig.panels['panel1'].name = 'Eagle2Ae 1@烟肉鸭';
+            this.fullConfig.panels['panel2'].name = 'Eagle2Ae 2@烟肉鸭';
+            this.fullConfig.panels['panel3'].name = 'Eagle2Ae 3@烟肉鸭';
 
             // 确保当前面板有配置
             if (!this.fullConfig.panels[this.ae.currentPanelId]) {
