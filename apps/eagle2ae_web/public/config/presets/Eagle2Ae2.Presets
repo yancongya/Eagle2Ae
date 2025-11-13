@@ -39,13 +39,13 @@
     "favoriteExportFolder": ""
   },
   "uiSettings": {
-    "theme": false,
-    "language": false,
+    "theme": true,
+    "language": true,
     "log": true,
     "projectInfo": true,
     "logPanel": true,
-    "header": false,
-    "fullscreen": false
+    "header": true,
+    "fullscreen": true
   },
-  "exportedAt": "2025-11-13T11:59:09.416Z"
+  "exportedAt": "2025-11-13T12:31:13.676Z"
 }
