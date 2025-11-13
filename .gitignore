@@ -27,6 +27,7 @@ yarn-error.log*
 dist/
 build/
 out/
+.vercel/
 
 # 排除用户配置文件
 *.user
