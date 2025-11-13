@@ -329,16 +329,18 @@ class AEExtension {
     /**
      * 获取当前面板的显示名称（用于演示模式提示）。
      */
-    getPanelDisplayName() {
-        if (this.panelDisplayName && typeof this.panelDisplayName === 'string') {
+    getPanelDisplayName(panelId) {
+        const idToUse = panelId || this.panelId;
+        // Only return the dynamic display name if we are not getting a name for a specific different panel
+        if (!panelId && this.panelDisplayName && typeof this.panelDisplayName === 'string') {
             return this.panelDisplayName;
         }
         const map = {
-            'com.yanrouya.eagle2ae.panel1': 'Eagle2Ae 面板 1',
-            'com.yanrouya.eagle2ae.panel2': 'Eagle2Ae 面板 2',
-            'com.yanrouya.eagle2ae.panel3': 'Eagle2Ae 面板 3'
+            'panel1': 'Eagle2Ae 面板 1',
+            'panel2': 'Eagle2Ae 面板 2',
+            'panel3': 'Eagle2Ae 面板 3'
         };
-        return map[this.panelId] || this.panelId || '未知面板';
+        return map[idToUse] || idToUse || '未知面板';
     }
 
     /**
@@ -352,9 +354,9 @@ class AEExtension {
             }
         } catch (_) {}
         const defaults = {
-            'com.yanrouya.eagle2ae.panel1': '默认配置',
-            'com.yanrouya.eagle2ae.panel2': '快速预览',
-            'com.yanrouya.eagle2ae.panel3': '音频项目'
+            'panel1': '默认配置',
+            'panel2': '快速预览',
+            'panel3': '音频项目'
         };
         return defaults[this.panelId] || '未命名预设';
     }

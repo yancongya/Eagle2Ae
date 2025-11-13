@@ -22,7 +22,7 @@ class ConfigManager {
      */
     async loadConfigFile() {
         try {
-            console.log('[ConfigManager] 开始加载配置文件...');
+            this.ae.log(`[ConfigManager] 正在加载预设文件: ${this.configFilePath}`, 'info');
             
             // 方法1: 使用虚拟文件系统 (Demo模式)
             if (window.demoFileSystem && typeof window.demoFileSystem.readFile === 'function') {
@@ -617,9 +617,9 @@ class ConfigManager {
     /**
      * 获取默认面板配置
      */
-    getDefaultPanelConfig() {
+    getDefaultPanelConfig(panelId) {
         // 使用 AEExtension 实例的 getPanelDisplayName 方法获取正确的面板显示名称
-        const panelName = this.ae.getPanelDisplayName();
+        const panelName = this.ae.getPanelDisplayName(panelId);
         
         return {
             name: panelName, // 使用正确的显示名称
@@ -803,18 +803,15 @@ class ConfigManager {
                 this.ae.log('[ConfigManager] 创建默认的新格式配置...', 'info');
                 this.fullConfig = this.getDefaultConfig();
                 // 为所有面板创建默认配置
-                const panelIds = [
-                    'com.yanrouya.eagle2ae.panel1',
-                    'com.yanrouya.eagle2ae.panel2',
-                    'com.yanrouya.eagle2ae.panel3'
-                ];
+                const panelIds = ['panel1', 'panel2', 'panel3'];
                 panelIds.forEach(id => {
-                    this.fullConfig.panels[id] = this.getDefaultPanelConfig();
+                    this.fullConfig.panels[id] = this.getDefaultPanelConfig(id);
                 });
+                
                 // 自定义面板名称
-                this.fullConfig.panels['com.yanrouya.eagle2ae.panel1'].name = '默认配置';
-                this.fullConfig.panels['com.yanrouya.eagle2ae.panel2'].name = '快速预览';
-                this.fullConfig.panels['com.yanrouya.eagle2ae.panel3'].name = '音频项目';
+                this.fullConfig.panels['panel1'].name = '默认配置';
+                this.fullConfig.panels['panel2'].name = '快速预览';
+                this.fullConfig.panels['panel3'].name = '音频项目';
                 
                 await this.saveConfigFile();
                 this.ae.log('[ConfigManager] ✅ 默认配置已创建并保存。', 'success');
@@ -848,17 +845,13 @@ class ConfigManager {
         this.ae.log('[ConfigManager] 启用降级方案，强制使用默认配置...', 'warning');
         try {
             this.fullConfig = this.getDefaultConfig();
-            const panelIds = [
-                'com.yanrouya.eagle2ae.panel1',
-                'com.yanrouya.eagle2ae.panel2',
-                'com.yanrouya.eagle2ae.panel3'
-            ];
+            const panelIds = ['panel1', 'panel2', 'panel3'];
             panelIds.forEach(id => {
-                this.fullConfig.panels[id] = this.getDefaultPanelConfig();
+                this.fullConfig.panels[id] = this.getDefaultPanelConfig(id);
             });
-            this.fullConfig.panels['com.yanrouya.eagle2ae.panel1'].name = '默认配置';
-            this.fullConfig.panels['com.yanrouya.eagle2ae.panel2'].name = '快速预览';
-            this.fullConfig.panels['com.yanrouya.eagle2ae.panel3'].name = '音频项目';
+            this.fullConfig.panels['panel1'].name = '默认配置';
+            this.fullConfig.panels['panel2'].name = '快速预览';
+            this.fullConfig.panels['panel3'].name = '音频项目';
 
             // 确保当前面板有配置
             if (!this.fullConfig.panels[this.ae.currentPanelId]) {
