@@ -1,7 +1,7 @@
 {
   "installCommand": "npx pnpm@10.12.4 --filter eagle2ae_web install --no-frozen-lockfile",
   "buildCommand": "npx pnpm@10.12.4 --filter eagle2ae_web run build",
-  "outputDirectory": "apps/eagle2ae_web/dist",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
