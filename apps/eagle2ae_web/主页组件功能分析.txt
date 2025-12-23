@@ -1,0 +1,128 @@
+# 项目主页组件功能分析与重构需求关键词
+
+本文档旨在详细分析 `eagle2ae_web` 项目主页中的核心组件 `Home.vue`、`Hero.vue` 和 `FeatureDetail.vue` 的具体功能，并提炼出用于未来重构或再开发的需求关键词。
+
+---
+
+## 1. 主页视图 (`Home.vue`)
+
+*   **功能概述:**
+    作为整个主页的顶层容器和编排者，`Home.vue` 将 `Hero.vue`、多个 `FeatureDetail.vue` 实例和 `Footer.vue` 整合在一起，形成一个完整的页面。它负责处理页面的整体滚动行为、响应式布局以及数据流的传递。
+
+*   **核心功能:**
+    *   **页面布局与组件集成:** 组织 `Hero` 组件、动态渲染的 `FeatureDetail` 列表以及 `Footer` 组件，构建主页的整体视觉结构。
+    *   **动态内容展示数据源:** 负责从国际化资源中获取所有功能 (`features`) 的数据（包括标题、描述、图片等），并将这些数据传递给各个 `FeatureDetail` 子组件。
+    *   **国际化支持:** 通过 `useI18n` 确保页面上的所有文本内容（包括功能描述、CTA 文本等）都能根据用户语言进行切换。
+    *   **高级滚动控制 (Advanced Scroll Control):**
+        *   **平滑滚动 (Smooth Scrolling):** 使用 GSAP (`ScrollToPlugin`) 实现页面内容的流畅滚动。
+        *   **章节吸附 (Scroll Snap):** 利用 GSAP `ScrollTrigger` 实现滚动到特定区域时，页面自动“吸附”到最近的 `Hero` 或 `FeatureDetail` 章节，提供分段式的浏览体验。
+        *   **响应式滚动行为:** 滚动计算（如锚点位置、导航栏高度）会根据窗口大小动态调整。
+        *   **程序化滚动 (Programmatic Scroll):** 提供一个 `scrollToFeatureById` 方法，允许 `Hero` 组件触发滚动到特定的 `FeatureDetail` 区域。
+    *   **功能激活状态管理:** 使用 Vue 的 `provide/inject` 机制，向下游组件提供 `activeFeatureId`，通知哪个 `FeatureDetail` 组件当前正处于视口中心，以便该组件可以触发自身特定的行为（如动画）。
+    *   **Call to Action (CTA):** 包含一个明确的下载链接，引导用户前往下载页面。
+
+*   **重构关键词:**
+    *   `主页容器`、`组件编排`、`视图层`、`动态功能列表`、`i18n 数据绑定`、`多语言`、`GSAP`、`ScrollTrigger`、`平滑滚动`、`滚动吸附`、`章节滚动`、`响应式布局`、`状态管理`、`Vue Provide/Inject`、`下载链接`、`CTA`。
+
+---
+
+## 2. 英雄区组件 (`Hero.vue`)
+
+*   **功能概述:**
+    作为主页最顶部的视觉焦点，`Hero.vue` 旨在通过引人注目的设计、动画和交互，快速吸引用户并传达核心价值主张（"Eagle 👉 AE Bridge"）。它集成了主标题、副标题、两个关键的预览导航按钮以及一组可交互的功能卡片。
+
+*   **核心功能:**
+    *   **主视觉与品牌信息:** 突出“Eagle 👉 AE Bridge”这一核心概念，配合引人入胜的动画和文字。
+    *   **动态标题与副标题:** 标题和副标题内容均支持国际化 (`t('hero.bridge')`, `t('hero.subtitle')`)。
+    *   **交互式标题动画:** 在非移动设备上，鼠标悬停在主标题上时，会触发“Eagle”和“AE”部分之间的 3D 翻转动画，巧妙地切换文字顺序和箭头方向，增加视觉趣味性。
+    *   **关键导航与行动号召 (CTA):** 提供两个显眼的 `router-link` 按钮，分别用于导航至 `/ae-preview` 和 `/eagle-preview`。按钮具有自定义样式和精致的“扫光”悬停效果。
+    *   **特色功能卡片网格:** 以响应式网格 (`grid grid-cols-3 lg:grid-cols-6`) 形式展示 6 个主要特色功能卡片，每张卡片包含图标和标题。
+    *   **高级卡片交互动画:**
+        *   **点击滚动锚点:** 点击任一功能卡片，会通过 `emit('scroll-to-feature', id)` 事件通知父组件 `Home.vue`，使其平滑滚动到页面下方对应的 `FeatureDetail` 区域。
+        *   **3D 级联悬停效果 (仅桌面端):** 鼠标悬停在某张卡片上时，该卡片会放大并提升（`scale`, `translateY`），同时周围的卡片会根据距离进行 3D 转换（`scale` 缩小、`translateZ` 景深、`opacity` 降低、`blur` 模糊），形成一种视觉上的层次感和焦点效果。此效果在移动设备上禁用。
+    *   **自适应布局与缩放:** 根据可用视口高度和下方卡片容器的高度，动态计算并调整 (`topScale`) 标题和按钮区域的大小，确保内容在不同屏幕尺寸下的可见性和布局协调。
+    *   **页面入场动画:** 使用 GSAP，在组件加载完成后，通过平滑动画（`opacity`, `y` 轴位移，`stagger` 错时）将标题、副标题、按钮和卡片依次引入视图。
+    *   **外部动画配置:** 支持从 `/config/hero-cards.json` 文件加载动画参数，增强可配置性。
+
+*   **重构关键词:**
+    *   `主页首屏`、`视觉焦点`、`品牌传达`、`动态标题`、`多语言支持`、`交互式标题`、`3D 翻转动画`、`CTA 按钮`、`扫光效果`、`功能卡片`、`卡片网格`、`点击滚动`、`3D 悬停动画`、`级联效果`、`景深`、`自适应缩放`、`GSAP 动画`、`入场动画`、`外部配置`。
+
+---
+
+## 3. 功能详情组件 (`FeatureDetail.vue`)
+
+*   **功能概述:**
+    这是一个可重用的组件，在 `Home.vue` 中被循环渲染，用于展示主页的每个特定功能。它以引人入胜的方式结合了图片轮播、详细的描述文本以及一个根据滚动位置动态显示的粘性页脚。
+
+*   **核心功能:**
+    *   **独立功能模块展示:** 每个实例专门显示一个功能的标题 (`title`)、描述文本 (`descriptionLines`) 和相关图片 (`imageUrls`)。
+    *   **图片轮播 (Image Carousel):**
+        *   **Swiper 整合:** 使用 `Swiper` 库实现图片轮播，采用“卡片堆叠”效果 (`effect="cards"`)，带来独特视觉体验。
+        *   **动态图片源:** `imageList` 优先使用 `imageUrls` prop，若无则回退到默认占位图。
+        *   **动态卡片阴影:** 根据当前主题（亮/暗模式）和轮播的活动索引，动态调整卡片阴影，增强立体感和视觉主题一致性。
+    *   **描述文本动态处理:**
+        *   **行式描述:** `descriptionLines` 以数组形式传入，支持多行描述。
+        *   **动态适应图片:** `lines` 计算属性会根据轮播图片的总数 (`totalImages`) 动态调整描述行的数量，确保每张图片都能有对应的描述。
+        *   **逐行显示动画:** `visibleLines` 确保描述文本随着轮播图片的切换（`activeIndex` 变化）而逐行显示或隐藏，使用 Vue `TransitionGroup` 配合 GSAP 实现平滑的入场/退场动画。
+    *   **滚动交互与内容动画:**
+        *   **视口进入/退出动画:** 使用 GSAP `ScrollTrigger` 监听组件在视口中的可见性。当组件进入视口中心时，会触发图片和文本容器的平滑入场动画 (`playEnter`)；当离开时，则触发退场动画 (`playExit`)。
+        *   **Sticky 页脚 (Footer):** 包含一个可选的 `footerText`，该文本会在组件进入视口时动态显示为一个粘性（或绝对定位）的页脚区域，并在离开时隐藏。其定位逻辑会根据屏幕大小（小屏固定底部，大屏绝对定位）和是否为最后一个功能区进行调整。
+    *   **主题感知:** 通过监听 `document.documentElement` 的 `class` 变化，实时响应主题切换（亮/暗模式），并更新图片卡片的阴影样式。
+    *   **功能激活状态反馈:** 通过 Vue `inject` 接收父组件 (`Home.vue`) 提供的 `setActiveFeatureId` 方法，并在自身进入视口中心时，将自身的 `id` 设置为当前的 `activeFeatureId`，告知父组件“我当前是活跃的”。
+    *   **外部动画配置:** 支持从 `/config/feature-detail.json` 文件加载动画参数。
+
+*   **重构关键词:**
+    *   `功能详情`、`模块化`、`图片轮播`、`Swiper EffectCards`、`动态图片`、`卡片阴影`、`主题感知`、`描述文本`、`逐行动画`、`Vue TransitionGroup`、`GSAP ScrollTrigger`、`内容入场动画`、`内容退场动画`、`粘性页脚`、`响应式定位`、`活动状态通知`、`外部配置`。
+
+---
+
+## 技术栈总结 (Technical Stack Summary)
+
+以下是本项目主页相关组件中使用的主要技术栈，供替换和迭代参考：
+
+*   **前端框架:**
+    *   `Vue.js` (核心框架，使用组合式 API 和 `<script setup>` 语法糖进行开发)
+
+*   **样式与UI:**
+    *   `Tailwind CSS` (实用程序优先的 CSS 框架，用于快速构建响应式和现代化的界面)
+    *   `Scoped CSS` (Vue 单文件组件中的局部样式，防止样式污染)
+    *   `CSS Variables` (用于管理主题颜色、动态尺寸等，例如 `--navbar-height`)
+
+*   **动画与滚动:**
+    *   `GSAP (GreenSock Animation Platform)` (专业的 JavaScript 动画库，提供高性能和强大的动画控制)
+    *   `GSAP ScrollTrigger` (GSAP 插件，用于创建基于滚动进度的动画和交互效果，实现章节吸附、视口动画等)
+    *   `GSAP ScrollToPlugin` (GSAP 插件，用于平滑滚动到页面上的任意位置)
+    *   `Vue Transition` / `TransitionGroup` (Vue 内置组件，用于元素或组件的进入/离开动画)
+    *   `Intersection Observer API` (浏览器原生 API，用于检测元素与视口交叉情况，实现元素可见性检测，例如 `FeatureDetail` 中的页脚显示)
+    *   `Lenis` (一个轻量级的平滑滚动库，尽管在提供代码片段中 `Home.vue` 使用 GSAP 作为回退或替代方案，但暗示项目中可能集成或考虑使用 Lenis 来提供全局更高级的平滑滚动体验)
+
+*   **UI 组件 / 库:**
+    *   `Swiper.js` (现代触摸滑块库，`FeatureDetail.vue` 中用于图片轮播，特别是 `EffectCards` 效果)
+    *   `splitpanes` (用于创建可调整大小的分割面板布局，在 `AE_Preview.vue` 和 `Eagle_Preview.vue` 中使用，是项目整体 UI 策略的一部分)
+
+*   **状态管理与实用工具:**
+    *   `Vue Reactivity System` (`ref`, `computed`, `watch`) (Vue 核心的响应式系统)
+    *   `Vue Provide/Inject` (Vue 提供的依赖注入机制，用于跨组件（祖先-后代）通信，例如 `Home.vue` 向 `FeatureDetail.vue` 传递 `activeFeatureId`)
+    *   `@vueuse/core` (`useDark` 等组合式函数，用于方便地检测和管理暗黑模式、设备信息等)
+
+*   **国际化 (i18n):**
+    *   `vue-i18n` (Vue.js 官方推荐的国际化插件，用于实现多语言支持)
+
+*   **路由:**
+    *   `vue-router` (Vue.js 官方路由管理器，用于单页面应用的页面导航和路由管理)
+
+*   **浏览器 API (原生交互):**
+    *   `window.matchMedia` (用于检测媒体查询，实现响应式设计，例如 `isMobile` 和 `prefers-reduced-motion` 检测)
+    *   `ResizeObserver` (用于监测元素尺寸变化，实现动态布局调整，例如 `Hero.vue` 中的标题区域缩放)
+    *   `MutationObserver` (用于监测 DOM 树变化，例如 `document.documentElement` 的 `class` 变化来检测主题切换)
+    *   `localStorage` (浏览器本地存储，用于持久化用户偏好，例如布局尺寸、面板分配等)
+    *   `fetch API` (用于进行网络请求，例如加载外部 JSON 配置文件)
+    *   `postMessage` (用于跨窗口/iframe 通信，主要用于 `AE_Preview.vue` 和 `Eagle_Preview.vue` 中宿主与扩展的交互)
+    *   `View Transitions API` (浏览器原生 API，用于在不同页面状态或 DOM 变化之间创建平滑过渡效果)
+
+*   **构建工具:**
+    *   `Vite` (由 `vite.config.js` 文件推断，新一代前端构建工具，提供极速开发体验)
+
+*   **开发语言:**
+    *   `JavaScript` (结合 Vue.js 框架进行开发)
+
