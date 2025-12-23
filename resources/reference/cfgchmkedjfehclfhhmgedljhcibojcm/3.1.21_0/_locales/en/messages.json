@@ -1,6 +1,6 @@
 {
    "appDesc": {
-      "message": "This extension makes it easy to save images and save screenshots to Eagle App."
+      "message": "This extension is modified based on the official extension and is for learning and testing purposes only."
    },
    "appName": {
       "message": "Eagle for Edge"

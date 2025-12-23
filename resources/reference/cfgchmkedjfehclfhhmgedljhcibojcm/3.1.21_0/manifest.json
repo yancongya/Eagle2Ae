@@ -112,7 +112,7 @@
    "name": "__MSG_appName__",
    "permissions": [ "activeTab", "contextMenus", "storage", "tabs", "scripting", "webNavigation" ],
    "update_url": "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
-   "version": "3.1.21",
+   "version": "3.1.22",
    "web_accessible_resources": [ {
       "matches": [ "https://*/*", "http://*/*", "file://*/*", "\u003Call_urls>" ],
       "resources": [ "locales/*.json", "images/*.svg", "images/*.png", "images/folder-icons/*.png" ]
