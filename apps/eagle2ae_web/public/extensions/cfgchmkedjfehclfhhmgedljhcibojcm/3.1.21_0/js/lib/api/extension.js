@@ -1,1 +1,0 @@
-class Extension{extension;constructor(){this.extension={path:eagle.runtime.getURL(""),manifest:eagle.runtime.getManifest()}}}eagle.extension=(new Extension).extension;

@@ -1,3 +1,0 @@
-div[role="button"]:has(img) > div div div:empty {
-	inset: unset;
-}
