@@ -451,7 +451,7 @@ testFolderPath('D:\\素材\\设计文件');
 
 - [对话框系统文档](./dialog-system.md)
 - [UI交互指南](../development/ui-interaction-guide.md)
-- [JSX脚本API参考](../api/jsx-scripts.md)
+- [JSX脚本API参考](../api-reference/jsx-scripts.md)
 - [故障排除指南](../troubleshooting/common-issues.md)
 
 ---

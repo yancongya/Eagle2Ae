@@ -1,13 +1,1 @@
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "uvx",
-      "args": ["mcp-server-puppeteer"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
+{"mcpServers": {"puppeteer": {"command": "uvx", "args": ["mcp-server-puppeteer"], "env": {"FASTMCP_LOG_LEVEL": "ERROR"}, "disabled": false, "autoApprove": []}, "drawio": {"command": "npx", "args": ["-y", "drawio-mcp-server"], "disabled": false, "autoApprove": []}}}

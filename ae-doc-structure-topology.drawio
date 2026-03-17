@@ -1,0 +1,228 @@
+<mxfile host="app.diagrams.net" modified="2026-03-17T00:00:00.000Z" agent="iFlow CLI" etag="doc-topology" version="21.0.0" type="device">
+  <diagram name="文档结构拓扑对比" id="doc-topology">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 标题 -->
+        <mxCell id="title" value="AE扩展文档结构拓扑对比" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- 当前文档结构 -->
+        <mxCell id="current-structure" value="当前文档结构 (13个目录, 103个文档)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="850" height="1040" as="geometry" />
+        </mxCell>
+
+        <!-- 当前结构 - 第一层 -->
+        <mxCell id="current-level1" value="核心文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="current-structure">
+          <mxGeometry x="40" y="60" width="350" height="940" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-manual" value="使用手册&#xa;(12个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level1">
+          <mxGeometry x="20" y="40" width="310" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-manual-list" value="• 快速入门&#xa;• 界面设置&#xa;• 素材处理&#xa;• 导入导出&#xa;• 高级设置&#xa;• FAQ&#xa;• 新功能指南(6个)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level1">
+          <mxGeometry x="30" y="80" width="290" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-api" value="API参考&#xa;(18个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level1">
+          <mxGeometry x="20" y="180" width="310" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-api-list" value="• 前端API&#xa;• 对话框系统&#xa;• 状态监控&#xa;• 连接监控&#xa;• 错误处理&#xa;• 事件系统&#xa;• 配置管理&#xa;• 日志增强..." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level1">
+          <mxGeometry x="30" y="220" width="290" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-arch" value="架构文档&#xa;(2个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level1">
+          <mxGeometry x="20" y="320" width="310" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-arch-list" value="• CEP扩展架构&#xa;• 通信协议" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level1">
+          <mxGeometry x="30" y="360" width="290" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- 当前结构 - 第二层 -->
+        <mxCell id="current-level2" value="功能文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="current-structure">
+          <mxGeometry x="420" y="60" width="390" height="440" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-core-comp" value="核心组件&#xa;(7个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level2">
+          <mxGeometry x="20" y="40" width="350" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-core-comp-list" value="• AE扩展&#xa;• Eagle连接管理器&#xa;• 导出管理器&#xa;• 导入管理器&#xa;• 日志管理器&#xa;• 项目状态检测器&#xa;• 设置管理器" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level2">
+          <mxGeometry x="30" y="80" width="330" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-core-func" value="核心功能&#xa;(8个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level2">
+          <mxGeometry x="20" y="160" width="350" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-core-func-list" value="• 数据持久化&#xa;• 错误处理&#xa;• 事件系统&#xa;• 日志系统&#xa;• 模块系统&#xa;• 网络通信&#xa;• 性能优化&#xa;• 状态管理" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level2">
+          <mxGeometry x="30" y="200" width="330" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-features" value="功能特性&#xa;(15个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level2">
+          <mxGeometry x="20" y="280" width="350" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-features-list" value="• 拖拽导入增强&#xa;• 文件处理系统&#xa;• 文件夹打开模块&#xa;• 多面板支持&#xa;• 预设管理系统&#xa;• 项目状态检测器&#xa;• UI控制系统&#xa;• 虚拟对话框系统..." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level2">
+          <mxGeometry x="30" y="320" width="330" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 当前结构 - 第三层 -->
+        <mxCell id="current-level3" value="辅助文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="current-structure">
+          <mxGeometry x="40" y="540" width="350" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-guides" value="指南&#xa;(6个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level3">
+          <mxGeometry x="20" y="40" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-guides-list" value="• 拖拽导入增强指南&#xa;• 多面板快速入门&#xa;• 预设管理指南&#xa;• 项目状态检测器详细指南..." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level3">
+          <mxGeometry x="30" y="80" width="290" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-standards" value="标准文档&#xa;(10个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level3">
+          <mxGeometry x="20" y="160" width="310" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-standards-list" value="• 构建打包标准&#xa;• 配置管理标准&#xa;• E2E测试标准&#xa;• 文件组织标准&#xa;• 集成测试标准&#xa;• JavaScript编码标准&#xa;• JSX编码标准&#xa;• 性能测试标准..." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level3">
+          <mxGeometry x="30" y="200" width="290" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-panel-func" value="面板功能&#xa;(6个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level3">
+          <mxGeometry x="20" y="320" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-panel-func-list" value="• 高级设置面板&#xa;• 连接状态&#xa;• 检测图层&#xa;• 导出到Eagle&#xa;• 导入行为设置&#xa;• 导入模式设置" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level3">
+          <mxGeometry x="30" y="360" width="290" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- 当前结构 - 第四层 -->
+        <mxCell id="current-level4" value="其他文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="current-structure">
+          <mxGeometry x="420" y="540" width="390" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-dev" value="开发文档&#xa;(7个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level4">
+          <mxGeometry x="20" y="40" width="350" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-dev-list" value="• Demo指南&#xa;• 开发指南&#xa;• 对话框系统&#xa;• 导入逻辑&#xa;• 项目状态检测器&#xa;• 设置指南&#xa;• UI交互指南" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level4">
+          <mxGeometry x="30" y="80" width="330" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-ui" value="UI组件&#xa;(6个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level4">
+          <mxGeometry x="20" y="160" width="350" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cs-ui-list" value="• CSS样式API&#xa;• CSS样式最佳实践&#xa;• CSS样式组件&#xa;• CSS样式Eagle2Ae&#xa;• CSS样式示例&#xa;• CSS样式变量" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-level4">
+          <mxGeometry x="30" y="200" width="330" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-perf" value="性能优化&#xa;(4个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level4">
+          <mxGeometry x="20" y="280" width="350" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cs-trouble" value="故障排除&#xa;(2个文档)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="current-level4">
+          <mxGeometry x="20" y="380" width="350" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- 当前问题分析 -->
+        <mxCell id="current-problems" value="问题分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="current-structure">
+          <mxGeometry x="40" y="860" width="770" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="problem-details" value="• 重复率高: 使用手册vs功能特性(60%), APIvs核心组件(50%)&#xa;• 分类混乱: 用户文档和开发者文档混合, 概念和实现文档混合&#xa;• 层次不清: 新用户难以找到适合的文档, 开发者需要浏览多个目录&#xa;• 导航困难: 文档分散在13个目录, 同一主题内容分散" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="current-structure">
+          <mxGeometry x="50" y="900" width="750" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- 新文档结构 -->
+        <mxCell id="new-structure" value="新文档结构 (7个目录, 60-70个文档)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="80" width="810" height="1040" as="geometry" />
+        </mxCell>
+
+        <!-- 新结构 - 用户文档层 -->
+        <mxCell id="new-user-layer" value="用户文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="new-structure">
+          <mxGeometry x="40" y="60" width="360" height="340" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-getting-started" value="入门指南&#xa;(getting-started)&#xa;目标: 新用户" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=top;" vertex="1" parent="new-user-layer">
+          <mxGeometry x="20" y="40" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-gs-list" value="• index.md - 入门导航&#xa;• installation.md - 安装指南&#xa;• quick-start.md - 快速开始&#xa;• overview.md - 功能概览&#xa;• concepts.md - 核心概念" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-user-layer">
+          <mxGeometry x="30" y="80" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-user-guide" value="用户指南&#xa;(user-guide)&#xa;目标: 所有用户" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=top;" vertex="1" parent="new-user-layer">
+          <mxGeometry x="20" y="180" width="320" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-ug-list" value="• index.md - 用户导航&#xa;• interface.md - 界面说明&#xa;• import-export.md - 导入导出&#xa;• settings.md - 设置管理&#xa;• features.md - 功能详解&#xa;• faq.md - 常见问题" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-user-layer">
+          <mxGeometry x="30" y="220" width="300" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- 新结构 - 开发者文档层 -->
+        <mxCell id="new-dev-layer" value="开发者文档层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="new-structure">
+          <mxGeometry x="420" y="60" width="350" height="340" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-api-ref" value="API参考&#xa;(api-reference)&#xa;目标: 开发者" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;" vertex="1" parent="new-dev-layer">
+          <mxGeometry x="20" y="40" width="310" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-api-list" value="• index.md - API导航&#xa;• frontend-api.md - 前端API&#xa;• jsx-api.md - ExtendScript API&#xa;• communication.md - 通信接口&#xa;• events.md - 事件系统" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-dev-layer">
+          <mxGeometry x="30" y="80" width="290" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-components" value="组件文档&#xa;(components)&#xa;目标: 开发者" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=top;" vertex="1" parent="new-dev-layer">
+          <mxGeometry x="20" y="180" width="310" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-comp-list" value="• index.md - 组件导航&#xa;• main-extension.md - 主扩展&#xa;• import-manager.md - 导入管理&#xa;• export-manager.md - 导出管理&#xa;• settings-manager.md - 设置管理&#xa;• status-checker.md - 状态检测&#xa;• dialog-system.md - 对话框系统" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-dev-layer">
+          <mxGeometry x="30" y="220" width="290" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- 新结构 - 架构设计层 -->
+        <mxCell id="new-arch-layer" value="架构设计层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="new-structure">
+          <mxGeometry x="40" y="420" width="360" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-architecture" value="架构设计&#xa;(architecture)&#xa;目标: 架构师" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;verticalAlign=top;" vertex="1" parent="new-arch-layer">
+          <mxGeometry x="20" y="40" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-arch-list" value="• index.md - 架构导航&#xa;• system-design.md - 系统设计&#xa;• modules.md - 模块设计&#xa;• communication.md - 通信机制&#xa;• data-flow.md - 数据流" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-arch-layer">
+          <mxGeometry x="30" y="80" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-development" value="开发指南&#xa;(development)&#xa;目标: 开发者" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;verticalAlign=top;" vertex="1" parent="new-arch-layer">
+          <mxGeometry x="20" y="180" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-dev-guide-list" value="• index.md - 开发导航&#xa;• environment.md - 开发环境&#xa;• build-deploy.md - 构建部署&#xa;• coding-standards.md - 编码规范&#xa;• testing.md - 测试指南&#xa;• troubleshooting.md - 故障排除" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-arch-layer">
+          <mxGeometry x="30" y="220" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- 新结构 - 性能优化层 -->
+        <mxCell id="new-perf-layer" value="性能优化层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="new-structure">
+          <mxGeometry x="420" y="420" width="350" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ns-performance" value="性能优化&#xa;(performance)&#xa;目标: 性能工程师" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=top;" vertex="1" parent="new-perf-layer">
+          <mxGeometry x="20" y="40" width="310" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-perf-list" value="• index.md - 性能导航&#xa;• best-practices.md - 最佳实践&#xa;• optimization.md - 优化策略&#xa;• benchmark.md - 性能测试" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-perf-layer">
+          <mxGeometry x="30" y="80" width="290" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- 新结构优势 -->
+        <mxCell id="new-advantages" value="新结构优势" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;verticalAlign=top;" vertex="1" parent="new-structure">
+          <mxGeometry x="40" y="780" width="730" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="advantage-details" value="• 清晰的用户角色分类: 用户文档层 + 开发者文档层&#xa;• 明确的文档类型分类: 概念性 + 使用性 + 技术性 + 指导性&#xa;• 简化的目录结构: 从13个减少到7个目录&#xa;• 降低内容重复率: 从30-40%降至5%以下&#xa;• 优化的学习路径: 新手路径 + 开发者路径 + 专家路径&#xa;• 统一的导航结构: 每个目录都有index.md&#xa;• 高效的信息查找: 按角色、类型、层次分类&#xa;• 降低维护成本: 文档数量减少30-40%" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="new-structure">
+          <mxGeometry x="50" y="820" width="710" height="190" as="geometry" />
+        </mxCell>
+
+        <!-- 对比箭头 -->
+        <mxCell id="arrow-compare" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;strokeColor=#666666;" edge="1" parent="1" source="current-structure" target="new-structure">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="935" y="600" as="sourcePoint" />
+            <mxPoint x="985" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-label" value="优化重组" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="895" y="580" width="120" height="40" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

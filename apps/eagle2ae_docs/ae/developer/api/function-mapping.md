@@ -1234,7 +1234,7 @@ function handleKeyboardShortcuts(event) {
 
 ## 相关文档
 
-- [UI组件详细说明](./ui-components.md)
+- UI组件详细说明请参考 [开发指南 - CSS样式](../development/)
 - [UI交互指南](../development/ui-interaction-guide.md)
 - [API参考文档](./api-reference.md)
 - [开发指南](../development/setup-guide.md)

@@ -387,8 +387,7 @@ function determineExportPath(exportSettings, projectInfo) {
 ---
 
 **相关文档**:
-- [UI组件说明](../api/ui-components.md)
-- [函数功能映射](../api/function-mapping.md)
+- [函数功能映射](../api-reference/function-mapping.md)
 - [对话框系统](../development/dialog-system.md)
 - [连接管理](../development/connection-management.md)
 - [项目状态检测](../development/project-status-detection.md)
