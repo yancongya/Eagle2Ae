@@ -29,7 +29,7 @@ class EasterEgg {
 
         // 只在CEP环境中启用彩蛋功能
         if (!this.isCEPEnvironment()) {
-            console.log('🎭 彩蛋功能仅在CEP环境中可用');
+            console.debug('🎭 彩蛋功能仅在CEP环境中可用');
             return;
         }
 

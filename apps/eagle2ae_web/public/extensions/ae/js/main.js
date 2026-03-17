@@ -95,8 +95,8 @@ class AEExtension {
         // 🔥 识别当前面板 ID
         this.panelId = this.getPanelId();
         console.log('='.repeat(60));
-        console.log(`[Panel] 当前面板 ID: ${this.panelId}`);
-        console.log(`[Panel] 预设文件名: ${this.getPresetFileName()}`);
+        if (window.__DEBUG_PANEL__) console.log(`[Panel] 当前面板 ID: ${this.panelId}`);
+        if (window.__DEBUG_PANEL__) console.log(`[Panel] 预设文件名: ${this.getPresetFileName()}`);
         console.log('='.repeat(60));
 
         this.connectionState = ConnectionState.DISCONNECTED;
@@ -259,7 +259,7 @@ class AEExtension {
         try {
             if (this.csInterface && typeof this.csInterface.getExtensionID === 'function') {
                 const extensionId = this.csInterface.getExtensionID();
-                console.log(`[Panel] Extension ID: ${extensionId}`);
+                if (window.__DEBUG_PANEL__) console.log(`[Panel] Extension ID: ${extensionId}`);
 
                 // 🔥 安全检查：确保 extensionId 不是 null 或 undefined
                 if (extensionId && typeof extensionId === 'string') {
@@ -6860,6 +6860,7 @@ class AEExtension {
                     // 显示设置说明
                     const descriptions = {
                         'no_import': '素材将仅复制到项目文件夹，不导入到合成',
+                        'create_precomp': '素材将创建预合成并导入到当前时间位置',
                         'current_time': '素材将导入到合成并放置在当前时间指针位置',
                         'timeline_start': '素材将导入到合成并移至时间轴开始处（0秒位置）'
                     };
@@ -6867,57 +6868,6 @@ class AEExtension {
                 }
             });
         });
-
-        // 高级设置"不导入合成"按钮的子模式切换功能
-        const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
-        if (advancedNoImportBtn) {
-            let wasCheckedOnMousedown = false;
-            const radio = advancedNoImportBtn.querySelector('input[type="radio"]');
-            const textSpan = advancedNoImportBtn.querySelector('span');
-
-            advancedNoImportBtn.addEventListener('mousedown', () => {
-                wasCheckedOnMousedown = radio.checked;
-            });
-
-            advancedNoImportBtn.addEventListener('click', (event) => {
-                if (wasCheckedOnMousedown) {
-                    event.preventDefault();
-                    const isFilled = advancedNoImportBtn.classList.toggle('filled');
-                    if (isFilled) {
-                        textSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                        // 确保设置能够正确保存到localStorage
-                        const result = this.settingsManager.updateField('noImportSubMode', 'pre_comp', true, false);
-                        if (!result.success) {
-                            console.error('保存noImportSubMode设置失败:', result.error);
-                        }
-                        this.log('高级设置已切换到创建预合成模式', 'info');
-                    } else {
-                        textSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                        // 确保设置能够正确保存到localStorage
-                        const result = this.settingsManager.updateField('noImportSubMode', 'normal', true, false);
-                        if (!result.success) {
-                            console.error('保存noImportSubMode设置失败:', result.error);
-                        }
-                        this.log('高级设置已切换到不导入合成模式', 'info');
-                    }
-
-                    // 同步到快速设置面板
-                    if (this.quickSettingsInitialized) {
-                        const quickNoImportBtn = document.getElementById('no-import-comp-btn');
-                        const quickTextSpan = quickNoImportBtn ? quickNoImportBtn.querySelector('.behavior-text') : null;
-                        if (quickNoImportBtn && quickTextSpan) {
-                            if (isFilled) {
-                                quickNoImportBtn.classList.add('filled');
-                                quickTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                            } else {
-                                quickNoImportBtn.classList.remove('filled');
-                                quickTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
         // 合成导入选项
         const addToCompositionCheckbox = document.getElementById('add-to-composition');
@@ -6956,6 +6906,7 @@ class AEExtension {
 
                         // 显示设置说明
                         const descriptions = {
+                            'create_precomp': '素材将创建预合成并放置在当前时间位置',
                             'current_time': '素材将放置在当前时间指针位置',
                             'timeline_start': '素材将移至时间轴开始处（0秒位置）'
                         };
@@ -7167,22 +7118,6 @@ class AEExtension {
             advancedImportBehaviorRadio.checked = true;
         }
 
-        // 恢复高级设置面板noImportSubMode的视觉状态
-        if (advancedImportBehaviorValue === 'no_import') {
-            const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
-            const advancedTextSpan = advancedNoImportBtn ? advancedNoImportBtn.querySelector('span') : null;
-            if (advancedNoImportBtn && advancedTextSpan) {
-                const subMode = settings.noImportSubMode || 'normal';
-                if (subMode === 'pre_comp') {
-                    advancedNoImportBtn.classList.add('filled');
-                    advancedTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                } else {
-                    advancedNoImportBtn.classList.remove('filled');
-                    advancedTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                }
-            }
-        }
-
         // 时间轴选项
         const timelinePlacementRadio = document.querySelector(`input[name="timeline-placement"][value="${settings.timelineOptions.placement}"]`);
         if (timelinePlacementRadio) {
@@ -7292,7 +7227,7 @@ class AEExtension {
             }
         }
 
-        console.log(`[AE Extension] ${message}`);
+        console.debug(`[AE Extension] ${message}`);
     }
 
     // 初始化最新日志显示
@@ -8559,40 +8494,15 @@ class AEExtension {
             });
         });
 
-        // 导入行为变化 - 处理一级选择和“不导入合成”按钮的视觉状态
+        // 导入行为变化 - 处理 4 个独立按钮的选择
         importBehaviorRadios.forEach(radio => {
             radio.addEventListener('change', (e) => {
                 if (this.isLoadingSettings) return; // 在加载设置时，忽略此事件
 
-                const noImportBtn = document.getElementById('no-import-comp-btn');
-                const noImportRadio = noImportBtn ? noImportBtn.querySelector('input[type="radio"]') : null;
-                const noImportTextSpan = noImportBtn ? noImportBtn.querySelector('.behavior-text') : null;
-
-                // 无论哪个radio被点击，都检查“不导入合成”按钮的最终状态
-                if (noImportRadio && noImportTextSpan) {
-                    if (noImportRadio.checked) {
-                        // 如果“不导入合成”按钮现在是选中状态，恢复其子模式的视觉状态
-                        const subMode = this.settingsManager.getField('noImportSubMode');
-                        if (subMode === 'pre_comp') {
-                            noImportBtn.classList.add('filled');
-                            noImportTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                        } else {
-                            noImportBtn.classList.remove('filled');
-                            noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                        }
-                    } else {
-                        // 如果“不导入合成”按钮现在是未选中状态，强制清除其特殊样式和文本
-                        noImportBtn.classList.remove('filled');
-                        noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                        // 重置noImportSubMode为normal状态
-                        this.settingsManager.updateField('noImportSubMode', 'normal');
-                    }
-                }
-
-                // 然后处理当前被点击的radio的设置更新
+                // 处理当前被点击的radio的设置更新
                 if (e.target.checked) {
                     const behavior = e.target.value;
-                    this.log(`一级选择已更改为: ${behavior}`, 'info');
+                    this.log(`导入行为已更改为: ${behavior}`, 'info');
 
                     // 更新图层操作按钮的视觉状态
                     this.updateLayerOperationButtonsVisual(behavior);
@@ -8600,10 +8510,18 @@ class AEExtension {
                     this.updateModeButtonStyles();
 
                     if (behavior === 'no_import') {
+                        // 不导入到合成
                         this.updateQuickSetting('addToComposition', false);
+                    } else if (behavior === 'create_precomp') {
+                        // 创建预合成
+                        this.updateQuickSetting('addToComposition', true);
+                        this.updateQuickSetting('timelineOptions.placement', 'current_time');
+                        this.updateQuickSetting('createPrecomp', true);
                     } else {
+                        // 当前时间或时间轴开始
                         this.updateQuickSetting('addToComposition', true);
                         this.updateQuickSetting('timelineOptions.placement', behavior);
+                        this.updateQuickSetting('createPrecomp', false);
                     }
 
                     // 同步到高级设置面板
@@ -8765,24 +8683,7 @@ class AEExtension {
                 const noImportRadio = document.querySelector('input[name="import-behavior"][value="no_import"]');
                 if (noImportRadio) {
                     noImportRadio.checked = true;
-
-                    // 恢复noImportSubMode的视觉状态
-                    const noImportBtn = document.getElementById('no-import-comp-btn');
-                    const noImportTextSpan = noImportBtn ? noImportBtn.querySelector('.behavior-text') : null;
-                    if (noImportBtn && noImportTextSpan) {
-                        const subMode = settings.noImportSubMode || 'normal';
-                        if (subMode === 'pre_comp') {
-                            noImportBtn.classList.add('filled');
-                            noImportTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                        } else {
-                            noImportBtn.classList.remove('filled');
-                            noImportTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                        }
-                    }
-                } else {
-                    this.log('找不到"不导入合成"选项', 'warning');
                 }
-            }
 
             // 同步到高级设置面板
             this.syncQuickToAdvanced();
@@ -8798,6 +8699,7 @@ class AEExtension {
             this.updateLayerOperationButtonsVisual(currentImportBehavior);
 
             // 快速设置加载完成
+            }
 
         } catch (error) {
             this.log(`加载快速设置失败: ${error.message}`, 'error');
@@ -10120,6 +10022,7 @@ class AEExtension {
                     // 显示设置说明
                     const descriptions = {
                         'no_import': '素材将不会添加到合成中',
+                        'create_precomp': '素材将创建预合成并放置在当前时间位置',
                         'current_time': '素材将放置在当前时间指针位置',
                         'timeline_start': '素材将移至时间轴开始处（0秒位置）'
                     };
@@ -13477,7 +13380,10 @@ ${pathsText}
                         throw new Error(`HTTP ${response.status}`);
                     }
                 } catch (fetchError) {
-                    console.warn('版本文件加载失败 (fetch):', fetchError.message);
+                    // web 环境下 CORS 错误是正常的，不输出警告
+                    if (!fetchError.message.includes('CORS') && !fetchError.message.includes('network')) {
+                        console.warn('版本文件加载失败 (fetch):', fetchError.message);
+                    }
                     // 如果两者都失败，返回默认版本
                     return '1.0.0';
                 }
@@ -13856,52 +13762,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             aeExtension.getAEVersion();
         }
     }, 1000); // 比版本标题加载稍微晚一点
-
-    const noImportCompBtn = document.getElementById('no-import-comp-btn');
-    if (noImportCompBtn) {
-        let wasCheckedOnMousedown = false;
-        const radio = noImportCompBtn.querySelector('input[type="radio"]');
-        const textSpan = noImportCompBtn.querySelector('.behavior-text');
-
-        noImportCompBtn.addEventListener('mousedown', () => {
-            wasCheckedOnMousedown = radio.checked;
-        });
-
-        noImportCompBtn.addEventListener('click', (event) => {
-            if (wasCheckedOnMousedown) {
-                event.preventDefault();
-                const isFilled = noImportCompBtn.classList.toggle('filled');
-                if (isFilled) {
-                    textSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                    // 确保设置能够正确保存到localStorage
-                    const result = aeExtension.settingsManager.updateField('noImportSubMode', 'pre_comp', true, false);
-                    if (!result.success) {
-                        console.error('保存noImportSubMode设置失败:', result.error);
-                    }
-                    aeExtension.log('快速设置已切换到创建预合成模式', 'info');
-                } else {
-                    textSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                    // 确保设置能够正确保存到localStorage
-                    const result = aeExtension.settingsManager.updateField('noImportSubMode', 'normal', true, false);
-                    if (!result.success) {
-                        console.error('保存noImportSubMode设置失败:', result.error);
-                    }
-                    aeExtension.log('快速设置已切换到不导入合成模式', 'info');
-                }
-
-                // 同步到高级设置面板
-                const advancedNoImportBtn = document.getElementById('advanced-no-import-comp-btn');
-                const advancedTextSpan = advancedNoImportBtn ? advancedNoImportBtn.querySelector('span') : null;
-                if (advancedNoImportBtn && advancedTextSpan) {
-                    if (isFilled) {
-                        advancedNoImportBtn.classList.add('filled');
-                        advancedTextSpan.textContent = (window.i18n?.getText('common.createPrecomp') || '创建预合成');
-                    } else {
-                        advancedNoImportBtn.classList.remove('filled');
-                        advancedTextSpan.textContent = (window.i18n?.getText('common.doNotImportToComp') || '不导入合成');
-                    }
-                }
-            }
-        });
-    }
 });

@@ -63,13 +63,11 @@ class I18n {
   }
 
   async loadTranslations() {
-    console.log('[i18n] loadTranslations 开始，语言:', this.currentLang);
     try {
       // 加载当前语言的翻译（支持HTTP与CEP本地文件）
       this.translations = await this.loadJson(`js/i18n/${this.currentLang}.json`);
       // 缓存到多语言字典
       this.allTranslations[this.currentLang] = this.translations;
-      console.log('[i18n] 翻译加载成功，keys:', Object.keys(this.translations));
       this.updatePageTexts();
       // 切换后补充动态内容刷新，确保占位文案即时本地化
       try {
@@ -114,7 +112,6 @@ class I18n {
       if (!this.allTranslations[otherLang]) {
         this.loadJson(`js/i18n/${otherLang}.json`).then(data => {
           this.allTranslations[otherLang] = data;
-          console.log('[i18n] 已预加载另一语言字典:', otherLang);
         }).catch(err => console.warn('[i18n] 预加载另一语言失败:', otherLang, err));
       }
     } catch (e) {
@@ -194,10 +191,6 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const text = this.getText(key);
       if (text) {
-        if (element.id === 'communicationPortSettingsTitle') {
-            console.log(`[i18n.updatePageTexts] 尝试翻译通信端口设置标题: 键: ${key}, 翻译文本: ${text}`);
-        }
-        console.log(`[i18n.updatePageTexts] 找到 data-i18n 元素: ${element.tagName}#${element.id || element.className}，键: ${key}，翻译文本: ${text}`);
         element.textContent = text;
         // 调试：记录 UI 设置按钮的更新（仅在 debug 开启时输出）
         try {

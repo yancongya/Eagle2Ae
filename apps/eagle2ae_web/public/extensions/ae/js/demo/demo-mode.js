@@ -37,7 +37,7 @@ class DemoMode {
     }
     
     async init() {
-        // console.log('🎭 演示模式控制器初始化...');
+        // console.debug('🎭 演示模式控制器初始化...');
         
         try {
             // 检测环境
@@ -478,7 +478,7 @@ class DemoMode {
 
         if (!this.state.isCEPEnvironment) {
             // 非CEP环境自动启用演示模式
-            console.log('🎭 Web环境检测到，准备自动启用演示模式...');
+            console.debug('🎭 Web环境检测到，准备自动启用演示模式...');
             this.enableDemoMode(this.modes.AUTO_DEMO);
         } else {
             // CEP环境保持正常模式，等待彩蛋触发
@@ -561,7 +561,7 @@ class DemoMode {
         //     this.config.demoData.ui.messages.modeSwitch || '🎭 演示模式已启用 - 网络通信已完全拦截';
         // this.showModeNotification(message);
 
-        console.log('✅ 演示模式已启用');
+        console.debug('✅ 演示模式已启用');
     }
     
     disableDemoMode() {
@@ -599,7 +599,7 @@ class DemoMode {
         // 重新初始化正常模式
         this.reinitializeNormalMode();
 
-        console.log('✅ 正常模式已恢复 - 网络通信已恢复正常');
+        console.debug('✅ 正常模式已恢复 - 网络通信已恢复正常');
     }
 
     restoreOriginalProjectInfo() {
@@ -673,7 +673,7 @@ class DemoMode {
             testConnectionBtn.classList.remove('connected');
         }
 
-        console.log('✅ 原始项目信息显示已恢复');
+        console.debug('✅ 原始项目信息显示已恢复');
     }
     
     backupOriginalAPIs() {
@@ -742,28 +742,28 @@ class DemoMode {
             // 替换为演示版本
             if (aeExtension.getAEVersion) {
                 aeExtension.getAEVersion = () => {
-                    console.log('🎭 拦截getAEVersion调用');
+                    console.debug('🎭 拦截getAEVersion调用');
                     // 不执行真实的版本获取，保持演示数据
                 };
             }
 
             if (aeExtension.testConnection) {
                 aeExtension.testConnection = async () => {
-                    console.log('🎭 拦截testConnection调用');
+                    console.debug('🎭 拦截testConnection调用');
                     return await this.demoAPIs.testConnection();
                 };
             }
 
             if (aeExtension.updateConnectionUI) {
                 aeExtension.updateConnectionUI = () => {
-                    console.log('🎭 拦截updateConnectionUI调用');
+                    console.debug('🎭 拦截updateConnectionUI调用');
                     // 保持演示模式的UI状态，不执行真实更新
                 };
             }
 
             if (aeExtension.refreshProjectInfo) {
                 aeExtension.refreshProjectInfo = async () => {
-                    console.log('🎭 拦截refreshProjectInfo调用');
+                    console.debug('🎭 拦截refreshProjectInfo调用');
                     return await this.demoAPIs.getProjectInfo();
                 };
             }
@@ -771,7 +771,7 @@ class DemoMode {
             // 关键：拦截updateEagleUI方法，防止Eagle信息被覆盖
             if (aeExtension.updateEagleUI) {
                 aeExtension.updateEagleUI = (eagleStatus) => {
-                    console.log('🎭 拦截updateEagleUI调用，保持演示数据');
+                    console.debug('🎭 拦截updateEagleUI调用，保持演示数据');
                     // 完全阻止Eagle UI更新，保持演示数据
                 };
             }
@@ -779,7 +779,7 @@ class DemoMode {
             // 关键：拦截updateEagleStatusFromServer方法
             if (aeExtension.updateEagleStatusFromServer) {
                 aeExtension.updateEagleStatusFromServer = async () => {
-                    console.log('🎭 拦截updateEagleStatusFromServer调用');
+                    console.debug('🎭 拦截updateEagleStatusFromServer调用');
                     // 不执行真实的状态获取，避免覆盖演示数据
                 };
             }
@@ -787,7 +787,7 @@ class DemoMode {
             // 拦截updateProjectUI方法
             if (aeExtension.updateProjectUI) {
                 aeExtension.updateProjectUI = (projectInfo) => {
-                    console.log('🎭 拦截updateProjectUI调用，保持演示数据');
+                    console.debug('🎭 拦截updateProjectUI调用，保持演示数据');
                     // 不执行真实的项目UI更新
                 };
             }
@@ -795,12 +795,12 @@ class DemoMode {
             // 拦截pollMessages方法，防止轮询触发状态更新
             if (aeExtension.pollMessages) {
                 aeExtension.pollMessages = async () => {
-                    console.log('🎭 拦截pollMessages调用');
+                    console.debug('🎭 拦截pollMessages调用');
                     return await this.demoAPIs.pollMessages();
                 };
             }
 
-            console.log('🎭 AEExtension方法已完全拦截');
+            console.debug('🎭 AEExtension方法已完全拦截');
         }
     }
     
@@ -866,13 +866,13 @@ class DemoMode {
         // 清空备份
         this.state.originalAPIs = {};
 
-        console.log('✅ 所有原始API已恢复');
+        console.debug('✅ 所有原始API已恢复');
     }
     
     interceptAPICallsIfNeeded() {
         // 完整拦截所有网络API调用
         if (this.state.currentMode !== this.modes.NORMAL) {
-            console.log('🎭 启用完整网络拦截模式');
+            console.debug('🎭 启用完整网络拦截模式');
 
             // 拦截fetch请求
             this.interceptFetch();
@@ -883,7 +883,7 @@ class DemoMode {
             // 拦截XMLHttpRequest（如果需要）
             this.interceptXMLHttpRequest();
 
-            console.log('✅ 网络API拦截已启用');
+            console.debug('✅ 网络API拦截已启用');
         }
     }
 
@@ -915,7 +915,7 @@ class DemoMode {
 
         window.WebSocket = this.demoAPIs.createMockWebSocket();
 
-        console.log('🎭 WebSocket已被拦截');
+        console.debug('🎭 WebSocket已被拦截');
     }
 
     // 拦截XMLHttpRequest
@@ -923,7 +923,7 @@ class DemoMode {
         const originalXMLHttpRequest = this.state.originalAPIs.XMLHttpRequest;
 
         window.XMLHttpRequest = function() {
-            console.log('🎭 拦截XMLHttpRequest创建');
+            console.debug('🎭 拦截XMLHttpRequest创建');
 
             const mockXHR = {
                 open: function(method, url) {
@@ -954,7 +954,7 @@ class DemoMode {
             return mockXHR;
         };
 
-        console.log('🎭 XMLHttpRequest已被拦截');
+        console.debug('🎭 XMLHttpRequest已被拦截');
     }
 
     // 检查是否是Eagle API调用
@@ -1029,7 +1029,7 @@ class DemoMode {
                 window.AEExtension.startProjectMonitoring();
             }
 
-            console.log('✅ 正常模式重新初始化完成');
+            console.debug('✅ 正常模式重新初始化完成');
         }, 500);
     }
     
@@ -1093,7 +1093,7 @@ class DemoMode {
             aeVersion.textContent = aeData.version;
             const aeVerPrefix = window.i18n?.getText('tooltips.aeVersionPrefix') || 'After Effects Version:';
             aeVersion.title = `${aeVerPrefix} ${aeData.version}`;
-            console.log('✅ AE版本已设置:', aeData.version);
+            console.debug('✅ AE版本已设置:', aeData.version);
         } else {
             console.warn('❌ 未找到ae-version元素');
         }
@@ -1106,10 +1106,10 @@ class DemoMode {
             // 添加点击样式和事件
             projectPath.classList.add('clickable');
             projectPath.onclick = () => {
-                console.log('🎭 演示模式：模拟打开项目文件夹');
+                console.debug('🎭 演示模式：模拟打开项目文件夹');
                 alert('演示模式：这里会打开项目文件夹\n' + aeData.projectPath);
             };
-            console.log('✅ 项目路径已设置:', aeData.projectPath);
+            console.debug('✅ 项目路径已设置:', aeData.projectPath);
         } else {
             console.warn('❌ 未找到project-path元素');
         }
@@ -1119,7 +1119,7 @@ class DemoMode {
         if (projectName) {
             projectName.textContent = aeData.projectName;
             projectName.title = aeData.projectName; // 添加悬浮提示
-            console.log('✅ 项目名称已设置:', aeData.projectName);
+            console.debug('✅ 项目名称已设置:', aeData.projectName);
         } else {
             console.warn('❌ 未找到project-name元素');
         }
@@ -1129,7 +1129,7 @@ class DemoMode {
         if (compName) {
             compName.textContent = aeData.activeComp;
             compName.title = aeData.activeComp; // 添加悬浮提示
-            console.log('✅ 合成名称已设置:', aeData.activeComp);
+            console.debug('✅ 合成名称已设置:', aeData.activeComp);
         } else {
             console.warn('❌ 未找到comp-name元素');
         }
@@ -1146,7 +1146,7 @@ class DemoMode {
         if (eagleVersion) {
             eagleVersion.textContent = eagleData.version;
             eagleVersion.title = `Eagle版本: ${eagleData.version}`; // 添加悬浮提示
-            console.log('✅ Eagle版本已设置:', eagleData.version);
+            console.debug('✅ Eagle版本已设置:', eagleData.version);
         } else {
             console.warn('❌ 未找到eagle-version元素');
         }
@@ -1161,7 +1161,7 @@ class DemoMode {
             // Eagle路径不设置点击事件
             eaglePath.classList.remove('clickable');
             eaglePath.onclick = null;
-            console.log('✅ Eagle路径已设置:', eagleData.execPath);
+            console.debug('✅ Eagle路径已设置:', eagleData.execPath);
         } else {
             console.warn('❌ 未找到eagle-path元素');
         }
@@ -1181,10 +1181,10 @@ class DemoMode {
             // 添加点击样式和事件
             eagleLibrary.classList.add('clickable');
             eagleLibrary.onclick = () => {
-                console.log('🎭 演示模式：模拟打开Eagle资源库文件夹');
+                console.debug('🎭 演示模式：模拟打开Eagle资源库文件夹');
                 alert('演示模式：这里会打开Eagle资源库文件夹\n' + libraryPath);
             };
-            console.log('✅ Eagle资源库已设置:', libraryName);
+            console.debug('✅ Eagle资源库已设置:', libraryName);
         } else {
             console.warn('❌ 未找到eagle-library元素');
         }
@@ -1197,7 +1197,7 @@ class DemoMode {
             const selectedFolder = eagleData.selectedFolder;
             eagleFolder.textContent = selectedFolder;
             eagleFolder.title = `当前组: ${selectedFolder}`; // 添加悬浮提示
-            console.log('✅ Eagle当前组已设置:', selectedFolder);
+            console.debug('✅ Eagle当前组已设置:', selectedFolder);
         } else {
             console.warn('❌ 未找到eagle-folder元素');
         }
@@ -1317,7 +1317,7 @@ async function initializeDemoMode() {
         await new Promise(resolve => {
             const checkInit = () => {
                 if (window.demoMode.state.isInitialized) {
-                    console.log('✅ 演示模式初始化完成');
+                    console.debug('✅ 演示模式初始化完成');
                     resolve();
                 } else {
                     setTimeout(checkInit, 50);
@@ -1453,12 +1453,12 @@ window.debugConnection = function() {
 
     // 检查演示模式状态
     if (window.demoMode) {
-        console.log('✅ 演示模式已初始化');
+        console.debug('✅ 演示模式已初始化');
         console.log('🔍 当前模式:', window.demoMode.state.currentMode);
         console.log('🔍 CEP环境:', window.demoMode.state.isCEPEnvironment);
 
         if (window.demoMode.demoUI) {
-            console.log('✅ DemoUI已初始化');
+            console.debug('✅ DemoUI已初始化');
             console.log('🔍 DemoUI状态:', window.demoMode.demoUI.state);
             console.log('🔍 DemoUI是否已设置:', window.demoMode.demoUI.state.isInitialized);
         } else {
@@ -1471,7 +1471,7 @@ window.debugConnection = function() {
     // 检查连接按钮元素
     const button = document.getElementById('test-connection-btn');
     if (button) {
-        console.log('✅ 连接按钮元素存在');
+        console.debug('✅ 连接按钮元素存在');
         console.log('🔍 按钮disabled:', button.disabled);
         console.log('🔍 按钮title:', button.title);
 
@@ -1486,7 +1486,7 @@ window.debugConnection = function() {
 
     // 检查主应用状态
     if (window.eagle2ae) {
-        console.log('✅ 主应用已初始化');
+        console.debug('✅ 主应用已初始化');
         console.log('🔍 连接状态:', window.eagle2ae.connectionState);
     } else {
         console.log('❌ 主应用未初始化');

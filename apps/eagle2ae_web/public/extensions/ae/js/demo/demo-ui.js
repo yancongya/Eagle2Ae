@@ -73,7 +73,7 @@ class DemoUI {
         // 因为这些会在演示模式初始化时单独调用
 
         this.state.isInitialized = true;
-        console.log('✅ 演示UI已激活');
+        console.debug('✅ 演示UI已激活');
     }
     
     updateProjectInfo() {
@@ -117,7 +117,7 @@ class DemoUI {
             // 添加点击样式和事件
             this.elements.projectPath.classList.add('clickable');
             this.elements.projectPath.onclick = () => {
-                console.log('🎭 演示模式：模拟打开项目文件夹');
+                console.debug('🎭 演示模式：模拟打开项目文件夹');
                 alert('演示模式：这里会打开项目文件夹\n' + projectPath);
             };
         }
@@ -259,7 +259,7 @@ class DemoUI {
             // 添加点击样式和事件
             this.elements.eagleLibrary.classList.add('clickable');
             this.elements.eagleLibrary.onclick = () => {
-                console.log('🎭 演示模式：模拟打开Eagle资源库文件夹');
+                console.debug('🎭 演示模式：模拟打开Eagle资源库文件夹');
                 alert('演示模式：这里会打开Eagle资源库文件夹\n' + libraryPath);
             };
         } else {
@@ -364,7 +364,7 @@ class DemoUI {
                 contextmenu: demoContextHandler
             };
 
-            console.log('✅ 演示模式连接按钮事件监听器已设置（capture模式）');
+            console.debug('✅ 演示模式连接按钮事件监听器已设置（capture模式）');
         } else {
             console.warn('⚠️ 连接按钮元素未找到，无法设置事件监听器');
         }
@@ -425,7 +425,7 @@ class DemoUI {
                     setTimeout(() => {
                         this.updateProjectInfo();
                     }, 200);
-                    console.log('✅ 演示断开连接完成');
+                    console.debug('✅ 演示断开连接完成');
                 }
             } catch (error) {
                 console.error('❌ 断开连接失败:', error);
@@ -498,7 +498,7 @@ class DemoUI {
                 window.aeExtension.log(`🎯 ${tSystemReady}`, 'success');
             }, 1400);
         }
-        console.log('✅ 演示连接完成');
+        console.debug('✅ 演示连接完成');
                 } else {
                     throw new Error(result.message || '连接失败');
                 }
@@ -553,7 +553,7 @@ class DemoUI {
         setTimeout(() => {
             this.updateAEInfoConnected();
             this.updateEagleInfoConnected();
-            console.log('✅ 连接状态UI已更新，包括AE和Eagle信息');
+            console.debug('✅ 连接状态UI已更新，包括AE和Eagle信息');
         }, 100);
     }
     
@@ -657,14 +657,14 @@ class DemoUI {
             }
         } catch (__) {}
 
-        console.log('🎭 演示模式指示器已显示');
+        console.debug('🎭 演示模式指示器已显示');
     }
     
     hideDemoModeIndicator() {
         const indicator = document.getElementById('demo-mode-indicator');
         if (indicator) {
             indicator.remove();
-            console.log('🎭 演示模式指示器已隐藏');
+            console.debug('🎭 演示模式指示器已隐藏');
         }
     }
     
@@ -804,7 +804,7 @@ window.fixTitles = function() {
         projectPathElement.removeAttribute('title');
         projectPathElement.setAttribute('title', globalAEData.execPath);
         projectPathElement.title = globalAEData.execPath;
-        console.log('✅ AE项目路径悬浮提示已修复');
+        console.debug('✅ AE项目路径悬浮提示已修复');
     }
 
     // 修复Eagle路径
@@ -813,7 +813,7 @@ window.fixTitles = function() {
         eaglePathElement.removeAttribute('title');
         eaglePathElement.setAttribute('title', globalEagleData.execPath);
         eaglePathElement.title = globalEagleData.execPath;
-        console.log('✅ Eagle路径悬浮提示已修复');
+        console.debug('✅ Eagle路径悬浮提示已修复');
     }
 
     // 强制重排

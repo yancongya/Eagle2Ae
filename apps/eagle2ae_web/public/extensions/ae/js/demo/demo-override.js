@@ -4,7 +4,7 @@
 (function() {
     'use strict';
     
-    console.log('🎭 演示模式数据覆盖策略已加载，等待激活...');
+    console.debug('🎭 演示模式数据覆盖策略已加载，等待激活...');
 
     // 不立即激活，等待演示模式真正启用时才激活
     window.__DEMO_MODE_ACTIVE__ = false;
@@ -83,7 +83,7 @@
         
         // 立即应用新的演示数据
         if (window.__DEMO_MODE_ACTIVE__) {
-            console.log('🎭 演示模式激活，应用新的本地化数据');
+            console.debug('🎭 演示模式激活，应用新的本地化数据');
             window.__setDemoInfo__(true, true);
         }
     };
@@ -261,7 +261,7 @@
     
     // 持续监控和覆盖
     window.__startDemoMonitoring__ = function() {
-        console.log('🎭 启动演示数据持续覆盖...');
+        console.debug('🎭 启动演示数据持续覆盖...');
 
         // 添加暂停机制，在连接状态变化时暂停覆盖
         let isPaused = false;
@@ -272,7 +272,7 @@
             if (pauseTimeout) clearTimeout(pauseTimeout);
             pauseTimeout = setTimeout(() => {
                 isPaused = false;
-                console.log('🎭 演示数据覆盖已恢复');
+                console.debug('🎭 演示数据覆盖已恢复');
             }, duration);
             console.log(`🎭 演示数据覆盖已暂停 ${duration}ms`);
         };
@@ -363,7 +363,7 @@
             }
         }, 10000); // 增加到10秒，进一步减少闪烁
         
-        console.log('✅ 演示数据持续覆盖已启动');
+        console.debug('✅ 演示数据持续覆盖已启动');
     };
     
     // 获取期望的演示值
@@ -393,7 +393,7 @@
     
     // 覆盖关键方法，确保显示演示数据但保持功能
     function overrideKeyMethods() {
-        console.log('🎭 覆盖关键方法...');
+        console.debug('🎭 覆盖关键方法...');
 
         // 等待AEExtension加载
         const checkAEExtension = () => {
@@ -410,11 +410,11 @@
                 if (proto.updateProjectUI) {
                     const originalUpdateProjectUI = proto.updateProjectUI;
                     proto.updateProjectUI = function(projectInfo) {
-                        console.log('🎭 拦截updateProjectUI，阻止真实数据覆盖');
+                        console.debug('🎭 拦截updateProjectUI，阻止真实数据覆盖');
 
                         // 在演示模式下完全阻止更新
                         if (window.__DEMO_MODE_ACTIVE__) {
-                            console.log('🎭 演示模式激活，阻止项目UI更新');
+                            console.debug('🎭 演示模式激活，阻止项目UI更新');
                             return;
                         }
 
@@ -427,11 +427,11 @@
                 if (proto.updateEagleUI) {
                     const originalUpdateEagleUI = proto.updateEagleUI;
                     proto.updateEagleUI = function(eagleStatus) {
-                        console.log('🎭 拦截updateEagleUI，阻止真实数据覆盖');
+                        console.debug('🎭 拦截updateEagleUI，阻止真实数据覆盖');
 
                         // 在演示模式下完全阻止更新
                         if (window.__DEMO_MODE_ACTIVE__) {
-                            console.log('🎭 演示模式激活，阻止Eagle UI更新');
+                            console.debug('🎭 演示模式激活，阻止Eagle UI更新');
                             return;
                         }
 
@@ -444,11 +444,11 @@
                 if (proto.updateEagleStatusFromServer) {
                     const originalUpdateEagleStatusFromServer = proto.updateEagleStatusFromServer;
                     proto.updateEagleStatusFromServer = async function() {
-                        console.log('🎭 拦截updateEagleStatusFromServer');
+                        console.debug('🎭 拦截updateEagleStatusFromServer');
 
                         // 在演示模式下完全阻止更新
                         if (window.__DEMO_MODE_ACTIVE__) {
-                            console.log('🎭 演示模式激活，阻止Eagle状态获取');
+                            console.debug('🎭 演示模式激活，阻止Eagle状态获取');
                             return;
                         }
 
@@ -461,7 +461,7 @@
                 if (proto.updateConnectionUI) {
                     const originalUpdateConnectionUI = proto.updateConnectionUI;
                     proto.updateConnectionUI = function() {
-                        console.log('🎭 拦截updateConnectionUI，保持连接逻辑但使用演示数据');
+                        console.debug('🎭 拦截updateConnectionUI，保持连接逻辑但使用演示数据');
 
                         // 暂停演示数据覆盖，避免冲突
                         if (window.__pauseDemoOverride__) {
@@ -485,7 +485,7 @@
                     const originalGetAEVersion = proto.getAEVersion;
                     proto.getAEVersion = function() {
                         if (window.__DEMO_MODE_ACTIVE__) {
-                            console.log('🎭 拦截getAEVersion调用，返回演示数据');
+                            console.debug('🎭 拦截getAEVersion调用，返回演示数据');
                             // 延迟返回演示数据，模拟真实调用
                             setTimeout(() => {
                                 const aeVersionElement = document.getElementById('ae-version');
@@ -567,7 +567,7 @@
                     };
                 }
 
-                console.log('✅ AEExtension方法覆盖完成');
+                console.debug('✅ AEExtension方法覆盖完成');
                 console.log('🔍 executeExtendScript方法已覆盖:', !!proto.executeExtendScript);
             } else {
                 // 如果AEExtension还没加载，继续等待
@@ -630,14 +630,14 @@
     
     // 初始化演示数据设置
     function initializeDemoData() {
-        console.log('🎭 初始化演示数据设置...');
+        console.debug('🎭 初始化演示数据设置...');
         
         const trySetDemoInfo = () => {
             if (window.__setDemoInfo__) {
                 // 初始设置时保持连接状态
                 const changed = window.__setDemoInfo__(true, true); // force=true, respectConnectionState=true
                 if (changed > 0) {
-                    console.log('✅ 初始演示数据设置成功');
+                    console.debug('✅ 初始演示数据设置成功');
                 } else {
                     console.log('⚠️ 演示数据设置未找到元素，将继续尝试...');
                 }
@@ -664,7 +664,7 @@
             if (!isSet && attempts < maxAttempts) {
                 setTimeout(attemptSet, 1000);
             } else if (isSet) {
-                console.log('✅ 演示数据设置成功');
+                console.debug('✅ 演示数据设置成功');
                 // 启动持续监控
                 setTimeout(() => {
                     window.__startDemoMonitoring__();
@@ -742,19 +742,19 @@
     // 提供激活和停用接口
     window.__DEMO_OVERRIDE__ = {
         activate: function() {
-            console.log('🎭 激活演示模式数据覆盖策略...');
+            console.debug('🎭 激活演示模式数据覆盖策略...');
             window.__DEMO_MODE_ACTIVE__ = true;
             overrideKeyMethods();
             initializeDemoData();
             protectDemoElements();
-            console.log('✅ 演示模式数据覆盖策略已激活');
+            console.debug('✅ 演示模式数据覆盖策略已激活');
         },
 
         deactivate: function() {
             console.log('🔧 停用演示模式数据覆盖策略...');
             window.__DEMO_MODE_ACTIVE__ = false;
             // 这里可以添加恢复原始方法的逻辑
-            console.log('✅ 演示模式数据覆盖策略已停用');
+            console.debug('✅ 演示模式数据覆盖策略已停用');
         },
 
         isActive: function() {
@@ -762,5 +762,5 @@
         }
     };
 
-    console.log('✅ 演示模式数据覆盖策略已准备就绪，等待激活');
+    console.debug('✅ 演示模式数据覆盖策略已准备就绪，等待激活');
 })();

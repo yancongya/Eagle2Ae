@@ -8,9 +8,21 @@ Eagle2Ae is a CEP (Common Extensibility Platform) extension for Adobe After Effe
 - **Real-time Communication**: HTTP/WebSocket communication between Eagle plugin and AE extension
 - **Project Integration**: Smart project detection and composition management
 - **File Management**: Flexible import modes (direct, project-adjacent, custom folder)
+- **Import Behavior Options**: 4 import placement options for flexible composition control
 - **Clipboard Support**: Import assets directly from clipboard with drag-and-drop functionality
 - **Multilingual Support**: Chinese (zh-CN) and English (en-US) interface
 - **Settings Management**: Comprehensive user preferences and import configuration
+
+## Import Behavior Options
+
+The extension provides 4 distinct import behavior options:
+
+1. **不导入合成 (Don't Import to Comp)** - Assets are copied to the project folder but not added to any composition
+2. **创建预合成 (Create Pre-comp)** - Assets are imported and placed in a pre-composition at the current time position
+3. **当前时间 (Current Time)** - Assets are imported to the composition and placed at the current time indicator position
+4. **时间轴开始 (Timeline Start)** - Assets are imported to the composition and moved to the timeline start (0 second position)
+
+These options are available in both the quick settings panel and advanced settings, allowing users to choose the most appropriate import method for their workflow.
 
 ## Target Users
 

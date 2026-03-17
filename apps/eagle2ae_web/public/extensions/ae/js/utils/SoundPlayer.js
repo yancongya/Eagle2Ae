@@ -73,7 +73,7 @@ class SoundPlayer {
                 this.audioElements[key] = audio;
             }
             
-            console.log('音效播放器初始化完成');
+            console.debug('音效播放器初始化完成');
         } catch (error) {
             console.warn('预加载音效失败:', error);
         }

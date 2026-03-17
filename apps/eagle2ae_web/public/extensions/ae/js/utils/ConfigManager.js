@@ -29,7 +29,7 @@ class ConfigManager {
                 const result = window.demoFileSystem.readFile(this.configFilePath);
                 if (result && result.success && result.content) {
                     this.fullConfig = JSON.parse(result.content);
-                    console.log('[ConfigManager] 虚拟文件系统加载成功');
+                    console.debug('[ConfigManager] 虚拟文件系统加载成功');
                     return this.fullConfig;
                 }
                 // 在演示模式下，如果虚拟文件不存在，则直接跳到末尾创建默认配置的逻辑
@@ -51,7 +51,7 @@ class ConfigManager {
                     if (fs.existsSync(configPath)) {
                         const configData = fs.readFileSync(configPath, 'utf8');
                         this.fullConfig = JSON.parse(configData);
-                        console.log('[ConfigManager] Node.js fs 加载成功');
+                        console.debug('[ConfigManager] Node.js fs 加载成功');
                         return this.fullConfig;
                     }
                 } catch (fsError) {
@@ -64,7 +64,7 @@ class ConfigManager {
                 const response = await fetch(this.configFilePath);
                 if (response.ok) {
                     this.fullConfig = await response.json();
-                    console.log('[ConfigManager] fetch 加载成功');
+                    console.debug('[ConfigManager] fetch 加载成功');
                     return this.fullConfig;
                 }
             } catch (fetchError) {
@@ -103,7 +103,7 @@ class ConfigManager {
                     const result = window.demoFileSystem.readFile(this.configFilePath);
                     if (result && result.success && result.content) {
                         latestConfig = JSON.parse(result.content);
-                        console.log('[ConfigManager] 读取到最新配置，准备合并');
+                        console.debug('[ConfigManager] 读取到最新配置，准备合并');
                     }
                 } catch (readError) {
                     console.warn('[ConfigManager] 读取最新配置失败，使用当前配置:', readError);
@@ -122,7 +122,7 @@ class ConfigManager {
                     if (fs.existsSync(configPath)) {
                         const existingData = fs.readFileSync(configPath, 'utf8');
                         latestConfig = JSON.parse(existingData);
-                        console.log('[ConfigManager] 读取到最新配置，准备合并');
+                        console.debug('[ConfigManager] 读取到最新配置，准备合并');
                     }
                 } catch (readError) {
                     console.warn('[ConfigManager] 读取最新配置失败，使用当前配置:', readError);
@@ -135,7 +135,7 @@ class ConfigManager {
                     const existingData = localStorage.getItem('eagle2ae_fullConfig');
                     if (existingData) {
                         latestConfig = JSON.parse(existingData);
-                        console.log('[ConfigManager] 从 localStorage 读取到最新配置，准备合并');
+                        console.debug('[ConfigManager] 从 localStorage 读取到最新配置，准备合并');
                     }
                 } catch (readError) {
                     console.warn('[ConfigManager] 从 localStorage 读取失败:', readError);
@@ -145,7 +145,7 @@ class ConfigManager {
             // 🔥 合并配置：只更新当前面板的部分
             let finalConfig;
             
-            console.log('[ConfigManager] 🔍 合并前状态:', {
+            console.debug('[ConfigManager] 🔍 合并前状态:', {
                 hasLatestConfig: !!latestConfig,
                 latestPanels: latestConfig?.panels ? Object.keys(latestConfig.panels) : [],
                 configToSavePanels: configToSave?.panels ? Object.keys(configToSave.panels) : [],
@@ -176,7 +176,7 @@ class ConfigManager {
             } else {
                 // 如果没有读取到最新配置，直接使用 configToSave
                 finalConfig = configToSave;
-                console.log('[ConfigManager] 没有最新配置，直接使用当前配置');
+                console.debug('[ConfigManager] 没有最新配置，直接使用当前配置');
             }
             
             // 更新元数据
@@ -185,13 +185,13 @@ class ConfigManager {
             finalConfig.metadata.modifiedBy = this.ae.panelId;
             
             const configJSON = JSON.stringify(finalConfig, null, 2);
-            console.log('[ConfigManager] 开始保存配置文件...');
+            console.debug('[ConfigManager] 开始保存配置文件...');
             
             // 保存到虚拟文件系统 (Demo模式)
             if (window.demoFileSystem && typeof window.demoFileSystem.writeFile === 'function') {
                 const writeResult = window.demoFileSystem.writeFile(this.configFilePath, configJSON);
                 if (writeResult && writeResult.success) {
-                    console.log('[ConfigManager] 虚拟文件系统保存成功');
+                    console.debug('[ConfigManager] 虚拟文件系统保存成功');
                     
                     // 🔥 更新本地的 fullConfig，保持同步
                     this.fullConfig = finalConfig;
@@ -212,7 +212,7 @@ class ConfigManager {
                     const configPath = path.join(extensionRoot, this.configFilePath);
                     
                     fs.writeFileSync(configPath, configJSON, 'utf8');
-                    console.log('[ConfigManager] Node.js fs 保存成功');
+                    console.debug('[ConfigManager] Node.js fs 保存成功');
                     
                     // 🔥 更新本地的 fullConfig，保持同步
                     this.fullConfig = finalConfig;
@@ -225,7 +225,7 @@ class ConfigManager {
             
             // 保存到 localStorage (后备方案)
             localStorage.setItem('eagle2ae_fullConfig', configJSON);
-            console.log('[ConfigManager] localStorage 保存成功');
+            console.debug('[ConfigManager] localStorage 保存成功');
             
             // 🔥 更新本地的 fullConfig，保持同步
             this.fullConfig = finalConfig;
@@ -274,7 +274,7 @@ class ConfigManager {
             let panelConfig = this.fullConfig.panels[this.ae.currentPanelId];
             
             if (!panelConfig) {
-                console.log('[ConfigManager] 面板配置不存在，创建默认配置');
+                console.debug('[ConfigManager] 面板配置不存在，创建默认配置');
                 panelConfig = this.getDefaultPanelConfig();
                 this.fullConfig.panels[this.ae.currentPanelId] = panelConfig;
             }
@@ -283,7 +283,7 @@ class ConfigManager {
             panelConfig.lastUsed = new Date().toISOString();
             
             this.currentPanelConfig = panelConfig;
-            console.log('[ConfigManager] 面板配置加载成功');
+            console.debug('[ConfigManager] 面板配置加载成功');
             return panelConfig;
             
         } catch (error) {
@@ -363,7 +363,7 @@ class ConfigManager {
                 panelConfig.uiSettings = this.getDefaultUISettings();
             }
             
-            console.log('[ConfigManager] 配置收集完成');
+            console.debug('[ConfigManager] 配置收集完成');
             return panelConfig;
             
         } catch (error) {
@@ -382,7 +382,7 @@ class ConfigManager {
                 return;
             }
             
-            console.log('[ConfigManager] 应用配置到 settingsManager');
+            console.debug('[ConfigManager] 应用配置到 settingsManager');
             
             const settingsManager = this.ae.settingsManager;
             
@@ -402,7 +402,7 @@ class ConfigManager {
                 settingsManager.recentFolders = [...this.currentPanelConfig.customFolderSettings.recentFolders];
             }
             
-            console.log('[ConfigManager] 配置应用完成');
+            console.debug('[ConfigManager] 配置应用完成');
             
         } catch (error) {
             console.error('[ConfigManager] 应用配置失败:', error);
@@ -532,7 +532,7 @@ class ConfigManager {
      */
     convertOldConfigToPanelConfig(oldSettings, oldPreferences, oldRecentFolders, oldUISettings = null) {
         try {
-            console.log('[ConfigManager] 转换配置格式...');
+            console.debug('[ConfigManager] 转换配置格式...');
             
             const panelConfig = this.getDefaultPanelConfig();
             
@@ -575,7 +575,7 @@ class ConfigManager {
             panelConfig.name = '默认配置 (已迁移)';
             panelConfig.description = '从旧版本迁移的配置';
             
-            console.log('[ConfigManager] 配置格式转换完成');
+            console.debug('[ConfigManager] 配置格式转换完成');
             return panelConfig;
             
         } catch (error) {
@@ -738,7 +738,7 @@ class ConfigManager {
      */
     setupAutoSave() {
         try {
-            console.log('[ConfigManager] 设置自动保存监听');
+            console.debug('[ConfigManager] 设置自动保存监听');
             
             // 监听 settingsManager 的变化
             const settingsManager = this.ae.settingsManager;

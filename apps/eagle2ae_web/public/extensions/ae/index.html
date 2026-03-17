@@ -3032,14 +3032,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 6px 8px;
+            padding: 5px 6px;
             background: transparent;
             border: 1px solid #666;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
-            font-size: 10px;
+            font-size: 9px;
             color: #999;
             user-select: none;
             min-width: 0;
@@ -4890,6 +4890,12 @@
                             <img src="public/icons/no-import.svg" class="behavior-icon" alt="">
                             <span class="behavior-text" data-i18n="common.doNotImportToComp"></span>
                         </label>
+                        <label class="import-behavior-button" id="create-precomp-btn"
+                            data-i18n-title="common.createPrecomp" title="">
+                            <input type="radio" name="import-behavior" value="create_precomp">
+                            <img src="public/icons/create-compss.svg" class="behavior-icon" alt="">
+                            <span class="behavior-text" data-i18n="common.createPrecomp"></span>
+                        </label>
                         <label class="import-behavior-button" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="import-behavior" value="current_time" checked>
                             <img src="public/icons/current-time.svg" class="behavior-icon" alt="">
@@ -5026,6 +5032,12 @@
                             <input type="radio" name="advanced-import-behavior" value="no_import">
                             <img src="public/icons/no-import.svg" class="behavior-option-icon" alt="">
                             <span data-i18n="common.doNotImportToComp"></span>
+                        </label>
+                        <label class="import-behavior-option" id="advanced-create-precomp-btn"
+                            data-i18n-title="common.createPrecomp" title="">
+                            <input type="radio" name="advanced-import-behavior" value="create_precomp">
+                            <img src="public/icons/create-compss.svg" class="behavior-option-icon" alt="">
+                            <span data-i18n="common.createPrecomp"></span>
                         </label>
                         <label class="import-behavior-option" data-i18n-title="tooltips.currentTime">
                             <input type="radio" name="advanced-import-behavior" value="current_time" checked>
@@ -6191,8 +6203,8 @@
     "uiToggleProjectInfo": "点击切换项目信息面板的显示/隐藏",
     "uiToggleLogPanel": "点击切换日志面板的显示/隐藏",
     "uiToggleLogPanel": "点击切换状态信息面板的显示/隐藏",
-    "panelIdPrefix": "当前面板 ID":
-    "presetFilenamePrefix": "当前预设文件名:"
+    "panelIdPrefix": "当前面板 ID",
+    "presetFilenamePrefix": "当前预设文件名"
   }
 }
 </script>
@@ -6313,8 +6325,8 @@
     "uiToggleLog": "Click to toggle log button visibility",
     "uiToggleProjectInfo": "Click to toggle project info panel visibility",
     "uiToggleLogPanel": "Click to toggle log panel visibility",
-    "panelIdPrefix": "Current Panel ID:",
-    "presetFilenamePrefix": "Current Preset Filename:"
+    "panelIdPrefix": "Current Panel ID",
+    "presetFilenamePrefix": "Current Preset Filename"
   }
 }
 </script>
@@ -6914,8 +6926,6 @@
 
             // 初始化 UI 设置按钮
             function initUISettings() {
-                console.log('[UI Settings] ========== 开始初始化 UI 设置按钮 ==========');
-
                 const buttons = {
                     theme: document.getElementById('ui-toggle-theme'),
                     language: document.getElementById('ui-toggle-language'),
@@ -6925,8 +6935,6 @@
                     header: document.getElementById('ui-toggle-header'),
                     fullscreen: document.getElementById('ui-toggle-fullscreen')
                 };
-
-                console.log('[UI Settings] 按钮元素:', buttons);
 
                 // 主面板对应的元素映射
                 const mainPanelElements = {
@@ -7139,7 +7147,7 @@
                         const triggerHeight = Math.max(30, Math.min(50, headerHeight + headerTop + 8));
                         
                         headerHoverTrigger.style.height = triggerHeight + 'px';
-                        console.log(`[自适应激活区域] 标题栏高度: ${headerHeight}px, 激活区域高度: ${triggerHeight}px`);
+                        console.debug(`[自适应激活区域] 标题栏高度: ${headerHeight}px, 激活区域高度: ${triggerHeight}px`);
                     }
                 }
 
@@ -7365,12 +7373,10 @@
             // 等待 i18n 系统完全加载后初始化
             function waitForI18n() {
                 if (window.i18n && window.i18n.updatePageTexts) {
-                    console.log('[UI Settings] i18n 系统已就绪，开始初始化');
                     initUISettings();
                     // 多次延迟调用以确保 i18n 完全初始化和更新
                     setTimeout(() => {
                         if (window.i18n && window.i18n.updatePageTexts) {
-                            console.log('[UI Settings] 第一次 i18n 更新');
                             window.i18n.updatePageTexts();
                         }
                     }, 200);
@@ -7392,12 +7398,9 @@
             }
 
             // DOM 加载完成后初始化
-            console.log('[UI Settings] 脚本加载，document.readyState:', document.readyState);
             if (document.readyState === 'loading') {
-                console.log('[UI Settings] 等待 DOMContentLoaded');
                 document.addEventListener('DOMContentLoaded', waitForI18n);
             } else {
-                console.log('[UI Settings] DOM 已就绪，立即初始化');
                 waitForI18n();
             }
 

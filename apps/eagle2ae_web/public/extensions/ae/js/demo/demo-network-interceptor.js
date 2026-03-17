@@ -30,7 +30,7 @@ class DemoNetworkInterceptor {
         this.interceptXMLHttpRequest();
         
         this.isActive = true;
-        console.log('✅ 网络拦截器已激活 - 所有网络通信将被拦截');
+        console.debug('✅ 网络拦截器已激活 - 所有网络通信将被拦截');
     }
     
     // 禁用网络拦截
@@ -46,7 +46,7 @@ class DemoNetworkInterceptor {
         this.restoreOriginalAPIs();
         
         this.isActive = false;
-        console.log('✅ 网络拦截器已禁用 - 网络通信已恢复正常');
+        console.debug('✅ 网络拦截器已禁用 - 网络通信已恢复正常');
     }
     
     // 备份原始网络API
