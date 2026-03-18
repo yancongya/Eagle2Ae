@@ -10078,16 +10078,13 @@ class AEExtension {
     // 设置拖拽监听
     setupDragAndDrop() {
         try {
-            // 防止默认拖拽行为并进行预检查
-            document.addEventListener('dragover', async (e) => {
+            // 防止默认拖拽行为
+            document.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // 添加基础视觉反馈
-                document.body.classList.add('drag-over');
-
-                // 进行项目内文件预检查
-                await this.handleDragPreview(e);
+                // 检测鼠标悬浮在哪个导入行为按钮上
+                this.handleDragHoverBehaviorButton(e);
             });
 
             document.addEventListener('dragenter', (e) => {
@@ -10098,9 +10095,7 @@ class AEExtension {
             document.addEventListener('dragleave', (e) => {
                 // 当鼠标指针离开窗口时，e.relatedTarget 会是 null
                 if (!e.relatedTarget) {
-                    document.body.classList.remove('drag-over');
-                    // 重置拖拽提示状态
-                    this.resetDragPreviewState();
+                    // 可以在这里添加其他清理逻辑
                 }
             });
 
@@ -10110,6 +10105,83 @@ class AEExtension {
             // 拖拽事件监听器已设置
         } catch (error) {
             this.log(`设置拖拽监听失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 处理拖拽悬浮到导入行为按钮
+    handleDragHoverBehaviorButton(event) {
+        try {
+            this.log(`🔍 拖拽悬浮检测开始，鼠标位置: (${event.clientX}, ${event.clientY})`, 'debug');
+
+            // 获取所有导入行为按钮
+            const behaviorButtons = document.querySelectorAll('.import-behavior-button');
+            this.log(`📋 找到 ${behaviorButtons.length} 个导入行为按钮`, 'debug');
+
+            // 显示当前所有按钮的状态
+            behaviorButtons.forEach((button, index) => {
+                const radio = button.querySelector('input[type="radio"]');
+                const text = button.querySelector('.behavior-text')?.textContent || '未知';
+                const rect = button.getBoundingClientRect();
+                this.log(`🔘 按钮 ${index + 1} [${text}]: checked=${radio?.checked}, rect=[${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.right)},${Math.round(rect.bottom)}]`, 'debug');
+            });
+
+            // 检测鼠标位置是否在某个按钮上
+            let hoveredButton = null;
+            let hoveredIndex = -1;
+
+            behaviorButtons.forEach((button, index) => {
+                const rect = button.getBoundingClientRect();
+                const isHovered = event.clientX >= rect.left && event.clientX <= rect.right &&
+                                 event.clientY >= rect.top && event.clientY <= rect.bottom;
+
+                if (isHovered) {
+                    hoveredButton = button;
+                    hoveredIndex = index;
+                    this.log(`✅ 鼠标悬浮在按钮 ${index + 1}`, 'debug');
+                }
+            });
+
+            if (hoveredButton) {
+                this.log(`🎯 准备切换到按钮 ${hoveredIndex + 1}`, 'debug');
+
+                // 先清除所有按钮的选中状态
+                this.log(`🧹 开始清除所有按钮的选中状态`, 'debug');
+                behaviorButtons.forEach((button, index) => {
+                    const radio = button.querySelector('input[type="radio"]');
+                    if (radio) {
+                        const wasChecked = radio.checked;
+                        radio.checked = false;
+                        this.log(`   清除按钮 ${index + 1}: ${wasChecked} → false`, 'debug');
+                    }
+                });
+
+                // 选中当前悬浮的按钮
+                const radio = hoveredButton.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    this.log(`✨ 选中按钮 ${hoveredIndex + 1}: false → true`, 'debug');
+
+                    // 只更新按钮视觉效果，不重新同步到内部设置（避免被覆盖）
+                    this.updateModeButtonStyles();
+
+                    // 记录日志
+                    const behaviorText = hoveredButton.querySelector('.behavior-text')?.textContent || '未知';
+                    this.log(`🎉 拖拽悬浮选中导入行为: ${behaviorText}`, 'debug');
+
+                    // 再次验证最终状态
+                    this.log(`🔍 最终状态验证:`, 'debug');
+                    behaviorButtons.forEach((button, index) => {
+                        const radio = button.querySelector('input[type="radio"]');
+                        const text = button.querySelector('.behavior-text')?.textContent || '未知';
+                        this.log(`   按钮 ${index + 1} [${text}]: checked=${radio?.checked}`, 'debug');
+                    });
+                }
+            } else {
+                this.log(`❌ 鼠标未悬浮在任何按钮上`, 'debug');
+            }
+        } catch (error) {
+            this.log(`❌ 处理拖拽悬浮失败: ${error.message}`, 'error');
+            console.error('拖拽悬浮错误:', error);
         }
     }
 

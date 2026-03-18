@@ -88,6 +88,151 @@ graph TD
     - **占用额外空间**: 同样会创建文件副本。
 - **适用场景**: 用户希望将所有外部导入的素材与项目文件分离，并进行集中化管理。
 
+### 3.4 导入行为设置
+
+导入行为设置（Import Behavior Settings）决定了素材导入到 After Effects 后的行为方式。该功能在 v2.5.0 版本中得到了重大增强，新增了拖拽悬浮选择功能。
+
+#### 3.4.1 四种导入行为
+
+**1. 不导入合成 (`no_import`)**
+- **描述**: 素材仅导入到项目面板，不会自动添加到时间轴
+- **设置**: `addToComposition: false`
+- **适用场景**: 需要手动选择导入时机和位置，批量导入大量素材但不立即使用
+
+**2. 创建预合成 (`create_precomp`)**
+- **描述**: 素材创建预合成并放置在当前时间位置
+- **设置**: `addToComposition: true`, `createPrecomp: true`
+- **适用场景**: 为复杂项目创建预合成，便于后续编辑和管理
+
+**3. 当前时间 (`current_time`)**
+- **描述**: 素材导入到合成并放置在当前时间指针位置
+- **设置**: `addToComposition: true`, `timelineOptions.placement: 'current_time'`
+- **适用场景**: 需要在当前位置添加素材，与现有图层精确对齐
+
+**4. 时间轴开始 (`timeline_start`)**
+- **描述**: 素材导入到合成并移至时间轴开始处（0秒位置）
+- **设置**: `addToComposition: true`, `timelineOptions.placement: 'timeline_start'`
+- **适用场景**: 需要统一组织导入的素材，批量导入后统一调整位置
+
+#### 3.4.2 拖拽悬浮选择功能（v2.5.0新增）
+
+**功能概述**：
+拖拽悬浮选择导入行为功能允许用户在拖拽文件的过程中，通过将鼠标悬浮到不同的导入行为按钮来动态切换导入方式。
+
+**技术实现**：
+```javascript
+// 拖拽事件监听器
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    this.handleDragHoverBehaviorButton(e);
+});
+
+// 处理拖拽悬浮到导入行为按钮
+handleDragHoverBehaviorButton(event) {
+    const behaviorButtons = document.querySelectorAll('.import-behavior-button');
+    let hoveredButton = null;
+
+    // 检测鼠标位置是否在某个按钮上
+    behaviorButtons.forEach(button => {
+        const rect = button.getBoundingClientRect();
+        if (event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom) {
+            hoveredButton = button;
+        }
+    });
+
+    if (hoveredButton) {
+        // 先清除所有按钮的选中状态
+        behaviorButtons.forEach(button => {
+            const radio = button.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = false;
+            }
+        });
+
+        // 选中当前悬浮的按钮
+        const radio = hoveredButton.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.checked = true;
+            this.updateModeButtonStyles();
+        }
+    }
+}
+```
+
+**技术要点**：
+- **实时响应**：拖拽过程中实时检测鼠标位置
+- **智能切换**：自动切换按钮选中状态，确保只有一个按钮被选中
+- **视觉反馈**：使用现有的高亮样式提供清晰的视觉反馈
+- **无弹窗干扰**：移除了拖拽时的"拖拽文件到此处"弹窗提示
+- **状态保持**：选中的导入行为会应用到最终的文件导入操作
+
+**性能优化**：
+- 使用 `getBoundingClientRect()` 获取按钮位置，避免重复查询
+- 每次拖拽事件只处理一次鼠标位置检测
+- 避免在拖拽过程中进行繁重的DOM操作
+
+#### 3.4.3 设置同步机制
+
+**快速设置与高级设置同步**：
+```javascript
+// 快速设置变化时同步到高级设置
+quickImportBehaviorRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (radio.checked) {
+            const advancedRadio = document.querySelector(
+                `input[name="advanced-import-behavior"][value="${radio.value}"]`
+            );
+            if (advancedRadio) {
+                advancedRadio.checked = true;
+            }
+        }
+    });
+});
+
+// 高级设置变化时同步到快速设置
+advancedImportBehaviorRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (radio.checked) {
+            const quickRadio = document.querySelector(
+                `input[name="import-behavior"][value="${radio.value}"]`
+            );
+            if (quickRadio) {
+                quickRadio.checked = true;
+            }
+        }
+    });
+});
+```
+
+#### 3.4.4 预设管理
+
+**预设存储**：
+```javascript
+// 预设文件命名规则
+const presetFileName = `Eagle2Ae${panelNumber}.Presets`;
+
+// 预设路径
+const presetPath = `${app.preferences.getPref("Main Pref Section v2", "Pref_SCRIPTS_FILE")}/${presetFileName}`;
+```
+
+**预设内容**：
+```javascript
+{
+    "name": "默认配置",
+    "version": "2.5.0",
+    "mode": "project_adjacent",
+    "addToComposition": true,
+    "createPrecomp": false,
+    "timelineOptions": {
+        "enabled": true,
+        "placement": "current_time",
+        "sequenceInterval": 1.0
+    }
+}
+```
+
 ## 4. 错误处理与恢复机制
 
 ### 4.1 Unicode字符处理

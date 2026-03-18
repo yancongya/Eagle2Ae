@@ -22,6 +22,39 @@
 
 提供实时状态提示和进度显示，改善用户体验。
 
+### 5. 拖拽悬浮选择导入行为（v2.5.0新增）
+
+拖拽文件时，通过将鼠标悬浮到不同的导入行为按钮来动态切换导入方式，大幅提升操作效率和灵活性。
+
+## 使用指南
+
+### 基本拖拽操作
+
+1. 从文件管理器中选择一个或多个文件
+2. 拖拽到 Eagle2Ae 扩展面板的任意位置
+3. 等待系统处理并导入文件
+
+### 文件夹拖拽操作
+
+1. 从文件管理器中选择一个文件夹
+2. 拖拽到 Eagle2Ae 扩展面板
+3. 系统会自动分析文件夹内容
+4. 根据分析结果显示导入选项对话框
+
+### 拖拽悬浮选择导入行为
+
+1. 开始拖拽文件到扩展面板
+2. 在释放文件之前，将鼠标移动到想要的导入行为按钮上
+3. 按钮会自动显示高亮选中状态
+4. 可以继续移动鼠标到其他按钮切换导入行为
+5. 在目标按钮上方释放鼠标，文件将使用选中的导入行为进行导入
+
+**注意事项**：
+- 拖拽悬浮功能仅在有文件被拖拽时激活
+- 导入行为按钮的选择是实时的，可以随时切换
+- 最终使用的导入行为取决于释放文件时鼠标悬浮的按钮
+- 该功能与点击按钮选择方式完全兼容
+
 ## 使用指南
 
 ### 基本拖拽操作
@@ -221,3 +254,199 @@ detectImageSequence(files) {
 - `Ctrl+A`: 全选文件
 - `Delete`: 删除选中文件
 - `Enter`: 确认导入操作
+
+## 技术实现
+
+### 拖拽悬浮选择导入行为实现
+
+#### 概述
+拖拽悬浮选择导入行为是 v2.5.0 版本新增的功能，通过实时检测鼠标位置并动态切换导入行为按钮的选中状态，为用户提供更灵活的导入方式选择。
+
+#### 核心实现
+
+**1. 拖拽事件监听器设置**
+```javascript
+// 在 setupDragAndDrop() 函数中设置拖拽监听
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 检测鼠标悬浮在哪个导入行为按钮上
+    this.handleDragHoverBehaviorButton(e);
+});
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+document.addEventListener('dragleave', (e) => {
+    // 当鼠标指针离开窗口时清理状态
+    if (!e.relatedTarget) {
+        // 可以在这里添加其他清理逻辑
+    }
+});
+
+document.addEventListener('drop', this.handleFileDrop.bind(this));
+```
+
+**2. 鼠标位置检测函数**
+```javascript
+/**
+ * 处理拖拽悬浮到导入行为按钮
+ * @param {Event} event - 拖拽事件对象
+ */
+handleDragHoverBehaviorButton(event) {
+    try {
+        // 获取所有导入行为按钮
+        const behaviorButtons = document.querySelectorAll('.import-behavior-button');
+
+        // 检测鼠标位置是否在某个按钮上
+        let hoveredButton = null;
+        let hoveredIndex = -1;
+
+        behaviorButtons.forEach((button, index) => {
+            const rect = button.getBoundingClientRect();
+            const isHovered = event.clientX >= rect.left && event.clientX <= rect.right &&
+                             event.clientY >= rect.top && event.clientY <= rect.bottom;
+
+            if (isHovered) {
+                hoveredButton = button;
+                hoveredIndex = index;
+            }
+        });
+
+        if (hoveredButton) {
+            // 先清除所有按钮的选中状态
+            behaviorButtons.forEach(button => {
+                const radio = button.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = false;
+                }
+            });
+
+            // 选中当前悬浮的按钮
+            const radio = hoveredButton.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+                // 只更新按钮视觉效果
+                this.updateModeButtonStyles();
+            }
+        }
+    } catch (error) {
+        this.log(`处理拖拽悬浮失败: ${error.message}`, 'error');
+    }
+}
+```
+
+#### 技术要点
+
+**1. 性能优化**
+- 使用 `getBoundingClientRect()` 获取按钮位置，避免重复查询
+- 每次拖拽事件只处理一次鼠标位置检测
+- 避免在拖拽过程中进行繁重的DOM操作
+
+**2. 状态管理**
+- 临时状态：拖拽过程中的选中状态是临时的
+- 最终应用：释放文件时的选中状态被应用到导入操作
+- 不影响设置：不会永久改变用户的导入行为设置
+
+**3. 视觉反馈**
+- 使用现有的高亮样式（橙色边框和文字）
+- 实时响应鼠标移动
+- 清晰的选中状态指示
+
+**4. 兼容性处理**
+- 与点击按钮选择方式完全兼容
+- 不会影响预设管理和设置导出功能
+- 支持多面板独立配置
+
+#### 实现注意事项
+
+**1. 避免状态冲突**
+```javascript
+// ❌ 错误做法：会根据内部设置重新覆盖选择
+this.syncSettingsUI(); // 会根据内部设置重新覆盖我们的选择
+
+// ✅ 正确做法：只更新视觉效果
+this.updateModeButtonStyles(); // 只更新按钮的视觉样式
+```
+
+**2. 确保单选逻辑**
+```javascript
+// 先清除所有按钮的选中状态
+behaviorButtons.forEach(button => {
+    const radio = button.querySelector('input[type="radio"]');
+    if (radio) {
+        radio.checked = false;
+    }
+});
+
+// 然后选中当前悬浮的按钮
+const radio = hoveredButton.querySelector('input[type="radio"]');
+if (radio) {
+    radio.checked = true;
+}
+```
+
+**3. 错误处理**
+```javascript
+try {
+    // 处理拖拽悬浮逻辑
+} catch (error) {
+    // 捕获并记录错误，避免拖拽功能失效
+    this.log(`处理拖拽悬浮失败: ${error.message}`, 'error');
+}
+```
+
+#### 扩展性考虑
+
+**1. 支持更多按钮类型**
+```javascript
+// 可以扩展为支持其他类型的按钮
+const allButtons = document.querySelectorAll('.interactive-button');
+allButtons.forEach(button => {
+    // 统一处理所有交互按钮的悬浮逻辑
+});
+```
+
+**2. 添加更多交互效果**
+```javascript
+// 可以添加更丰富的视觉效果
+if (hoveredButton) {
+    hoveredButton.classList.add('drag-hover');
+    hoveredButton.classList.add('pulse-effect');
+    // 添加更多动画效果
+}
+```
+
+**3. 集成到其他功能**
+```javascript
+// 可以将此机制应用到其他需要选择的功能
+function handleGenericHoverSelection(event, selector, callback) {
+    const elements = document.querySelectorAll(selector);
+    // 通用化的悬浮选择逻辑
+    // ...
+}
+```
+
+## 最佳实践
+
+### 1. 代码组织
+- 将拖拽相关的功能模块化
+- 使用清晰的函数命名和注释
+- 保持函数职责单一
+
+### 2. 性能优化
+- 避免在拖拽事件中进行复杂计算
+- 使用防抖技术处理频繁事件
+- 及时清理临时对象和状态
+
+### 3. 用户体验
+- 提供清晰的视觉反馈
+- 保持操作的直观性和一致性
+- 考虑不同用户的使用习惯
+
+### 4. 测试覆盖
+- 测试各种边界情况
+- 验证不同屏幕尺寸的显示效果
+- 确保跨浏览器兼容性
