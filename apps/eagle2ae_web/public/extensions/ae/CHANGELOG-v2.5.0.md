@@ -430,3 +430,191 @@ The extension provides 4 distinct import behavior options:
 **优化完成时间**: 2026年3月17日
 **优化人员**: AI Assistant
 **版本**: v2.5.0
+
+---
+
+## 🎨 UI优化和CEP兼容性修复 - 2026年3月18日
+
+### 独显模式布局优化
+
+#### 优化概述
+优化独显模式下的布局，消除不必要的垂直间距，提升界面紧凑性和视觉一致性。
+
+#### 主要改进
+1. **消除垂直间距**：
+   - 将 `#import-mode-section` 的 `gap` 从 `2px` 改为 `0`
+   - 完全移除三个主要按钮组之间的垂直间距
+
+2. **减少按钮内边距**：
+   - 将按钮的垂直内边距从 `clamp(4px, 1vh, 8px)` 减少到 `2px`
+   - 大幅缩小按钮组内的垂直间距
+
+3. **恢复深色背景**：
+   - 将独显模式下 `#import-mode-section` 的背景色从透明改回深灰色 `#2a2a2a`
+   - 保持与整体界面的一致性
+
+4. **响应式优化**：
+   - 标准屏幕：`gap: 0`，按钮内边距 `2px 4px`
+   - 500px 以下：`gap: 0`，按钮间距 `2px`，内边距 `2px 4px`
+   - 350px 以下：`gap: 0`，按钮间距 `1px`，内边距 `1px 3px`
+
+#### 修改的文件
+- `apps/eagle2ae_web/public/extensions/ae/index.html` - 独显模式CSS样式优化
+
+### 拟态滚动条样式
+
+#### 功能概述
+将原生的滚动条替换为拟态风格的滚动条，提供更加现代和精致的视觉体验。
+
+#### 主要特性
+1. **深色主题滚动条**：
+   - 6px 宽度的精细滚动条
+   - 半透明深色轨道背景 `rgba(42, 42, 42, 0.8)`
+   - 渐变灰色滑块，带有细腻的阴影和边框效果
+   - 悬停时颜色变亮，激活时颜色变暗
+
+2. **浅色主题滚动条**：
+   - 半透明白色轨道背景 `rgba(255, 255, 255, 0.8)`
+   - 渐变浅灰色滑块，配合浅色阴影效果
+   - 相应的悬停和激活状态
+
+3. **全局应用**：
+   - 自动应用到所有具有滚动功能的元素
+   - 包括主内容区域、文件夹列表、设置列表等
+
+#### 技术实现
+```css
+/* 拟态滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(42, 42, 42, 0.8);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #5a5a5a 0%, #4a4a4a 100%);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+}
+```
+
+#### 修改的文件
+- `apps/eagle2ae_web/public/extensions/ae/index.html` - 添加拟态滚动条样式
+
+### CEP环境兼容性修复
+
+#### 问题概述
+在After Effects CEP（Common Extensibility Platform）环境中，设置面板的布局出现异常，具体表现为：
+- 导入模式、导出路径设置、面板组等组件变为垂直布局
+- 复选框组件（自动复制、阅后即焚、时间戳前缀等）样式丢失
+- 水平排列的选项组在CEP中显示为垂直排列
+
+#### 问题原因
+CEP环境使用的WebKit引擎对标准CSS flexbox属性的支持有限，特别是对某些现代CSS特性的支持不完整，导致水平布局在CEP中无法正常工作。
+
+#### 解决方案
+1. **添加-webkit-前缀**：
+   - 为所有flexbox相关属性添加 `-webkit-` 前缀
+   - 确保CEP环境的WebKit引擎能够正确识别
+
+2. **强制水平布局**：
+   - 强制所有水平布局容器使用 `flex-direction: row`
+   - 使用 `!important` 确保样式优先级
+
+3. **媒体查询修复**：
+   - 使用媒体查询针对CEP环境进行特殊处理
+   - 确保修复只影响CEP环境
+
+#### 修复的组件
+- 导入模式选项组 (`.import-mode-options-horizontal`)
+- 导出路径设置选项组 (`.import-mode-options-horizontal`)
+- 导入行为选项组 (`.import-behavior-options-horizontal`)
+- 复选框组件 (`.checkbox-group-horizontal`, `.checkbox-option`)
+- 设置内容容器 (`.settings-content`)
+
+#### 技术实现
+```css
+/* CEP 环境兼容性修复 */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    /* CEP 特定的样式修复 */
+    .checkbox-group-horizontal,
+    .import-mode-options-horizontal,
+    .import-behavior-options-horizontal,
+    .import-mode-option,
+    .import-behavior-option,
+    .checkbox-option {
+        display: -webkit-flex !important;
+        -webkit-flex-direction: row !important;
+        -webkit-flex-wrap: nowrap !important;
+        -webkit-align-items: center !important;
+        -webkit-justify-content: center !important;
+    }
+
+    .checkbox-group-horizontal .checkbox-option,
+    .import-mode-options-horizontal .import-mode-option,
+    .import-behavior-options-horizontal .import-behavior-option {
+        -webkit-flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    /* 修复可能的间距问题 */
+    .checkbox-group-horizontal,
+    .import-mode-options-horizontal,
+    .import-behavior-options-horizontal {
+        -webkit-box-sizing: border-box !important;
+        box-sizing: border-box !important;
+    }
+}
+```
+
+#### 修改的文件
+- `apps/eagle2ae_web/public/extensions/ae/index.html` - 添加CEP兼容性修复
+
+#### 测试验证
+1. **Web环境测试**：
+   - 验证在Web浏览器中布局正常
+   - 确认水平布局组件正常工作
+
+2. **CEP环境测试**：
+   - 验证在After Effects中布局恢复正常
+   - 确认所有水平布局组件正确显示
+   - 验证复选框组件样式正常
+
+3. **跨平台测试**：
+   - 在Windows和macOS系统上测试
+   - 确保跨平台兼容性
+
+### 影响范围
+
+#### 用户界面
+- 独显模式布局更加紧凑，垂直间距显著减少
+- 滚动条样式更加现代和精致
+- CEP环境中的设置面板布局恢复正常
+
+#### 用户体验
+- 独显模式下的界面更加整洁
+- 滚动操作更加平滑和美观
+- CEP环境中的设置面板使用体验得到改善
+
+#### 开发体验
+- CEP兼容性问题得到解决
+- 跨环境一致性得到保证
+- 维护成本降低
+
+### 已知问题
+无

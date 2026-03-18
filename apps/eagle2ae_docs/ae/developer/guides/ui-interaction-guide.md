@@ -681,3 +681,689 @@ function showPanelConfirmDialog(title, message, button1Text, button2Text) {
     }
 }
 ```
+
+---
+
+## 6. CEP环境兼容性
+
+### 6.1 CEP环境特点
+
+After Effects的扩展基于Adobe Common Extensibility Platform（CEP），使用内嵌的WebKit引擎渲染HTML界面。与标准Web浏览器相比，CEP环境有以下特点：
+
+1. **WebKit版本限制**：
+   - CEP使用的WebKit版本相对较旧
+   - 对现代CSS特性支持有限
+   - 需要使用 `-webkit-` 前缀
+
+2. **CSS Flexbox支持**：
+   - 标准flexbox属性可能不工作
+   - 需要添加 `-webkit-` 前缀
+   - 某些flexbox特性不支持
+
+3. **样式继承机制**：
+   - 样式继承行为可能与标准浏览器不同
+   - 需要显式设置样式优先级
+   - 使用 `!important` 确保样式生效
+
+### 6.2 CEP兼容性修复策略
+
+#### 6.2.1 Flexbox布局修复
+
+```css
+/* 标准Web环境 */
+.horizontal-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+/* CEP兼容性修复 */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    .horizontal-container {
+        display: -webkit-flex !important;
+        -webkit-flex-direction: row !important;
+        -webkit-flex-wrap: nowrap !important;
+        -webkit-align-items: center !important;
+        -webkit-justify-content: center !important;
+    }
+}
+```
+
+#### 6.2.2 水平布局组件修复
+
+```css
+/* 导入模式选项组 */
+.import-mode-options-horizontal {
+    display: -webkit-flex;
+    -webkit-flex-direction: row;
+    -webkit-align-items: stretch;
+    gap: 8px;
+}
+
+/* 导入行为选项组 */
+.import-behavior-options-horizontal {
+    display: -webkit-flex;
+    -webkit-flex-direction: row;
+    gap: 8px;
+}
+
+/* 复选框组 */
+.checkbox-group-horizontal {
+    display: -webkit-flex;
+    -webkit-flex-direction: row;
+    -webkit-flex-wrap: nowrap;
+    -webkit-align-items: flex-start;
+    gap: 8px;
+}
+```
+
+#### 6.2.3 选项组件修复
+
+```css
+/* 选项组件 */
+.import-mode-option,
+.import-behavior-option,
+.checkbox-option {
+    display: -webkit-flex;
+    -webkit-align-items: center;
+    -webkit-justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+```
+
+### 6.3 CEP兼容性最佳实践
+
+#### 6.3.1 使用媒体查询隔离CEP修复
+
+```css
+/* 只在CEP环境中应用修复 */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    /* CEP特定的样式修复 */
+    .horizontal-container {
+        display: -webkit-flex !important;
+    }
+}
+```
+
+#### 6.3.2 添加必要的CSS前缀
+
+```css
+/* 为所有flexbox属性添加前缀 */
+.flex-container {
+    display: flex;
+    display: -webkit-flex;
+    
+    flex-direction: row;
+    -webkit-flex-direction: row;
+    
+    align-items: center;
+    -webkit-align-items: center;
+    
+    justify-content: center;
+    -webkit-justify-content: center;
+}
+```
+
+#### 6.3.3 使用box-sizing控制布局
+
+```css
+/* 确保box-sizing一致性 */
+.cep-compatible-container {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+```
+
+#### 6.3.4 测试CEP兼容性
+
+```javascript
+// 检测是否在CEP环境中运行
+function isCEPEnvironment() {
+    return typeof window.__adobe_cep__ !== 'undefined';
+}
+
+// 根据环境应用不同的样式
+if (isCEPEnvironment()) {
+    document.body.classList.add('cep-environment');
+}
+```
+
+### 6.4 CEP兼容性检查清单
+
+- [ ] 所有flexbox容器都添加了 `-webkit-` 前缀
+- [ ] 使用媒体查询隔离CEP修复
+- [ ] 测试水平布局在CEP中是否正常
+- [ ] 验证复选框和选项组件的样式
+- [ ] 检查滚动条样式是否正确显示
+- [ ] 测试在不同AE版本中的兼容性
+- [ ] 验证响应式布局在CEP中的效果
+
+---
+
+## 7. UI优化和视觉效果
+
+### 7.1 独显模式优化
+
+#### 7.1.1 独显模式特点
+
+独显模式是指扩展面板占据整个AE窗口空间的模式，在这种模式下：
+
+1. **空间最大化**：
+   - 移除所有不必要的边距和间距
+   - 最大化内容显示区域
+   - 提供最紧凑的布局
+
+2. **背景一致性**：
+   - 使用深灰色背景 `#2a2a2a`
+   - 保持与整体界面的一致性
+   - 避免透明背景导致的显示异常
+
+3. **响应式设计**：
+   - 根据屏幕尺寸自动调整布局
+   - 在极小屏幕下优化显示
+   - 保持可用性和美观性
+
+#### 7.1.2 独显模式CSS优化
+
+```css
+/* 独显模式容器 */
+.content.fullscreen-mode {
+    padding: 0;
+    margin: 0;
+    height: 100vh;
+    box-sizing: border-box;
+    width: 100vw;
+    gap: 0;
+}
+
+/* 导入模式区域 */
+.content.fullscreen-mode #import-mode-section {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0;  /* 消除垂直间距 */
+    flex: 1;
+    min-height: 0;
+    background: #2a2a2a;  /* 深灰色背景 */
+    border: none;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+/* 按钮组容器 */
+.content.fullscreen-mode #import-mode-section .import-mode-selection,
+.content.fullscreen-mode #import-mode-section .import-behavior,
+.content.fullscreen-mode #import-mode-section .layer-operations {
+    width: 100%;
+    height: 100%;
+    min-height: 24px;
+    justify-content: space-between;
+}
+
+/* 按钮样式 */
+.content.fullscreen-mode #import-mode-section .mode-button,
+.content.fullscreen-mode #import-mode-section .import-behavior-button,
+.content.fullscreen-mode #import-mode-section .layer-operation-button {
+    flex: 1;
+    height: 100%;
+    min-height: 24px;
+    font-size: clamp(10px, 1.5vh, 14px);
+    padding: 2px 4px;  /* 最小内边距 */
+}
+```
+
+#### 7.1.3 响应式优化
+
+```css
+/* 极小屏幕优化 */
+@media (max-height: 500px) {
+    .content.fullscreen-mode #import-mode-section {
+        gap: 0;
+        padding: 0;
+    }
+
+    .content.fullscreen-mode #import-mode-section .import-mode-selection,
+    .content.fullscreen-mode #import-mode-section .import-behavior,
+    .content.fullscreen-mode #import-mode-section .layer-operations {
+        min-height: 20px;
+        justify-content: flex-start;
+    }
+
+    .content.fullscreen-mode #import-mode-section .mode-buttons,
+    .content.fullscreen-mode #import-mode-section .import-behavior-buttons,
+    .content.fullscreen-mode #import-mode-section .layer-operation-buttons {
+        gap: 2px;
+        min-height: 20px;
+    }
+
+    .content.fullscreen-mode #import-mode-section .mode-button,
+    .content.fullscreen-mode #import-mode-section .import-behavior-button,
+    .content.fullscreen-mode #import-mode-section .layer-operation-button {
+        min-height: 20px;
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+}
+
+/* 更小屏幕优化 */
+@media (max-height: 350px) {
+    .content.fullscreen-mode #import-mode-section {
+        gap: 0;
+        padding: 0;
+    }
+
+    .content.fullscreen-mode #import-mode-section .mode-buttons,
+    .content.fullscreen-mode #import-mode-section .import-behavior-buttons,
+    .content.fullscreen-mode #import-mode-section .layer-operation-buttons {
+        gap: 1px;
+    }
+
+    .content.fullscreen-mode #import-mode-section .mode-button,
+    .content.fullscreen-mode #import-mode-section .import-behavior-button,
+    .content.fullscreen-mode #import-mode-section .layer-operation-button {
+        min-height: 18px;
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+}
+```
+
+### 7.2 拟态滚动条样式
+
+#### 7.2.1 拟态滚动条设计理念
+
+拟态滚动条（Neumorphic Scrollbar）是一种现代UI设计风格，具有以下特点：
+
+1. **视觉细腻**：
+   - 6px宽度的精细滚动条
+   - 渐变背景和阴影效果
+   - 微妙的视觉反馈
+
+2. **交互友好**：
+   - 悬停时颜色变亮
+   - 激活时颜色变暗
+   - 平滑的过渡动画
+
+3. **主题适配**：
+   - 支持深色和浅色主题
+   - 与界面风格协调
+   - 增强整体美感
+
+#### 7.2.2 深色主题滚动条
+
+```css
+/* 深色主题拟态滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(42, 42, 42, 0.8);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #5a5a5a 0%, #4a4a4a 100%);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+```
+
+#### 7.2.3 浅色主题滚动条
+
+```css
+/* 浅色主题拟态滚动条 */
+html.theme-light ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 3px;
+}
+
+html.theme-light ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #e0e0e0 0%, #d0d0d0 100%);
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8),
+                0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+html.theme-light ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #d0d0d0 0%, #c0c0c0 100%);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+html.theme-light ::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #c0c0c0 0%, #b0b0b0 100%);
+}
+```
+
+### 7.3 UI性能优化
+
+#### 7.3.1 减少重绘和重排
+
+```css
+/* 使用transform代替position变化 */
+.animated-element {
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+}
+
+.animated-element:hover {
+    transform: translateX(10px);
+}
+
+/* 使用opacity代替display切换 */
+.fade-element {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.fade-element.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+```
+
+#### 7.3.2 使用GPU加速
+
+```css
+/* 启用GPU加速 */
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* 复杂动画使用GPU加速 */
+.animated-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+```
+
+#### 7.3.3 优化渲染性能
+
+```css
+/* 减少阴影计算 */
+.optimized-shadow {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 使用单层阴影代替多层 */
+.complex-shadow {
+    box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.24);
+}
+```
+
+---
+
+## 8. 测试和验证
+
+### 8.1 跨环境测试
+
+#### 8.1.1 Web环境测试
+
+```javascript
+// 测试工具函数
+function testWebEnvironment() {
+    const tests = {
+        'Flexbox布局': testFlexboxLayout(),
+        '滚动条样式': testScrollbarStyles(),
+        '响应式布局': testResponsiveLayout(),
+        '动画效果': testAnimations()
+    };
+    
+    return tests;
+}
+
+function testFlexboxLayout() {
+    const container = document.querySelector('.horizontal-container');
+    const computedStyle = window.getComputedStyle(container);
+    
+    return {
+        display: computedStyle.display,
+        flexDirection: computedStyle.flexDirection,
+        alignItems: computedStyle.alignItems,
+        justifyContent: computedStyle.justifyContent
+    };
+}
+```
+
+#### 8.1.2 CEP环境测试
+
+```javascript
+// 测试CEP环境兼容性
+function testCEPCompatibility() {
+    if (typeof window.__adobe_cep__ === 'undefined') {
+        return { error: 'Not in CEP environment' };
+    }
+    
+    const tests = {
+        'Flexbox布局': testCEPFlexbox(),
+        '水平排列': testHorizontalLayout(),
+        '复选框样式': testCheckboxStyles(),
+        '按钮布局': testButtonLayout()
+    };
+    
+    return tests;
+}
+
+function testCEPFlexbox() {
+    const container = document.querySelector('.import-mode-options-horizontal');
+    const computedStyle = window.getComputedStyle(container);
+    
+    return {
+        display: computedStyle.display,
+        webkitDisplay: computedStyle.webkitDisplay,
+        flexDirection: computedStyle.flexDirection,
+        webkitFlexDirection: computedStyle.webkitFlexDirection
+    };
+}
+```
+
+### 8.2 视觉回归测试
+
+#### 8.2.1 截图对比
+
+```javascript
+// 视觉回归测试工具
+class VisualRegressionTester {
+    constructor() {
+        this.baselineImages = new Map();
+        this.currentImages = new Map();
+    }
+    
+    async captureScreenshot(element, testName) {
+        try {
+            // 使用html2canvas截图
+            const canvas = await html2canvas(element);
+            this.currentImages.set(testName, canvas.toDataURL());
+            return canvas.toDataURL();
+        } catch (error) {
+            console.error('截图失败:', error);
+            return null;
+        }
+    }
+    
+    async compareImages(testName) {
+        const baseline = this.baselineImages.get(testName);
+        const current = this.currentImages.get(testName);
+        
+        if (!baseline || !current) {
+            return { error: 'Missing baseline or current image' };
+        }
+        
+        // 使用pixelmatch库对比图片
+        const baselineImg = new Image();
+        const currentImg = new Image();
+        
+        baselineImg.src = baseline;
+        currentImg.src = current;
+        
+        await Promise.all([
+            new Promise(resolve => baselineImg.onload = resolve),
+            new Promise(resolve => currentImg.onload = resolve)
+        ]);
+        
+        const diff = pixelmatch(
+            baselineImg.data, 
+            currentImg.data, 
+            null, 
+            baselineImg.width, 
+            baselineImg.height,
+            { threshold: 0.1 }
+        );
+        
+        return {
+            differentPixels: diff,
+            totalPixels: baselineImg.width * baselineImg.height,
+            percentage: (diff / (baselineImg.width * baselineImg.height)) * 100
+        };
+    }
+}
+```
+
+#### 8.2.2 自动化测试
+
+```javascript
+// 自动化UI测试套件
+class UITestSuite {
+    constructor() {
+        this.tests = [];
+        this.results = [];
+    }
+    
+    addTest(name, testFunction) {
+        this.tests.push({ name, testFunction });
+    }
+    
+    async runTests() {
+        for (const test of this.tests) {
+            try {
+                const result = await test.testFunction();
+                this.results.push({
+                    name: test.name,
+                    status: 'passed',
+                    result
+                });
+            } catch (error) {
+                this.results.push({
+                    name: test.name,
+                    status: 'failed',
+                    error: error.message
+                });
+            }
+        }
+        
+        return this.results;
+    }
+    
+    generateReport() {
+        const passed = this.results.filter(r => r.status === 'passed').length;
+        const failed = this.results.filter(r => r.status === 'failed').length;
+        
+        return {
+            total: this.results.length,
+            passed,
+            failed,
+            successRate: (passed / this.results.length) * 100,
+            details: this.results
+        };
+    }
+}
+```
+
+---
+
+## 9. 最佳实践总结
+
+### 9.1 开发最佳实践
+
+1. **渐进增强**：
+   - 从标准Web环境开始开发
+   - 逐步添加CEP兼容性修复
+   - 使用媒体查询隔离环境特定代码
+
+2. **测试驱动**：
+   - 在多个环境中测试UI
+   - 使用自动化测试工具
+   - 定期进行视觉回归测试
+
+3. **性能优先**：
+   - 优化CSS性能
+   - 减少重绘和重排
+   - 使用GPU加速
+
+4. **可维护性**：
+   - 保持代码清晰
+   - 添加详细注释
+   - 使用有意义的类名
+
+### 9.2 用户体验最佳实践
+
+1. **一致性**：
+   - 保持界面风格一致
+   - 统一交互模式
+   - 标准化视觉反馈
+
+2. **响应性**：
+   - 优化加载性能
+   - 提供即时反馈
+   - 平滑的动画效果
+
+3. **可访问性**：
+   - 支持键盘导航
+   - 提供文本替代
+   - 确保足够的对比度
+
+4. **适应性**：
+   - 支持不同屏幕尺寸
+   - 适应不同主题
+   - 兼容不同浏览器
+
+### 9.3 CEP环境特定最佳实践
+
+1. **兼容性优先**：
+   - 使用 `-webkit-` 前缀
+   - 避免使用实验性特性
+   - 提供降级方案
+
+2. **性能优化**：
+   - 减少DOM操作
+   - 优化事件处理
+   - 使用虚拟滚动
+
+3. **调试友好**：
+   - 添加详细日志
+   - 提供调试工具
+   - 支持远程调试
+
+4. **文档完善**：
+   - 记录已知问题
+   - 提供解决方案
+   - 更新最佳实践
+```
