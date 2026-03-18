@@ -763,11 +763,11 @@
             flex: 1;
             min-height: 0;
             margin: 0;
-            /* 贴齐页面边缘：移除内边距与边框，但保留背景填充 */
+            /* 贴齐页面边缘：移除内边距、边框和背景 */
             padding: 0;
             overflow: auto;
             box-sizing: border-box;
-            background: #2a2a2a;
+            background: transparent;
             border: none;
             border-radius: 0;
         }
@@ -4548,7 +4548,7 @@
 
         /* 亮色模式：独显模式容器背景 */
         html.theme-light .content.fullscreen-mode #import-mode-section {
-            background: #ffffff;
+            background: transparent;
             border-color: #ddd;
         }
 
